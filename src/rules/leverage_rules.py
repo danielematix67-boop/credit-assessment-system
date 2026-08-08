@@ -3,21 +3,21 @@ from src.rules.result import RuleResult
 from src.rules.rule import Rule
 
 
-class EbitdaMarginRule(Rule):
+class PfnToEbitdaRule(Rule):
 
-    rule_id = "R003"
-    rule_name = "EBITDA margin deterioration"
-    category = "profitability"
-    threshold = 0.0
+    rule_id = "R004"
+    rule_name = "PFN / EBITDA leverage"
+    category = "leverage"
+    threshold = 5.0
 
     def evaluate(self, position: CreditPosition) -> RuleResult:
-        triggered = position.ebitda_margin < self.threshold
+        triggered = position.pfn_to_ebitda > self.threshold
 
         return RuleResult(
             rule_id=self.rule_id,
             rule_name=self.rule_name,
             category=self.category,
             triggered=triggered,
-            value=position.ebitda_margin,
+            value=position.pfn_to_ebitda,
             threshold=self.threshold,
         )

@@ -6,6 +6,7 @@ from src.models.position import CreditPosition
 from src.rules.revenue_rules import RevenueGrowthRule
 from src.rules.profitability_rules import NegativeEbitdaRule
 from src.rules.margin_rules import EbitdaMarginRule
+from src.rules.leverage_rules import PfnToEbitdaRule
 
 
 @pytest.fixture
@@ -79,3 +80,19 @@ def test_ebitda_margin_comment_generated(base_position):
     assert comment is not None
     assert comment.rule_id == "R003"
     assert comment.text == "EBITDA margin is below acceptable threshold."
+
+def test_pfn_to_ebitda_comment_generated(base_position):
+    position = replace(
+        base_position,
+        pfn_to_ebitda=6.0,
+    )
+
+    rule = PfnToEbitdaRule()
+    result = rule.evaluate(position)
+
+    engine = CommentEngine()
+    comment = engine.generate(result)
+
+    assert comment is not None
+    assert comment.rule_id == "R004"
+    assert comment.text == "Leverage is above acceptable threshold."

@@ -5,14 +5,19 @@ from src.rules.rule import Rule
 
 class NegativeEbitdaRule(Rule):
 
+    rule_id = "R002"
+    rule_name = "Negative EBITDA"
+    category = "profitability"
+    threshold = 0
+
     def evaluate(self, position: CreditPosition) -> RuleResult:
-        threshold = 0
+        triggered = position.ebitda < self.threshold
 
         return RuleResult(
-            rule_id="R002",
-            rule_name="Negative EBITDA",
-            category="profitability",
-            triggered=position.ebitda < threshold,
+            rule_id=self.rule_id,
+            rule_name=self.rule_name,
+            category=self.category,
+            triggered=triggered,
             value=position.ebitda,
-            threshold=threshold,
+            threshold=self.threshold,
         )

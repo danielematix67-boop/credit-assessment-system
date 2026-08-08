@@ -5,14 +5,19 @@ from src.rules.rule import Rule
 
 class RevenueGrowthRule(Rule):
 
+    rule_id = "R001"
+    rule_name = "Revenue deterioration"
+    category = "revenue"
+    threshold = -0.10
+
     def evaluate(self, position: CreditPosition) -> RuleResult:
-        threshold = -0.10
+        triggered = position.revenue_growth < self.threshold
 
         return RuleResult(
-            rule_id="R001",
-            rule_name="Revenue deterioration",
-            category="revenue",
-            triggered=position.revenue_growth < threshold,
+            rule_id=self.rule_id,
+            rule_name=self.rule_name,
+            category=self.category,
+            triggered=triggered,
             value=position.revenue_growth,
-            threshold=threshold,
+            threshold=self.threshold,
         )
