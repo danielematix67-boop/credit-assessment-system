@@ -2,7 +2,7 @@ from src.comments.comment import Comment
 from src.comments.comment_engine import CommentEngine
 from src.engine.rule_engine import RuleEngine
 from src.models.position import CreditPosition
-
+from src.models.assessment import Assessment
 
 class AssessmentService:
 
@@ -14,7 +14,7 @@ class AssessmentService:
         self.rule_engine = rule_engine
         self.comment_engine = comment_engine
 
-    def assess(self, position: CreditPosition) -> list[Comment]:
+    def assess(self, position: CreditPosition) -> Assessment:
         results = self.rule_engine.evaluate(position)
 
         comments = []
@@ -25,4 +25,8 @@ class AssessmentService:
             if comment is not None:
                 comments.append(comment)
 
-        return comments
+        return Assessment(
+            position_id=position.position_id,
+            rule_results=results,
+            comments=comments
+        )

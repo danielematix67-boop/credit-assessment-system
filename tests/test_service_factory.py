@@ -14,11 +14,13 @@ def test_default_assessment_service():
 
     service = create_default_assessment_service()
 
-    comments = service.assess(position)
+    assessment = service.assess(position)
 
-    assert len(comments) == 4
+    assert assessment.position_id == "POS001"
 
-    assert comments[0].rule_id == "R001"
-    assert comments[1].rule_id == "R002"
-    assert comments[2].rule_id == "R003"
-    assert comments[3].rule_id == "R004"
+    assert len(assessment.comments) == 4
+
+    assert assessment.comments[0].rule_id == "R001"
+    assert assessment.comments[1].rule_id == "R002"
+    assert assessment.comments[2].rule_id == "R003"
+    assert assessment.comments[3].rule_id == "R004"
