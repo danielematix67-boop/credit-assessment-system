@@ -38,3 +38,4 @@ class FinancialExpensesToEbitdaRule(Rule):
             value=value,
             threshold=threshold,
         )
+

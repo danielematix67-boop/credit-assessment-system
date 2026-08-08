@@ -7,6 +7,7 @@ from src.rules.revenue_rules import RevenueGrowthRule
 from src.rules.profitability_rules import NegativeEbitdaRule
 from src.rules.margin_rules import EbitdaMarginRule
 from src.rules.leverage_rules import PfnToEbitdaRule
+from src.rules.financial_expenses_rules import FinancialExpensesToEbitdaRule
 
 
 @pytest.fixture
@@ -18,7 +19,7 @@ def base_position():
         profit_loss=50000,
         ebitda_margin=0.10,
         pfn_to_ebitda=3.5,
-        interest_expense=40000
+        interest_expense=40000,
     )
 
 
@@ -36,7 +37,10 @@ def test_comment_generated_when_rule_is_triggered(base_position):
 
     assert comment is not None
     assert comment.rule_id == "R001"
-    assert comment.text == "Revenue deterioration detected."
+    assert comment.text == (
+        "Revenue deterioration detected. "
+        "Revenue growth: -15.0%."
+    )
 
 
 def test_no_comment_generated_when_rule_is_not_triggered(base_position):
@@ -63,7 +67,10 @@ def test_negative_ebitda_comment_generated(base_position):
 
     assert comment is not None
     assert comment.rule_id == "R002"
-    assert comment.text == "Negative EBITDA detected."
+    assert comment.text == (
+        "Negative EBITDA detected. "
+        "EBITDA: €-50,000."
+    )
 
 
 def test_ebitda_margin_comment_generated(base_position):
@@ -80,7 +87,11 @@ def test_ebitda_margin_comment_generated(base_position):
 
     assert comment is not None
     assert comment.rule_id == "R003"
-    assert comment.text == "EBITDA margin is below acceptable threshold."
+    assert comment.text == (
+        "EBITDA margin is below acceptable threshold. "
+        "EBITDA margin: -5.0%."
+    )
+
 
 def test_pfn_to_ebitda_comment_generated(base_position):
     position = replace(
@@ -96,4 +107,27 @@ def test_pfn_to_ebitda_comment_generated(base_position):
 
     assert comment is not None
     assert comment.rule_id == "R004"
-    assert comment.text == "Leverage is above acceptable threshold."
+    assert comment.text == (
+        "Leverage is above acceptable threshold. "
+        "PFN to EBITDA: 6.0x."
+    )
+
+
+def test_interest_expense_to_ebitda_comment_generated(base_position):
+    position = replace(
+        base_position,
+        interest_expense=200000,
+    )
+
+    rule = FinancialExpensesToEbitdaRule()
+    result = rule.evaluate(position)
+
+    engine = CommentEngine()
+    comment = engine.generate(result)
+
+    assert comment is not None
+    assert comment.rule_id == "R005"
+    assert comment.text == (
+        "Interest expense to EBITDA is above acceptable threshold. "
+        "Ratio: 80.0%."
+    )

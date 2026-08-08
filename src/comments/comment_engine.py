@@ -9,4 +9,15 @@ class CommentEngine:
         if not result.triggered:
             return None
 
-        return COMMENTS.get(result.rule_id)
+        template = COMMENTS.get(result.rule_id)
+
+        if template is None:
+            return None
+
+        return Comment(
+            rule_id=result.rule_id,
+            text=template.format(
+                value=result.value,
+                threshold=result.threshold,
+            ),
+        )

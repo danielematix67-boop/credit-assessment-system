@@ -14,7 +14,7 @@ def test_assessment_service_generates_assessment():
         profit_loss=-50000,
         ebitda_margin=-0.05,
         pfn_to_ebitda=3.5,
-        interest_expense=40000
+        interest_expense=40000,
     )
 
     rules = [
@@ -35,12 +35,21 @@ def test_assessment_service_generates_assessment():
     assert assessment.position_id == "POS001"
 
     assert len(assessment.rule_results) == 2
+
     assert assessment.rule_results[0].rule_id == "R001"
     assert assessment.rule_results[1].rule_id == "R002"
 
     assert len(assessment.comments) == 2
+
     assert assessment.comments[0].rule_id == "R001"
-    assert assessment.comments[0].text == "Revenue deterioration detected."
+    assert assessment.comments[0].text == (
+        "Revenue deterioration detected. "
+        "Revenue growth: -15.0%."
+    )
 
     assert assessment.comments[1].rule_id == "R002"
-    assert assessment.comments[1].text == "Negative EBITDA detected."
+    assert assessment.comments[1].text == (
+        "Negative EBITDA detected. "
+        "EBITDA: €-50,000."
+    )
+

@@ -1,29 +1,26 @@
-from src.comments.comment import Comment
-
-
 COMMENTS = {
-    "R001": Comment(
-        rule_id="R001",
-        text="Revenue deterioration detected."
+    "R001": (
+        "Revenue deterioration detected. "
+        "Revenue growth: {value:.1%}."
     ),
 
-    "R002": Comment(
-        rule_id="R002",
-        text="Negative EBITDA detected."
+    "R002": (
+        "Negative EBITDA detected. "
+        "EBITDA: €{value:,.0f}."
     ),
 
-    "R003": Comment(
-        rule_id="R003",
-        text="EBITDA margin is below acceptable threshold."
+    "R003": (
+        "EBITDA margin is below acceptable threshold. "
+        "EBITDA margin: {value:.1%}."
     ),
 
-    "R004": Comment(
-        rule_id="R004",
-        text="Leverage is above acceptable threshold."
+    "R004": (
+        "Leverage is above acceptable threshold. "
+        "PFN to EBITDA: {value:.1f}x."
     ),
 
-    "R005": Comment(
-        rule_id="R005",
-        text="Interest coverage is below acceptable threshold."
+    "R005": (
+        "Interest expense to EBITDA is above acceptable threshold. "
+        "Ratio: {value:.1%}."
     ),
 }
