@@ -7,7 +7,8 @@ def test_credit_position_creation():
         ebitda=250000,
         profit_loss=-50000,
         ebitda_margin=-0.05,
-        pfn_to_ebitda=3.5
+        pfn_to_ebitda=3.5,
+        interest_expense=10000
     )
 
     assert position.position_id == "POS001"
@@ -16,3 +17,4 @@ def test_credit_position_creation():
     assert position.profit_loss == -50000
     assert position.ebitda_margin == -0.05
     assert position.pfn_to_ebitda == 3.5
+    assert position.interest_expense == 10000

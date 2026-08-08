@@ -18,6 +18,7 @@ def base_position():
         profit_loss=50000,
         ebitda_margin=0.10,
         pfn_to_ebitda=3.5,
+        interest_expense=40000
     )
 
 

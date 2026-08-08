@@ -9,3 +9,4 @@ class CreditPosition:
     profit_loss: float
     ebitda_margin: float
     pfn_to_ebitda: float
+    interest_expense: float

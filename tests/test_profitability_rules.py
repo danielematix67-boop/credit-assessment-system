@@ -9,7 +9,8 @@ def test_negative_ebitda_rule_triggered():
         ebitda=-50000,
         profit_loss=-50000,
         ebitda_margin=0.10,
-        pfn_to_ebitda=3.5
+        pfn_to_ebitda=3.5,
+        interest_expense=40000
     )
 
     rule = NegativeEbitdaRule()
@@ -29,7 +30,8 @@ def test_negative_ebitda_rule_not_triggered():
         ebitda=250000,
         profit_loss=50000,
         ebitda_margin=0.10,
-        pfn_to_ebitda=3.5
+        pfn_to_ebitda=3.5,
+        interest_expense=40000
     )
 
     rule = NegativeEbitdaRule()

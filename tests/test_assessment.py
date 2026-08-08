@@ -14,6 +14,7 @@ def test_assessment_service_generates_assessment():
         profit_loss=-50000,
         ebitda_margin=-0.05,
         pfn_to_ebitda=3.5,
+        interest_expense=40000
     )
 
     rules = [

@@ -9,7 +9,8 @@ def test_revenue_growth_rule_triggered():
         ebitda=250000,
         profit_loss=-50000,
         ebitda_margin=-0.05,
-        pfn_to_ebitda=3.5
+        pfn_to_ebitda=3.5,
+        interest_expense=40000
     )
 
     rule = RevenueGrowthRule()
@@ -28,7 +29,8 @@ def test_revenue_growth_rule_not_triggered():
         ebitda=250000,
         profit_loss=50000,
         ebitda_margin=-0.05,
-        pfn_to_ebitda=3.5
+        pfn_to_ebitda=3.5,
+        interest_expense=40000
     )
 
     rule = RevenueGrowthRule()

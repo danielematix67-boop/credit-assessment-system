@@ -10,6 +10,7 @@ def test_pfn_to_ebitda_rule_triggered():
         profit_loss=50000,
         ebitda_margin=0.10,
         pfn_to_ebitda=6.0,
+        interest_expense=40000
     )
 
     rule = PfnToEbitdaRule()
@@ -29,6 +30,7 @@ def test_pfn_to_ebitda_rule_not_triggered():
         profit_loss=50000,
         ebitda_margin=0.10,
         pfn_to_ebitda=3.5,
+        interest_expense=40000
     )
 
     rule = PfnToEbitdaRule()

@@ -10,6 +10,7 @@ def test_default_assessment_service():
         profit_loss=-50000,
         ebitda_margin=-0.05,
         pfn_to_ebitda=6.0,
+        interest_expense=40000
     )
 
     service = create_default_assessment_service()

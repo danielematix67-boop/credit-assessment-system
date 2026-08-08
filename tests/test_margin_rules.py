@@ -9,6 +9,7 @@ def test_ebitda_margin_rule_triggered():
         profit_loss=-50000,
         ebitda_margin=-0.05,
         pfn_to_ebitda=6.5,
+        interest_expense=40000
     )
 
     rule = EbitdaMarginRule()
@@ -29,6 +30,7 @@ def test_ebitda_margin_rule_not_triggered():
         profit_loss=50000,
         ebitda_margin=0.12,
         pfn_to_ebitda=2.5,
+        interest_expense=40000
     )
 
     rule = EbitdaMarginRule()

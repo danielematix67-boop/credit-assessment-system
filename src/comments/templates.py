@@ -21,4 +21,9 @@ COMMENTS = {
         rule_id="R004",
         text="Leverage is above acceptable threshold."
     ),
+
+    "R005": Comment(
+        rule_id="R005",
+        text="Interest coverage is below acceptable threshold."
+    ),
 }
