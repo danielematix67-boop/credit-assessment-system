@@ -1,5 +1,8 @@
 from dataclasses import dataclass
 
+# CreditPosition represents the input data used by the assessment engine.
+# It should contain business and financial data, but no rule-evaluation logic.
+# Rules read the position and independently determine whether their conditions are triggered.
 
 @dataclass
 class CreditPosition:

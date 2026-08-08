@@ -2,6 +2,9 @@ from src.models.position import CreditPosition
 from src.rules.result import RuleResult
 from src.rules.rule import Rule
 
+# Each rule should be implemented as a separate class with a unique rule_id.
+# Multiple related rules can coexist in the same module, but each class should
+# represent one specific business rule and return one RuleResult.
 
 class EbitdaMarginRule(Rule):
 
@@ -21,3 +24,4 @@ class EbitdaMarginRule(Rule):
             value=position.ebitda_margin,
             threshold=self.threshold,
         )
+

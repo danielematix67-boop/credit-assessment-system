@@ -3,6 +3,10 @@ from src.comments.templates import COMMENTS
 from src.rules.result import RuleResult
 
 
+# The CommentEngine converts triggered RuleResults into human-readable comments.
+# Rules determine whether a condition is triggered; the CommentEngine determines how it is communicated.
+# Comment generation must remain separate from rule evaluation.
+
 class CommentEngine:
 
     def generate(self, result: RuleResult) -> Comment | None:

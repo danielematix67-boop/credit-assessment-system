@@ -4,6 +4,10 @@ from src.engine.rule_engine import RuleEngine
 from src.models.position import CreditPosition
 from src.models.assessment import Assessment
 
+# AssessmentService orchestrates the assessment workflow.
+# It coordinates rule evaluation and comment generation without implementing business rules itself.
+# The service returns the complete assessment for a CreditPosition.
+
 class AssessmentService:
 
     def __init__(
