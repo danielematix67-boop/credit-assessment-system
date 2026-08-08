@@ -2,7 +2,6 @@ from src.models.position import CreditPosition
 from src.rules.result import RuleResult
 from src.rules.rule import Rule
 
-
 # Each rule should be implemented as a separate class with a unique rule_id.
 #
 # Multiple related rules can coexist in the same module, but each class should
@@ -26,6 +25,7 @@ class PfnToEbitdaRule(Rule):
                 triggered=False,
                 value=None,
                 threshold=self.threshold,
+                status="NOT_EVALUABLE",
             )
 
         triggered = position.pfn_to_ebitda > self.threshold
@@ -37,4 +37,5 @@ class PfnToEbitdaRule(Rule):
             triggered=triggered,
             value=position.pfn_to_ebitda,
             threshold=self.threshold,
+            status="OK",
         )

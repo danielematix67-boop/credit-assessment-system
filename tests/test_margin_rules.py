@@ -41,3 +41,25 @@ def test_ebitda_margin_rule_not_triggered():
     assert result.triggered is False
     assert result.value == 0.12
     assert result.threshold == 0.0
+
+def test_ebitda_margin_rule_not_evaluable_when_none():
+    position = CreditPosition(
+        position_id="POS001",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=None,
+        pfn_to_ebitda=3.5,
+        interest_expense=40000,
+    )
+
+    rule = EbitdaMarginRule()
+
+    result = rule.evaluate(position)
+
+    assert result.rule_id == "R003"
+    assert result.triggered is False
+    assert result.value is None
+    assert result.threshold == 0.0
+    assert result.status == "NOT_EVALUABLE"
+

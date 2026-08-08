@@ -10,5 +10,6 @@ class RuleResult:
     rule_name: str
     category: str
     triggered: bool
-    value: float
+    value: float | None
     threshold: float
+    status: str

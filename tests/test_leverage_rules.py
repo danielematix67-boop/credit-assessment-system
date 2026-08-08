@@ -40,3 +40,24 @@ def test_pfn_to_ebitda_rule_not_triggered():
     assert result.triggered is False
     assert result.value == 3.5
     assert result.threshold == 5.0
+
+def test_pfn_to_ebitda_rule_not_evaluable_when_none():
+    position = CreditPosition(
+        position_id="POS001",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=None,
+        interest_expense=40000,
+    )
+
+    rule = PfnToEbitdaRule()
+
+    result = rule.evaluate(position)
+
+    assert result.rule_id == "R004"
+    assert result.triggered is False
+    assert result.value is None
+    assert result.threshold == 5.0
+    assert result.status == "NOT_EVALUABLE"

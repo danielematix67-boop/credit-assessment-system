@@ -23,6 +23,7 @@ def test_interest_expense_to_ebitda_rule_triggered():
     assert result.triggered is True
     assert result.value == 0.8
     assert result.threshold == 0.60
+    assert result.status == "OK"
 
 
 def test_interest_expense_to_ebitda_rule_not_triggered():
@@ -46,6 +47,7 @@ def test_interest_expense_to_ebitda_rule_not_triggered():
     assert result.triggered is False
     assert result.value == 0.4
     assert result.threshold == 0.60
+    assert result.status == "OK"
 
 
 def test_interest_expense_to_ebitda_rule_with_negative_ebitda():
@@ -69,3 +71,76 @@ def test_interest_expense_to_ebitda_rule_with_negative_ebitda():
     assert result.triggered is False
     assert result.value is None
     assert result.threshold == 0.60
+    assert result.status == "NOT_EVALUABLE"
+
+
+def test_interest_expense_to_ebitda_rule_not_evaluable_when_interest_expense_none():
+    position = CreditPosition(
+        position_id="POS004",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=3.5,
+        interest_expense=None,
+    )
+
+    rule = FinancialExpensesToEbitdaRule()
+
+    result = rule.evaluate(position)
+
+    assert result.rule_id == "R005"
+    assert result.rule_name == "Interest expense to EBITDA"
+    assert result.category == "profitability"
+    assert result.triggered is False
+    assert result.value is None
+    assert result.threshold == 0.60
+    assert result.status == "NOT_EVALUABLE"
+
+
+def test_interest_expense_to_ebitda_rule_not_evaluable_when_ebitda_none():
+    position = CreditPosition(
+        position_id="POS005",
+        revenue_growth=0.05,
+        ebitda=None,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=3.5,
+        interest_expense=100000,
+    )
+
+    rule = FinancialExpensesToEbitdaRule()
+
+    result = rule.evaluate(position)
+
+    assert result.rule_id == "R005"
+    assert result.rule_name == "Interest expense to EBITDA"
+    assert result.category == "profitability"
+    assert result.triggered is False
+    assert result.value is None
+    assert result.threshold == 0.60
+    assert result.status == "NOT_EVALUABLE"
+
+
+def test_interest_expense_to_ebitda_rule_not_evaluable_with_zero_ebitda():
+    position = CreditPosition(
+        position_id="POS006",
+        revenue_growth=0.05,
+        ebitda=0,
+        profit_loss=-50000,
+        ebitda_margin=0.0,
+        pfn_to_ebitda=6.0,
+        interest_expense=40000,
+    )
+
+    rule = FinancialExpensesToEbitdaRule()
+
+    result = rule.evaluate(position)
+
+    assert result.rule_id == "R005"
+    assert result.rule_name == "Interest expense to EBITDA"
+    assert result.category == "profitability"
+    assert result.triggered is False
+    assert result.value is None
+    assert result.threshold == 0.60
+    assert result.status == "NOT_EVALUABLE"

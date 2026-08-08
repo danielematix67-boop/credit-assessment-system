@@ -9,6 +9,10 @@ from src.rules.rule import Rule
 # represent one specific business rule and return one RuleResult.
 
 
+from src.models.position import CreditPosition
+from src.rules.result import RuleResult
+from src.rules.rule import Rule
+
 class RevenueGrowthRule(Rule):
 
     rule_id = "R001"
@@ -26,6 +30,7 @@ class RevenueGrowthRule(Rule):
                 triggered=False,
                 value=None,
                 threshold=self.threshold,
+                status="NOT_EVALUABLE",
             )
 
         triggered = position.revenue_growth < self.threshold
@@ -37,4 +42,5 @@ class RevenueGrowthRule(Rule):
             triggered=triggered,
             value=position.revenue_growth,
             threshold=self.threshold,
+            status="OK",
         )

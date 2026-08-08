@@ -8,7 +8,6 @@ from src.rules.rule import Rule
 # Multiple related rules can coexist in the same module, but each class should
 # represent one specific business rule and return one RuleResult.
 
-
 class NegativeEbitdaRule(Rule):
 
     rule_id = "R002"
@@ -26,6 +25,7 @@ class NegativeEbitdaRule(Rule):
                 triggered=False,
                 value=None,
                 threshold=self.threshold,
+                status="NOT_EVALUABLE",
             )
 
         triggered = position.ebitda < self.threshold
@@ -37,4 +37,5 @@ class NegativeEbitdaRule(Rule):
             triggered=triggered,
             value=position.ebitda,
             threshold=self.threshold,
+            status="OK",
         )

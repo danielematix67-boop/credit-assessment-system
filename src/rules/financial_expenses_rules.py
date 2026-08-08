@@ -3,8 +3,10 @@ from src.rules.rule import Rule
 from src.rules.result import RuleResult
 
 # Each rule should be implemented as a separate class with a unique rule_id.
+#
 # Multiple related rules can coexist in the same module, but each class should
 # represent one specific business rule and return one RuleResult.
+
 
 class FinancialExpensesToEbitdaRule(Rule):
 
@@ -23,6 +25,7 @@ class FinancialExpensesToEbitdaRule(Rule):
                 triggered=False,
                 value=None,
                 threshold=self.threshold,
+                status="NOT_EVALUABLE",
             )
 
         if position.ebitda is None:
@@ -33,6 +36,7 @@ class FinancialExpensesToEbitdaRule(Rule):
                 triggered=False,
                 value=None,
                 threshold=self.threshold,
+                status="NOT_EVALUABLE",
             )
 
         if position.ebitda <= 0:
@@ -43,6 +47,7 @@ class FinancialExpensesToEbitdaRule(Rule):
                 triggered=False,
                 value=None,
                 threshold=self.threshold,
+                status="NOT_EVALUABLE",
             )
 
         value = position.interest_expense / position.ebitda
@@ -54,4 +59,5 @@ class FinancialExpensesToEbitdaRule(Rule):
             triggered=value > self.threshold,
             value=value,
             threshold=self.threshold,
+            status="OK",
         )
