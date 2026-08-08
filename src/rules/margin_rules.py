@@ -14,6 +14,17 @@ class EbitdaMarginRule(Rule):
     threshold = 0.0
 
     def evaluate(self, position: CreditPosition) -> RuleResult:
+
+        if position.ebitda_margin is None:
+            return RuleResult(
+                rule_id=self.rule_id,
+                rule_name=self.rule_name,
+                category=self.category,
+                triggered=False,
+                value=None,
+                threshold=self.threshold,
+            )
+
         triggered = position.ebitda_margin < self.threshold
 
         return RuleResult(

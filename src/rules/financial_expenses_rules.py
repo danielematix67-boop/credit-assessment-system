@@ -8,37 +8,50 @@ from src.rules.result import RuleResult
 
 class FinancialExpensesToEbitdaRule(Rule):
 
+    rule_id = "R005"
+    rule_name = "Interest expense to EBITDA"
+    category = "profitability"
+    threshold = 0.60
+
     def evaluate(self, position: CreditPosition) -> RuleResult:
-        threshold = 0.60
 
         if position.interest_expense is None:
             return RuleResult(
-                rule_id="R005",
-                rule_name="Interest expense to EBITDA",
-                category="profitability",
+                rule_id=self.rule_id,
+                rule_name=self.rule_name,
+                category=self.category,
                 triggered=False,
-                value=0.0,
-                threshold=threshold,
+                value=None,
+                threshold=self.threshold,
+            )
+
+        if position.ebitda is None:
+            return RuleResult(
+                rule_id=self.rule_id,
+                rule_name=self.rule_name,
+                category=self.category,
+                triggered=False,
+                value=None,
+                threshold=self.threshold,
             )
 
         if position.ebitda <= 0:
             return RuleResult(
-                rule_id="R005",
-                rule_name="Interest expense to EBITDA",
-                category="profitability",
+                rule_id=self.rule_id,
+                rule_name=self.rule_name,
+                category=self.category,
                 triggered=False,
-                value=0.0,
-                threshold=threshold,
+                value=None,
+                threshold=self.threshold,
             )
 
         value = position.interest_expense / position.ebitda
 
         return RuleResult(
-            rule_id="R005",
-            rule_name="Interest expense to EBITDA",
-            category="profitability",
-            triggered=value > threshold,
+            rule_id=self.rule_id,
+            rule_name=self.rule_name,
+            category=self.category,
+            triggered=value > self.threshold,
             value=value,
-            threshold=threshold,
+            threshold=self.threshold,
         )
-

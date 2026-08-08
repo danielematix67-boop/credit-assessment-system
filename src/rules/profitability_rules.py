@@ -2,9 +2,12 @@ from src.models.position import CreditPosition
 from src.rules.result import RuleResult
 from src.rules.rule import Rule
 
+
 # Each rule should be implemented as a separate class with a unique rule_id.
+#
 # Multiple related rules can coexist in the same module, but each class should
 # represent one specific business rule and return one RuleResult.
+
 
 class NegativeEbitdaRule(Rule):
 
@@ -14,6 +17,17 @@ class NegativeEbitdaRule(Rule):
     threshold = 0
 
     def evaluate(self, position: CreditPosition) -> RuleResult:
+
+        if position.ebitda is None:
+            return RuleResult(
+                rule_id=self.rule_id,
+                rule_name=self.rule_name,
+                category=self.category,
+                triggered=False,
+                value=None,
+                threshold=self.threshold,
+            )
+
         triggered = position.ebitda < self.threshold
 
         return RuleResult(

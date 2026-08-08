@@ -67,5 +67,5 @@ def test_interest_expense_to_ebitda_rule_with_negative_ebitda():
     assert result.rule_name == "Interest expense to EBITDA"
     assert result.category == "profitability"
     assert result.triggered is False
-    assert result.value == 0.0
+    assert result.value is None
     assert result.threshold == 0.60
