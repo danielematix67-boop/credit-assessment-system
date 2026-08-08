@@ -6,9 +6,13 @@ def test_credit_position_creation():
         revenue_growth=-0.15,
         ebitda=250000,
         profit_loss=-50000,
+        ebitda_margin=-0.05,
+        pfn_to_ebitda=3.5
     )
 
     assert position.position_id == "POS001"
     assert position.revenue_growth == -0.15
     assert position.ebitda == 250000
     assert position.profit_loss == -50000
+    assert position.ebitda_margin == -0.05
+    assert position.pfn_to_ebitda == 3.5

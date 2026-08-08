@@ -10,4 +10,8 @@ COMMENTS = {
         rule_id="R002",
         text="Negative EBITDA detected."
     ),
+    "R003": Comment(
+        rule_id="R003",
+        text="EBITDA margin is below acceptable threshold."
+    ),
 }

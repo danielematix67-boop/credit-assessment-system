@@ -1,0 +1,41 @@
+from src.models.position import CreditPosition
+from src.rules.margin_rules import EbitdaMarginRule
+
+def test_ebitda_margin_rule_triggered():
+    position = CreditPosition(
+        position_id="POS001",
+        revenue_growth=-0.15,
+        ebitda=-50000,
+        profit_loss=-50000,
+        ebitda_margin=-0.05,
+        pfn_to_ebitda=6.5,
+    )
+
+    rule = EbitdaMarginRule()
+
+    result = rule.evaluate(position)
+
+    assert result.rule_id == "R003"
+    assert result.triggered is True
+    assert result.value == -0.05
+    assert result.threshold == 0.0
+
+
+def test_ebitda_margin_rule_not_triggered():
+    position = CreditPosition(
+        position_id="POS002",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.12,
+        pfn_to_ebitda=2.5,
+    )
+
+    rule = EbitdaMarginRule()
+
+    result = rule.evaluate(position)
+
+    assert result.rule_id == "R003"
+    assert result.triggered is False
+    assert result.value == 0.12
+    assert result.threshold == 0.0

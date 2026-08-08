@@ -12,6 +12,8 @@ def test_assessment_service_generates_comments():
         revenue_growth=-0.15,
         ebitda=-50000,
         profit_loss=-50000,
+        ebitda_margin=-0.05,
+        pfn_to_ebitda=3.5
     )
 
     rules = [

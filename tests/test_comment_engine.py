@@ -1,14 +1,29 @@
+import pytest
+from dataclasses import replace
+
 from src.comments.comment_engine import CommentEngine
 from src.models.position import CreditPosition
 from src.rules.revenue_rules import RevenueGrowthRule
+from src.rules.profitability_rules import NegativeEbitdaRule
+from src.rules.margin_rules import EbitdaMarginRule
 
 
-def test_comment_generated_when_rule_is_triggered():
-    position = CreditPosition(
+@pytest.fixture
+def base_position():
+    return CreditPosition(
         position_id="POS001",
-        revenue_growth=-0.15,
+        revenue_growth=0.05,
         ebitda=250000,
         profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=3.5,
+    )
+
+
+def test_comment_generated_when_rule_is_triggered(base_position):
+    position = replace(
+        base_position,
+        revenue_growth=-0.15,
     )
 
     rule = RevenueGrowthRule()
@@ -22,18 +37,45 @@ def test_comment_generated_when_rule_is_triggered():
     assert comment.text == "Revenue deterioration detected."
 
 
-def test_no_comment_generated_when_rule_is_not_triggered():
-    position = CreditPosition(
-        position_id="POS002",
-        revenue_growth=0.05,
-        ebitda=250000,
-        profit_loss=50000,
-    )
-
+def test_no_comment_generated_when_rule_is_not_triggered(base_position):
     rule = RevenueGrowthRule()
-    result = rule.evaluate(position)
+    result = rule.evaluate(base_position)
 
     engine = CommentEngine()
     comment = engine.generate(result)
 
     assert comment is None
+
+
+def test_negative_ebitda_comment_generated(base_position):
+    position = replace(
+        base_position,
+        ebitda=-50000,
+    )
+
+    rule = NegativeEbitdaRule()
+    result = rule.evaluate(position)
+
+    engine = CommentEngine()
+    comment = engine.generate(result)
+
+    assert comment is not None
+    assert comment.rule_id == "R002"
+    assert comment.text == "Negative EBITDA detected."
+
+
+def test_ebitda_margin_comment_generated(base_position):
+    position = replace(
+        base_position,
+        ebitda_margin=-0.05,
+    )
+
+    rule = EbitdaMarginRule()
+    result = rule.evaluate(position)
+
+    engine = CommentEngine()
+    comment = engine.generate(result)
+
+    assert comment is not None
+    assert comment.rule_id == "R003"
+    assert comment.text == "EBITDA margin is below acceptable threshold."
