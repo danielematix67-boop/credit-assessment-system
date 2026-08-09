@@ -1,3 +1,4 @@
+from src.models.assessment_status import AssessmentStatus
 from src.models.position import CreditPosition
 from src.rules.base.status import RuleStatus
 from src.services.service_factory import create_default_assessment_service
@@ -19,6 +20,7 @@ def test_default_assessment_service():
     assessment = service.assess(position)
 
     assert assessment.position_id == "POS001"
+    assert assessment.status == AssessmentStatus.CRITICAL
 
     # Five default rules are evaluated.
     assert len(assessment.rule_results) == 5
@@ -71,6 +73,12 @@ def test_default_assessment_service_with_healthy_position():
     assessment = service.assess(position)
 
     assert assessment.position_id == "POS002"
+    assert assessment.status == AssessmentStatus.NORMAL
 
     assert len(assessment.rule_results) == 5
     assert len(assessment.comments) == 0
+
+    assert all(
+        result.status == RuleStatus.NOT_TRIGGERED
+        for result in assessment.rule_results
+    )
