@@ -53,3 +53,24 @@ def test_default_assessment_service():
         "R003",
         "R004",
     ]
+
+
+def test_default_assessment_service_with_healthy_position():
+    position = CreditPosition(
+        position_id="POS002",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=3.5,
+        interest_expense=40000,
+    )
+
+    service = create_default_assessment_service()
+
+    assessment = service.assess(position)
+
+    assert assessment.position_id == "POS002"
+
+    assert len(assessment.rule_results) == 5
+    assert len(assessment.comments) == 0

@@ -95,3 +95,35 @@ def test_assessment_service_does_not_generate_comment_for_not_evaluable_rule():
         result.status != RuleStatus.NOT_EVALUABLE
         for result in assessment.rule_results[1:]
     )
+
+
+def test_assessment_service_generates_no_comments_for_healthy_position():
+    position = CreditPosition(
+        position_id="POS003",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=3.5,
+        interest_expense=40000,
+    )
+
+    rule_engine = RuleEngine(get_default_rules())
+    comment_engine = CommentEngine()
+
+    service = AssessmentService(
+        rule_engine=rule_engine,
+        comment_engine=comment_engine,
+    )
+
+    assessment = service.assess(position)
+
+    assert assessment.position_id == "POS003"
+
+    assert len(assessment.rule_results) == 5
+    assert len(assessment.comments) == 0
+
+    assert all(
+        result.status == RuleStatus.NOT_TRIGGERED
+        for result in assessment.rule_results
+    )

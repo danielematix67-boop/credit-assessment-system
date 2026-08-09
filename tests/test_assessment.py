@@ -1,69 +1,33 @@
-from src.comments.comment_engine import CommentEngine
-from src.engine.rule_engine import RuleEngine
-from src.models.position import CreditPosition
-from src.rules.base.config import RuleConfig
-from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
-from src.rules.revenue.revenue_growth import RevenueGrowthRule
-from src.services.assessment_service import AssessmentService
+from src.comments.comment import Comment
+from src.models.assessment import Assessment
+from src.rules.base.status import RuleStatus
+from src.rules.result import RuleResult
 
 
-def test_assessment_service_generates_assessment():
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=3.5,
-        interest_expense=40000,
-    )
-
-    revenue_growth_config = RuleConfig(
+def test_assessment_stores_position_id_rule_results_and_comments():
+    rule_result = RuleResult(
         rule_id="R001",
         rule_name="Revenue growth deterioration",
         category="revenue",
+        status=RuleStatus.TRIGGERED,
+        value=-0.15,
         threshold=-0.10,
     )
 
-    negative_ebitda_config = RuleConfig(
-        rule_id="R002",
-        rule_name="Negative EBITDA",
-        category="profitability",
-        threshold=0.0,
+    comment = Comment(
+        rule_id="R001",
+        text=(
+            "Revenue deterioration detected. "
+            "Revenue growth: -15.0% (threshold: -10.0%)."
+        ),
     )
 
-    rules = [
-        RevenueGrowthRule(revenue_growth_config),
-        NegativeEbitdaRule(negative_ebitda_config),
-    ]
-
-    rule_engine = RuleEngine(rules)
-    comment_engine = CommentEngine()
-
-    service = AssessmentService(
-        rule_engine=rule_engine,
-        comment_engine=comment_engine,
+    assessment = Assessment(
+        position_id="POS001",
+        rule_results=[rule_result],
+        comments=[comment],
     )
-
-    assessment = service.assess(position)
 
     assert assessment.position_id == "POS001"
-
-    assert len(assessment.rule_results) == 2
-
-    assert assessment.rule_results[0].rule_id == "R001"
-    assert assessment.rule_results[1].rule_id == "R002"
-
-    assert len(assessment.comments) == 2
-
-    assert assessment.comments[0].rule_id == "R001"
-    assert assessment.comments[0].text == (
-        "Revenue deterioration detected. "
-        "Revenue growth: -15.0% (threshold: -10.0%)."
-    )
-
-    assert assessment.comments[1].rule_id == "R002"
-    assert assessment.comments[1].text == (
-        "Negative EBITDA detected. "
-        "EBITDA: €-50,000 (threshold: €0)."
-    )
+    assert assessment.rule_results == [rule_result]
+    assert assessment.comments == [comment]
