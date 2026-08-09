@@ -5,6 +5,8 @@ import pytest
 from src.config.rule_config_loader import RuleConfigLoader
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
+from src.rules.registry import build_rules
+from src.rules.revenue.revenue_growth import RevenueGrowthRule
 
 
 RULES_CONFIG_PATH = Path("config/rules.yaml")
@@ -121,6 +123,20 @@ def test_rule_config_loader_raises_when_yaml_is_invalid(tmp_path):
         loader.load(config_path)
 
 
+def test_rule_config_loader_raises_when_yaml_is_empty(tmp_path):
+    config_path = tmp_path / "empty_rules.yaml"
+
+    config_path.write_text(
+        "",
+        encoding="utf-8",
+    )
+
+    loader = RuleConfigLoader()
+
+    with pytest.raises(ValueError):
+        loader.load(config_path)
+
+
 def test_rule_config_loader_raises_when_rules_section_is_missing(tmp_path):
     config_path = tmp_path / "missing_rules.yaml"
 
@@ -134,7 +150,7 @@ def test_rule_config_loader_raises_when_rules_section_is_missing(tmp_path):
 
     loader = RuleConfigLoader()
 
-    with pytest.raises(KeyError):
+    with pytest.raises(ValueError):
         loader.load(config_path)
 
 
@@ -147,14 +163,14 @@ def test_rule_config_loader_raises_when_required_field_is_missing(tmp_path):
           - rule_id: R001
             rule_name: Revenue growth deterioration
             category: revenue
-            severity: MEDIUM
+            threshold: -0.10
         """,
         encoding="utf-8",
     )
 
     loader = RuleConfigLoader()
 
-    with pytest.raises(KeyError):
+    with pytest.raises(ValueError):
         loader.load(config_path)
 
 
@@ -175,7 +191,34 @@ def test_rule_config_loader_raises_when_severity_is_invalid(tmp_path):
 
     loader = RuleConfigLoader()
 
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="Invalid severity for rule_id: R001",
+    ):
+        loader.load(config_path)
+
+
+def test_rule_config_loader_raises_when_threshold_is_not_numeric(tmp_path):
+    config_path = tmp_path / "invalid_threshold.yaml"
+
+    config_path.write_text(
+        """
+        rules:
+          - rule_id: R001
+            rule_name: Revenue growth deterioration
+            category: revenue
+            threshold: not-a-number
+            severity: MEDIUM
+        """,
+        encoding="utf-8",
+    )
+
+    loader = RuleConfigLoader()
+
+    with pytest.raises(
+        ValueError,
+        match="Invalid threshold for rule_id: R001",
+    ):
         loader.load(config_path)
 
 
@@ -205,103 +248,21 @@ def test_rule_config_loader_raises_when_rule_ids_are_duplicated(tmp_path):
     with pytest.raises(ValueError):
         loader.load(config_path)
 
-def test_rule_config_loader_raises_when_file_does_not_exist(tmp_path):
-    loader = RuleConfigLoader()
 
-    config_path = tmp_path / "missing_rules.yaml"
-
-    with pytest.raises(FileNotFoundError):
-        loader.load(config_path)
-
-
-def test_rule_config_loader_raises_when_yaml_is_empty(tmp_path):
-    config_path = tmp_path / "empty_rules.yaml"
-
-    config_path.write_text(
-        "",
-        encoding="utf-8",
+def test_build_rules_uses_configuration_threshold():
+    config = RuleConfig(
+        rule_id="R001",
+        rule_name="Revenue growth deterioration",
+        category="revenue",
+        threshold=-0.20,
+        severity=RuleSeverity.MEDIUM,
     )
 
-    loader = RuleConfigLoader()
+    rules = build_rules([config])
 
-    with pytest.raises(ValueError):
-        loader.load(config_path)
+    assert len(rules) == 1
+    assert isinstance(rules[0], RevenueGrowthRule)
 
-
-def test_rule_config_loader_raises_when_rules_section_is_missing(tmp_path):
-    config_path = tmp_path / "invalid_rules.yaml"
-
-    config_path.write_text(
-        """
-        configuration:
-          something: value
-        """,
-        encoding="utf-8",
-    )
-
-    loader = RuleConfigLoader()
-
-    with pytest.raises(ValueError):
-        loader.load(config_path)
-
-
-def test_rule_config_loader_raises_when_required_field_is_missing(tmp_path):
-    config_path = tmp_path / "invalid_rules.yaml"
-
-    config_path.write_text(
-        """
-        rules:
-          - rule_id: R001
-            rule_name: Revenue growth deterioration
-            category: revenue
-            threshold: -0.10
-        """,
-        encoding="utf-8",
-    )
-
-    loader = RuleConfigLoader()
-
-    with pytest.raises(ValueError):
-        loader.load(config_path)
-
-
-def test_rule_config_loader_raises_for_invalid_severity(tmp_path):
-    config_path = tmp_path / "invalid_rules.yaml"
-
-    config_path.write_text(
-        """
-        rules:
-          - rule_id: R001
-            rule_name: Revenue growth deterioration
-            category: revenue
-            threshold: -0.10
-            severity: INVALID
-        """,
-        encoding="utf-8",
-    )
-
-    loader = RuleConfigLoader()
-
-    with pytest.raises(ValueError):
-        loader.load(config_path)
-
-
-def test_rule_config_loader_raises_for_non_numeric_threshold(tmp_path):
-    config_path = tmp_path / "invalid_rules.yaml"
-
-    config_path.write_text(
-        """
-        rules:
-          - rule_id: R001
-            rule_name: Revenue growth deterioration
-            category: revenue
-            threshold: not_a_number
-            severity: MEDIUM
-        """,
-        encoding="utf-8",
-    )
-
-    loader = RuleConfigLoader()
-
-    with pytest.raises(ValueError):
-        loader.load(config_path)
+    assert rules[0].config.rule_id == "R001"
+    assert rules[0].config.threshold == -0.20
+    assert rules[0].config.severity == RuleSeverity.MEDIUM
