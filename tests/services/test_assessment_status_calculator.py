@@ -1,4 +1,5 @@
 from src.models.assessment_status import AssessmentStatus
+from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 from src.services.assessment_status_calculator import (
@@ -15,6 +16,7 @@ def test_returns_normal_when_no_rules_are_triggered():
             status=RuleStatus.NOT_TRIGGERED,
             value=0.05,
             threshold=-0.10,
+            severity=RuleSeverity.MEDIUM,
         ),
         RuleResult(
             rule_id="R002",
@@ -23,6 +25,7 @@ def test_returns_normal_when_no_rules_are_triggered():
             status=RuleStatus.NOT_TRIGGERED,
             value=250000,
             threshold=0.0,
+            severity=RuleSeverity.HIGH,
         ),
     ]
 
@@ -42,6 +45,7 @@ def test_returns_attention_when_at_least_one_rule_is_triggered():
             status=RuleStatus.TRIGGERED,
             value=-0.15,
             threshold=-0.10,
+            severity=RuleSeverity.MEDIUM,
         ),
         RuleResult(
             rule_id="R002",
@@ -50,6 +54,7 @@ def test_returns_attention_when_at_least_one_rule_is_triggered():
             status=RuleStatus.NOT_TRIGGERED,
             value=250000,
             threshold=0.0,
+            severity=RuleSeverity.HIGH,
         ),
     ]
 
@@ -69,6 +74,7 @@ def test_returns_normal_when_rules_are_not_evaluable():
             status=RuleStatus.NOT_EVALUABLE,
             value=None,
             threshold=-0.10,
+            severity=RuleSeverity.MEDIUM,
         ),
         RuleResult(
             rule_id="R002",
@@ -77,6 +83,7 @@ def test_returns_normal_when_rules_are_not_evaluable():
             status=RuleStatus.NOT_EVALUABLE,
             value=None,
             threshold=0.0,
+            severity=RuleSeverity.HIGH,
         ),
     ]
 
@@ -96,6 +103,7 @@ def test_returns_attention_when_triggered_and_not_evaluable_rules_are_present():
             status=RuleStatus.TRIGGERED,
             value=-0.15,
             threshold=-0.10,
+            severity=RuleSeverity.MEDIUM,
         ),
         RuleResult(
             rule_id="R002",
@@ -104,6 +112,7 @@ def test_returns_attention_when_triggered_and_not_evaluable_rules_are_present():
             status=RuleStatus.NOT_EVALUABLE,
             value=None,
             threshold=0.0,
+            severity=RuleSeverity.HIGH,
         ),
     ]
 
@@ -131,6 +140,7 @@ def test_returns_critical_when_at_least_two_rules_are_triggered():
             status=RuleStatus.TRIGGERED,
             value=-0.15,
             threshold=-0.10,
+            severity=RuleSeverity.MEDIUM,
         ),
         RuleResult(
             rule_id="R003",
@@ -139,6 +149,7 @@ def test_returns_critical_when_at_least_two_rules_are_triggered():
             status=RuleStatus.TRIGGERED,
             value=-0.05,
             threshold=0.0,
+            severity=RuleSeverity.MEDIUM,
         ),
         RuleResult(
             rule_id="R004",
@@ -147,6 +158,7 @@ def test_returns_critical_when_at_least_two_rules_are_triggered():
             status=RuleStatus.NOT_TRIGGERED,
             value=3.5,
             threshold=5.0,
+            severity=RuleSeverity.HIGH,
         ),
     ]
 

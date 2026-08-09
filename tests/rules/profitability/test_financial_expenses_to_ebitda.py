@@ -1,5 +1,6 @@
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
+from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.profitability.financial_expenses_to_ebitda import (
     FinancialExpensesToEbitdaRule,
@@ -11,6 +12,7 @@ R005_CONFIG = RuleConfig(
     rule_name="Interest expense to EBITDA",
     category="profitability",
     threshold=0.60,
+    severity=RuleSeverity.MEDIUM,
 )
 
 
@@ -34,6 +36,7 @@ def test_interest_expense_to_ebitda_rule_triggered():
     assert result.status == RuleStatus.TRIGGERED
     assert result.value == 0.8
     assert result.threshold == 0.60
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_interest_expense_to_ebitda_rule_not_triggered():
@@ -56,6 +59,7 @@ def test_interest_expense_to_ebitda_rule_not_triggered():
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == 0.4
     assert result.threshold == 0.60
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_interest_expense_to_ebitda_rule_not_evaluable_with_negative_ebitda():
@@ -78,6 +82,7 @@ def test_interest_expense_to_ebitda_rule_not_evaluable_with_negative_ebitda():
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
     assert result.threshold == 0.60
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_interest_expense_to_ebitda_rule_not_evaluable_when_interest_expense_none():
@@ -100,6 +105,7 @@ def test_interest_expense_to_ebitda_rule_not_evaluable_when_interest_expense_non
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
     assert result.threshold == 0.60
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_interest_expense_to_ebitda_rule_not_evaluable_when_ebitda_none():
@@ -122,6 +128,7 @@ def test_interest_expense_to_ebitda_rule_not_evaluable_when_ebitda_none():
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
     assert result.threshold == 0.60
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_interest_expense_to_ebitda_rule_not_evaluable_with_zero_ebitda():
@@ -144,6 +151,7 @@ def test_interest_expense_to_ebitda_rule_not_evaluable_with_zero_ebitda():
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
     assert result.threshold == 0.60
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_interest_expense_to_ebitda_rule_uses_configured_threshold():
@@ -152,6 +160,7 @@ def test_interest_expense_to_ebitda_rule_uses_configured_threshold():
         rule_name="Custom interest expense to EBITDA",
         category="profitability",
         threshold=1.00,
+        severity=RuleSeverity.HIGH,
     )
 
     position = CreditPosition(
@@ -173,3 +182,4 @@ def test_interest_expense_to_ebitda_rule_uses_configured_threshold():
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == 0.8
     assert result.threshold == 1.00
+    assert result.severity == RuleSeverity.HIGH

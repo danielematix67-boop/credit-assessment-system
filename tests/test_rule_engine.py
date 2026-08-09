@@ -2,6 +2,7 @@ from src.engine.rule_engine import RuleEngine
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.status import RuleStatus
+from src.rules.base.severity import RuleSeverity
 from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
 from src.rules.revenue.revenue_growth import RevenueGrowthRule
 from src.rules.profitability.ebitda_margin import EbitdaMarginRule
@@ -60,6 +61,7 @@ def test_rule_engine_preserves_rule_order():
         rule_name="PFN / EBITDA leverage",
         category="leverage",
         threshold=5.0,
+        severity=RuleSeverity.HIGH,
     )
 
     revenue_growth_config = RuleConfig(
@@ -67,6 +69,7 @@ def test_rule_engine_preserves_rule_order():
         rule_name="Revenue growth deterioration",
         category="revenue",
         threshold=-0.10,
+        severity=RuleSeverity.MEDIUM,
     )
 
     ebitda_margin_config = RuleConfig(
@@ -74,6 +77,7 @@ def test_rule_engine_preserves_rule_order():
         rule_name="EBITDA margin deterioration",
         category="profitability",
         threshold=0.0,
+        severity=RuleSeverity.MEDIUM,
     )
 
     negative_ebitda_config = RuleConfig(
@@ -81,6 +85,7 @@ def test_rule_engine_preserves_rule_order():
         rule_name="Negative EBITDA",
         category="profitability",
         threshold=0.0,
+        severity=RuleSeverity.HIGH,
     )
 
     rules = [

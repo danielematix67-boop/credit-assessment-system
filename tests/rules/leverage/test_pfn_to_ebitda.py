@@ -1,5 +1,6 @@
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
+from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
 
@@ -9,6 +10,7 @@ R004_CONFIG = RuleConfig(
     rule_name="PFN / EBITDA leverage",
     category="leverage",
     threshold=5.0,
+    severity=RuleSeverity.HIGH,
 )
 
 
@@ -32,6 +34,7 @@ def test_pfn_to_ebitda_rule_triggered():
     assert result.status == RuleStatus.TRIGGERED
     assert result.value == 6.0
     assert result.threshold == 5.0
+    assert result.severity == RuleSeverity.HIGH
 
 
 def test_pfn_to_ebitda_rule_not_triggered():
@@ -54,6 +57,7 @@ def test_pfn_to_ebitda_rule_not_triggered():
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == 3.5
     assert result.threshold == 5.0
+    assert result.severity == RuleSeverity.HIGH
 
 
 def test_pfn_to_ebitda_rule_not_evaluable_when_none():
@@ -76,6 +80,7 @@ def test_pfn_to_ebitda_rule_not_evaluable_when_none():
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
     assert result.threshold == 5.0
+    assert result.severity == RuleSeverity.HIGH
 
 
 def test_pfn_to_ebitda_rule_uses_configured_threshold():
@@ -84,6 +89,7 @@ def test_pfn_to_ebitda_rule_uses_configured_threshold():
         rule_name="Custom PFN / EBITDA threshold",
         category="leverage",
         threshold=7.0,
+        severity=RuleSeverity.MEDIUM,
     )
 
     position = CreditPosition(
@@ -105,3 +111,4 @@ def test_pfn_to_ebitda_rule_uses_configured_threshold():
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == 6.0
     assert result.threshold == 7.0
+    assert result.severity == RuleSeverity.MEDIUM

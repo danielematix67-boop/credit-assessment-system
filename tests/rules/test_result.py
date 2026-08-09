@@ -1,5 +1,6 @@
 import pytest
 
+from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
@@ -12,6 +13,7 @@ def test_rule_result_stores_evaluation_result():
         status=RuleStatus.TRIGGERED,
         value=-0.15,
         threshold=-0.10,
+        severity=RuleSeverity.MEDIUM,
     )
 
     assert result.rule_id == "R001"
@@ -20,6 +22,7 @@ def test_rule_result_stores_evaluation_result():
     assert result.status == RuleStatus.TRIGGERED
     assert result.value == -0.15
     assert result.threshold == -0.10
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_rule_result_is_immutable():
@@ -30,6 +33,7 @@ def test_rule_result_is_immutable():
         status=RuleStatus.TRIGGERED,
         value=-0.15,
         threshold=-0.10,
+        severity=RuleSeverity.MEDIUM,
     )
 
     with pytest.raises(AttributeError):

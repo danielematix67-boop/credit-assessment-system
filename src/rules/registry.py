@@ -1,5 +1,6 @@
 from src.rules.base.config import RuleConfig
 from src.rules.base.rule import Rule
+from src.rules.base.severity import RuleSeverity
 from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
 from src.rules.profitability.ebitda_margin import EbitdaMarginRule
 from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
@@ -25,6 +26,7 @@ def get_default_rules() -> list[Rule]:
                 rule_name="Revenue deterioration",
                 category="revenue",
                 threshold=-0.10,
+                severity=RuleSeverity.MEDIUM,
             )
         ),
         NegativeEbitdaRule(
@@ -33,6 +35,7 @@ def get_default_rules() -> list[Rule]:
                 rule_name="Negative EBITDA",
                 category="profitability",
                 threshold=0,
+                severity=RuleSeverity.HIGH,
             )
         ),
         EbitdaMarginRule(
@@ -41,6 +44,7 @@ def get_default_rules() -> list[Rule]:
                 rule_name="EBITDA margin deterioration",
                 category="profitability",
                 threshold=0.0,
+                severity=RuleSeverity.MEDIUM,
             )
         ),
         PfnToEbitdaRule(
@@ -49,6 +53,7 @@ def get_default_rules() -> list[Rule]:
                 rule_name="PFN / EBITDA leverage",
                 category="leverage",
                 threshold=5.0,
+                severity=RuleSeverity.HIGH,
             )
         ),
         FinancialExpensesToEbitdaRule(
@@ -57,6 +62,7 @@ def get_default_rules() -> list[Rule]:
                 rule_name="Interest expense to EBITDA",
                 category="profitability",
                 threshold=0.60,
+                severity=RuleSeverity.MEDIUM,
             )
         ),
     ]

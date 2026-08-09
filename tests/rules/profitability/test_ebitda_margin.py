@@ -1,5 +1,6 @@
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
+from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.profitability.ebitda_margin import EbitdaMarginRule
 
@@ -9,6 +10,7 @@ R003_CONFIG = RuleConfig(
     rule_name="EBITDA margin deterioration",
     category="profitability",
     threshold=0.0,
+    severity=RuleSeverity.MEDIUM,
 )
 
 
@@ -32,6 +34,7 @@ def test_ebitda_margin_rule_triggered():
     assert result.status == RuleStatus.TRIGGERED
     assert result.value == -0.05
     assert result.threshold == 0.0
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_ebitda_margin_rule_not_triggered():
@@ -54,6 +57,7 @@ def test_ebitda_margin_rule_not_triggered():
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == 0.12
     assert result.threshold == 0.0
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_ebitda_margin_rule_not_evaluable_when_none():
@@ -76,6 +80,7 @@ def test_ebitda_margin_rule_not_evaluable_when_none():
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
     assert result.threshold == 0.0
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_ebitda_margin_rule_uses_configured_threshold():
@@ -84,6 +89,7 @@ def test_ebitda_margin_rule_uses_configured_threshold():
         rule_name="Custom EBITDA margin threshold",
         category="profitability",
         threshold=-0.10,
+        severity=RuleSeverity.HIGH,
     )
 
     position = CreditPosition(
@@ -105,3 +111,4 @@ def test_ebitda_margin_rule_uses_configured_threshold():
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == -0.05
     assert result.threshold == -0.10
+    assert result.severity == RuleSeverity.HIGH

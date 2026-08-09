@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
+from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
+
 
 
 # RuleResult is the standardized output of a rule evaluation.
@@ -15,6 +17,7 @@ from src.rules.base.status import RuleStatus
 # accessing rule-specific logic.
 
 
+
 @dataclass(frozen=True)
 class RuleResult:
     rule_id: str
@@ -23,4 +26,6 @@ class RuleResult:
     status: RuleStatus
     value: float | None
     threshold: float
+    severity: RuleSeverity
+
 

@@ -1,6 +1,7 @@
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.status import RuleStatus
+from src.rules.base.severity import RuleSeverity
 from src.rules.revenue.revenue_growth import RevenueGrowthRule
 
 
@@ -9,6 +10,7 @@ R001_CONFIG = RuleConfig(
     rule_name="Revenue deterioration",
     category="revenue",
     threshold=-0.10,
+    severity=RuleSeverity.MEDIUM,
 )
 
 
@@ -28,10 +30,11 @@ def test_revenue_growth_rule_triggered():
 
     assert result.rule_id == "R001"
     assert result.rule_name == "Revenue deterioration"
+    assert result.category == "revenue"
     assert result.status == RuleStatus.TRIGGERED
     assert result.value == -0.15
     assert result.threshold == -0.10
-    assert result.category == "revenue"
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_revenue_growth_rule_not_triggered():
@@ -50,10 +53,11 @@ def test_revenue_growth_rule_not_triggered():
 
     assert result.rule_id == "R001"
     assert result.rule_name == "Revenue deterioration"
+    assert result.category == "revenue"
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == 0.05
     assert result.threshold == -0.10
-    assert result.category == "revenue"
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_revenue_growth_rule_not_evaluable_when_none():
@@ -72,10 +76,11 @@ def test_revenue_growth_rule_not_evaluable_when_none():
 
     assert result.rule_id == "R001"
     assert result.rule_name == "Revenue deterioration"
+    assert result.category == "revenue"
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
     assert result.threshold == -0.10
-    assert result.category == "revenue"
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_revenue_growth_rule_uses_configured_threshold():
@@ -84,6 +89,7 @@ def test_revenue_growth_rule_uses_configured_threshold():
         rule_name="Custom revenue deterioration",
         category="revenue",
         threshold=-0.20,
+        severity=RuleSeverity.HIGH,
     )
 
     position = CreditPosition(
@@ -101,7 +107,8 @@ def test_revenue_growth_rule_uses_configured_threshold():
 
     assert result.rule_id == "R001_CUSTOM"
     assert result.rule_name == "Custom revenue deterioration"
+    assert result.category == "revenue"
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == -0.15
     assert result.threshold == -0.20
-    assert result.category == "revenue"
+    assert result.severity == RuleSeverity.HIGH

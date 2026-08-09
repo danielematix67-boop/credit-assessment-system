@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from src.rules.base.severity import RuleSeverity
+
 
 @dataclass(frozen=True)
 class RuleConfig:
@@ -7,3 +9,4 @@ class RuleConfig:
     rule_name: str
     category: str
     threshold: float
+    severity: RuleSeverity

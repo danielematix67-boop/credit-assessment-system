@@ -4,6 +4,7 @@ from dataclasses import replace
 from src.comments.comment_engine import CommentEngine
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
+from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.revenue.revenue_growth import RevenueGrowthRule
 from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
@@ -38,6 +39,7 @@ def test_comment_generated_when_rule_is_triggered(base_position):
         rule_name="Revenue growth deterioration",
         category="revenue",
         threshold=-0.10,
+        severity=RuleSeverity.MEDIUM,
     )
 
     rule = RevenueGrowthRule(config)
@@ -61,6 +63,7 @@ def test_no_comment_generated_when_rule_is_not_triggered(base_position):
         rule_name="Revenue growth deterioration",
         category="revenue",
         threshold=-0.10,
+        severity=RuleSeverity.MEDIUM,
     )
 
     rule = RevenueGrowthRule(config)
@@ -83,6 +86,7 @@ def test_negative_ebitda_comment_generated(base_position):
         rule_name="Negative EBITDA",
         category="profitability",
         threshold=0.0,
+        severity=RuleSeverity.HIGH,
     )
 
     rule = NegativeEbitdaRule(config)
@@ -111,6 +115,7 @@ def test_ebitda_margin_comment_generated(base_position):
         rule_name="EBITDA margin deterioration",
         category="profitability",
         threshold=0.0,
+        severity=RuleSeverity.MEDIUM,
     )
 
     rule = EbitdaMarginRule(config)
@@ -139,6 +144,7 @@ def test_pfn_to_ebitda_comment_generated(base_position):
         rule_name="PFN / EBITDA leverage",
         category="leverage",
         threshold=5.0,
+        severity=RuleSeverity.HIGH,
     )
 
     rule = PfnToEbitdaRule(config)
@@ -167,6 +173,7 @@ def test_interest_expense_to_ebitda_comment_generated(base_position):
         rule_name="Interest expense to EBITDA",
         category="profitability",
         threshold=0.60,
+        severity=RuleSeverity.MEDIUM,
     )
 
     rule = FinancialExpensesToEbitdaRule(config)
@@ -183,6 +190,7 @@ def test_interest_expense_to_ebitda_comment_generated(base_position):
         "(threshold: 60.0%)."
     )
 
+
 def test_no_comment_generated_when_rule_is_not_evaluable(base_position):
     position = replace(
         base_position,
@@ -194,6 +202,7 @@ def test_no_comment_generated_when_rule_is_not_evaluable(base_position):
         rule_name="Revenue growth deterioration",
         category="revenue",
         threshold=-0.10,
+        severity=RuleSeverity.MEDIUM,
     )
 
     rule = RevenueGrowthRule(config)
@@ -204,4 +213,3 @@ def test_no_comment_generated_when_rule_is_not_evaluable(base_position):
 
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert comment is None
-

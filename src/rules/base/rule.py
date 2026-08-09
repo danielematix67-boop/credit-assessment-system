@@ -40,6 +40,7 @@ class Rule(ABC):
             status=status,
             value=value,
             threshold=self.config.threshold,
+            severity=self.config.severity,
         )
 
     def _not_evaluable(self) -> RuleResult:
