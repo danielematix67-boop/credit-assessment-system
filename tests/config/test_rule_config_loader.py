@@ -17,7 +17,7 @@ def test_rule_config_loader_loads_all_rules():
 
     configs = loader.load(RULES_CONFIG_PATH)
 
-    assert len(configs) == 5
+    assert len(configs) == 6
 
 
 def test_rule_config_loader_loads_rule_ids():
@@ -31,6 +31,7 @@ def test_rule_config_loader_loads_rule_ids():
         "R003",
         "R004",
         "R005",
+        "R006",
     ]
 
 
@@ -41,30 +42,44 @@ def test_rule_config_loader_loads_rule_configuration():
 
     config = {item.rule_id: item for item in configs}
 
+    # R001 - Revenue growth deterioration
     assert config["R001"].rule_name == "Revenue growth deterioration"
     assert config["R001"].category == "revenue"
     assert config["R001"].threshold == -0.10
     assert config["R001"].severity == RuleSeverity.MEDIUM
 
+    # R002 - Negative EBITDA
     assert config["R002"].rule_name == "Negative EBITDA"
     assert config["R002"].category == "profitability"
     assert config["R002"].threshold == 0.0
     assert config["R002"].severity == RuleSeverity.HIGH
 
+    # R003 - EBITDA margin deterioration
     assert config["R003"].rule_name == "EBITDA margin deterioration"
     assert config["R003"].category == "profitability"
     assert config["R003"].threshold == 0.0
     assert config["R003"].severity == RuleSeverity.MEDIUM
 
+    # R004 - PFN / EBITDA leverage
     assert config["R004"].rule_name == "PFN / EBITDA leverage"
     assert config["R004"].category == "leverage"
     assert config["R004"].threshold == 5.0
     assert config["R004"].severity == RuleSeverity.HIGH
 
+    # R005 - Interest expense to EBITDA
     assert config["R005"].rule_name == "Interest expense to EBITDA"
     assert config["R005"].category == "profitability"
     assert config["R005"].threshold == 0.60
     assert config["R005"].severity == RuleSeverity.MEDIUM
+
+    # R006 - EBITDA materially supported by finished goods inventory increase
+    assert (
+        config["R006"].rule_name
+        == "EBITDA materially supported by finished goods inventory increase"
+    )
+    assert config["R006"].category == "profitability_quality"
+    assert config["R006"].threshold == 0.30
+    assert config["R006"].severity == RuleSeverity.MEDIUM
 
 
 def test_rule_config_loader_preserves_rule_order():
@@ -78,6 +93,7 @@ def test_rule_config_loader_preserves_rule_order():
         "R003",
         "R004",
         "R005",
+        "R006",
     ]
 
 

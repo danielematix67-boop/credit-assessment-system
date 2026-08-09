@@ -42,6 +42,7 @@ class CreditPosition:
     ebitda: float | None = None
     profit_loss: float | None = None
     ebitda_margin: float | None = None
+    ebitda_inventory_contribution: float | None = None
 
     # =========================
     # Leverage / financial structure
@@ -55,3 +56,5 @@ class CreditPosition:
     # =========================
 
     revenue_growth: float | None = None
+
+    

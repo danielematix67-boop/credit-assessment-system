@@ -1,15 +1,19 @@
+from pathlib import Path
+
+from src.config.rule_configuration import RuleConfiguration
 from src.engine.rule_engine import RuleEngine
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
-from src.rules.base.status import RuleStatus
 from src.rules.base.severity import RuleSeverity
+from src.rules.base.status import RuleStatus
+from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
+from src.rules.profitability.ebitda_inventory_contribution import (
+    EbitdaInventoryContributionRule,
+)
+from src.rules.profitability.ebitda_margin import EbitdaMarginRule
 from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
 from src.rules.revenue.revenue_growth import RevenueGrowthRule
-from src.rules.profitability.ebitda_margin import EbitdaMarginRule
-from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
 from src.rules.registry import build_rules, get_default_rules
-from pathlib import Path
-from src.config.rule_configuration import RuleConfiguration
 
 
 def test_rule_engine_evaluates_all_rules():
@@ -29,7 +33,7 @@ def test_rule_engine_evaluates_all_rules():
 
     results = engine.evaluate(position)
 
-    assert len(results) == 5
+    assert len(results) == 6
 
     assert results[0].rule_id == "R001"
     assert results[0].status == RuleStatus.TRIGGERED
@@ -45,6 +49,13 @@ def test_rule_engine_evaluates_all_rules():
 
     assert results[4].rule_id == "R005"
     assert results[4].status == RuleStatus.NOT_EVALUABLE
+
+    # R006 - EBITDA materially supported by finished goods
+    # inventory increase.
+    # Cannot be evaluated because the inventory variation is missing.
+    assert results[5].rule_id == "R006"
+    assert results[5].status == RuleStatus.NOT_EVALUABLE
+    assert results[5].value is None
 
 
 def test_rule_engine_preserves_rule_order():
@@ -151,6 +162,14 @@ def test_rule_engine_preserves_not_evaluable_status():
     assert revenue_growth_result.value is None
     assert revenue_growth_result.threshold == -0.10
 
+    # R006 is also not evaluable because the finished goods
+    # inventory variation is missing.
+    inventory_contribution_result = results[5]
+
+    assert inventory_contribution_result.rule_id == "R006"
+    assert inventory_contribution_result.status == RuleStatus.NOT_EVALUABLE
+    assert inventory_contribution_result.value is None
+
 
 def test_get_default_rules_uses_custom_configuration(tmp_path):
     config_path = tmp_path / "rules.yaml"
@@ -196,5 +215,3 @@ def test_build_rules_uses_configuration_threshold():
     assert rules[0].config.rule_id == "R001"
     assert rules[0].config.threshold == -0.20
     assert rules[0].config.severity == RuleSeverity.MEDIUM
-
-

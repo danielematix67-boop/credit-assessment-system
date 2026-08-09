@@ -19,7 +19,7 @@ def test_assessment_service_generates_critical_assessment(assessment_service):
     assert assessment.position_id == "POS001"
     assert assessment.status == AssessmentStatus.CRITICAL
 
-    assert len(assessment.rule_results) == 5
+    assert len(assessment.rule_results) == 6
     assert len(assessment.comments) == 4
 
     results = {
@@ -38,6 +38,12 @@ def test_assessment_service_generates_critical_assessment(assessment_service):
     assert results["R003"].status == RuleStatus.TRIGGERED
     assert results["R004"].status == RuleStatus.TRIGGERED
     assert results["R005"].status == RuleStatus.NOT_EVALUABLE
+
+    # R006 - EBITDA materially supported by finished goods
+    # inventory increase.
+    # Cannot be evaluated because inventory variation is missing.
+    assert results["R006"].status == RuleStatus.NOT_EVALUABLE
+    assert results["R006"].value is None
 
     # Generated comments
     assert comments["R001"].text == (
@@ -79,7 +85,7 @@ def test_assessment_service_generates_normal_assessment_when_rule_is_not_evaluab
     assert assessment.position_id == "POS002"
     assert assessment.status == AssessmentStatus.NORMAL
 
-    assert len(assessment.rule_results) == 5
+    assert len(assessment.rule_results) == 6
     assert len(assessment.comments) == 0
 
     results = {
@@ -87,13 +93,20 @@ def test_assessment_service_generates_normal_assessment_when_rule_is_not_evaluab
         for result in assessment.rule_results
     }
 
+    # R001 cannot be evaluated because revenue growth is missing.
     assert results["R001"].status == RuleStatus.NOT_EVALUABLE
     assert results["R001"].value is None
 
+    # R006 cannot be evaluated because finished goods inventory
+    # variation is missing.
+    assert results["R006"].status == RuleStatus.NOT_EVALUABLE
+    assert results["R006"].value is None
+
+    # All other rules are evaluable and not triggered.
     assert all(
-        result.status != RuleStatus.NOT_EVALUABLE
+        result.status == RuleStatus.NOT_TRIGGERED
         for result in assessment.rule_results
-        if result.rule_id != "R001"
+        if result.rule_id not in {"R001", "R006"}
     )
 
 
@@ -113,13 +126,25 @@ def test_assessment_service_generates_normal_assessment(assessment_service):
     assert assessment.position_id == "POS003"
     assert assessment.status == AssessmentStatus.NORMAL
 
-    assert len(assessment.rule_results) == 5
+    assert len(assessment.rule_results) == 6
     assert len(assessment.comments) == 0
 
+    results = {
+        result.rule_id: result
+        for result in assessment.rule_results
+    }
+
+    # Existing rules are not triggered.
     assert all(
         result.status == RuleStatus.NOT_TRIGGERED
         for result in assessment.rule_results
+        if result.rule_id != "R006"
     )
+
+    # R006 cannot be evaluated because finished goods inventory
+    # variation is missing.
+    assert results["R006"].status == RuleStatus.NOT_EVALUABLE
+    assert results["R006"].value is None
 
 
 def test_assessment_service_generates_attention_assessment(assessment_service):
@@ -138,13 +163,23 @@ def test_assessment_service_generates_attention_assessment(assessment_service):
     assert assessment.position_id == "POS004"
     assert assessment.status == AssessmentStatus.ATTENTION
 
-    assert len(assessment.rule_results) == 5
+    assert len(assessment.rule_results) == 6
     assert len(assessment.comments) == 1
+
+    results = {
+        result.rule_id: result
+        for result in assessment.rule_results
+    }
 
     comments = {
         comment.rule_id: comment
         for comment in assessment.comments
     }
+
+    # R006 cannot be evaluated because finished goods inventory
+    # variation is missing.
+    assert results["R006"].status == RuleStatus.NOT_EVALUABLE
+    assert results["R006"].value is None
 
     assert comments["R004"].text == (
         "Leverage is above the acceptable threshold. "

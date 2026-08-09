@@ -1,7 +1,11 @@
 import pytest
+
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
 from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
+from src.rules.profitability.ebitda_inventory_contribution import (
+    EbitdaInventoryContributionRule,
+)
 from src.rules.profitability.ebitda_margin import EbitdaMarginRule
 from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
 from src.rules.profitability.financial_expenses_to_ebitda import (
@@ -14,7 +18,7 @@ from src.rules.registry import build_rules, get_default_rules
 def test_default_rules_registry():
     rules = get_default_rules()
 
-    assert len(rules) == 5
+    assert len(rules) == 6
 
     expected = [
         (
@@ -57,6 +61,14 @@ def test_default_rules_registry():
             0.60,
             RuleSeverity.MEDIUM,
         ),
+        (
+            EbitdaInventoryContributionRule,
+            "R006",
+            "EBITDA materially supported by finished goods inventory increase",
+            "profitability_quality",
+            0.30,
+            RuleSeverity.MEDIUM,
+        ),
     ]
 
     for rule, (
@@ -84,6 +96,7 @@ def test_default_rules_registry_preserves_yaml_order():
         "R003",
         "R004",
         "R005",
+        "R006",
     ]
 
 
@@ -135,17 +148,25 @@ def test_build_rules_creates_correct_rule_types():
             threshold=0.60,
             severity=RuleSeverity.MEDIUM,
         ),
+        RuleConfig(
+            rule_id="R006",
+            rule_name="EBITDA materially supported by finished goods inventory increase",
+            category="profitability_quality",
+            threshold=0.30,
+            severity=RuleSeverity.MEDIUM,
+        ),
     ]
 
     rules = build_rules(configs)
 
-    assert len(rules) == 5
+    assert len(rules) == 6
 
     assert isinstance(rules[0], RevenueGrowthRule)
     assert isinstance(rules[1], NegativeEbitdaRule)
     assert isinstance(rules[2], EbitdaMarginRule)
     assert isinstance(rules[3], PfnToEbitdaRule)
     assert isinstance(rules[4], FinancialExpensesToEbitdaRule)
+    assert isinstance(rules[5], EbitdaInventoryContributionRule)
 
 
 def test_build_rules_preserves_configuration_order():
@@ -165,6 +186,13 @@ def test_build_rules_preserves_configuration_order():
             severity=RuleSeverity.MEDIUM,
         ),
         RuleConfig(
+            rule_id="R006",
+            rule_name="EBITDA materially supported by finished goods inventory increase",
+            category="profitability_quality",
+            threshold=0.30,
+            severity=RuleSeverity.MEDIUM,
+        ),
+        RuleConfig(
             rule_id="R002",
             rule_name="Negative EBITDA",
             category="profitability",
@@ -178,6 +206,7 @@ def test_build_rules_preserves_configuration_order():
     assert [rule.config.rule_id for rule in rules] == [
         "R004",
         "R001",
+        "R006",
         "R002",
     ]
 
@@ -197,6 +226,7 @@ def test_build_rules_preserves_configuration_object():
     assert isinstance(rules[0], PfnToEbitdaRule)
 
     assert rules[0].config is config
+
 
 def test_build_rules_raises_for_unknown_rule_id():
     config = RuleConfig(
@@ -228,4 +258,3 @@ def test_build_rules_uses_configuration_threshold():
     assert rules[0].config.rule_id == "R001"
     assert rules[0].config.threshold == -0.20
     assert rules[0].config.severity == RuleSeverity.MEDIUM
-

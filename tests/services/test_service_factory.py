@@ -22,7 +22,7 @@ def test_default_assessment_service_generates_critical_assessment():
     assert assessment.position_id == "POS001"
     assert assessment.status == AssessmentStatus.CRITICAL
 
-    assert len(assessment.rule_results) == 5
+    assert len(assessment.rule_results) == 6
     assert len(assessment.comments) == 4
 
     results = {
@@ -52,6 +52,13 @@ def test_default_assessment_service_generates_critical_assessment():
     assert results["R005"].status == RuleStatus.NOT_EVALUABLE
     assert results["R005"].value is None
 
+    # R006 - EBITDA materially supported by finished goods
+    # inventory increase.
+    # Cannot be evaluated because the inventory variation
+    # is not provided.
+    assert results["R006"].status == RuleStatus.NOT_EVALUABLE
+    assert results["R006"].value is None
+
     # Only triggered rules generate comments.
     assert set(comments.keys()) == {
         "R001",
@@ -79,10 +86,22 @@ def test_default_assessment_service_generates_normal_assessment():
     assert assessment.position_id == "POS002"
     assert assessment.status == AssessmentStatus.NORMAL
 
-    assert len(assessment.rule_results) == 5
+    assert len(assessment.rule_results) == 6
     assert len(assessment.comments) == 0
 
+    results = {
+        result.rule_id: result
+        for result in assessment.rule_results
+    }
+
+    # Existing rules are not triggered.
     assert all(
         result.status == RuleStatus.NOT_TRIGGERED
-        for result in assessment.rule_results
+        for rule_id, result in results.items()
+        if rule_id != "R006"
     )
+
+    # R006 cannot be evaluated because the finished goods
+    # inventory variation is not provided.
+    assert results["R006"].status == RuleStatus.NOT_EVALUABLE
+    assert results["R006"].value is None

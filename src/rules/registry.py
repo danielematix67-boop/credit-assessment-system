@@ -3,6 +3,7 @@ from src.config.rule_configuration import RuleConfiguration
 from src.rules.base.config import RuleConfig
 from src.rules.base.rule import Rule
 from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
+from src.rules.profitability.ebitda_inventory_contribution import EbitdaInventoryContributionRule
 from src.rules.profitability.ebitda_margin import EbitdaMarginRule
 from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
 from src.rules.profitability.financial_expenses_to_ebitda import (
@@ -17,6 +18,7 @@ _RULE_FACTORIES = {
     "R003": EbitdaMarginRule,
     "R004": PfnToEbitdaRule,
     "R005": FinancialExpensesToEbitdaRule,
+    "R006": EbitdaInventoryContributionRule,
 }
 
 

@@ -28,3 +28,10 @@ rules:
     category: profitability
     threshold: 0.60
     severity: MEDIUM
+
+  - rule_id: R006
+    rule_name: EBITDA materially supported by finished goods inventory increase
+    category: profitability_quality
+    threshold: 0.30
+    severity: MEDIUM
+  
