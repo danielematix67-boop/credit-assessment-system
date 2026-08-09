@@ -4,7 +4,6 @@ from src.rules.base.status import RuleStatus
 from src.rules.revenue.revenue_growth import RevenueGrowthRule
 
 
-
 R001_CONFIG = RuleConfig(
     rule_id="R001",
     rule_name="Revenue deterioration",
@@ -74,4 +73,32 @@ def test_revenue_growth_rule_not_evaluable_when_none():
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
     assert result.threshold == -0.10
+    assert result.category == "revenue"
+
+
+def test_revenue_growth_rule_uses_configured_threshold():
+    config = RuleConfig(
+        rule_id="R001_CUSTOM",
+        rule_name="Custom revenue deterioration",
+        category="revenue",
+        threshold=-0.20,
+    )
+
+    position = CreditPosition(
+        position_id="POS003",
+        revenue_growth=-0.15,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=3.5,
+        interest_expense=40000,
+    )
+
+    rule = RevenueGrowthRule(config)
+    result = rule.evaluate(position)
+
+    assert result.rule_id == "R001_CUSTOM"
+    assert result.status == RuleStatus.NOT_TRIGGERED
+    assert result.value == -0.15
+    assert result.threshold == -0.20
     assert result.category == "revenue"
