@@ -1,8 +1,6 @@
-
 from src.models.position import CreditPosition
 from src.rules.base.rule import Rule
 from src.rules.base.status import RuleStatus
-from src.rules.result import RuleResult
 
 
 class PfnToEbitdaRule(Rule):
@@ -15,18 +13,12 @@ class PfnToEbitdaRule(Rule):
     category = "leverage"
     threshold = 5.0
 
-    def evaluate(self, position: CreditPosition) -> RuleResult:
+    def evaluate(self, position: CreditPosition):
+
         value = position.pfn_to_ebitda
 
         if value is None:
-            return RuleResult(
-                rule_id=self.rule_id,
-                rule_name=self.rule_name,
-                category=self.category,
-                status=RuleStatus.NOT_EVALUABLE,
-                value=None,
-                threshold=self.threshold,
-            )
+            return self._not_evaluable()
 
         status = (
             RuleStatus.TRIGGERED
@@ -34,11 +26,7 @@ class PfnToEbitdaRule(Rule):
             else RuleStatus.NOT_TRIGGERED
         )
 
-        return RuleResult(
-            rule_id=self.rule_id,
-            rule_name=self.rule_name,
-            category=self.category,
-            status=status,
+        return self._result(
             value=value,
-            threshold=self.threshold,
+            status=status,
         )

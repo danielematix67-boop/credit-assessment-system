@@ -9,7 +9,6 @@ from src.rules.result import RuleResult
 # The rule evaluates revenue growth against the configured threshold
 # and returns a standardized RuleResult.
 
-
 class RevenueGrowthRule(Rule):
 
     rule_id = "R001"
