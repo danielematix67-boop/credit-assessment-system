@@ -12,7 +12,7 @@ class RuleConfigLoader:
         with path.open("r", encoding="utf-8") as file:
             data = yaml.safe_load(file)
 
-        return [
+        configs = [
             RuleConfig(
                 rule_id=item["rule_id"],
                 rule_name=item["rule_name"],
@@ -22,3 +22,10 @@ class RuleConfigLoader:
             )
             for item in data["rules"]
         ]
+
+        rule_ids = [config.rule_id for config in configs]
+
+        if len(rule_ids) != len(set(rule_ids)):
+            raise ValueError("Duplicate rule_id found in rule configuration")
+
+        return configs

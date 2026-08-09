@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from src.config.rule_config_loader import RuleConfigLoader
+from src.rules.base.config import RuleConfig
 from src.rules.base.rule import Rule
 from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
 from src.rules.profitability.ebitda_margin import EbitdaMarginRule
@@ -23,11 +24,21 @@ _RULE_FACTORIES = {
 }
 
 
+def build_rules(configs: list[RuleConfig]) -> list[Rule]:
+    rules = []
+
+    for config in configs:
+        factory = _RULE_FACTORIES.get(config.rule_id)
+
+        if factory is None:
+            raise ValueError(f"Unknown rule_id: {config.rule_id}")
+
+        rules.append(factory(config))
+
+    return rules
+
 def get_default_rules() -> list[Rule]:
     loader = RuleConfigLoader()
     configs = loader.load(RULES_CONFIG_PATH)
 
-    return [
-        _RULE_FACTORIES[config.rule_id](config)
-        for config in configs
-    ]
+    return build_rules(configs)

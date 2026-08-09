@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from src.config.rule_config_loader import RuleConfigLoader
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
@@ -86,3 +88,119 @@ def test_rule_config_loader_returns_rule_config_objects():
         isinstance(config, RuleConfig)
         for config in configs
     )
+
+
+def test_rule_config_loader_raises_when_file_does_not_exist(tmp_path):
+    loader = RuleConfigLoader()
+
+    missing_path = tmp_path / "missing_rules.yaml"
+
+    with pytest.raises(FileNotFoundError):
+        loader.load(missing_path)
+
+
+def test_rule_config_loader_raises_when_yaml_is_invalid(tmp_path):
+    config_path = tmp_path / "invalid_rules.yaml"
+
+    config_path.write_text(
+        """
+        rules:
+          - rule_id: R001
+            rule_name: Revenue growth deterioration
+            category: revenue
+            threshold: -0.10
+            severity: MEDIUM
+          invalid yaml: [
+        """,
+        encoding="utf-8",
+    )
+
+    loader = RuleConfigLoader()
+
+    with pytest.raises(Exception):
+        loader.load(config_path)
+
+
+def test_rule_config_loader_raises_when_rules_section_is_missing(tmp_path):
+    config_path = tmp_path / "missing_rules.yaml"
+
+    config_path.write_text(
+        """
+        configuration:
+          enabled: true
+        """,
+        encoding="utf-8",
+    )
+
+    loader = RuleConfigLoader()
+
+    with pytest.raises(KeyError):
+        loader.load(config_path)
+
+
+def test_rule_config_loader_raises_when_required_field_is_missing(tmp_path):
+    config_path = tmp_path / "missing_field.yaml"
+
+    config_path.write_text(
+        """
+        rules:
+          - rule_id: R001
+            rule_name: Revenue growth deterioration
+            category: revenue
+            severity: MEDIUM
+        """,
+        encoding="utf-8",
+    )
+
+    loader = RuleConfigLoader()
+
+    with pytest.raises(KeyError):
+        loader.load(config_path)
+
+
+def test_rule_config_loader_raises_when_severity_is_invalid(tmp_path):
+    config_path = tmp_path / "invalid_severity.yaml"
+
+    config_path.write_text(
+        """
+        rules:
+          - rule_id: R001
+            rule_name: Revenue growth deterioration
+            category: revenue
+            threshold: -0.10
+            severity: INVALID
+        """,
+        encoding="utf-8",
+    )
+
+    loader = RuleConfigLoader()
+
+    with pytest.raises(ValueError):
+        loader.load(config_path)
+
+
+def test_rule_config_loader_raises_when_rule_ids_are_duplicated(tmp_path):
+    config_path = tmp_path / "duplicate_rules.yaml"
+
+    config_path.write_text(
+        """
+        rules:
+          - rule_id: R001
+            rule_name: Revenue growth deterioration
+            category: revenue
+            threshold: -0.10
+            severity: MEDIUM
+
+          - rule_id: R001
+            rule_name: Another rule
+            category: revenue
+            threshold: -0.20
+            severity: LOW
+        """,
+        encoding="utf-8",
+    )
+
+    loader = RuleConfigLoader()
+
+    with pytest.raises(ValueError):
+        loader.load(config_path)
