@@ -2,9 +2,12 @@ from src.config.rule_config_loader import RuleConfigLoader
 from src.config.rule_configuration import RuleConfiguration
 from src.rules.base.config import RuleConfig
 from src.rules.base.rule import Rule
+from src.rules.discovery import discover_rules
 
 
 def build_rules(configs: list[RuleConfig]) -> list[Rule]:
+    discover_rules()
+
     rules = []
 
     for config in configs:
