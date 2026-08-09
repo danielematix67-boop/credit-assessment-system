@@ -1,6 +1,8 @@
 from src.models.position import CreditPosition
 from src.rules.base.rule import Rule
+from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
+
 
 # Each rule should be implemented as a separate class with a unique rule_id.
 #
@@ -22,10 +24,9 @@ class FinancialExpensesToEbitdaRule(Rule):
                 rule_id=self.rule_id,
                 rule_name=self.rule_name,
                 category=self.category,
-                triggered=False,
+                status=RuleStatus.NOT_EVALUABLE,
                 value=None,
                 threshold=self.threshold,
-                status="NOT_EVALUABLE",
             )
 
         if position.ebitda is None:
@@ -33,10 +34,9 @@ class FinancialExpensesToEbitdaRule(Rule):
                 rule_id=self.rule_id,
                 rule_name=self.rule_name,
                 category=self.category,
-                triggered=False,
+                status=RuleStatus.NOT_EVALUABLE,
                 value=None,
                 threshold=self.threshold,
-                status="NOT_EVALUABLE",
             )
 
         if position.ebitda <= 0:
@@ -44,20 +44,24 @@ class FinancialExpensesToEbitdaRule(Rule):
                 rule_id=self.rule_id,
                 rule_name=self.rule_name,
                 category=self.category,
-                triggered=False,
+                status=RuleStatus.NOT_EVALUABLE,
                 value=None,
                 threshold=self.threshold,
-                status="NOT_EVALUABLE",
             )
 
         value = position.interest_expense / position.ebitda
+
+        status = (
+            RuleStatus.TRIGGERED
+            if value > self.threshold
+            else RuleStatus.NOT_TRIGGERED
+        )
 
         return RuleResult(
             rule_id=self.rule_id,
             rule_name=self.rule_name,
             category=self.category,
-            triggered=value > self.threshold,
+            status=status,
             value=value,
             threshold=self.threshold,
-            status="OK",
         )

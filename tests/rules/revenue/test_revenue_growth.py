@@ -1,4 +1,5 @@
 from src.models.position import CreditPosition
+from src.rules.base.status import RuleStatus
 from src.rules.revenue.revenue_growth import RevenueGrowthRule
 
 
@@ -10,17 +11,18 @@ def test_revenue_growth_rule_triggered():
         profit_loss=-50000,
         ebitda_margin=-0.05,
         pfn_to_ebitda=3.5,
-        interest_expense=40000
+        interest_expense=40000,
     )
 
     rule = RevenueGrowthRule()
     result = rule.evaluate(position)
 
     assert result.rule_id == "R001"
-    assert result.triggered is True
+    assert result.status == RuleStatus.TRIGGERED
     assert result.value == -0.15
     assert result.threshold == -0.10
     assert result.category == "revenue"
+
 
 def test_revenue_growth_rule_not_triggered():
     position = CreditPosition(
@@ -30,17 +32,18 @@ def test_revenue_growth_rule_not_triggered():
         profit_loss=50000,
         ebitda_margin=-0.05,
         pfn_to_ebitda=3.5,
-        interest_expense=40000
+        interest_expense=40000,
     )
 
     rule = RevenueGrowthRule()
     result = rule.evaluate(position)
 
     assert result.rule_id == "R001"
-    assert result.triggered is False
+    assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == 0.05
     assert result.threshold == -0.10
     assert result.category == "revenue"
+
 
 def test_revenue_growth_rule_not_evaluable_when_none():
     position = CreditPosition(
@@ -58,8 +61,6 @@ def test_revenue_growth_rule_not_evaluable_when_none():
     result = rule.evaluate(position)
 
     assert result.rule_id == "R001"
-    assert result.triggered is False
+    assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
     assert result.threshold == -0.10
-    assert result.status == "NOT_EVALUABLE"
-

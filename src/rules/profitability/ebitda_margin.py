@@ -1,7 +1,8 @@
-
 from src.models.position import CreditPosition
-from src.rules.result import RuleResult
 from src.rules.base.rule import Rule
+from src.rules.base.status import RuleStatus
+from src.rules.result import RuleResult
+
 
 # Each rule should be implemented as a separate class with a unique rule_id.
 #
@@ -23,20 +24,22 @@ class EbitdaMarginRule(Rule):
                 rule_id=self.rule_id,
                 rule_name=self.rule_name,
                 category=self.category,
-                triggered=False,
+                status=RuleStatus.NOT_EVALUABLE,
                 value=None,
                 threshold=self.threshold,
-                status="NOT_EVALUABLE",
             )
 
-        triggered = position.ebitda_margin < self.threshold
+        status = (
+            RuleStatus.TRIGGERED
+            if position.ebitda_margin < self.threshold
+            else RuleStatus.NOT_TRIGGERED
+        )
 
         return RuleResult(
             rule_id=self.rule_id,
             rule_name=self.rule_name,
             category=self.category,
-            triggered=triggered,
+            status=status,
             value=position.ebitda_margin,
             threshold=self.threshold,
-            status="OK",
         )

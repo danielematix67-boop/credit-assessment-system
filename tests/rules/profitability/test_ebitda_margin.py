@@ -1,5 +1,7 @@
 from src.models.position import CreditPosition
+from src.rules.base.status import RuleStatus
 from src.rules.profitability.ebitda_margin import EbitdaMarginRule
+
 
 def test_ebitda_margin_rule_triggered():
     position = CreditPosition(
@@ -9,7 +11,7 @@ def test_ebitda_margin_rule_triggered():
         profit_loss=-50000,
         ebitda_margin=-0.05,
         pfn_to_ebitda=6.5,
-        interest_expense=40000
+        interest_expense=40000,
     )
 
     rule = EbitdaMarginRule()
@@ -17,7 +19,7 @@ def test_ebitda_margin_rule_triggered():
     result = rule.evaluate(position)
 
     assert result.rule_id == "R003"
-    assert result.triggered is True
+    assert result.status == RuleStatus.TRIGGERED
     assert result.value == -0.05
     assert result.threshold == 0.0
 
@@ -30,7 +32,7 @@ def test_ebitda_margin_rule_not_triggered():
         profit_loss=50000,
         ebitda_margin=0.12,
         pfn_to_ebitda=2.5,
-        interest_expense=40000
+        interest_expense=40000,
     )
 
     rule = EbitdaMarginRule()
@@ -38,9 +40,10 @@ def test_ebitda_margin_rule_not_triggered():
     result = rule.evaluate(position)
 
     assert result.rule_id == "R003"
-    assert result.triggered is False
+    assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == 0.12
     assert result.threshold == 0.0
+
 
 def test_ebitda_margin_rule_not_evaluable_when_none():
     position = CreditPosition(
@@ -58,8 +61,6 @@ def test_ebitda_margin_rule_not_evaluable_when_none():
     result = rule.evaluate(position)
 
     assert result.rule_id == "R003"
-    assert result.triggered is False
+    assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
     assert result.threshold == 0.0
-    assert result.status == "NOT_EVALUABLE"
-

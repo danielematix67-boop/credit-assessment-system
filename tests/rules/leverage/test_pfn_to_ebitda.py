@@ -1,5 +1,7 @@
 from src.models.position import CreditPosition
+from src.rules.base.status import RuleStatus
 from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
+
 
 def test_pfn_to_ebitda_rule_triggered():
     position = CreditPosition(
@@ -9,14 +11,14 @@ def test_pfn_to_ebitda_rule_triggered():
         profit_loss=50000,
         ebitda_margin=0.10,
         pfn_to_ebitda=6.0,
-        interest_expense=40000
+        interest_expense=40000,
     )
 
     rule = PfnToEbitdaRule()
     result = rule.evaluate(position)
 
     assert result.rule_id == "R004"
-    assert result.triggered is True
+    assert result.status == RuleStatus.TRIGGERED
     assert result.value == 6.0
     assert result.threshold == 5.0
 
@@ -29,16 +31,17 @@ def test_pfn_to_ebitda_rule_not_triggered():
         profit_loss=50000,
         ebitda_margin=0.10,
         pfn_to_ebitda=3.5,
-        interest_expense=40000
+        interest_expense=40000,
     )
 
     rule = PfnToEbitdaRule()
     result = rule.evaluate(position)
 
     assert result.rule_id == "R004"
-    assert result.triggered is False
+    assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == 3.5
     assert result.threshold == 5.0
+
 
 def test_pfn_to_ebitda_rule_not_evaluable_when_none():
     position = CreditPosition(
@@ -56,7 +59,6 @@ def test_pfn_to_ebitda_rule_not_evaluable_when_none():
     result = rule.evaluate(position)
 
     assert result.rule_id == "R004"
-    assert result.triggered is False
+    assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
     assert result.threshold == 5.0
-    assert result.status == "NOT_EVALUABLE"
