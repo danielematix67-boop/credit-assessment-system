@@ -15,7 +15,26 @@ def test_default_rules_registry():
     assert len(rules) == 5
 
     assert isinstance(rules[0], RevenueGrowthRule)
+    assert rules[0].config.rule_id == "R001"
+    assert rules[0].config.category == "revenue"
+    assert rules[0].config.threshold == -0.10
+
     assert isinstance(rules[1], NegativeEbitdaRule)
+    assert rules[1].config.rule_id == "R002"
+    assert rules[1].config.category == "profitability"
+    assert rules[1].config.threshold == 0.0
+
     assert isinstance(rules[2], EbitdaMarginRule)
+    assert rules[2].config.rule_id == "R003"
+    assert rules[2].config.category == "profitability"
+    assert rules[2].config.threshold == 0.0
+
     assert isinstance(rules[3], PfnToEbitdaRule)
+    assert rules[3].config.rule_id == "R004"
+    assert rules[3].config.category == "leverage"
+    assert rules[3].config.threshold == 5.0
+
     assert isinstance(rules[4], FinancialExpensesToEbitdaRule)
+    assert rules[4].config.rule_id == "R005"
+    assert rules[4].config.category == "profitability"
+    assert rules[4].config.threshold == 0.60
