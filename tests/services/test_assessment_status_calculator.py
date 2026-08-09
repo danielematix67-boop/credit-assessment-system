@@ -120,3 +120,37 @@ def test_returns_normal_when_results_are_empty():
     status = calculator.calculate([])
 
     assert status == AssessmentStatus.NORMAL
+
+def test_returns_critical_when_multiple_rules_are_triggered():
+    results = [
+        RuleResult(
+            rule_id="R001",
+            rule_name="Revenue growth deterioration",
+            category="revenue",
+            status=RuleStatus.TRIGGERED,
+            value=-0.15,
+            threshold=-0.10,
+        ),
+        RuleResult(
+            rule_id="R003",
+            rule_name="EBITDA margin below threshold",
+            category="profitability",
+            status=RuleStatus.TRIGGERED,
+            value=-0.05,
+            threshold=0.0,
+        ),
+        RuleResult(
+            rule_id="R004",
+            rule_name="Leverage above threshold",
+            category="leverage",
+            status=RuleStatus.TRIGGERED,
+            value=6.0,
+            threshold=5.0,
+        ),
+    ]
+
+    calculator = AssessmentStatusCalculator()
+
+    status = calculator.calculate(results)
+
+    assert status == AssessmentStatus.CRITICAL
