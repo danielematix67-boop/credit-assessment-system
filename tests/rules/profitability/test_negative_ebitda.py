@@ -8,7 +8,7 @@ R002_CONFIG = RuleConfig(
     rule_id="R002",
     rule_name="Negative EBITDA",
     category="profitability",
-    threshold=0,
+    threshold=0.0,
 )
 
 
@@ -27,10 +27,11 @@ def test_negative_ebitda_rule_triggered():
     result = rule.evaluate(position)
 
     assert result.rule_id == "R002"
+    assert result.rule_name == "Negative EBITDA"
     assert result.category == "profitability"
     assert result.status == RuleStatus.TRIGGERED
     assert result.value == -50000
-    assert result.threshold == 0
+    assert result.threshold == 0.0
 
 
 def test_negative_ebitda_rule_not_triggered():
@@ -48,15 +49,16 @@ def test_negative_ebitda_rule_not_triggered():
     result = rule.evaluate(position)
 
     assert result.rule_id == "R002"
+    assert result.rule_name == "Negative EBITDA"
     assert result.category == "profitability"
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == 250000
-    assert result.threshold == 0
+    assert result.threshold == 0.0
 
 
 def test_negative_ebitda_rule_not_evaluable_when_none():
     position = CreditPosition(
-        position_id="POS001",
+        position_id="POS003",
         revenue_growth=0.05,
         ebitda=None,
         profit_loss=50000,
@@ -69,9 +71,11 @@ def test_negative_ebitda_rule_not_evaluable_when_none():
     result = rule.evaluate(position)
 
     assert result.rule_id == "R002"
+    assert result.rule_name == "Negative EBITDA"
+    assert result.category == "profitability"
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
-    assert result.threshold == 0
+    assert result.threshold == 0.0
 
 
 def test_negative_ebitda_rule_uses_configured_threshold():
@@ -79,11 +83,11 @@ def test_negative_ebitda_rule_uses_configured_threshold():
         rule_id="R002_CUSTOM",
         rule_name="Custom EBITDA threshold",
         category="profitability",
-        threshold=-100000,
+        threshold=-100000.0,
     )
 
     position = CreditPosition(
-        position_id="POS003",
+        position_id="POS004",
         revenue_growth=0.05,
         ebitda=-50000,
         profit_loss=50000,
@@ -96,7 +100,8 @@ def test_negative_ebitda_rule_uses_configured_threshold():
     result = rule.evaluate(position)
 
     assert result.rule_id == "R002_CUSTOM"
+    assert result.rule_name == "Custom EBITDA threshold"
     assert result.category == "profitability"
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == -50000
-    assert result.threshold == -100000
+    assert result.threshold == -100000.0

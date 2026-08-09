@@ -4,6 +4,14 @@ from src.rules.base.status import RuleStatus
 from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
 
 
+R004_CONFIG = RuleConfig(
+    rule_id="R004",
+    rule_name="PFN / EBITDA leverage",
+    category="leverage",
+    threshold=5.0,
+)
+
+
 def test_pfn_to_ebitda_rule_triggered():
     position = CreditPosition(
         position_id="POS001",
@@ -15,17 +23,12 @@ def test_pfn_to_ebitda_rule_triggered():
         interest_expense=40000,
     )
 
-    config = RuleConfig(
-        rule_id="R004",
-        rule_name="PFN / EBITDA leverage",
-        category="leverage",
-        threshold=5.0,
-    )
-
-    rule = PfnToEbitdaRule(config)
+    rule = PfnToEbitdaRule(R004_CONFIG)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R004"
+    assert result.rule_name == "PFN / EBITDA leverage"
+    assert result.category == "leverage"
     assert result.status == RuleStatus.TRIGGERED
     assert result.value == 6.0
     assert result.threshold == 5.0
@@ -42,17 +45,12 @@ def test_pfn_to_ebitda_rule_not_triggered():
         interest_expense=40000,
     )
 
-    config = RuleConfig(
-        rule_id="R004",
-        rule_name="PFN / EBITDA leverage",
-        category="leverage",
-        threshold=5.0,
-    )
-
-    rule = PfnToEbitdaRule(config)
+    rule = PfnToEbitdaRule(R004_CONFIG)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R004"
+    assert result.rule_name == "PFN / EBITDA leverage"
+    assert result.category == "leverage"
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == 3.5
     assert result.threshold == 5.0
@@ -60,7 +58,7 @@ def test_pfn_to_ebitda_rule_not_triggered():
 
 def test_pfn_to_ebitda_rule_not_evaluable_when_none():
     position = CreditPosition(
-        position_id="POS001",
+        position_id="POS003",
         revenue_growth=0.05,
         ebitda=250000,
         profit_loss=50000,
@@ -69,17 +67,41 @@ def test_pfn_to_ebitda_rule_not_evaluable_when_none():
         interest_expense=40000,
     )
 
+    rule = PfnToEbitdaRule(R004_CONFIG)
+    result = rule.evaluate(position)
+
+    assert result.rule_id == "R004"
+    assert result.rule_name == "PFN / EBITDA leverage"
+    assert result.category == "leverage"
+    assert result.status == RuleStatus.NOT_EVALUABLE
+    assert result.value is None
+    assert result.threshold == 5.0
+
+
+def test_pfn_to_ebitda_rule_uses_configured_threshold():
     config = RuleConfig(
-        rule_id="R004",
-        rule_name="PFN / EBITDA leverage",
+        rule_id="R004_CUSTOM",
+        rule_name="Custom PFN / EBITDA threshold",
         category="leverage",
-        threshold=5.0,
+        threshold=7.0,
+    )
+
+    position = CreditPosition(
+        position_id="POS004",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=6.0,
+        interest_expense=40000,
     )
 
     rule = PfnToEbitdaRule(config)
     result = rule.evaluate(position)
 
-    assert result.rule_id == "R004"
-    assert result.status == RuleStatus.NOT_EVALUABLE
-    assert result.value is None
-    assert result.threshold == 5.0
+    assert result.rule_id == "R004_CUSTOM"
+    assert result.rule_name == "Custom PFN / EBITDA threshold"
+    assert result.category == "leverage"
+    assert result.status == RuleStatus.NOT_TRIGGERED
+    assert result.value == 6.0
+    assert result.threshold == 7.0

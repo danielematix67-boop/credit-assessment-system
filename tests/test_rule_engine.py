@@ -118,3 +118,28 @@ def test_rule_engine_with_no_rules():
     results = engine.evaluate(position)
 
     assert results == []
+
+
+def test_rule_engine_preserves_not_evaluable_status():
+    position = CreditPosition(
+        position_id="POS001",
+        revenue_growth=None,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=3.5,
+        interest_expense=40000,
+    )
+
+    rules = get_default_rules()
+
+    engine = RuleEngine(rules)
+
+    results = engine.evaluate(position)
+
+    revenue_growth_result = results[0]
+
+    assert revenue_growth_result.rule_id == "R001"
+    assert revenue_growth_result.status == RuleStatus.NOT_EVALUABLE
+    assert revenue_growth_result.value is None
+    assert revenue_growth_result.threshold == -0.10

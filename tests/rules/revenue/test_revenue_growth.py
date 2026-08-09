@@ -27,6 +27,7 @@ def test_revenue_growth_rule_triggered():
     result = rule.evaluate(position)
 
     assert result.rule_id == "R001"
+    assert result.rule_name == "Revenue deterioration"
     assert result.status == RuleStatus.TRIGGERED
     assert result.value == -0.15
     assert result.threshold == -0.10
@@ -48,6 +49,7 @@ def test_revenue_growth_rule_not_triggered():
     result = rule.evaluate(position)
 
     assert result.rule_id == "R001"
+    assert result.rule_name == "Revenue deterioration"
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == 0.05
     assert result.threshold == -0.10
@@ -56,7 +58,7 @@ def test_revenue_growth_rule_not_triggered():
 
 def test_revenue_growth_rule_not_evaluable_when_none():
     position = CreditPosition(
-        position_id="POS001",
+        position_id="POS003",
         revenue_growth=None,
         ebitda=250000,
         profit_loss=50000,
@@ -66,10 +68,10 @@ def test_revenue_growth_rule_not_evaluable_when_none():
     )
 
     rule = RevenueGrowthRule(R001_CONFIG)
-
     result = rule.evaluate(position)
 
     assert result.rule_id == "R001"
+    assert result.rule_name == "Revenue deterioration"
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
     assert result.threshold == -0.10
@@ -85,7 +87,7 @@ def test_revenue_growth_rule_uses_configured_threshold():
     )
 
     position = CreditPosition(
-        position_id="POS003",
+        position_id="POS004",
         revenue_growth=-0.15,
         ebitda=250000,
         profit_loss=50000,
@@ -98,6 +100,7 @@ def test_revenue_growth_rule_uses_configured_threshold():
     result = rule.evaluate(position)
 
     assert result.rule_id == "R001_CUSTOM"
+    assert result.rule_name == "Custom revenue deterioration"
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == -0.15
     assert result.threshold == -0.20

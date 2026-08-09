@@ -1,9 +1,9 @@
 from src.comments.comment_engine import CommentEngine
 from src.engine.rule_engine import RuleEngine
 from src.models.position import CreditPosition
-
+from src.rules.base.status import RuleStatus
+from src.rules.registry import get_default_rules
 from src.services.assessment_service import AssessmentService
-from config.rules import DEFAULT_RULES
 
 
 def test_assessment_service_generates_assessment():
@@ -17,7 +17,7 @@ def test_assessment_service_generates_assessment():
         interest_expense=40000,
     )
 
-    rule_engine = RuleEngine(DEFAULT_RULES)
+    rule_engine = RuleEngine(get_default_rules())
     comment_engine = CommentEngine()
 
     service = AssessmentService(
@@ -58,4 +58,40 @@ def test_assessment_service_generates_assessment():
     assert assessment.comments[3].text == (
         "Interest expense to EBITDA is above the acceptable threshold. "
         "Ratio: 80.0% (threshold: 60.0%)."
+    )
+
+
+def test_assessment_service_does_not_generate_comment_for_not_evaluable_rule():
+    position = CreditPosition(
+        position_id="POS002",
+        revenue_growth=None,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=3.5,
+        interest_expense=40000,
+    )
+
+    rule_engine = RuleEngine(get_default_rules())
+    comment_engine = CommentEngine()
+
+    service = AssessmentService(
+        rule_engine=rule_engine,
+        comment_engine=comment_engine,
+    )
+
+    assessment = service.assess(position)
+
+    assert assessment.position_id == "POS002"
+
+    assert len(assessment.rule_results) == 5
+    assert len(assessment.comments) == 0
+
+    assert assessment.rule_results[0].rule_id == "R001"
+    assert assessment.rule_results[0].status == RuleStatus.NOT_EVALUABLE
+    assert assessment.rule_results[0].value is None
+
+    assert all(
+        result.status != RuleStatus.NOT_EVALUABLE
+        for result in assessment.rule_results[1:]
     )
