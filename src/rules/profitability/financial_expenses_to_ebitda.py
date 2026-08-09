@@ -4,13 +4,10 @@ from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
 
-# Each rule should be implemented as a separate class with a unique rule_id.
-#
-# Multiple related rules can coexist in the same module, but each class should
-# represent one specific business rule and return one RuleResult.
-
-
 class FinancialExpensesToEbitdaRule(Rule):
+    """
+    Triggers when interest expense exceeds the defined proportion of EBITDA.
+    """
 
     rule_id = "R005"
     rule_name = "Interest expense to EBITDA"
@@ -18,8 +15,10 @@ class FinancialExpensesToEbitdaRule(Rule):
     threshold = 0.60
 
     def evaluate(self, position: CreditPosition) -> RuleResult:
+        interest_expense = position.interest_expense
+        ebitda = position.ebitda
 
-        if position.interest_expense is None:
+        if interest_expense is None or ebitda is None or ebitda <= 0:
             return RuleResult(
                 rule_id=self.rule_id,
                 rule_name=self.rule_name,
@@ -29,27 +28,7 @@ class FinancialExpensesToEbitdaRule(Rule):
                 threshold=self.threshold,
             )
 
-        if position.ebitda is None:
-            return RuleResult(
-                rule_id=self.rule_id,
-                rule_name=self.rule_name,
-                category=self.category,
-                status=RuleStatus.NOT_EVALUABLE,
-                value=None,
-                threshold=self.threshold,
-            )
-
-        if position.ebitda <= 0:
-            return RuleResult(
-                rule_id=self.rule_id,
-                rule_name=self.rule_name,
-                category=self.category,
-                status=RuleStatus.NOT_EVALUABLE,
-                value=None,
-                threshold=self.threshold,
-            )
-
-        value = position.interest_expense / position.ebitda
+        value = interest_expense / ebitda
 
         status = (
             RuleStatus.TRIGGERED

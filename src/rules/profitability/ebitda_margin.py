@@ -4,10 +4,12 @@ from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
 
-# Each rule should be implemented as a separate class with a unique rule_id.
+# Each rule represents one independent business rule.
 #
-# Multiple related rules can coexist in the same module, but each class should
-# represent one specific business rule and return one RuleResult.
+# A rule evaluates a CreditPosition and returns exactly one RuleResult.
+#
+# Related rules may live in the same module, but each rule must have
+# its own class and rule_id.
 
 
 class EbitdaMarginRule(Rule):

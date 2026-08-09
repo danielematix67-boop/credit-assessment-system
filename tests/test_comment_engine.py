@@ -7,7 +7,9 @@ from src.rules.revenue.revenue_growth import RevenueGrowthRule
 from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
 from src.rules.profitability.ebitda_margin import EbitdaMarginRule
 from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
-from src.rules.profitability.financial_expenses_to_ebitda import FinancialExpensesToEbitdaRule
+from src.rules.profitability.financial_expenses_to_ebitda import (
+    FinancialExpensesToEbitdaRule,
+)
 
 
 @pytest.fixture
@@ -39,7 +41,8 @@ def test_comment_generated_when_rule_is_triggered(base_position):
     assert comment.rule_id == "R001"
     assert comment.text == (
         "Revenue deterioration detected. "
-        "Revenue growth: -15.0%."
+        "Revenue growth: -15.0% "
+        "(threshold: -10.0%)."
     )
 
 
@@ -69,7 +72,8 @@ def test_negative_ebitda_comment_generated(base_position):
     assert comment.rule_id == "R002"
     assert comment.text == (
         "Negative EBITDA detected. "
-        "EBITDA: €-50,000."
+        "EBITDA: €-50,000 "
+        "(threshold: €0)."
     )
 
 
@@ -88,8 +92,9 @@ def test_ebitda_margin_comment_generated(base_position):
     assert comment is not None
     assert comment.rule_id == "R003"
     assert comment.text == (
-        "EBITDA margin is below acceptable threshold. "
-        "EBITDA margin: -5.0%."
+        "EBITDA margin is below the acceptable threshold. "
+        "EBITDA margin: -5.0% "
+        "(threshold: 0.0%)."
     )
 
 
@@ -108,8 +113,9 @@ def test_pfn_to_ebitda_comment_generated(base_position):
     assert comment is not None
     assert comment.rule_id == "R004"
     assert comment.text == (
-        "Leverage is above acceptable threshold. "
-        "PFN to EBITDA: 6.0x."
+        "Leverage is above the acceptable threshold. "
+        "PFN to EBITDA: 6.0x "
+        "(threshold: 5.0x)."
     )
 
 
@@ -128,6 +134,7 @@ def test_interest_expense_to_ebitda_comment_generated(base_position):
     assert comment is not None
     assert comment.rule_id == "R005"
     assert comment.text == (
-        "Interest expense to EBITDA is above acceptable threshold. "
-        "Ratio: 80.0%."
+        "Interest expense to EBITDA is above the acceptable threshold. "
+        "Ratio: 80.0% "
+        "(threshold: 60.0%)."
     )

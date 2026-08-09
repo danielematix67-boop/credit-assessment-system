@@ -44,12 +44,11 @@ def test_assessment_service_generates_assessment():
     assert assessment.comments[0].rule_id == "R001"
     assert assessment.comments[0].text == (
         "Revenue deterioration detected. "
-        "Revenue growth: -15.0%."
+        "Revenue growth: -15.0% (threshold: -10.0%)."
     )
 
     assert assessment.comments[1].rule_id == "R002"
     assert assessment.comments[1].text == (
         "Negative EBITDA detected. "
-        "EBITDA: €-50,000."
+        "EBITDA: €-50,000 (threshold: €0)."
     )
-

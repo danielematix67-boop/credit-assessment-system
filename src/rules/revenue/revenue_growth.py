@@ -4,10 +4,10 @@ from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
 
-# Each rule should be implemented as a separate class with a unique rule_id.
+# Each rule represents one independent business rule.
 #
-# Multiple related rules can coexist in the same module, but each class should
-# represent one specific business rule and return one RuleResult.
+# The rule evaluates revenue growth against the configured threshold
+# and returns a standardized RuleResult.
 
 
 class RevenueGrowthRule(Rule):
@@ -20,26 +20,17 @@ class RevenueGrowthRule(Rule):
     def evaluate(self, position: CreditPosition) -> RuleResult:
 
         if position.revenue_growth is None:
-            return RuleResult(
-                rule_id=self.rule_id,
-                rule_name=self.rule_name,
-                category=self.category,
-                status=RuleStatus.NOT_EVALUABLE,
-                value=None,
-                threshold=self.threshold,
-            )
+            return self._not_evaluable()
+
+        value = position.revenue_growth
 
         status = (
             RuleStatus.TRIGGERED
-            if position.revenue_growth < self.threshold
+            if value < self.threshold
             else RuleStatus.NOT_TRIGGERED
         )
 
-        return RuleResult(
-            rule_id=self.rule_id,
-            rule_name=self.rule_name,
-            category=self.category,
+        return self._result(
+            value=value,
             status=status,
-            value=position.revenue_growth,
-            threshold=self.threshold,
         )

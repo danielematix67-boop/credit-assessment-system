@@ -36,26 +36,26 @@ def test_assessment_service_generates_assessment():
     assert assessment.comments[0].rule_id == "R001"
     assert assessment.comments[0].text == (
         "Revenue deterioration detected. "
-        "Revenue growth: -15.0%."
+        "Revenue growth: -15.0% (threshold: -10.0%)."
     )
 
     # R003
     assert assessment.comments[1].rule_id == "R003"
     assert assessment.comments[1].text == (
-        "EBITDA margin is below acceptable threshold. "
-        "EBITDA margin: -5.0%."
+        "EBITDA margin is below the acceptable threshold. "
+        "EBITDA margin: -5.0% (threshold: 0.0%)."
     )
 
     # R004
     assert assessment.comments[2].rule_id == "R004"
     assert assessment.comments[2].text == (
-        "Leverage is above acceptable threshold. "
-        "PFN to EBITDA: 6.0x."
+        "Leverage is above the acceptable threshold. "
+        "PFN to EBITDA: 6.0x (threshold: 5.0x)."
     )
 
     # R005
     assert assessment.comments[3].rule_id == "R005"
     assert assessment.comments[3].text == (
-        "Interest expense to EBITDA is above acceptable threshold. "
-        "Ratio: 80.0%."
+        "Interest expense to EBITDA is above the acceptable threshold. "
+        "Ratio: 80.0% (threshold: 60.0%)."
     )

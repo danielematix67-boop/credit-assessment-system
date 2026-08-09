@@ -3,13 +3,10 @@ from src.comments.templates import COMMENTS
 from src.rules.result import RuleResult
 from src.rules.base.status import RuleStatus
 
-
-# The CommentEngine converts triggered RuleResults into human-readable comments.
-#
-# Rules determine whether a condition is triggered; the CommentEngine
-# determines how it is communicated.
-#
-# Comment generation must remain separate from rule evaluation.
+# The CommentEngine converts triggered rule results into human-readable comments. 
+# Rules are responsible for evaluating business conditions and assigning a 
+# RuleStatus. The CommentEngine is responsible only for translating triggered results into human-readable comments. 
+# Comment generation must remain separate from rule evaluation and business logic.
 
 class CommentEngine:
 
