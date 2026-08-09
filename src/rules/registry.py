@@ -1,6 +1,5 @@
-from pathlib import Path
-
 from src.config.rule_config_loader import RuleConfigLoader
+from src.config.rule_configuration import RuleConfiguration
 from src.rules.base.config import RuleConfig
 from src.rules.base.rule import Rule
 from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
@@ -10,9 +9,6 @@ from src.rules.profitability.financial_expenses_to_ebitda import (
     FinancialExpensesToEbitdaRule,
 )
 from src.rules.revenue.revenue_growth import RevenueGrowthRule
-
-
-RULES_CONFIG_PATH = Path("config/rules.yaml")
 
 
 _RULE_FACTORIES = {
@@ -37,8 +33,13 @@ def build_rules(configs: list[RuleConfig]) -> list[Rule]:
 
     return rules
 
-def get_default_rules() -> list[Rule]:
+
+def get_default_rules(
+    configuration: RuleConfiguration | None = None,
+) -> list[Rule]:
+    configuration = configuration or RuleConfiguration.default()
+
     loader = RuleConfigLoader()
-    configs = loader.load(RULES_CONFIG_PATH)
+    configs = loader.load(configuration.rules_path)
 
     return build_rules(configs)

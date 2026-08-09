@@ -8,6 +8,8 @@ from src.rules.revenue.revenue_growth import RevenueGrowthRule
 from src.rules.profitability.ebitda_margin import EbitdaMarginRule
 from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
 from src.rules.registry import get_default_rules
+from pathlib import Path
+from src.config.rule_configuration import RuleConfiguration
 
 
 def test_rule_engine_evaluates_all_rules():
@@ -148,3 +150,31 @@ def test_rule_engine_preserves_not_evaluable_status():
     assert revenue_growth_result.status == RuleStatus.NOT_EVALUABLE
     assert revenue_growth_result.value is None
     assert revenue_growth_result.threshold == -0.10
+
+
+def test_get_default_rules_uses_custom_configuration(tmp_path):
+    config_path = tmp_path / "rules.yaml"
+
+    config_path.write_text(
+        """
+        rules:
+          - rule_id: R001
+            rule_name: Custom revenue rule
+            category: revenue
+            threshold: -0.20
+            severity: HIGH
+        """,
+        encoding="utf-8",
+    )
+
+    configuration = RuleConfiguration(config_path)
+
+    rules = get_default_rules(configuration)
+
+    assert len(rules) == 1
+    assert isinstance(rules[0], RevenueGrowthRule)
+    assert rules[0].config.rule_id == "R001"
+    assert rules[0].config.rule_name == "Custom revenue rule"
+    assert rules[0].config.threshold == -0.20
+    assert rules[0].config.severity == RuleSeverity.HIGH
+
