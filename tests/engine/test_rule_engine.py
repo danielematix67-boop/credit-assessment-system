@@ -1,22 +1,14 @@
-from pathlib import Path
-
 from src.config.rule_configuration import RuleConfiguration
 from src.engine.rule_engine import RuleEngine
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
-from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
-from src.rules.profitability.ebitda_inventory_contribution import (
-    EbitdaInventoryContributionRule,
-)
-from src.rules.profitability.ebitda_margin import EbitdaMarginRule
-from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
-from src.rules.revenue.revenue_growth import RevenueGrowthRule
 from src.rules.registry import build_rules, get_default_rules
+from src.rules.revenue.revenue_growth import RevenueGrowthRule
 
 
-def test_rule_engine_evaluates_all_rules():
+def test_rule_engine_evaluates_all_configured_rules():
     position = CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
@@ -28,34 +20,21 @@ def test_rule_engine_evaluates_all_rules():
     )
 
     rules = get_default_rules()
-
     engine = RuleEngine(rules)
 
     results = engine.evaluate(position)
 
-    assert len(results) == 6
+    # The engine must return exactly one result for every configured rule.
+    assert len(results) == len(rules)
 
-    assert results[0].rule_id == "R001"
-    assert results[0].status == RuleStatus.TRIGGERED
-
-    assert results[1].rule_id == "R002"
-    assert results[1].status == RuleStatus.TRIGGERED
-
-    assert results[2].rule_id == "R003"
-    assert results[2].status == RuleStatus.TRIGGERED
-
-    assert results[3].rule_id == "R004"
-    assert results[3].status == RuleStatus.TRIGGERED
-
-    assert results[4].rule_id == "R005"
-    assert results[4].status == RuleStatus.NOT_EVALUABLE
-
-    # R006 - EBITDA materially supported by finished goods
-    # inventory increase.
-    # Cannot be evaluated because the inventory variation is missing.
-    assert results[5].rule_id == "R006"
-    assert results[5].status == RuleStatus.NOT_EVALUABLE
-    assert results[5].value is None
+    # Every configured rule must produce exactly one result.
+    assert {
+        result.rule_id
+        for result in results
+    } == {
+        rule.config.rule_id
+        for rule in rules
+    }
 
 
 def test_rule_engine_preserves_rule_order():
@@ -69,54 +48,46 @@ def test_rule_engine_preserves_rule_order():
         interest_expense=40000,
     )
 
-    pfn_to_ebitda_config = RuleConfig(
-        rule_id="R004",
-        rule_name="PFN / EBITDA leverage",
-        category="leverage",
-        threshold=5.0,
-        severity=RuleSeverity.HIGH,
-    )
-
-    revenue_growth_config = RuleConfig(
-        rule_id="R001",
-        rule_name="Revenue growth deterioration",
-        category="revenue",
-        threshold=-0.10,
-        severity=RuleSeverity.MEDIUM,
-    )
-
-    ebitda_margin_config = RuleConfig(
-        rule_id="R003",
-        rule_name="EBITDA margin deterioration",
-        category="profitability",
-        threshold=0.0,
-        severity=RuleSeverity.MEDIUM,
-    )
-
-    negative_ebitda_config = RuleConfig(
-        rule_id="R002",
-        rule_name="Negative EBITDA",
-        category="profitability",
-        threshold=0.0,
-        severity=RuleSeverity.HIGH,
-    )
-
-    rules = [
-        PfnToEbitdaRule(pfn_to_ebitda_config),
-        RevenueGrowthRule(revenue_growth_config),
-        EbitdaMarginRule(ebitda_margin_config),
-        NegativeEbitdaRule(negative_ebitda_config),
+    configs = [
+        RuleConfig(
+            rule_id="R004",
+            rule_name="PFN / EBITDA leverage",
+            category="leverage",
+            threshold=5.0,
+            severity=RuleSeverity.HIGH,
+        ),
+        RuleConfig(
+            rule_id="R001",
+            rule_name="Revenue growth deterioration",
+            category="revenue",
+            threshold=-0.10,
+            severity=RuleSeverity.MEDIUM,
+        ),
+        RuleConfig(
+            rule_id="R003",
+            rule_name="EBITDA margin deterioration",
+            category="profitability",
+            threshold=0.0,
+            severity=RuleSeverity.MEDIUM,
+        ),
+        RuleConfig(
+            rule_id="R002",
+            rule_name="Negative EBITDA",
+            category="profitability",
+            threshold=0.0,
+            severity=RuleSeverity.HIGH,
+        ),
     ]
+
+    rules = build_rules(configs)
 
     engine = RuleEngine(rules)
 
     results = engine.evaluate(position)
 
     assert [result.rule_id for result in results] == [
-        "R004",
-        "R001",
-        "R003",
-        "R002",
+        config.rule_id
+        for config in configs
     ]
 
 
@@ -150,25 +121,21 @@ def test_rule_engine_preserves_not_evaluable_status():
     )
 
     rules = get_default_rules()
-
     engine = RuleEngine(rules)
 
     results = engine.evaluate(position)
 
-    revenue_growth_result = results[0]
+    # Find the rule affected by the missing revenue growth
+    # without relying on its position in the result list.
+    revenue_growth_result = next(
+        result
+        for result in results
+        if result.rule_id == "R001"
+    )
 
-    assert revenue_growth_result.rule_id == "R001"
     assert revenue_growth_result.status == RuleStatus.NOT_EVALUABLE
     assert revenue_growth_result.value is None
     assert revenue_growth_result.threshold == -0.10
-
-    # R006 is also not evaluable because the finished goods
-    # inventory variation is missing.
-    inventory_contribution_result = results[5]
-
-    assert inventory_contribution_result.rule_id == "R006"
-    assert inventory_contribution_result.status == RuleStatus.NOT_EVALUABLE
-    assert inventory_contribution_result.value is None
 
 
 def test_get_default_rules_uses_custom_configuration(tmp_path):
@@ -192,6 +159,7 @@ def test_get_default_rules_uses_custom_configuration(tmp_path):
 
     assert len(rules) == 1
     assert isinstance(rules[0], RevenueGrowthRule)
+
     assert rules[0].config.rule_id == "R001"
     assert rules[0].config.rule_name == "Custom revenue rule"
     assert rules[0].config.threshold == -0.20

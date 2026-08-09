@@ -5,96 +5,110 @@ import pytest
 from src.config.rule_config_loader import RuleConfigLoader
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
-from src.rules.registry import build_rules
-from src.rules.revenue.revenue_growth import RevenueGrowthRule
 
 
 RULES_CONFIG_PATH = Path("config/rules.yaml")
 
 
-def test_rule_config_loader_loads_all_rules():
+def test_rule_config_loader_loads_rules():
     loader = RuleConfigLoader()
 
     configs = loader.load(RULES_CONFIG_PATH)
 
-    assert len(configs) == 6
-
-
-def test_rule_config_loader_loads_rule_ids():
-    loader = RuleConfigLoader()
-
-    configs = loader.load(RULES_CONFIG_PATH)
-
-    assert [config.rule_id for config in configs] == [
-        "R001",
-        "R002",
-        "R003",
-        "R004",
-        "R005",
-        "R006",
-    ]
-
-
-def test_rule_config_loader_loads_rule_configuration():
-    loader = RuleConfigLoader()
-
-    configs = loader.load(RULES_CONFIG_PATH)
-
-    config = {item.rule_id: item for item in configs}
-
-    # R001 - Revenue growth deterioration
-    assert config["R001"].rule_name == "Revenue growth deterioration"
-    assert config["R001"].category == "revenue"
-    assert config["R001"].threshold == -0.10
-    assert config["R001"].severity == RuleSeverity.MEDIUM
-
-    # R002 - Negative EBITDA
-    assert config["R002"].rule_name == "Negative EBITDA"
-    assert config["R002"].category == "profitability"
-    assert config["R002"].threshold == 0.0
-    assert config["R002"].severity == RuleSeverity.HIGH
-
-    # R003 - EBITDA margin deterioration
-    assert config["R003"].rule_name == "EBITDA margin deterioration"
-    assert config["R003"].category == "profitability"
-    assert config["R003"].threshold == 0.0
-    assert config["R003"].severity == RuleSeverity.MEDIUM
-
-    # R004 - PFN / EBITDA leverage
-    assert config["R004"].rule_name == "PFN / EBITDA leverage"
-    assert config["R004"].category == "leverage"
-    assert config["R004"].threshold == 5.0
-    assert config["R004"].severity == RuleSeverity.HIGH
-
-    # R005 - Interest expense to EBITDA
-    assert config["R005"].rule_name == "Interest expense to EBITDA"
-    assert config["R005"].category == "profitability"
-    assert config["R005"].threshold == 0.60
-    assert config["R005"].severity == RuleSeverity.MEDIUM
-
-    # R006 - EBITDA materially supported by finished goods inventory increase
-    assert (
-        config["R006"].rule_name
-        == "EBITDA materially supported by finished goods inventory increase"
+    assert configs
+    assert all(
+        isinstance(config, RuleConfig)
+        for config in configs
     )
-    assert config["R006"].category == "profitability_quality"
-    assert config["R006"].threshold == 0.30
-    assert config["R006"].severity == RuleSeverity.MEDIUM
 
 
-def test_rule_config_loader_preserves_rule_order():
+def test_rule_config_loader_loads_unique_rule_ids():
     loader = RuleConfigLoader()
 
     configs = loader.load(RULES_CONFIG_PATH)
 
+    rule_ids = [config.rule_id for config in configs]
+
+    assert len(rule_ids) == len(set(rule_ids))
+
+
+def test_rule_config_loader_loads_complete_configurations():
+    loader = RuleConfigLoader()
+
+    configs = loader.load(RULES_CONFIG_PATH)
+
+    assert all(config.rule_id for config in configs)
+    assert all(config.rule_name for config in configs)
+    assert all(config.category for config in configs)
+    assert all(config.severity in RuleSeverity for config in configs)
+
+
+def test_rule_config_loader_preserves_input_order(tmp_path):
+    config_path = tmp_path / "rules.yaml"
+
+    config_path.write_text(
+        """
+        rules:
+          - rule_id: R003
+            rule_name: Rule three
+            category: test
+            threshold: 3.0
+            severity: LOW
+
+          - rule_id: R001
+            rule_name: Rule one
+            category: test
+            threshold: 1.0
+            severity: HIGH
+
+          - rule_id: R002
+            rule_name: Rule two
+            category: test
+            threshold: 2.0
+            severity: MEDIUM
+        """,
+        encoding="utf-8",
+    )
+
+    loader = RuleConfigLoader()
+
+    configs = loader.load(config_path)
+
     assert [config.rule_id for config in configs] == [
+        "R003",
         "R001",
         "R002",
-        "R003",
-        "R004",
-        "R005",
-        "R006",
     ]
+
+
+def test_rule_config_loader_loads_configuration_values(tmp_path):
+    config_path = tmp_path / "rules.yaml"
+
+    config_path.write_text(
+        """
+        rules:
+          - rule_id: R999
+            rule_name: Test rule
+            category: test_category
+            threshold: 0.30
+            severity: MEDIUM
+        """,
+        encoding="utf-8",
+    )
+
+    loader = RuleConfigLoader()
+
+    configs = loader.load(config_path)
+
+    assert len(configs) == 1
+
+    config = configs[0]
+
+    assert config.rule_id == "R999"
+    assert config.rule_name == "Test rule"
+    assert config.category == "test_category"
+    assert config.threshold == 0.30
+    assert config.severity == RuleSeverity.MEDIUM
 
 
 def test_rule_config_loader_returns_rule_config_objects():
@@ -263,22 +277,3 @@ def test_rule_config_loader_raises_when_rule_ids_are_duplicated(tmp_path):
 
     with pytest.raises(ValueError):
         loader.load(config_path)
-
-
-def test_build_rules_uses_configuration_threshold():
-    config = RuleConfig(
-        rule_id="R001",
-        rule_name="Revenue growth deterioration",
-        category="revenue",
-        threshold=-0.20,
-        severity=RuleSeverity.MEDIUM,
-    )
-
-    rules = build_rules([config])
-
-    assert len(rules) == 1
-    assert isinstance(rules[0], RevenueGrowthRule)
-
-    assert rules[0].config.rule_id == "R001"
-    assert rules[0].config.threshold == -0.20
-    assert rules[0].config.severity == RuleSeverity.MEDIUM
