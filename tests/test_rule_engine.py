@@ -6,6 +6,7 @@ from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
 from src.rules.revenue.revenue_growth import RevenueGrowthRule
 from src.rules.profitability.ebitda_margin import EbitdaMarginRule
 from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
+from src.rules.registry import get_default_rules
 
 
 def test_rule_engine_evaluates_all_rules():
@@ -19,46 +20,13 @@ def test_rule_engine_evaluates_all_rules():
         interest_expense=40000,
     )
 
-    revenue_growth_config = RuleConfig(
-        rule_id="R001",
-        rule_name="Revenue growth deterioration",
-        category="revenue",
-        threshold=-0.10,
-    )
-
-    negative_ebitda_config = RuleConfig(
-        rule_id="R002",
-        rule_name="Negative EBITDA",
-        category="profitability",
-        threshold=0.0,
-    )
-
-    ebitda_margin_config = RuleConfig(
-        rule_id="R003",
-        rule_name="EBITDA margin deterioration",
-        category="profitability",
-        threshold=0.0,
-    )
-
-    pfn_to_ebitda_config = RuleConfig(
-        rule_id="R004",
-        rule_name="PFN / EBITDA leverage",
-        category="leverage",
-        threshold=5.0,
-    )
-
-    rules = [
-        RevenueGrowthRule(revenue_growth_config),
-        NegativeEbitdaRule(negative_ebitda_config),
-        EbitdaMarginRule(ebitda_margin_config),
-        PfnToEbitdaRule(pfn_to_ebitda_config),
-    ]
+    rules = get_default_rules()
 
     engine = RuleEngine(rules)
 
     results = engine.evaluate(position)
 
-    assert len(results) == 4
+    assert len(results) == 5
 
     assert results[0].rule_id == "R001"
     assert results[0].status == RuleStatus.TRIGGERED
@@ -71,6 +39,9 @@ def test_rule_engine_evaluates_all_rules():
 
     assert results[3].rule_id == "R004"
     assert results[3].status == RuleStatus.TRIGGERED
+
+    assert results[4].rule_id == "R005"
+    assert results[4].status == RuleStatus.NOT_EVALUABLE
 
 
 def test_rule_engine_preserves_rule_order():
