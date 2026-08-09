@@ -7,7 +7,7 @@ from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
 from src.rules.revenue.revenue_growth import RevenueGrowthRule
 from src.rules.profitability.ebitda_margin import EbitdaMarginRule
 from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
-from src.rules.registry import get_default_rules
+from src.rules.registry import build_rules, get_default_rules
 from pathlib import Path
 from src.config.rule_configuration import RuleConfiguration
 
@@ -177,4 +177,24 @@ def test_get_default_rules_uses_custom_configuration(tmp_path):
     assert rules[0].config.rule_name == "Custom revenue rule"
     assert rules[0].config.threshold == -0.20
     assert rules[0].config.severity == RuleSeverity.HIGH
+
+
+def test_build_rules_uses_configuration_threshold():
+    config = RuleConfig(
+        rule_id="R001",
+        rule_name="Revenue growth deterioration",
+        category="revenue",
+        threshold=-0.20,
+        severity=RuleSeverity.MEDIUM,
+    )
+
+    rules = build_rules([config])
+
+    assert len(rules) == 1
+    assert isinstance(rules[0], RevenueGrowthRule)
+
+    assert rules[0].config.rule_id == "R001"
+    assert rules[0].config.threshold == -0.20
+    assert rules[0].config.severity == RuleSeverity.MEDIUM
+
 

@@ -209,3 +209,23 @@ def test_build_rules_raises_for_unknown_rule_id():
 
     with pytest.raises(ValueError, match="Unknown rule_id: R999"):
         build_rules([config])
+
+
+def test_build_rules_uses_configuration_threshold():
+    config = RuleConfig(
+        rule_id="R001",
+        rule_name="Revenue growth deterioration",
+        category="revenue",
+        threshold=-0.20,
+        severity=RuleSeverity.MEDIUM,
+    )
+
+    rules = build_rules([config])
+
+    assert len(rules) == 1
+    assert isinstance(rules[0], RevenueGrowthRule)
+
+    assert rules[0].config.rule_id == "R001"
+    assert rules[0].config.threshold == -0.20
+    assert rules[0].config.severity == RuleSeverity.MEDIUM
+

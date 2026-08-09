@@ -204,3 +204,104 @@ def test_rule_config_loader_raises_when_rule_ids_are_duplicated(tmp_path):
 
     with pytest.raises(ValueError):
         loader.load(config_path)
+
+def test_rule_config_loader_raises_when_file_does_not_exist(tmp_path):
+    loader = RuleConfigLoader()
+
+    config_path = tmp_path / "missing_rules.yaml"
+
+    with pytest.raises(FileNotFoundError):
+        loader.load(config_path)
+
+
+def test_rule_config_loader_raises_when_yaml_is_empty(tmp_path):
+    config_path = tmp_path / "empty_rules.yaml"
+
+    config_path.write_text(
+        "",
+        encoding="utf-8",
+    )
+
+    loader = RuleConfigLoader()
+
+    with pytest.raises(ValueError):
+        loader.load(config_path)
+
+
+def test_rule_config_loader_raises_when_rules_section_is_missing(tmp_path):
+    config_path = tmp_path / "invalid_rules.yaml"
+
+    config_path.write_text(
+        """
+        configuration:
+          something: value
+        """,
+        encoding="utf-8",
+    )
+
+    loader = RuleConfigLoader()
+
+    with pytest.raises(ValueError):
+        loader.load(config_path)
+
+
+def test_rule_config_loader_raises_when_required_field_is_missing(tmp_path):
+    config_path = tmp_path / "invalid_rules.yaml"
+
+    config_path.write_text(
+        """
+        rules:
+          - rule_id: R001
+            rule_name: Revenue growth deterioration
+            category: revenue
+            threshold: -0.10
+        """,
+        encoding="utf-8",
+    )
+
+    loader = RuleConfigLoader()
+
+    with pytest.raises(ValueError):
+        loader.load(config_path)
+
+
+def test_rule_config_loader_raises_for_invalid_severity(tmp_path):
+    config_path = tmp_path / "invalid_rules.yaml"
+
+    config_path.write_text(
+        """
+        rules:
+          - rule_id: R001
+            rule_name: Revenue growth deterioration
+            category: revenue
+            threshold: -0.10
+            severity: INVALID
+        """,
+        encoding="utf-8",
+    )
+
+    loader = RuleConfigLoader()
+
+    with pytest.raises(ValueError):
+        loader.load(config_path)
+
+
+def test_rule_config_loader_raises_for_non_numeric_threshold(tmp_path):
+    config_path = tmp_path / "invalid_rules.yaml"
+
+    config_path.write_text(
+        """
+        rules:
+          - rule_id: R001
+            rule_name: Revenue growth deterioration
+            category: revenue
+            threshold: not_a_number
+            severity: MEDIUM
+        """,
+        encoding="utf-8",
+    )
+
+    loader = RuleConfigLoader()
+
+    with pytest.raises(ValueError):
+        loader.load(config_path)
