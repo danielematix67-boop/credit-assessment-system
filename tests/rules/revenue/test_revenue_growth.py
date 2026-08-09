@@ -1,6 +1,16 @@
 from src.models.position import CreditPosition
+from src.rules.base.config import RuleConfig
 from src.rules.base.status import RuleStatus
 from src.rules.revenue.revenue_growth import RevenueGrowthRule
+
+
+
+R001_CONFIG = RuleConfig(
+    rule_id="R001",
+    rule_name="Revenue deterioration",
+    category="revenue",
+    threshold=-0.10,
+)
 
 
 def test_revenue_growth_rule_triggered():
@@ -14,7 +24,7 @@ def test_revenue_growth_rule_triggered():
         interest_expense=40000,
     )
 
-    rule = RevenueGrowthRule()
+    rule = RevenueGrowthRule(R001_CONFIG)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R001"
@@ -35,7 +45,7 @@ def test_revenue_growth_rule_not_triggered():
         interest_expense=40000,
     )
 
-    rule = RevenueGrowthRule()
+    rule = RevenueGrowthRule(R001_CONFIG)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R001"
@@ -56,7 +66,7 @@ def test_revenue_growth_rule_not_evaluable_when_none():
         interest_expense=40000,
     )
 
-    rule = RevenueGrowthRule()
+    rule = RevenueGrowthRule(R001_CONFIG)
 
     result = rule.evaluate(position)
 
@@ -64,3 +74,4 @@ def test_revenue_growth_rule_not_evaluable_when_none():
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
     assert result.threshold == -0.10
+    assert result.category == "revenue"

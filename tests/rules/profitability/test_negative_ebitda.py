@@ -1,4 +1,5 @@
 from src.models.position import CreditPosition
+from src.rules.base.config import RuleConfig
 from src.rules.base.status import RuleStatus
 from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
 
@@ -14,7 +15,14 @@ def test_negative_ebitda_rule_triggered():
         interest_expense=40000,
     )
 
-    rule = NegativeEbitdaRule()
+    config = RuleConfig(
+        rule_id="R002",
+        rule_name="Negative EBITDA",
+        category="profitability",
+        threshold=0,
+    )
+
+    rule = NegativeEbitdaRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R002"
@@ -35,7 +43,14 @@ def test_negative_ebitda_rule_not_triggered():
         interest_expense=40000,
     )
 
-    rule = NegativeEbitdaRule()
+    config = RuleConfig(
+        rule_id="R002",
+        rule_name="Negative EBITDA",
+        category="profitability",
+        threshold=0,
+    )
+
+    rule = NegativeEbitdaRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R002"
@@ -56,8 +71,14 @@ def test_negative_ebitda_rule_not_evaluable_when_none():
         interest_expense=40000,
     )
 
-    rule = NegativeEbitdaRule()
+    config = RuleConfig(
+        rule_id="R002",
+        rule_name="Negative EBITDA",
+        category="profitability",
+        threshold=0,
+    )
 
+    rule = NegativeEbitdaRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R002"

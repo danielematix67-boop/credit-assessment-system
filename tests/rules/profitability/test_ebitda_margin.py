@@ -1,4 +1,5 @@
 from src.models.position import CreditPosition
+from src.rules.base.config import RuleConfig
 from src.rules.base.status import RuleStatus
 from src.rules.profitability.ebitda_margin import EbitdaMarginRule
 
@@ -14,8 +15,14 @@ def test_ebitda_margin_rule_triggered():
         interest_expense=40000,
     )
 
-    rule = EbitdaMarginRule()
+    config = RuleConfig(
+        rule_id="R003",
+        rule_name="EBITDA margin deterioration",
+        category="profitability",
+        threshold=0.0,
+    )
 
+    rule = EbitdaMarginRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R003"
@@ -35,8 +42,14 @@ def test_ebitda_margin_rule_not_triggered():
         interest_expense=40000,
     )
 
-    rule = EbitdaMarginRule()
+    config = RuleConfig(
+        rule_id="R003",
+        rule_name="EBITDA margin deterioration",
+        category="profitability",
+        threshold=0.0,
+    )
 
+    rule = EbitdaMarginRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R003"
@@ -56,8 +69,14 @@ def test_ebitda_margin_rule_not_evaluable_when_none():
         interest_expense=40000,
     )
 
-    rule = EbitdaMarginRule()
+    config = RuleConfig(
+        rule_id="R003",
+        rule_name="EBITDA margin deterioration",
+        category="profitability",
+        threshold=0.0,
+    )
 
+    rule = EbitdaMarginRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R003"

@@ -8,11 +8,6 @@ class FinancialExpensesToEbitdaRule(Rule):
     Triggers when interest expense exceeds the defined proportion of EBITDA.
     """
 
-    rule_id = "R005"
-    rule_name = "Interest expense to EBITDA"
-    category = "profitability"
-    threshold = 0.60
-
     def evaluate(self, position: CreditPosition):
 
         interest_expense = position.interest_expense
@@ -25,7 +20,7 @@ class FinancialExpensesToEbitdaRule(Rule):
 
         status = (
             RuleStatus.TRIGGERED
-            if value > self.threshold
+            if value > self.config.threshold
             else RuleStatus.NOT_TRIGGERED
         )
 

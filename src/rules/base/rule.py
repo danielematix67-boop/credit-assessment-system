@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from src.models.position import CreditPosition
+from src.rules.base.config import RuleConfig
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
@@ -8,8 +9,9 @@ from src.rules.result import RuleResult
 # Each rule represents one independent business rule.
 #
 # A rule evaluates a CreditPosition and returns exactly one RuleResult.
+#
 # Related rules may live in the same module, but each rule must have its
-# own class and rule_id.
+# own configuration.
 #
 # The base class provides common helpers for building standardized
 # RuleResult objects, while the concrete rule remains responsible for
@@ -17,6 +19,9 @@ from src.rules.result import RuleResult
 
 
 class Rule(ABC):
+
+    def __init__(self, config: RuleConfig):
+        self.config = config
 
     @abstractmethod
     def evaluate(self, position: CreditPosition) -> RuleResult:
@@ -29,12 +34,12 @@ class Rule(ABC):
         status: RuleStatus,
     ) -> RuleResult:
         return RuleResult(
-            rule_id=self.rule_id,
-            rule_name=self.rule_name,
-            category=self.category,
+            rule_id=self.config.rule_id,
+            rule_name=self.config.rule_name,
+            category=self.config.category,
             status=status,
             value=value,
-            threshold=self.threshold,
+            threshold=self.config.threshold,
         )
 
     def _not_evaluable(self) -> RuleResult:

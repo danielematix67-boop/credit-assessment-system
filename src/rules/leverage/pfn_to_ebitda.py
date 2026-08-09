@@ -8,11 +8,6 @@ class PfnToEbitdaRule(Rule):
     Triggers when PFN / EBITDA exceeds the defined leverage threshold.
     """
 
-    rule_id = "R004"
-    rule_name = "PFN / EBITDA leverage"
-    category = "leverage"
-    threshold = 5.0
-
     def evaluate(self, position: CreditPosition):
 
         value = position.pfn_to_ebitda
@@ -22,7 +17,7 @@ class PfnToEbitdaRule(Rule):
 
         status = (
             RuleStatus.TRIGGERED
-            if value > self.threshold
+            if value > self.config.threshold
             else RuleStatus.NOT_TRIGGERED
         )
 

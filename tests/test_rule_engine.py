@@ -1,5 +1,6 @@
 from src.engine.rule_engine import RuleEngine
 from src.models.position import CreditPosition
+from src.rules.base.config import RuleConfig
 from src.rules.base.status import RuleStatus
 from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
 from src.rules.revenue.revenue_growth import RevenueGrowthRule
@@ -18,11 +19,39 @@ def test_rule_engine_evaluates_all_rules():
         interest_expense=40000,
     )
 
+    revenue_growth_config = RuleConfig(
+        rule_id="R001",
+        rule_name="Revenue growth deterioration",
+        category="revenue",
+        threshold=-0.10,
+    )
+
+    negative_ebitda_config = RuleConfig(
+        rule_id="R002",
+        rule_name="Negative EBITDA",
+        category="profitability",
+        threshold=0.0,
+    )
+
+    ebitda_margin_config = RuleConfig(
+        rule_id="R003",
+        rule_name="EBITDA margin deterioration",
+        category="profitability",
+        threshold=0.0,
+    )
+
+    pfn_to_ebitda_config = RuleConfig(
+        rule_id="R004",
+        rule_name="PFN / EBITDA leverage",
+        category="leverage",
+        threshold=5.0,
+    )
+
     rules = [
-        RevenueGrowthRule(),
-        NegativeEbitdaRule(),
-        EbitdaMarginRule(),
-        PfnToEbitdaRule(),
+        RevenueGrowthRule(revenue_growth_config),
+        NegativeEbitdaRule(negative_ebitda_config),
+        EbitdaMarginRule(ebitda_margin_config),
+        PfnToEbitdaRule(pfn_to_ebitda_config),
     ]
 
     engine = RuleEngine(rules)
@@ -55,11 +84,39 @@ def test_rule_engine_preserves_rule_order():
         interest_expense=40000,
     )
 
+    pfn_to_ebitda_config = RuleConfig(
+        rule_id="R004",
+        rule_name="PFN / EBITDA leverage",
+        category="leverage",
+        threshold=5.0,
+    )
+
+    revenue_growth_config = RuleConfig(
+        rule_id="R001",
+        rule_name="Revenue growth deterioration",
+        category="revenue",
+        threshold=-0.10,
+    )
+
+    ebitda_margin_config = RuleConfig(
+        rule_id="R003",
+        rule_name="EBITDA margin deterioration",
+        category="profitability",
+        threshold=0.0,
+    )
+
+    negative_ebitda_config = RuleConfig(
+        rule_id="R002",
+        rule_name="Negative EBITDA",
+        category="profitability",
+        threshold=0.0,
+    )
+
     rules = [
-        PfnToEbitdaRule(),
-        RevenueGrowthRule(),
-        EbitdaMarginRule(),
-        NegativeEbitdaRule(),
+        PfnToEbitdaRule(pfn_to_ebitda_config),
+        RevenueGrowthRule(revenue_growth_config),
+        EbitdaMarginRule(ebitda_margin_config),
+        NegativeEbitdaRule(negative_ebitda_config),
     ]
 
     engine = RuleEngine(rules)

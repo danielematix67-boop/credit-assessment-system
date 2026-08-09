@@ -1,4 +1,5 @@
 from src.models.position import CreditPosition
+from src.rules.base.config import RuleConfig
 from src.rules.base.status import RuleStatus
 from src.rules.profitability.financial_expenses_to_ebitda import (
     FinancialExpensesToEbitdaRule,
@@ -16,8 +17,14 @@ def test_interest_expense_to_ebitda_rule_triggered():
         interest_expense=200000,
     )
 
-    rule = FinancialExpensesToEbitdaRule()
+    config = RuleConfig(
+        rule_id="R005",
+        rule_name="Interest expense to EBITDA",
+        category="profitability",
+        threshold=0.60,
+    )
 
+    rule = FinancialExpensesToEbitdaRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R005"
@@ -39,8 +46,14 @@ def test_interest_expense_to_ebitda_rule_not_triggered():
         interest_expense=100000,
     )
 
-    rule = FinancialExpensesToEbitdaRule()
+    config = RuleConfig(
+        rule_id="R005",
+        rule_name="Interest expense to EBITDA",
+        category="profitability",
+        threshold=0.60,
+    )
 
+    rule = FinancialExpensesToEbitdaRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R005"
@@ -62,8 +75,14 @@ def test_interest_expense_to_ebitda_rule_not_evaluable_with_negative_ebitda():
         interest_expense=40000,
     )
 
-    rule = FinancialExpensesToEbitdaRule()
+    config = RuleConfig(
+        rule_id="R005",
+        rule_name="Interest expense to EBITDA",
+        category="profitability",
+        threshold=0.60,
+    )
 
+    rule = FinancialExpensesToEbitdaRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R005"
@@ -85,8 +104,14 @@ def test_interest_expense_to_ebitda_rule_not_evaluable_when_interest_expense_non
         interest_expense=None,
     )
 
-    rule = FinancialExpensesToEbitdaRule()
+    config = RuleConfig(
+        rule_id="R005",
+        rule_name="Interest expense to EBITDA",
+        category="profitability",
+        threshold=0.60,
+    )
 
+    rule = FinancialExpensesToEbitdaRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R005"
@@ -108,8 +133,14 @@ def test_interest_expense_to_ebitda_rule_not_evaluable_when_ebitda_none():
         interest_expense=100000,
     )
 
-    rule = FinancialExpensesToEbitdaRule()
+    config = RuleConfig(
+        rule_id="R005",
+        rule_name="Interest expense to EBITDA",
+        category="profitability",
+        threshold=0.60,
+    )
 
+    rule = FinancialExpensesToEbitdaRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R005"
@@ -131,8 +162,14 @@ def test_interest_expense_to_ebitda_rule_not_evaluable_with_zero_ebitda():
         interest_expense=40000,
     )
 
-    rule = FinancialExpensesToEbitdaRule()
+    config = RuleConfig(
+        rule_id="R005",
+        rule_name="Interest expense to EBITDA",
+        category="profitability",
+        threshold=0.60,
+    )
 
+    rule = FinancialExpensesToEbitdaRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R005"

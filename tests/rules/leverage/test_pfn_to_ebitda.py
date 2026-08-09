@@ -1,4 +1,5 @@
 from src.models.position import CreditPosition
+from src.rules.base.config import RuleConfig
 from src.rules.base.status import RuleStatus
 from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
 
@@ -14,7 +15,14 @@ def test_pfn_to_ebitda_rule_triggered():
         interest_expense=40000,
     )
 
-    rule = PfnToEbitdaRule()
+    config = RuleConfig(
+        rule_id="R004",
+        rule_name="PFN / EBITDA leverage",
+        category="leverage",
+        threshold=5.0,
+    )
+
+    rule = PfnToEbitdaRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R004"
@@ -34,7 +42,14 @@ def test_pfn_to_ebitda_rule_not_triggered():
         interest_expense=40000,
     )
 
-    rule = PfnToEbitdaRule()
+    config = RuleConfig(
+        rule_id="R004",
+        rule_name="PFN / EBITDA leverage",
+        category="leverage",
+        threshold=5.0,
+    )
+
+    rule = PfnToEbitdaRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R004"
@@ -54,8 +69,14 @@ def test_pfn_to_ebitda_rule_not_evaluable_when_none():
         interest_expense=40000,
     )
 
-    rule = PfnToEbitdaRule()
+    config = RuleConfig(
+        rule_id="R004",
+        rule_name="PFN / EBITDA leverage",
+        category="leverage",
+        threshold=5.0,
+    )
 
+    rule = PfnToEbitdaRule(config)
     result = rule.evaluate(position)
 
     assert result.rule_id == "R004"

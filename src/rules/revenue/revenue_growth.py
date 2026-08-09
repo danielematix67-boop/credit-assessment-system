@@ -9,23 +9,19 @@ from src.rules.result import RuleResult
 # The rule evaluates revenue growth against the configured threshold
 # and returns a standardized RuleResult.
 
-class RevenueGrowthRule(Rule):
 
-    rule_id = "R001"
-    rule_name = "Revenue deterioration"
-    category = "revenue"
-    threshold = -0.10
+class RevenueGrowthRule(Rule):
 
     def evaluate(self, position: CreditPosition) -> RuleResult:
 
-        if position.revenue_growth is None:
-            return self._not_evaluable()
-
         value = position.revenue_growth
+
+        if value is None:
+            return self._not_evaluable()
 
         status = (
             RuleStatus.TRIGGERED
-            if value < self.threshold
+            if value < self.config.threshold
             else RuleStatus.NOT_TRIGGERED
         )
 

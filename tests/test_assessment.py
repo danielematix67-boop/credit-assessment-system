@@ -1,6 +1,7 @@
 from src.comments.comment_engine import CommentEngine
 from src.engine.rule_engine import RuleEngine
 from src.models.position import CreditPosition
+from src.rules.base.config import RuleConfig
 from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
 from src.rules.revenue.revenue_growth import RevenueGrowthRule
 from src.services.assessment_service import AssessmentService
@@ -17,9 +18,23 @@ def test_assessment_service_generates_assessment():
         interest_expense=40000,
     )
 
+    revenue_growth_config = RuleConfig(
+        rule_id="R001",
+        rule_name="Revenue growth deterioration",
+        category="revenue",
+        threshold=-0.10,
+    )
+
+    negative_ebitda_config = RuleConfig(
+        rule_id="R002",
+        rule_name="Negative EBITDA",
+        category="profitability",
+        threshold=0.0,
+    )
+
     rules = [
-        RevenueGrowthRule(),
-        NegativeEbitdaRule(),
+        RevenueGrowthRule(revenue_growth_config),
+        NegativeEbitdaRule(negative_ebitda_config),
     ]
 
     rule_engine = RuleEngine(rules)

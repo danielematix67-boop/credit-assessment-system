@@ -3,6 +3,7 @@ from dataclasses import replace
 
 from src.comments.comment_engine import CommentEngine
 from src.models.position import CreditPosition
+from src.rules.base.config import RuleConfig
 from src.rules.revenue.revenue_growth import RevenueGrowthRule
 from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
 from src.rules.profitability.ebitda_margin import EbitdaMarginRule
@@ -31,7 +32,14 @@ def test_comment_generated_when_rule_is_triggered(base_position):
         revenue_growth=-0.15,
     )
 
-    rule = RevenueGrowthRule()
+    config = RuleConfig(
+        rule_id="R001",
+        rule_name="Revenue growth deterioration",
+        category="revenue",
+        threshold=-0.10,
+    )
+
+    rule = RevenueGrowthRule(config)
     result = rule.evaluate(position)
 
     engine = CommentEngine()
@@ -47,7 +55,14 @@ def test_comment_generated_when_rule_is_triggered(base_position):
 
 
 def test_no_comment_generated_when_rule_is_not_triggered(base_position):
-    rule = RevenueGrowthRule()
+    config = RuleConfig(
+        rule_id="R001",
+        rule_name="Revenue growth deterioration",
+        category="revenue",
+        threshold=-0.10,
+    )
+
+    rule = RevenueGrowthRule(config)
     result = rule.evaluate(base_position)
 
     engine = CommentEngine()
@@ -62,7 +77,14 @@ def test_negative_ebitda_comment_generated(base_position):
         ebitda=-50000,
     )
 
-    rule = NegativeEbitdaRule()
+    config = RuleConfig(
+        rule_id="R002",
+        rule_name="Negative EBITDA",
+        category="profitability",
+        threshold=0.0,
+    )
+
+    rule = NegativeEbitdaRule(config)
     result = rule.evaluate(position)
 
     engine = CommentEngine()
@@ -83,7 +105,14 @@ def test_ebitda_margin_comment_generated(base_position):
         ebitda_margin=-0.05,
     )
 
-    rule = EbitdaMarginRule()
+    config = RuleConfig(
+        rule_id="R003",
+        rule_name="EBITDA margin deterioration",
+        category="profitability",
+        threshold=0.0,
+    )
+
+    rule = EbitdaMarginRule(config)
     result = rule.evaluate(position)
 
     engine = CommentEngine()
@@ -104,7 +133,14 @@ def test_pfn_to_ebitda_comment_generated(base_position):
         pfn_to_ebitda=6.0,
     )
 
-    rule = PfnToEbitdaRule()
+    config = RuleConfig(
+        rule_id="R004",
+        rule_name="PFN / EBITDA leverage",
+        category="leverage",
+        threshold=5.0,
+    )
+
+    rule = PfnToEbitdaRule(config)
     result = rule.evaluate(position)
 
     engine = CommentEngine()
@@ -125,7 +161,14 @@ def test_interest_expense_to_ebitda_comment_generated(base_position):
         interest_expense=200000,
     )
 
-    rule = FinancialExpensesToEbitdaRule()
+    config = RuleConfig(
+        rule_id="R005",
+        rule_name="Interest expense to EBITDA",
+        category="profitability",
+        threshold=0.60,
+    )
+
+    rule = FinancialExpensesToEbitdaRule(config)
     result = rule.evaluate(position)
 
     engine = CommentEngine()
