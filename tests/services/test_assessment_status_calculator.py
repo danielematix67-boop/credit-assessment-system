@@ -121,7 +121,8 @@ def test_returns_normal_when_results_are_empty():
 
     assert status == AssessmentStatus.NORMAL
 
-def test_returns_critical_when_multiple_rules_are_triggered():
+
+def test_returns_critical_when_at_least_two_rules_are_triggered():
     results = [
         RuleResult(
             rule_id="R001",
@@ -143,8 +144,8 @@ def test_returns_critical_when_multiple_rules_are_triggered():
             rule_id="R004",
             rule_name="Leverage above threshold",
             category="leverage",
-            status=RuleStatus.TRIGGERED,
-            value=6.0,
+            status=RuleStatus.NOT_TRIGGERED,
+            value=3.5,
             threshold=5.0,
         ),
     ]

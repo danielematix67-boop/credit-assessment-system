@@ -1,14 +1,14 @@
 from src.comments.comment_engine import CommentEngine
 from src.engine.rule_engine import RuleEngine
-from src.models.position import CreditPosition
 from src.models.assessment_status import AssessmentStatus
+from src.models.position import CreditPosition
 from src.rules.base.status import RuleStatus
 from src.rules.registry import get_default_rules
 from src.services.assessment_service import AssessmentService
 from src.services.assessment_status_calculator import AssessmentStatusCalculator
 
 
-def test_assessment_service_generates_assessment():
+def test_assessment_service_generates_critical_assessment():
     position = CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
@@ -66,7 +66,7 @@ def test_assessment_service_generates_assessment():
     )
 
 
-def test_assessment_service_does_not_generate_comment_for_not_evaluable_rule():
+def test_assessment_service_generates_normal_assessment_when_rule_is_not_evaluable():
     position = CreditPosition(
         position_id="POS002",
         revenue_growth=None,
@@ -90,6 +90,7 @@ def test_assessment_service_does_not_generate_comment_for_not_evaluable_rule():
     assessment = service.assess(position)
 
     assert assessment.position_id == "POS002"
+    assert assessment.status == AssessmentStatus.NORMAL
 
     assert len(assessment.rule_results) == 5
     assert len(assessment.comments) == 0
@@ -104,7 +105,7 @@ def test_assessment_service_does_not_generate_comment_for_not_evaluable_rule():
     )
 
 
-def test_assessment_service_generates_no_comments_for_healthy_position():
+def test_assessment_service_generates_normal_assessment():
     position = CreditPosition(
         position_id="POS003",
         revenue_growth=0.05,
@@ -136,4 +137,39 @@ def test_assessment_service_generates_no_comments_for_healthy_position():
     assert all(
         result.status == RuleStatus.NOT_TRIGGERED
         for result in assessment.rule_results
+    )
+
+def test_assessment_service_generates_attention_assessment():
+    position = CreditPosition(
+        position_id="POS002",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=6.0,
+        interest_expense=40000,
+    )
+
+    rule_engine = RuleEngine(get_default_rules())
+    comment_engine = CommentEngine()
+    status_calculator = AssessmentStatusCalculator()
+
+    service = AssessmentService(
+        rule_engine=rule_engine,
+        comment_engine=comment_engine,
+        status_calculator=status_calculator,
+    )
+
+    assessment = service.assess(position)
+
+    assert assessment.position_id == "POS002"
+    assert assessment.status == AssessmentStatus.ATTENTION
+
+    assert len(assessment.rule_results) == 5
+    assert len(assessment.comments) == 1
+
+    assert assessment.comments[0].rule_id == "R004"
+    assert assessment.comments[0].text == (
+        "Leverage is above the acceptable threshold. "
+        "PFN to EBITDA: 6.0x (threshold: 5.0x)."
     )
