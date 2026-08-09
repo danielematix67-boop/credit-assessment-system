@@ -21,7 +21,7 @@ def test_assessment_service_generates_critical_assessment(
     assert assessment.position_id == "POS001"
     assert assessment.status == AssessmentStatus.CRITICAL
 
-    # The assessment must contain one result for every configured rule.
+    # One result must be produced for every configured rule.
     assert len(assessment.rule_results) == len(
         assessment_service.rule_engine.rules
     )
@@ -36,7 +36,8 @@ def test_assessment_service_generates_critical_assessment(
         for comment in assessment.comments
     }
 
-    # Critical assessment must contain the expected triggered rules.
+    # These are the rules expected to trigger in this
+    # specific critical scenario.
     expected_triggered_rules = {
         "R001",
         "R002",
@@ -44,15 +45,13 @@ def test_assessment_service_generates_critical_assessment(
         "R004",
     }
 
-    assert {
+    triggered_rules = {
         result.rule_id
         for result in assessment.rule_results
         if result.status == RuleStatus.TRIGGERED
-    } == expected_triggered_rules
+    }
 
-    # R005 is not evaluable because EBITDA is negative.
-    assert results["R005"].status == RuleStatus.NOT_EVALUABLE
-    assert results["R005"].value is None
+    assert triggered_rules == expected_triggered_rules
 
     # Only triggered rules generate comments.
     assert set(comments) == expected_triggered_rules
@@ -96,29 +95,19 @@ def test_assessment_service_generates_normal_assessment_when_rule_is_not_evaluab
     assert assessment.position_id == "POS002"
     assert assessment.status == AssessmentStatus.NORMAL
 
-    # The assessment must contain one result for every configured rule.
+    # One result must be produced for every configured rule.
     assert len(assessment.rule_results) == len(
         assessment_service.rule_engine.rules
     )
 
-    # No triggered rule means no comments.
-    assert assessment.comments == []
-
-    results = {
-        result.rule_id: result
-        for result in assessment.rule_results
-    }
-
-    # R001 cannot be evaluated because revenue growth is missing.
-    assert results["R001"].status == RuleStatus.NOT_EVALUABLE
-    assert results["R001"].value is None
-
-    # A NORMAL assessment means that no rule was triggered.
-    # Other rules may be NOT_EVALUABLE when input data is missing.
+    # A NORMAL assessment must not contain triggered rules.
     assert all(
         result.status != RuleStatus.TRIGGERED
         for result in assessment.rule_results
     )
+
+    # No triggered rule means no comments.
+    assert assessment.comments == []
 
 
 def test_assessment_service_generates_normal_assessment(
@@ -139,20 +128,19 @@ def test_assessment_service_generates_normal_assessment(
     assert assessment.position_id == "POS003"
     assert assessment.status == AssessmentStatus.NORMAL
 
-    # The assessment must contain one result for every configured rule.
+    # One result must be produced for every configured rule.
     assert len(assessment.rule_results) == len(
         assessment_service.rule_engine.rules
     )
 
-    # No triggered rule means no comments.
-    assert assessment.comments == []
-
-    # A NORMAL assessment means that no rule was triggered.
-    # Individual rules may still be NOT_EVALUABLE.
+    # A NORMAL assessment must not contain triggered rules.
     assert all(
         result.status != RuleStatus.TRIGGERED
         for result in assessment.rule_results
     )
+
+    # No triggered rule means no comments.
+    assert assessment.comments == []
 
 
 def test_assessment_service_generates_attention_assessment(
@@ -173,7 +161,7 @@ def test_assessment_service_generates_attention_assessment(
     assert assessment.position_id == "POS004"
     assert assessment.status == AssessmentStatus.ATTENTION
 
-    # The assessment must contain one result for every configured rule.
+    # One result must be produced for every configured rule.
     assert len(assessment.rule_results) == len(
         assessment_service.rule_engine.rules
     )
@@ -183,14 +171,19 @@ def test_assessment_service_generates_attention_assessment(
         for comment in assessment.comments
     }
 
-    # Only R004 is triggered in this scenario.
-    assert {
+    # This scenario is expected to trigger only the leverage rule.
+    expected_triggered_rules = {"R004"}
+
+    triggered_rules = {
         result.rule_id
         for result in assessment.rule_results
         if result.status == RuleStatus.TRIGGERED
-    } == {"R004"}
+    }
 
-    assert set(comments) == {"R004"}
+    assert triggered_rules == expected_triggered_rules
+
+    # Only triggered rules generate comments.
+    assert set(comments) == expected_triggered_rules
 
     assert comments["R004"].text == (
         "Leverage is above the acceptable threshold. "

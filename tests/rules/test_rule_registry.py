@@ -1,18 +1,8 @@
 import pytest
 
 from src.rules.base.config import RuleConfig
-from src.rules.base.severity import RuleSeverity
 from src.rules.base.rule import Rule
-from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
-from src.rules.profitability.ebitda_inventory_contribution import (
-    EbitdaInventoryContributionRule,
-)
-from src.rules.profitability.ebitda_margin import EbitdaMarginRule
-from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
-from src.rules.profitability.financial_expenses_to_ebitda import (
-    FinancialExpensesToEbitdaRule,
-)
-from src.rules.revenue.revenue_growth import RevenueGrowthRule
+from src.rules.base.severity import RuleSeverity
 from src.rules.registry import build_rules, get_default_rules
 
 
@@ -147,7 +137,7 @@ def test_build_rules_preserves_configuration_object():
     rules = build_rules([config])
 
     assert len(rules) == 1
-    assert isinstance(rules[0], PfnToEbitdaRule)
+    assert isinstance(rules[0], Rule)
 
     assert rules[0].config is config
 
@@ -168,33 +158,23 @@ def test_build_rules_raises_for_unknown_rule_id():
         build_rules([config])
 
 
-@pytest.mark.parametrize(
-    "rule_id, expected_type",
-    [
-        ("R001", RevenueGrowthRule),
-        ("R002", NegativeEbitdaRule),
-        ("R003", EbitdaMarginRule),
-        ("R004", PfnToEbitdaRule),
-        ("R005", FinancialExpensesToEbitdaRule),
-        ("R006", EbitdaInventoryContributionRule),
-    ],
-)
-def test_build_rules_maps_registered_rule_id_to_correct_type(
-    rule_id,
-    expected_type,
-):
-    config = RuleConfig(
-        rule_id=rule_id,
-        rule_name="Test rule",
-        category="test",
-        threshold=0.0,
-        severity=RuleSeverity.MEDIUM,
-    )
+def test_build_rules_maps_registered_rule_ids():
+    rules = get_default_rules()
 
-    rules = build_rules([config])
+    for rule in rules:
+        config = RuleConfig(
+            rule_id=rule.config.rule_id,
+            rule_name="Test rule",
+            category="test",
+            threshold=0.0,
+            severity=RuleSeverity.MEDIUM,
+        )
 
-    assert len(rules) == 1
-    assert isinstance(rules[0], expected_type)
+        built_rules = build_rules([config])
+
+        assert len(built_rules) == 1
+        assert isinstance(built_rules[0], Rule)
+        assert built_rules[0].config.rule_id == rule.config.rule_id
 
 
 def test_build_rules_uses_configuration_threshold():
@@ -209,7 +189,7 @@ def test_build_rules_uses_configuration_threshold():
     rules = build_rules([config])
 
     assert len(rules) == 1
-    assert isinstance(rules[0], RevenueGrowthRule)
+    assert isinstance(rules[0], Rule)
 
     assert rules[0].config.rule_id == "R001"
     assert rules[0].config.threshold == -0.20

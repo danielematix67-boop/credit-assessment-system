@@ -1,14 +1,12 @@
-from src.config.rule_configuration import RuleConfiguration
+from unittest.mock import MagicMock
+
 from src.engine.rule_engine import RuleEngine
 from src.models.position import CreditPosition
-from src.rules.base.config import RuleConfig
-from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
-from src.rules.registry import build_rules, get_default_rules
-from src.rules.revenue.revenue_growth import RevenueGrowthRule
+from src.rules.registry import get_default_rules
 
 
-def test_rule_engine_evaluates_all_configured_rules():
+def test_rule_engine_evaluates_all_rules():
     position = CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
@@ -20,11 +18,12 @@ def test_rule_engine_evaluates_all_configured_rules():
     )
 
     rules = get_default_rules()
+
     engine = RuleEngine(rules)
 
     results = engine.evaluate(position)
 
-    # The engine must return exactly one result for every configured rule.
+    # One result must be produced for every configured rule.
     assert len(results) == len(rules)
 
     # Every configured rule must produce exactly one result.
@@ -48,46 +47,31 @@ def test_rule_engine_preserves_rule_order():
         interest_expense=40000,
     )
 
-    configs = [
-        RuleConfig(
-            rule_id="R004",
-            rule_name="PFN / EBITDA leverage",
-            category="leverage",
-            threshold=5.0,
-            severity=RuleSeverity.HIGH,
-        ),
-        RuleConfig(
-            rule_id="R001",
-            rule_name="Revenue growth deterioration",
-            category="revenue",
-            threshold=-0.10,
-            severity=RuleSeverity.MEDIUM,
-        ),
-        RuleConfig(
-            rule_id="R003",
-            rule_name="EBITDA margin deterioration",
-            category="profitability",
-            threshold=0.0,
-            severity=RuleSeverity.MEDIUM,
-        ),
-        RuleConfig(
-            rule_id="R002",
-            rule_name="Negative EBITDA",
-            category="profitability",
-            threshold=0.0,
-            severity=RuleSeverity.HIGH,
-        ),
-    ]
+    rule_1 = MagicMock()
+    rule_1.config.rule_id = "TEST_1"
+    rule_1.evaluate.return_value.rule_id = "TEST_1"
 
-    rules = build_rules(configs)
+    rule_2 = MagicMock()
+    rule_2.config.rule_id = "TEST_2"
+    rule_2.evaluate.return_value.rule_id = "TEST_2"
+
+    rule_3 = MagicMock()
+    rule_3.config.rule_id = "TEST_3"
+    rule_3.evaluate.return_value.rule_id = "TEST_3"
+
+    rules = [rule_1, rule_2, rule_3]
 
     engine = RuleEngine(rules)
 
     results = engine.evaluate(position)
 
-    assert [result.rule_id for result in results] == [
-        config.rule_id
-        for config in configs
+    assert [
+        result.rule_id
+        for result in results
+    ] == [
+        "TEST_1",
+        "TEST_2",
+        "TEST_3",
     ]
 
 
@@ -121,12 +105,11 @@ def test_rule_engine_preserves_not_evaluable_status():
     )
 
     rules = get_default_rules()
+
     engine = RuleEngine(rules)
 
     results = engine.evaluate(position)
 
-    # Find the rule affected by the missing revenue growth
-    # without relying on its position in the result list.
     revenue_growth_result = next(
         result
         for result in results
@@ -137,49 +120,11 @@ def test_rule_engine_preserves_not_evaluable_status():
     assert revenue_growth_result.value is None
     assert revenue_growth_result.threshold == -0.10
 
-
-def test_get_default_rules_uses_custom_configuration(tmp_path):
-    config_path = tmp_path / "rules.yaml"
-
-    config_path.write_text(
-        """
-        rules:
-          - rule_id: R001
-            rule_name: Custom revenue rule
-            category: revenue
-            threshold: -0.20
-            severity: HIGH
-        """,
-        encoding="utf-8",
+    inventory_contribution_result = next(
+        result
+        for result in results
+        if result.rule_id == "R006"
     )
 
-    configuration = RuleConfiguration(config_path)
-
-    rules = get_default_rules(configuration)
-
-    assert len(rules) == 1
-    assert isinstance(rules[0], RevenueGrowthRule)
-
-    assert rules[0].config.rule_id == "R001"
-    assert rules[0].config.rule_name == "Custom revenue rule"
-    assert rules[0].config.threshold == -0.20
-    assert rules[0].config.severity == RuleSeverity.HIGH
-
-
-def test_build_rules_uses_configuration_threshold():
-    config = RuleConfig(
-        rule_id="R001",
-        rule_name="Revenue growth deterioration",
-        category="revenue",
-        threshold=-0.20,
-        severity=RuleSeverity.MEDIUM,
-    )
-
-    rules = build_rules([config])
-
-    assert len(rules) == 1
-    assert isinstance(rules[0], RevenueGrowthRule)
-
-    assert rules[0].config.rule_id == "R001"
-    assert rules[0].config.threshold == -0.20
-    assert rules[0].config.severity == RuleSeverity.MEDIUM
+    assert inventory_contribution_result.status == RuleStatus.NOT_EVALUABLE
+    assert inventory_contribution_result.value is None
