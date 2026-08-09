@@ -1,6 +1,6 @@
 from src.models.position import CreditPosition
 from src.rules.result import RuleResult
-from src.rules.rule import Rule
+from src.rules.base.rule import Rule
 
 
 # Each rule should be implemented as a separate class with a unique rule_id.

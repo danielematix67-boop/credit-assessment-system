@@ -1,6 +1,6 @@
 from src.models.position import CreditPosition
 from src.rules.result import RuleResult
-from src.rules.rule import Rule
+from src.rules.base.rule import Rule
 
 # The RuleEngine is responsible only for executing the registered rules.
 # It should not contain business-rule logic or generate comments.

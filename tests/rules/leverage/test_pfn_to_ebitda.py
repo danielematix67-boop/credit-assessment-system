@@ -1,6 +1,5 @@
 from src.models.position import CreditPosition
-from src.rules.leverage_rules import PfnToEbitdaRule
-
+from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
 
 def test_pfn_to_ebitda_rule_triggered():
     position = CreditPosition(

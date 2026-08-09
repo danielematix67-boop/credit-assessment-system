@@ -1,9 +1,9 @@
 from src.engine.rule_engine import RuleEngine
 from src.models.position import CreditPosition
-from src.rules.profitability_rules import NegativeEbitdaRule
-from src.rules.revenue_rules import RevenueGrowthRule
-from src.rules.margin_rules import EbitdaMarginRule
-from src.rules.leverage_rules import PfnToEbitdaRule
+from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
+from src.rules.revenue.revenue_growth import RevenueGrowthRule
+from src.rules.profitability.ebitda_margin import EbitdaMarginRule
+from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
 
 
 def test_rule_engine_evaluates_all_rules():

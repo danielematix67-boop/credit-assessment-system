@@ -1,8 +1,8 @@
 from src.comments.comment_engine import CommentEngine
 from src.engine.rule_engine import RuleEngine
 from src.models.position import CreditPosition
-from src.rules.profitability_rules import NegativeEbitdaRule
-from src.rules.revenue_rules import RevenueGrowthRule
+from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
+from src.rules.revenue.revenue_growth import RevenueGrowthRule
 from src.services.assessment_service import AssessmentService
 
 

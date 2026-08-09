@@ -1,5 +1,5 @@
 from src.models.position import CreditPosition
-from src.rules.financial_expenses_rules import FinancialExpensesToEbitdaRule
+from src.rules.profitability.financial_expenses_to_ebitda import FinancialExpensesToEbitdaRule
 
 
 def test_interest_expense_to_ebitda_rule_triggered():

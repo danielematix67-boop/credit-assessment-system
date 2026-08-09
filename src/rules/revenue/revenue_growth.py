@@ -1,7 +1,7 @@
-
 from src.models.position import CreditPosition
 from src.rules.result import RuleResult
-from src.rules.rule import Rule
+from src.rules.base.rule import Rule
+
 
 # Each rule should be implemented as a separate class with a unique rule_id.
 #
@@ -9,16 +9,16 @@ from src.rules.rule import Rule
 # represent one specific business rule and return one RuleResult.
 
 
-class EbitdaMarginRule(Rule):
+class RevenueGrowthRule(Rule):
 
-    rule_id = "R003"
-    rule_name = "EBITDA margin deterioration"
-    category = "profitability"
-    threshold = 0.0
+    rule_id = "R001"
+    rule_name = "Revenue deterioration"
+    category = "revenue"
+    threshold = -0.10
 
     def evaluate(self, position: CreditPosition) -> RuleResult:
 
-        if position.ebitda_margin is None:
+        if position.revenue_growth is None:
             return RuleResult(
                 rule_id=self.rule_id,
                 rule_name=self.rule_name,
@@ -29,14 +29,14 @@ class EbitdaMarginRule(Rule):
                 status="NOT_EVALUABLE",
             )
 
-        triggered = position.ebitda_margin < self.threshold
+        triggered = position.revenue_growth < self.threshold
 
         return RuleResult(
             rule_id=self.rule_id,
             rule_name=self.rule_name,
             category=self.category,
             triggered=triggered,
-            value=position.ebitda_margin,
+            value=position.revenue_growth,
             threshold=self.threshold,
             status="OK",
         )
