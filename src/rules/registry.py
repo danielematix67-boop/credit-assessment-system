@@ -14,18 +14,20 @@ from src.rules.revenue.revenue_growth import RevenueGrowthRule
 RULES_CONFIG_PATH = Path("config/rules.yaml")
 
 
-def get_default_rules() -> list[Rule]:
-    configs = RuleConfigLoader().load(RULES_CONFIG_PATH)
+_RULE_FACTORIES = {
+    "R001": RevenueGrowthRule,
+    "R002": NegativeEbitdaRule,
+    "R003": EbitdaMarginRule,
+    "R004": PfnToEbitdaRule,
+    "R005": FinancialExpensesToEbitdaRule,
+}
 
-    rule_classes = {
-        "R001": RevenueGrowthRule,
-        "R002": NegativeEbitdaRule,
-        "R003": EbitdaMarginRule,
-        "R004": PfnToEbitdaRule,
-        "R005": FinancialExpensesToEbitdaRule,
-    }
+
+def get_default_rules() -> list[Rule]:
+    loader = RuleConfigLoader()
+    configs = loader.load(RULES_CONFIG_PATH)
 
     return [
-        rule_classes[config.rule_id](config)
+        _RULE_FACTORIES[config.rule_id](config)
         for config in configs
     ]

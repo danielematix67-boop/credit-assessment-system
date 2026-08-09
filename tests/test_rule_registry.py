@@ -54,3 +54,14 @@ def test_default_rules_registry():
     assert rules[4].config.category == "profitability"
     assert rules[4].config.threshold == 0.60
     assert rules[4].config.severity == RuleSeverity.MEDIUM
+
+def test_default_rules_registry_preserves_yaml_order():
+    rules = get_default_rules()
+
+    assert [rule.config.rule_id for rule in rules] == [
+        "R001",
+        "R002",
+        "R003",
+        "R004",
+        "R005",
+    ]
