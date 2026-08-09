@@ -1,9 +1,11 @@
 from src.comments.comment_engine import CommentEngine
 from src.engine.rule_engine import RuleEngine
 from src.models.position import CreditPosition
+from src.models.assessment_status import AssessmentStatus
 from src.rules.base.status import RuleStatus
 from src.rules.registry import get_default_rules
 from src.services.assessment_service import AssessmentService
+from src.services.assessment_status_calculator import AssessmentStatusCalculator
 
 
 def test_assessment_service_generates_assessment():
@@ -19,15 +21,18 @@ def test_assessment_service_generates_assessment():
 
     rule_engine = RuleEngine(get_default_rules())
     comment_engine = CommentEngine()
+    status_calculator = AssessmentStatusCalculator()
 
     service = AssessmentService(
         rule_engine=rule_engine,
         comment_engine=comment_engine,
+        status_calculator=status_calculator,
     )
 
     assessment = service.assess(position)
 
     assert assessment.position_id == "POS001"
+    assert assessment.status == AssessmentStatus.CRITICAL
 
     assert len(assessment.rule_results) == 5
     assert len(assessment.comments) == 4
@@ -74,10 +79,12 @@ def test_assessment_service_does_not_generate_comment_for_not_evaluable_rule():
 
     rule_engine = RuleEngine(get_default_rules())
     comment_engine = CommentEngine()
+    status_calculator = AssessmentStatusCalculator()
 
     service = AssessmentService(
         rule_engine=rule_engine,
         comment_engine=comment_engine,
+        status_calculator=status_calculator,
     )
 
     assessment = service.assess(position)
@@ -110,15 +117,18 @@ def test_assessment_service_generates_no_comments_for_healthy_position():
 
     rule_engine = RuleEngine(get_default_rules())
     comment_engine = CommentEngine()
+    status_calculator = AssessmentStatusCalculator()
 
     service = AssessmentService(
         rule_engine=rule_engine,
         comment_engine=comment_engine,
+        status_calculator=status_calculator,
     )
 
     assessment = service.assess(position)
 
     assert assessment.position_id == "POS003"
+    assert assessment.status == AssessmentStatus.NORMAL
 
     assert len(assessment.rule_results) == 5
     assert len(assessment.comments) == 0

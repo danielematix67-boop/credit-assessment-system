@@ -1,10 +1,11 @@
 from src.comments.comment import Comment
 from src.models.assessment import Assessment
+from src.models.assessment_status import AssessmentStatus
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
 
-def test_assessment_stores_position_id_rule_results_and_comments():
+def test_assessment_stores_position_id_rule_results_comments_and_status():
     rule_result = RuleResult(
         rule_id="R001",
         rule_name="Revenue growth deterioration",
@@ -26,8 +27,10 @@ def test_assessment_stores_position_id_rule_results_and_comments():
         position_id="POS001",
         rule_results=[rule_result],
         comments=[comment],
+        status=AssessmentStatus.ATTENTION,
     )
 
     assert assessment.position_id == "POS001"
     assert assessment.rule_results == [rule_result]
     assert assessment.comments == [comment]
+    assert assessment.status == AssessmentStatus.ATTENTION
