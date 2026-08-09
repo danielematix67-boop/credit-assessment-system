@@ -7,7 +7,7 @@ def test_assessment_service_generates_critical_assessment(assessment_service):
     position = CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
-        ebitda=50000,
+        ebitda=-50000,
         profit_loss=-50000,
         ebitda_margin=-0.05,
         pfn_to_ebitda=6.0,
@@ -32,14 +32,22 @@ def test_assessment_service_generates_critical_assessment(assessment_service):
         for comment in assessment.comments
     }
 
+    # Rule statuses
     assert results["R001"].status == RuleStatus.TRIGGERED
+    assert results["R002"].status == RuleStatus.TRIGGERED
     assert results["R003"].status == RuleStatus.TRIGGERED
     assert results["R004"].status == RuleStatus.TRIGGERED
-    assert results["R005"].status == RuleStatus.TRIGGERED
+    assert results["R005"].status == RuleStatus.NOT_EVALUABLE
 
+    # Generated comments
     assert comments["R001"].text == (
         "Revenue deterioration detected. "
         "Revenue growth: -15.0% (threshold: -10.0%)."
+    )
+
+    assert comments["R002"].text == (
+        "Negative EBITDA detected. "
+        "EBITDA: €-50,000 (threshold: €0)."
     )
 
     assert comments["R003"].text == (
@@ -50,11 +58,6 @@ def test_assessment_service_generates_critical_assessment(assessment_service):
     assert comments["R004"].text == (
         "Leverage is above the acceptable threshold. "
         "PFN to EBITDA: 6.0x (threshold: 5.0x)."
-    )
-
-    assert comments["R005"].text == (
-        "Interest expense to EBITDA is above the acceptable threshold. "
-        "Ratio: 80.0% (threshold: 60.0%)."
     )
 
 
