@@ -1,6 +1,7 @@
-from src.rules.base.config import RuleConfig
+from pathlib import Path
+
+from src.config.rule_config_loader import RuleConfigLoader
 from src.rules.base.rule import Rule
-from src.rules.base.severity import RuleSeverity
 from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
 from src.rules.profitability.ebitda_margin import EbitdaMarginRule
 from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
@@ -10,59 +11,21 @@ from src.rules.profitability.financial_expenses_to_ebitda import (
 from src.rules.revenue.revenue_growth import RevenueGrowthRule
 
 
-# The registry defines the default set and execution order of business rules.
-#
-# Adding a new default rule requires registering its configuration and rule
-# class here.
-#
-# The registry should not contain the implementation of the rules themselves.
+RULES_CONFIG_PATH = Path("config/rules.yaml")
 
 
 def get_default_rules() -> list[Rule]:
+    configs = RuleConfigLoader().load(RULES_CONFIG_PATH)
+
+    rule_classes = {
+        "R001": RevenueGrowthRule,
+        "R002": NegativeEbitdaRule,
+        "R003": EbitdaMarginRule,
+        "R004": PfnToEbitdaRule,
+        "R005": FinancialExpensesToEbitdaRule,
+    }
+
     return [
-        RevenueGrowthRule(
-            RuleConfig(
-                rule_id="R001",
-                rule_name="Revenue deterioration",
-                category="revenue",
-                threshold=-0.10,
-                severity=RuleSeverity.MEDIUM,
-            )
-        ),
-        NegativeEbitdaRule(
-            RuleConfig(
-                rule_id="R002",
-                rule_name="Negative EBITDA",
-                category="profitability",
-                threshold=0,
-                severity=RuleSeverity.HIGH,
-            )
-        ),
-        EbitdaMarginRule(
-            RuleConfig(
-                rule_id="R003",
-                rule_name="EBITDA margin deterioration",
-                category="profitability",
-                threshold=0.0,
-                severity=RuleSeverity.MEDIUM,
-            )
-        ),
-        PfnToEbitdaRule(
-            RuleConfig(
-                rule_id="R004",
-                rule_name="PFN / EBITDA leverage",
-                category="leverage",
-                threshold=5.0,
-                severity=RuleSeverity.HIGH,
-            )
-        ),
-        FinancialExpensesToEbitdaRule(
-            RuleConfig(
-                rule_id="R005",
-                rule_name="Interest expense to EBITDA",
-                category="profitability",
-                threshold=0.60,
-                severity=RuleSeverity.MEDIUM,
-            )
-        ),
+        rule_classes[config.rule_id](config)
+        for config in configs
     ]
