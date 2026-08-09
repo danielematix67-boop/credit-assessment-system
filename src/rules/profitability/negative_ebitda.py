@@ -1,6 +1,7 @@
 from src.models.position import CreditPosition
 from src.rules.base.rule import Rule
 from src.rules.base.status import RuleStatus
+from src.rules.result import RuleResult
 
 
 # Each rule represents one independent business rule.
@@ -11,9 +12,10 @@ from src.rules.base.status import RuleStatus
 # its own configuration.
 
 
+@Rule.register("R002")
 class NegativeEbitdaRule(Rule):
 
-    def evaluate(self, position: CreditPosition):
+    def evaluate(self, position: CreditPosition) -> RuleResult:
 
         if position.ebitda is None:
             return self._not_evaluable()

@@ -1,19 +1,13 @@
 from src.models.position import CreditPosition
 from src.rules.base.rule import Rule
 from src.rules.base.status import RuleStatus
+from src.rules.result import RuleResult
 
 
-# Each rule represents one independent business rule.
-#
-# A rule evaluates a CreditPosition and returns exactly one RuleResult.
-#
-# Related rules may live in the same module, but each rule must have
-# its own configuration.
-
-
+@Rule.register("R003")
 class EbitdaMarginRule(Rule):
 
-    def evaluate(self, position: CreditPosition):
+    def evaluate(self, position: CreditPosition) -> RuleResult:
 
         if position.ebitda_margin is None:
             return self._not_evaluable()

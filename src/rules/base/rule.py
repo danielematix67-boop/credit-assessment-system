@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import ClassVar
 
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
@@ -6,19 +7,9 @@ from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
 
-# Each rule represents one independent business rule.
-#
-# A rule evaluates a CreditPosition and returns exactly one RuleResult.
-#
-# Related rules may live in the same module, but each rule must have its
-# own configuration.
-#
-# The base class provides common helpers for building standardized
-# RuleResult objects, while the concrete rule remains responsible for
-# its own business logic.
-
-
 class Rule(ABC):
+
+    _registry: ClassVar[dict[str, type["Rule"]]] = {}
 
     def __init__(self, config: RuleConfig):
         self.config = config
@@ -48,3 +39,28 @@ class Rule(ABC):
             value=None,
             status=RuleStatus.NOT_EVALUABLE,
         )
+
+    @classmethod
+    def register(cls, rule_id: str):
+        def decorator(rule_class: type["Rule"]) -> type["Rule"]:
+            if rule_id in cls._registry:
+                raise ValueError(
+                    f"Rule already registered: {rule_id}"
+                )
+
+            cls._registry[rule_id] = rule_class
+            return rule_class
+
+        return decorator
+
+    @classmethod
+    def get_registered_rule(
+        cls,
+        rule_id: str,
+    ) -> type["Rule"]:
+        try:
+            return cls._registry[rule_id]
+        except KeyError:
+            raise ValueError(
+                f"Unknown rule_id: {rule_id}"
+            ) from None
