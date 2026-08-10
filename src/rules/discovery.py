@@ -6,7 +6,13 @@ import src.rules
 
 def discover_rules() -> None:
     """
-    Import all rule modules so that registered rules are loaded.
+    Discover and import all rule modules.
+
+    Rule modules are imported once by Python's import system.
+    Importing an already loaded module does not re-execute it.
+    Therefore this function is idempotent and must not be used
+    to rebuild a cleared Rule registry.
+    
     """
 
     package = src.rules

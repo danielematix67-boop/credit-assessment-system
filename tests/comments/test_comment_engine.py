@@ -6,11 +6,11 @@ from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
-from src.rules.revenue.revenue_growth import RevenueGrowthRule
-from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
-from src.rules.profitability.ebitda_margin import EbitdaMarginRule
-from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
-from src.rules.profitability.financial_expenses_to_ebitda import (
+from src.rules.financial.revenue.revenue_growth import RevenueGrowthRule
+from src.rules.financial.profitability.negative_ebitda import NegativeEbitdaRule
+from src.rules.financial.margins.ebitda_margin import EbitdaMarginRule
+from src.rules.sustainability.leverage.pfn_to_ebitda import PfnToEbitdaRule
+from src.rules.financial.profitability.financial_expenses_to_ebitda import (
     FinancialExpensesToEbitdaRule,
 )
 

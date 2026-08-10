@@ -2,7 +2,7 @@ from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.status import RuleStatus
 from src.rules.base.severity import RuleSeverity
-from src.rules.revenue.revenue_growth import RevenueGrowthRule
+from src.rules.financial.revenue.revenue_growth import RevenueGrowthRule
 
 
 R001_CONFIG = RuleConfig(

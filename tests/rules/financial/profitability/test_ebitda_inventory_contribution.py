@@ -2,7 +2,7 @@ from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
-from src.rules.profitability.ebitda_inventory_contribution import (
+from src.rules.financial.profitability.ebitda_inventory_contribution import (
     EbitdaInventoryContributionRule,
 )
 

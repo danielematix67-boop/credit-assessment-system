@@ -2,7 +2,7 @@ from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
-from src.rules.leverage.pfn_to_ebitda import PfnToEbitdaRule
+from src.rules.sustainability.leverage.pfn_to_ebitda import PfnToEbitdaRule
 
 
 R004_CONFIG = RuleConfig(

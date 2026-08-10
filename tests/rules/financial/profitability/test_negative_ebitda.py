@@ -2,7 +2,7 @@ from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
-from src.rules.profitability.negative_ebitda import NegativeEbitdaRule
+from src.rules.financial.profitability.negative_ebitda import NegativeEbitdaRule
 
 
 R002_CONFIG = RuleConfig(
