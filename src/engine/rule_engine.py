@@ -11,8 +11,11 @@ class RuleEngine:
     def __init__(self, rules: list[Rule]):
         self.rules = rules
 
-    def evaluate(self, position: CreditPosition) -> list[RuleResult]:
-        results = []
+    def evaluate(
+        self,
+        position: CreditPosition,
+    ) -> list[RuleResult]:
+        results: list[RuleResult] = []
 
         for rule in self.rules:
             results.append(rule.evaluate(position))
