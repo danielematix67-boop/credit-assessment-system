@@ -26,11 +26,6 @@ def test_assessment_service_generates_critical_assessment(
         assessment_service.rule_engine.rules
     )
 
-    results = {
-        result.rule_id: result
-        for result in assessment.rule_results
-    }
-
     comments = {
         comment.rule_id: comment
         for comment in assessment.comments
