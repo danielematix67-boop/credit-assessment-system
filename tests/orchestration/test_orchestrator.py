@@ -1,11 +1,12 @@
+from src.agents.analysis.analysis_agent import AnalysisAgent
+from src.agents.reporting.reporting_agent import ReportingAgent
 from src.models.position import CreditPosition
 from src.models.report import Report
 from src.orchestration.orchestrator import AssessmentOrchestrator
-from src.agents.reporting.reporting_agent import ReportingAgent
-
 from src.orchestration.orchestrator_factory import (
     create_default_orchestrator,
 )
+
 
 def test_orchestrator_returns_report(assessment_service):
     position = CreditPosition(
@@ -20,6 +21,7 @@ def test_orchestrator_returns_report(assessment_service):
 
     orchestrator = AssessmentOrchestrator(
         assessment_service=assessment_service,
+        analysis_agent=AnalysisAgent(),
         reporting_agent=ReportingAgent(),
     )
 
@@ -27,6 +29,7 @@ def test_orchestrator_returns_report(assessment_service):
 
     assert isinstance(report, Report)
     assert report.position_id == position.position_id
+
 
 def test_orchestrator_preserves_assessment_status(
     assessment_service,
@@ -45,6 +48,7 @@ def test_orchestrator_preserves_assessment_status(
 
     orchestrator = AssessmentOrchestrator(
         assessment_service=assessment_service,
+        analysis_agent=AnalysisAgent(),
         reporting_agent=ReportingAgent(),
     )
 
@@ -59,6 +63,10 @@ def test_default_orchestrator_creates_valid_orchestrator():
     assert isinstance(
         orchestrator,
         AssessmentOrchestrator,
+    )
+    assert isinstance(
+        orchestrator.analysis_agent,
+        AnalysisAgent,
     )
     assert isinstance(
         orchestrator.reporting_agent,

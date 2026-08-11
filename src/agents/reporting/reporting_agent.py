@@ -1,56 +1,40 @@
 from src.agents.base.agent import Agent
-from src.models.assessment import Assessment
+from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.models.report import Report
-from src.rules.base.status import RuleStatus
 
 
-class ReportingAgent(Agent[Assessment, Report]):
+class ReportingAgent(Agent[AssessmentAnalysis, Report]):
 
-    def run(self, assessment: Assessment) -> Report:
-        triggered_rules = [
-            result
-            for result in assessment.rule_results
-            if result.status == RuleStatus.TRIGGERED
-        ]
+    def run(
+        self,
+        analysis: AssessmentAnalysis,
+    ) -> Report:
 
-        not_evaluable_rules = [
-            result
-            for result in assessment.rule_results
-            if result.status == RuleStatus.NOT_EVALUABLE
-        ]
-
-        findings = [
-            result.rule_name
-            for result in triggered_rules
-        ]
-
-        limitations = [
-            result.rule_name
-            for result in not_evaluable_rules
-        ]
-
-        if assessment.status == AssessmentStatus.NORMAL:
+        if analysis.assessment_status == AssessmentStatus.NORMAL:
             summary = (
                 "The credit assessment is classified as normal."
             )
-        elif assessment.status == AssessmentStatus.ATTENTION:
+
+        elif analysis.assessment_status == AssessmentStatus.ATTENTION:
             summary = (
                 "The credit assessment requires attention."
             )
-        elif assessment.status == AssessmentStatus.CRITICAL:
+
+        elif analysis.assessment_status == AssessmentStatus.CRITICAL:
             summary = (
                 "The credit assessment is classified as critical."
             )
+
         else:
             summary = (
                 "The credit assessment has an undefined status."
             )
 
         return Report(
-            position_id=assessment.position_id,
-            assessment_status=assessment.status,
+            position_id=analysis.position_id,
+            assessment_status=analysis.assessment_status,
             executive_summary=summary,
-            findings=findings,
-            limitations=limitations,
+            findings=analysis.key_findings,
+            limitations=analysis.limitations,
         )

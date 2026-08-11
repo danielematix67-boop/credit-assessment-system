@@ -40,6 +40,7 @@ class AnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
 
         return AssessmentAnalysis(
             position_id=assessment.position_id,
+            assessment_status=assessment.status,
             key_findings=key_findings,
             risk_factors=risk_factors,
             limitations=limitations,
