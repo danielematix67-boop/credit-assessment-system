@@ -1,0 +1,26 @@
+from src.agents.reporting.reporting_agent import ReportingAgent
+from src.models.assessment import Assessment
+from src.models.assessment_status import AssessmentStatus
+from src.models.position import CreditPosition
+from src.rules.base.status import RuleStatus
+
+def test_reporting_agent_preserves_deterministic_assessment(
+    assessment_service,
+):
+    position = CreditPosition(
+        position_id="POS001",
+        revenue_growth=-0.15,
+        ebitda=-50000,
+        profit_loss=-50000,
+        ebitda_margin=-0.05,
+        pfn_to_ebitda=6.0,
+        interest_expense=40000,
+    )
+
+    assessment = assessment_service.assess(position)
+
+    agent = ReportingAgent()
+    report = agent.run(assessment)
+
+    assert report.position_id == assessment.position_id
+    assert report.assessment_status == assessment.status
