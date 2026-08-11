@@ -35,3 +35,8 @@ rules:
     threshold: 0.30
     severity: MEDIUM
   
+  - rule_id: R007
+    rule_name: Interest coverage ratio
+    category: profitability
+    threshold: 2.0
+    severity: MEDIUM

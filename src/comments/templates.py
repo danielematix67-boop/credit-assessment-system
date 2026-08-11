@@ -34,4 +34,16 @@ COMMENTS = {
         "Ratio: {value:.1%} "
         "(threshold: {threshold:.1%})."
     ),
+
+    "R006": (
+        "Negative profit/loss detected. "
+        "Profit/Loss: €{value:,.0f} "
+        "(threshold: €{threshold:,.0f})."
+    ),
+
+    "R007": (
+        "EBITDA does not sufficiently cover interest expense. "
+        "Interest coverage ratio: {value:.1f}x "
+        "(threshold: {threshold:.1f}x)."
+    ),
 }

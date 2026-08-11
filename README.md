@@ -16,7 +16,7 @@ For each credit position, the system:
 2. Discovers and registers the available rule implementations.
 3. Instantiates the rules from their configuration.
 4. Evaluates each rule against the credit position.
-5. Produces a structured `RuleResult` for every rule.
+5. Produces a structured `RuleResult` for every configured rule.
 6. Aggregates the rule results into an overall assessment status.
 7. Optionally generates explanatory comments through a separate comment layer.
 
@@ -56,9 +56,9 @@ Rule thresholds, severities and metadata are externalized through configuration 
 
 ### Extensibility
 
-New rules can be introduced without modifying the core rule engine.
+New rules can be introduced without modifying the core rule engine, discovery mechanism or assessment orchestration.
 
-A new rule only needs to implement the `Rule` interface and register itself with a unique rule identifier.
+A new rule is registered through the common `Rule` abstraction and becomes discoverable automatically.
 
 ### Traceability
 
@@ -78,7 +78,7 @@ This makes the assessment process auditable and explainable.
 
 The system is designed around small, independently testable components.
 
-The project currently includes a comprehensive automated test suite covering domain models, rules, discovery, configuration, registry behaviour, services and comment generation.
+The test suite covers domain models, configuration, individual rules, registration, discovery, services, assessment aggregation and comment generation.
 
 ---
 
@@ -186,6 +186,7 @@ src/
 │   │   ├── profitability/
 │   │   │   ├── ebitda_inventory_contribution.py
 │   │   │   ├── financial_expenses_to_ebitda.py
+│   │   │   ├── interest_coverage_ratio.py
 │   │   │   └── negative_ebitda.py
 │   │   └── revenue/
 │   │       └── revenue_growth.py
@@ -204,7 +205,7 @@ src/
     └── service_factory.py
 ```
 
-The `tests/` directory mirrors the application structure and contains the corresponding unit and integration-oriented tests.
+The `tests/` directory mirrors the application structure and contains the corresponding unit and service-level tests.
 
 ---
 
@@ -257,11 +258,31 @@ R003 → EbitdaMarginRule
 R004 → PfnToEbitdaRule
 R005 → FinancialExpensesToEbitdaRule
 R006 → EbitdaInventoryContributionRule
+R007 → InterestCoverageRatioRule
 ```
 
 Duplicate rule identifiers are rejected during registration.
 
 Unknown identifiers are also explicitly rejected when building the rule set.
+
+The rule identifier acts as the stable link between:
+
+```text
+Configuration
+      │
+      ▼
+Rule ID
+      │
+      ├──► Rule implementation
+      │
+      ├──► Rule configuration
+      │
+      ├──► Rule tests
+      │
+      └──► Comment template
+```
+
+This provides a consistent mechanism for extending the system.
 
 ---
 
@@ -298,6 +319,8 @@ The discovery mechanism deliberately excludes infrastructure modules such as:
 * base rule modules.
 
 The discovery process is also designed to be idempotent once modules have already been imported.
+
+As a consequence, adding a new rule does **not** require manually updating a central list of rule classes.
 
 ---
 
@@ -356,7 +379,9 @@ class RuleEngine:
         return results
 ```
 
-This design makes the engine generic: it does not need to know whether a rule evaluates revenue growth, EBITDA, leverage or another financial indicator.
+This design makes the engine generic: it does not need to know whether a rule evaluates revenue growth, EBITDA, leverage, interest coverage or another financial indicator.
+
+Therefore, adding a new business rule does not require modifying `RuleEngine`.
 
 ---
 
@@ -383,7 +408,7 @@ Typical rule statuses include:
 * `NOT_TRIGGERED`
 * `NOT_EVALUABLE`
 
-This structured representation allows downstream components to operate on rule outcomes without depending on the implementation details of individual rules.
+The structured result allows downstream components to operate on rule outcomes without depending on the implementation details of individual rules.
 
 ---
 
@@ -435,6 +460,7 @@ The current rule taxonomy separates rules according to their business domain.
 * `R002` — Negative EBITDA
 * `R005` — Financial Expenses / EBITDA
 * `R006` — EBITDA Inventory Contribution
+* `R007` — Interest Coverage Ratio
 
 #### Margins
 
@@ -464,11 +490,27 @@ threshold
 severity
 ```
 
+For example:
+
+```yaml
+- rule_id: R007
+  rule_name: Interest coverage ratio
+  category: profitability
+  threshold: 2.0
+  severity: MEDIUM
+```
+
+The configuration determines whether a rule is part of the active assessment rule set.
+
+This distinction is important:
+
+> **Creating a rule implementation does not automatically mean that the rule is active.**
+
+A rule becomes part of the configured assessment when its corresponding configuration entry is present.
+
 This allows thresholds and metadata to be changed without modifying the rule implementation itself.
 
-For example, the implementation of a revenue-growth rule can remain unchanged while the configured threshold is adjusted.
-
-This approach supports:
+The configuration-driven approach supports:
 
 * parameterization;
 * reproducibility;
@@ -500,7 +542,27 @@ Assessment Status
 Comment / Reporting Layer
 ```
 
-The comment layer can transform structured assessment results into human-readable explanations.
+The comment layer transforms structured assessment results into human-readable explanations.
+
+Each triggered rule can have a corresponding comment template identified by the same rule ID.
+
+For example:
+
+```text
+R001 → Revenue deterioration comment
+R002 → Negative EBITDA comment
+R003 → EBITDA margin comment
+R004 → Leverage comment
+R005 → Financial expenses / EBITDA comment
+R006 → EBITDA inventory contribution comment
+R007 → Interest coverage ratio comment
+```
+
+This maintains a consistent separation between:
+
+* **decision logic**;
+* **structured results**;
+* **natural-language explanation**.
 
 This separation is particularly important for future integration with an **LLM-based reporting component**.
 
@@ -525,35 +587,278 @@ This preserves deterministic decision-making while allowing flexible natural-lan
 
 ---
 
-## 15. Testing
+## 15. Extensibility: Adding a New Rule
 
-The project uses `pytest` for automated testing.
+One of the main architectural goals of the project is that adding a new business rule should be **additive rather than invasive**.
 
-The test suite covers:
+The implementation has been explicitly validated by introducing additional rules without modifying the core orchestration components.
 
-* domain models;
-* rule configuration;
-* individual rules;
-* rule registration;
-* dynamic rule discovery;
-* rule construction;
-* rule engine execution;
-* assessment status calculation;
-* assessment services;
-* service factory;
-* comment generation.
+For example, the addition of the `Interest Coverage Ratio` rule followed the same architecture already used by the existing rules.
 
-The current test suite contains **92 tests**, all passing.
+The workflow is:
 
 ```text
-92 passed
+1. Create rule implementation
+          │
+          ▼
+2. Register with @Rule.register(...)
+          │
+          ▼
+3. Add configuration to rules.yaml
+          │
+          ▼
+4. Add comment template
+          │
+          ▼
+5. Add unit tests for the rule
+          │
+          ▼
+6. Update/add scenario tests only where
+   the new rule changes expected behaviour
+          │
+          ▼
+7. Run complete test suite
 ```
 
-The rule discovery tests also verify that all registered rule identifiers are correctly loaded and that repeated discovery does not alter the registry unexpectedly.
+### Step 1 — Create the rule
+
+The new rule is placed in the appropriate business taxonomy:
+
+```text
+src/rules/financial/profitability/interest_coverage_ratio.py
+```
+
+It implements the common `Rule` interface.
+
+### Step 2 — Register the rule
+
+The rule is associated with a unique business identifier:
+
+```python
+@Rule.register("R007")
+class InterestCoverageRatioRule(Rule):
+    ...
+```
+
+No modification to the central registry is required.
+
+### Step 3 — Add configuration
+
+The corresponding rule is added to the active configuration:
+
+```yaml
+- rule_id: R007
+  rule_name: Interest coverage ratio
+  category: profitability
+  threshold: 2.0
+  severity: MEDIUM
+```
+
+The configuration controls whether the rule participates in the default assessment service.
+
+### Step 4 — Add the comment template
+
+If the rule is intended to generate a human-readable explanation, a template is added using the same rule identifier.
+
+This preserves the mapping:
+
+```text
+R007
+ │
+ ├── Rule implementation
+ ├── Rule configuration
+ ├── Rule tests
+ └── Comment template
+```
+
+### Step 5 — Add rule-specific tests
+
+The new rule receives its own test module covering relevant scenarios such as:
+
+* triggered;
+* not triggered;
+* not evaluable;
+* missing inputs;
+* boundary conditions;
+* custom configuration.
+
+These tests validate the business logic independently from the rest of the system.
+
+### Step 6 — Update scenario tests only when necessary
+
+Service-level tests should validate **behaviour**, rather than the exact number of rules.
+
+For example, this is preferable:
+
+```python
+assert len(assessment.rule_results) == len(
+    assessment_service.rule_engine.rules
+)
+```
+
+rather than:
+
+```python
+assert len(assessment.rule_results) == 7
+```
+
+Likewise, scenario tests should avoid unnecessarily hard-coding every rule identifier when the purpose of the test is to validate general assessment behaviour.
+
+This means that adding a new rule should not automatically require rewriting unrelated tests.
+
+If the new rule changes the expected outcome of a specific scenario, that scenario should be updated accordingly.
+
+### Architectural result
+
+The core orchestration remains unchanged:
+
+```text
+RuleEngine
+AssessmentService
+Rule Discovery
+Rule Registry
+AssessmentStatusCalculator
+```
+
+do not need to be modified merely because a new business rule has been introduced.
+
+This is the practical manifestation of the project's extensibility principle:
+
+> **New business rules are added through extension points rather than changes to the orchestration layer.**
 
 ---
 
-## 16. Running the Test Suite
+## 16. Testing Strategy
+
+The testing strategy is divided into different levels.
+
+### Rule-level tests
+
+Each individual rule has dedicated tests for its own business logic.
+
+For example:
+
+```text
+tests/rules/financial/profitability/
+├── test_ebitda_inventory_contribution.py
+├── test_financial_expenses_to_ebitda.py
+├── test_interest_coverage_ratio.py
+└── test_negative_ebitda.py
+```
+
+These tests are intentionally specific to the rule.
+
+### Infrastructure tests
+
+The architecture also contains tests for:
+
+* rule registration;
+* duplicate identifiers;
+* dynamic discovery;
+* configuration;
+* result generation.
+
+These tests verify the framework rather than individual business rules.
+
+### Service-level tests
+
+Service tests validate the interaction between:
+
+```text
+Configuration
+      ↓
+Rule Discovery
+      ↓
+Rule Registry
+      ↓
+Rule Engine
+      ↓
+Assessment Service
+      ↓
+Assessment Status
+      ↓
+Comments
+```
+
+These tests should be as configuration-driven as possible.
+
+For example:
+
+```python
+assert len(assessment.rule_results) == len(
+    service.rule_engine.rules
+)
+```
+
+is preferable to hard-coding the current number of configured rules.
+
+Similarly, a generic assertion such as:
+
+```python
+assert all(
+    result.status != RuleStatus.TRIGGERED
+    for result in assessment.rule_results
+)
+```
+
+is preferable to enumerating every rule ID when the scenario is intended to verify that the assessment contains no triggered rules.
+
+This makes the test suite more resilient to future rule additions.
+
+---
+
+## 17. Test Extensibility Validation
+
+The project uses the addition of new rules as an architectural validation exercise.
+
+A useful extensibility test is:
+
+1. Introduce a new rule.
+2. Register it using the existing decorator.
+3. Add its configuration.
+4. Add its comment template.
+5. Add rule-specific tests.
+6. Run the entire test suite.
+7. Verify that the core engine and orchestration code remain unchanged.
+
+If the complete suite passes after these changes, the architecture has demonstrated that the new rule can be incorporated without modifying the central execution mechanism.
+
+This is more meaningful than simply demonstrating that an individual rule works.
+
+It verifies that the **system-level extension points are functioning correctly**.
+
+---
+
+## 18. Current Rule Set
+
+The currently configured rule set is:
+
+```text
+R001 → Revenue growth deterioration
+R002 → Negative EBITDA
+R003 → EBITDA margin deterioration
+R004 → PFN / EBITDA leverage
+R005 → Interest expense to EBITDA
+R006 → EBITDA materially supported by finished goods inventory increase
+R007 → Interest coverage ratio
+```
+
+Each rule is associated with:
+
+```text
+Rule ID
+   │
+   ├── Implementation
+   ├── Configuration
+   ├── Tests
+   └── Comment template
+```
+
+The rule set can therefore evolve independently of the orchestration layer.
+
+---
+
+## 19. Running the Test Suite
 
 From the project root:
 
@@ -579,9 +884,50 @@ To run the discovery tests:
 pytest tests/rules/test_rule_discovery.py
 ```
 
+To run a specific business rule:
+
+```bash
+pytest tests/rules/financial/profitability/test_interest_coverage_ratio.py
+```
+
+If code coverage is configured:
+
+```bash
+pytest --cov=src --cov-report=term-missing
+```
+
 ---
 
-## 17. Manual Rule Discovery Check
+## 20. Continuous Integration
+
+The project uses GitHub Actions to automatically validate the codebase.
+
+The CI pipeline performs the following steps:
+
+```text
+Checkout repository
+        │
+        ▼
+Set up Python
+        │
+        ▼
+Install dependencies
+        │
+        ▼
+Run Ruff linting
+        │
+        ▼
+Run pytest
+        │
+        ▼
+Generate coverage information
+```
+
+This ensures that changes pushed to the repository are automatically checked for both code quality and test regressions.
+
+---
+
+## 21. Manual Rule Discovery Check
 
 The rule registry can also be inspected manually:
 
@@ -605,62 +951,14 @@ R003
 R004
 R005
 R006
+R007
 ```
+
+The exact number of rules should not be treated as an architectural invariant. The registry is expected to evolve as new rules are added.
 
 ---
 
-## 18. Extending the System
-
-Adding a new rule follows a simple workflow.
-
-### 1. Create the rule module
-
-Place the implementation in the appropriate taxonomy directory.
-
-For example:
-
-```text
-src/rules/financial/liquidity/new_rule.py
-```
-
-### 2. Implement the `Rule` interface
-
-```python
-from src.rules.base.rule import Rule
-
-
-@Rule.register("R007")
-class NewRule(Rule):
-
-    def evaluate(self, position):
-        ...
-```
-
-### 3. Add the rule configuration
-
-Add the corresponding configuration entry containing the rule identifier, threshold, severity and metadata.
-
-### 4. Add tests
-
-Create a corresponding test module under:
-
-```text
-tests/rules/financial/liquidity/
-```
-
-### 5. Run the complete test suite
-
-```bash
-pytest
-```
-
-No modification to `RuleEngine` should be required.
-
-This is a key characteristic of the architecture: **new business rules should be additive rather than requiring changes to the orchestration layer.**
-
----
-
-## 19. Architectural Boundaries
+## 22. Architectural Boundaries
 
 The project intentionally maintains the following boundaries:
 
@@ -684,30 +982,7 @@ Keeping these boundaries explicit reduces coupling and makes the system easier t
 
 ---
 
-## 20. Future Development
-
-Potential extensions include:
-
-* additional financial and sustainability rules;
-* richer rule-status semantics;
-* configurable assessment aggregation policies;
-* rule dependency management;
-* rule execution tracing and audit logging;
-* versioned rule configurations;
-* validation of configuration consistency;
-* scenario-based testing;
-* batch assessment of multiple credit positions;
-* persistence of assessment results;
-* API exposure;
-* integration with an LLM-based reporting layer;
-* human-in-the-loop review workflows;
-* comparison between deterministic rule outcomes and analyst assessments.
-
-A future production-oriented implementation could also introduce explicit **rule-set versioning**, allowing each assessment to be associated with the exact rule configuration and implementation version used at evaluation time.
-
----
-
-## 21. Architectural Goal
+## 23. Architectural Goal
 
 The long-term goal is to provide a credit assessment framework that is:
 
@@ -734,7 +1009,71 @@ A language model can be introduced as a reporting component without delegating c
 
 ---
 
-## 22. Disclaimer
+## 24. Future Development
+
+Potential extensions include:
+
+* additional financial and sustainability rules;
+* richer rule-status semantics;
+* configurable assessment aggregation policies;
+* rule dependency management;
+* rule execution tracing and audit logging;
+* versioned rule configurations;
+* validation of configuration consistency;
+* scenario-based testing;
+* batch assessment of multiple credit positions;
+* persistence of assessment results;
+* API exposure;
+* integration with an LLM-based reporting layer;
+* human-in-the-loop review workflows;
+* comparison between deterministic rule outcomes and analyst assessments.
+
+A future production-oriented implementation could also introduce explicit **rule-set versioning**, allowing each assessment to be associated with the exact rule configuration and implementation version used at evaluation time.
+
+---
+
+## 25. Architectural Extension Checklist
+
+When introducing a new rule, the practical checklist is:
+
+```text
+[ ] Define the business logic
+[ ] Create the rule module
+[ ] Assign a unique rule ID
+[ ] Add @Rule.register(...)
+[ ] Add the rule to rules.yaml
+[ ] Add/update the CreditPosition input if necessary
+[ ] Add the comment template if required
+[ ] Add dedicated rule tests
+[ ] Update scenario tests only if expected behaviour changes
+[ ] Run pytest
+[ ] Run linting
+[ ] Run coverage
+[ ] Verify CI
+```
+
+The important distinction is that **not every new rule requires changes to every component**.
+
+For example:
+
+```text
+New rule
+   │
+   ├── Rule implementation       REQUIRED
+   ├── Decorator registration    REQUIRED
+   ├── Configuration             REQUIRED
+   ├── Rule tests                REQUIRED
+   │
+   ├── Comment template          REQUIRED if comments are generated
+   ├── Model change              ONLY if new input data is required
+   └── Service test changes      ONLY if scenario expectations change
+```
+
+This is the intended extension model of the architecture.
+
+---
+
+## 26. Disclaimer
 
 This project is a software and architectural prototype intended for educational, research and experimental purposes.
 
