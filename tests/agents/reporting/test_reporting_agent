@@ -24,3 +24,32 @@ def test_reporting_agent_preserves_deterministic_assessment(
 
     assert report.position_id == assessment.position_id
     assert report.assessment_status == assessment.status
+
+def test_reporting_agent_preserves_rule_results(
+    assessment_service,
+):
+    position = CreditPosition(
+        position_id="POS001",
+        revenue_growth=-0.15,
+        ebitda=-50000,
+        profit_loss=-50000,
+        ebitda_margin=-0.05,
+        pfn_to_ebitda=6.0,
+        interest_expense=40000,
+    )
+
+    assessment = assessment_service.assess(position)
+
+    agent = ReportingAgent()
+    report = agent.run(assessment)
+
+    assert report.position_id == assessment.position_id
+    assert report.assessment_status == assessment.status
+
+    expected_triggered_rules = {
+        result.rule_id
+        for result in assessment.rule_results
+        if result.status == RuleStatus.TRIGGERED
+    }
+
+    assert set(report.triggered_rules) == expected_triggered_rules
