@@ -2,6 +2,9 @@ from src.agents.reporting.reporting_agent import ReportingAgent
 from src.models.assessment_status import AssessmentStatus
 from src.models.position import CreditPosition
 from src.rules.base.status import RuleStatus
+from src.agents.base.agent import Agent
+from src.models.assessment import Assessment
+from src.models.report import Report
 
 
 def test_reporting_agent_preserves_deterministic_assessment(
@@ -142,3 +145,14 @@ def test_reporting_agent_does_not_depend_on_rule_ids(
     ]
 
     assert report.findings == triggered_rule_names
+
+
+def test_reporting_agent_implements_agent_contract():
+    agent = ReportingAgent()
+
+    assert isinstance(agent, Agent)
+
+    assert isinstance(agent, Agent)
+
+    assert agent.run.__annotations__["assessment"] is Assessment
+    assert agent.run.__annotations__["return"] is Report
