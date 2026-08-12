@@ -9,6 +9,7 @@ from src.rules.base.status import RuleStatus
 from src.rules.financial.revenue.revenue_growth import RevenueGrowthRule
 from src.rules.financial.profitability.negative_ebitda import NegativeEbitdaRule
 from src.rules.financial.margins.ebitda_margin import EbitdaMarginRule
+from src.rules.result import RuleResult
 from src.rules.sustainability.leverage.pfn_to_ebitda import PfnToEbitdaRule
 from src.rules.financial.profitability.financial_expenses_to_ebitda import (
     FinancialExpensesToEbitdaRule,
@@ -213,3 +214,64 @@ def test_no_comment_generated_when_rule_is_not_evaluable(base_position):
 
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert comment is None
+
+def test_no_comment_generated_when_rule_has_no_template():
+    result = RuleResult(
+        rule_id="R999",
+        rule_name="Custom rule",
+        category="test",
+        status=RuleStatus.TRIGGERED,
+        value=10.0,
+        threshold=5.0,
+        severity=RuleSeverity.MEDIUM,
+    )
+
+    engine = CommentEngine()
+
+    comment = engine.generate(result)
+
+    assert comment is None
+
+
+def test_comment_engine_formats_value_and_threshold():
+    result = RuleResult(
+        rule_id="R001",
+        rule_name="Revenue growth deterioration",
+        category="revenue",
+        status=RuleStatus.TRIGGERED,
+        value=-0.20,
+        threshold=-0.10,
+        severity=RuleSeverity.MEDIUM,
+    )
+
+    engine = CommentEngine()
+
+    comment = engine.generate(result)
+
+    assert comment is not None
+    assert comment.text == (
+        "Revenue deterioration detected. "
+        "Revenue growth: -20.0% "
+        "(threshold: -10.0%)."
+    )
+
+def test_comment_engine_does_not_modify_rule_result():
+    result = RuleResult(
+        rule_id="R001",
+        rule_name="Revenue growth deterioration",
+        category="revenue",
+        status=RuleStatus.TRIGGERED,
+        value=-0.15,
+        threshold=-0.10,
+        severity=RuleSeverity.MEDIUM,
+    )
+
+    original_result = result
+
+    engine = CommentEngine()
+    comment = engine.generate(result)
+
+    assert result is original_result
+    assert result.value == -0.15
+    assert result.threshold == -0.10
+    assert result.status == RuleStatus.TRIGGERED
