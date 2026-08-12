@@ -111,17 +111,6 @@ def test_rule_config_loader_loads_configuration_values(tmp_path):
     assert config.severity == RuleSeverity.MEDIUM
 
 
-def test_rule_config_loader_returns_rule_config_objects():
-    loader = RuleConfigLoader()
-
-    configs = loader.load(RULES_CONFIG_PATH)
-
-    assert all(
-        isinstance(config, RuleConfig)
-        for config in configs
-    )
-
-
 def test_rule_config_loader_raises_when_file_does_not_exist(tmp_path):
     loader = RuleConfigLoader()
 

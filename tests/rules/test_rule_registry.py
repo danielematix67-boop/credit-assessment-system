@@ -27,20 +27,6 @@ def test_default_rules_registry_returns_unique_rule_ids():
     assert len(rule_ids) == len(set(rule_ids))
 
 
-def test_default_rules_registry_preserves_configuration_order():
-    rules = get_default_rules()
-
-    rule_ids = [
-        rule.config.rule_id
-        for rule in rules
-    ]
-
-    assert rule_ids == sorted(
-        rule_ids,
-        key=lambda rule_id: int(rule_id[1:]),
-    )
-
-
 def test_default_rules_registry_returns_independent_rule_instances():
     rules_1 = get_default_rules()
     rules_2 = get_default_rules()

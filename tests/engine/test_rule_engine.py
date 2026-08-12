@@ -2,8 +2,45 @@ from unittest.mock import MagicMock
 
 from src.engine.rule_engine import RuleEngine
 from src.models.position import CreditPosition
+from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.registry import get_default_rules
+from src.rules.result import RuleResult
+
+
+def test_rule_engine_returns_rule_results_produced_by_rules():
+    position = CreditPosition(
+        position_id="POS001",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=3.5,
+        interest_expense=40000,
+    )
+
+    rule = MagicMock()
+
+    expected_result = RuleResult(
+        rule_id="TEST_1",
+        rule_name="Test rule",
+        category="test",
+        status=RuleStatus.TRIGGERED,
+        value=10.0,
+        threshold=5.0,
+        severity=RuleSeverity.HIGH,
+    )
+
+    rule.evaluate.return_value = expected_result
+
+    engine = RuleEngine([rule])
+
+    results = engine.evaluate(position)
+
+    assert results == [expected_result]
+    assert results[0] is expected_result
+    rule.evaluate.assert_called_once_with(position)
+
 
 
 def test_rule_engine_evaluates_all_rules():
@@ -128,3 +165,4 @@ def test_rule_engine_preserves_not_evaluable_status():
 
     assert inventory_contribution_result.status == RuleStatus.NOT_EVALUABLE
     assert inventory_contribution_result.value is None
+
