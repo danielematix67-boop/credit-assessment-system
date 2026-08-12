@@ -4,7 +4,7 @@ from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.report import Report
 
 
-@dataclass
+@dataclass(frozen=True)
 class AssessmentWorkflowResult:
     assessment: Assessment
     analysis: AssessmentAnalysis
