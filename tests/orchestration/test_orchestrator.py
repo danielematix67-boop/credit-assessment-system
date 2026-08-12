@@ -3,6 +3,7 @@ from unittest.mock import Mock
 from src.agents.analysis.analysis_agent import AnalysisAgent
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.agents.workflow.assessment_workflow import AssessmentWorkflow
+from src.models.assessment_status import AssessmentStatus
 from src.models.assessment_workflow import AssessmentWorkflowResult
 from src.models.position import CreditPosition
 from src.models.report import Report
@@ -120,3 +121,43 @@ def test_default_orchestrator_creates_valid_orchestrator():
         orchestrator.workflow.reporting_agent,
         ReportingAgent,
     )
+
+def test_orchestrator_depends_only_on_workflow():
+
+    class TestWorkflow:
+
+        def run(self, position):
+
+            return AssessmentWorkflowResult(
+                assessment=None,
+                analysis=None,
+                report=Report(
+                    position_id=position.position_id,
+                    assessment_status=AssessmentStatus.NORMAL,
+                    executive_summary="Test summary",
+                    findings=[],
+                    limitations=[],
+                ),
+            )
+
+    workflow = TestWorkflow()
+
+    orchestrator = AssessmentOrchestrator(
+        workflow=workflow,
+    )
+
+    position = CreditPosition(
+        position_id="POS001",
+        revenue_growth=0.10,
+        ebitda=100000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=2.0,
+        interest_expense=20000,
+    )
+
+    report = orchestrator.run(position)
+
+    assert isinstance(report, Report)
+    assert report.position_id == "POS001"
+    assert report.executive_summary == "Test summary"
