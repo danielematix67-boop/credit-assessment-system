@@ -1,9 +1,17 @@
 from src.agents.analysis.analysis_agent import AnalysisAgent
+from src.agents.base.agent import Agent
 from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
+
+
+def test_analysis_agent_implements_agent_contract():
+
+    agent = AnalysisAgent()
+
+    assert isinstance(agent, Agent)
 
 
 def test_analysis_agent_produces_structured_analysis():
@@ -49,6 +57,7 @@ def test_analysis_agent_produces_structured_analysis():
 
     assert isinstance(analysis, AssessmentAnalysis)
     assert analysis.position_id == "POS001"
+    assert analysis.assessment_status == AssessmentStatus.CRITICAL
 
     assert analysis.key_findings == [
         "Revenue Growth",
@@ -63,6 +72,7 @@ def test_analysis_agent_produces_structured_analysis():
     assert analysis.limitations == [
         "EBITDA Inventory Contribution",
     ]
+
 
 def test_analysis_agent_does_not_depend_on_rule_ids():
 
@@ -95,6 +105,8 @@ def test_analysis_agent_does_not_depend_on_rule_ids():
     agent = AnalysisAgent()
 
     analysis = agent.run(assessment)
+
+    assert analysis.assessment_status == AssessmentStatus.ATTENTION
 
     assert analysis.key_findings == [
         "Revenue Growth Deterioration",

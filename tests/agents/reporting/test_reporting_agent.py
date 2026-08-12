@@ -1,7 +1,16 @@
+import pytest
+
+from src.agents.base.agent import Agent
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
-import pytest
+
+
+def test_reporting_agent_implements_agent_contract():
+
+    agent = ReportingAgent()
+
+    assert isinstance(agent, Agent)
 
 
 def test_reporting_agent_generates_report_from_analysis():
@@ -29,6 +38,7 @@ def test_reporting_agent_generates_report_from_analysis():
     assert report.assessment_status == analysis.assessment_status
     assert report.findings == analysis.key_findings
     assert report.limitations == analysis.limitations
+
 
 @pytest.mark.parametrize(
     "status, expected_summary",
@@ -63,6 +73,7 @@ def test_reporting_agent_generates_summary_from_status(
     report = ReportingAgent().run(analysis)
 
     assert report.executive_summary == expected_summary
+
 
 def test_reporting_agent_does_not_depend_on_rule_ids():
 
