@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from src.models.assessment_status import AssessmentStatus
 
 
-@dataclass
+@dataclass(frozen=True)
 class Report:
     position_id: str
     assessment_status: AssessmentStatus
