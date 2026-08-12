@@ -1,25 +1,18 @@
-from src.agents.analysis.analysis_agent import AnalysisAgent
-from src.agents.reporting.reporting_agent import ReportingAgent
 from src.models.position import CreditPosition
 from src.models.report import Report
-from src.services.assessment_service import AssessmentService
+from src.agents.workflow.assessment_workflow import AssessmentWorkflow
+from src.models.assessment_workflow import AssessmentWorkflowResult
 
 
 class AssessmentOrchestrator:
 
     def __init__(
         self,
-        assessment_service: AssessmentService,
-        analysis_agent: AnalysisAgent,
-        reporting_agent: ReportingAgent,
+        workflow: AssessmentWorkflow,
     ):
-        self.assessment_service = assessment_service
-        self.analysis_agent = analysis_agent
-        self.reporting_agent = reporting_agent
+        self.workflow = workflow
 
     def run(self, position: CreditPosition) -> Report:
-        assessment = self.assessment_service.assess(position)
+        result: AssessmentWorkflowResult = self.workflow.run(position)
 
-        analysis = self.analysis_agent.run(assessment)
-
-        return self.reporting_agent.run(analysis)
+        return result.report

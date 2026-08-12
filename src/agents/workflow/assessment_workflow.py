@@ -1,6 +1,7 @@
 from src.agents.analysis.analysis_agent import AnalysisAgent
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.models.assessment_workflow import AssessmentWorkflowResult
+from src.models.position import CreditPosition
 from src.services.assessment_service import AssessmentService
 
 
@@ -16,8 +17,7 @@ class AssessmentWorkflow:
         self.analysis_agent = analysis_agent
         self.reporting_agent = reporting_agent
 
-    def run(self, position) -> AssessmentWorkflowResult:
-
+    def run(self, position: CreditPosition) -> AssessmentWorkflowResult:
         assessment = self.assessment_service.assess(position)
 
         analysis = self.analysis_agent.run(assessment)
