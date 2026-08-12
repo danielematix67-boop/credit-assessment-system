@@ -1,3 +1,5 @@
+import pytest
+
 from src.models.assessment_status import AssessmentStatus
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
@@ -7,113 +9,80 @@ from src.services.assessment_status_calculator import (
 )
 
 
-def test_returns_normal_when_no_rules_are_triggered():
-    results = [
-        RuleResult(
-            rule_id="R001",
-            rule_name="Revenue growth deterioration",
-            category="revenue",
-            status=RuleStatus.NOT_TRIGGERED,
-            value=0.05,
-            threshold=-0.10,
-            severity=RuleSeverity.MEDIUM,
-        ),
-        RuleResult(
-            rule_id="R002",
-            rule_name="Negative EBITDA",
-            category="profitability",
-            status=RuleStatus.NOT_TRIGGERED,
-            value=250000,
-            threshold=0.0,
-            severity=RuleSeverity.HIGH,
-        ),
-    ]
+def make_result(
+    rule_id: str,
+    status: RuleStatus,
+) -> RuleResult:
+    return RuleResult(
+        rule_id=rule_id,
+        rule_name=f"Test rule {rule_id}",
+        category="test",
+        status=status,
+        value=1.0 if status != RuleStatus.NOT_EVALUABLE else None,
+        threshold=0.0,
+        severity=RuleSeverity.MEDIUM,
+    )
 
+
+@pytest.mark.parametrize(
+    "results, expected_status",
+    [
+        (
+            [],
+            AssessmentStatus.NORMAL,
+        ),
+        (
+            [
+                make_result("R001", RuleStatus.NOT_TRIGGERED),
+                make_result("R002", RuleStatus.NOT_TRIGGERED),
+            ],
+            AssessmentStatus.NORMAL,
+        ),
+        (
+            [
+                make_result("R001", RuleStatus.NOT_EVALUABLE),
+                make_result("R002", RuleStatus.NOT_EVALUABLE),
+            ],
+            AssessmentStatus.NORMAL,
+        ),
+        (
+            [
+                make_result("R001", RuleStatus.TRIGGERED),
+            ],
+            AssessmentStatus.ATTENTION,
+        ),
+        (
+            [
+                make_result("R001", RuleStatus.TRIGGERED),
+                make_result("R002", RuleStatus.NOT_EVALUABLE),
+            ],
+            AssessmentStatus.ATTENTION,
+        ),
+        (
+            [
+                make_result("R001", RuleStatus.TRIGGERED),
+                make_result("R002", RuleStatus.TRIGGERED),
+            ],
+            AssessmentStatus.CRITICAL,
+        ),
+    ],
+)
+def test_assessment_status_calculator(
+    results,
+    expected_status,
+):
     calculator = AssessmentStatusCalculator()
 
     status = calculator.calculate(results)
 
-    assert status == AssessmentStatus.NORMAL
+    assert status == expected_status
 
-
-def test_returns_attention_when_at_least_one_rule_is_triggered():
+def test_only_triggered_rules_affect_assessment_status():
     results = [
-        RuleResult(
-            rule_id="R001",
-            rule_name="Revenue growth deterioration",
-            category="revenue",
-            status=RuleStatus.TRIGGERED,
-            value=-0.15,
-            threshold=-0.10,
-            severity=RuleSeverity.MEDIUM,
-        ),
-        RuleResult(
-            rule_id="R002",
-            rule_name="Negative EBITDA",
-            category="profitability",
-            status=RuleStatus.NOT_TRIGGERED,
-            value=250000,
-            threshold=0.0,
-            severity=RuleSeverity.HIGH,
-        ),
-    ]
-
-    calculator = AssessmentStatusCalculator()
-
-    status = calculator.calculate(results)
-
-    assert status == AssessmentStatus.ATTENTION
-
-
-def test_returns_normal_when_rules_are_not_evaluable():
-    results = [
-        RuleResult(
-            rule_id="R001",
-            rule_name="Revenue growth deterioration",
-            category="revenue",
-            status=RuleStatus.NOT_EVALUABLE,
-            value=None,
-            threshold=-0.10,
-            severity=RuleSeverity.MEDIUM,
-        ),
-        RuleResult(
-            rule_id="R002",
-            rule_name="Negative EBITDA",
-            category="profitability",
-            status=RuleStatus.NOT_EVALUABLE,
-            value=None,
-            threshold=0.0,
-            severity=RuleSeverity.HIGH,
-        ),
-    ]
-
-    calculator = AssessmentStatusCalculator()
-
-    status = calculator.calculate(results)
-
-    assert status == AssessmentStatus.NORMAL
-
-
-def test_returns_attention_when_triggered_and_not_evaluable_rules_are_present():
-    results = [
-        RuleResult(
-            rule_id="R001",
-            rule_name="Revenue growth deterioration",
-            category="revenue",
-            status=RuleStatus.TRIGGERED,
-            value=-0.15,
-            threshold=-0.10,
-            severity=RuleSeverity.MEDIUM,
-        ),
-        RuleResult(
-            rule_id="R002",
-            rule_name="Negative EBITDA",
-            category="profitability",
-            status=RuleStatus.NOT_EVALUABLE,
-            value=None,
-            threshold=0.0,
-            severity=RuleSeverity.HIGH,
-        ),
+        make_result("R001", RuleStatus.TRIGGERED),
+        make_result("R002", RuleStatus.NOT_EVALUABLE),
+        make_result("R003", RuleStatus.NOT_TRIGGERED),
+        make_result("R004", RuleStatus.NOT_EVALUABLE),
     ]
 
     calculator = AssessmentStatusCalculator()
@@ -122,48 +91,15 @@ def test_returns_attention_when_triggered_and_not_evaluable_rules_are_present():
 
     assert status == AssessmentStatus.ATTENTION
 
-
-def test_returns_normal_when_results_are_empty():
-    calculator = AssessmentStatusCalculator()
-
-    status = calculator.calculate([])
-
-    assert status == AssessmentStatus.NORMAL
-
-
-def test_returns_critical_when_at_least_two_rules_are_triggered():
+def test_not_evaluable_rules_do_not_count_as_triggered():
     results = [
-        RuleResult(
-            rule_id="R001",
-            rule_name="Revenue growth deterioration",
-            category="revenue",
-            status=RuleStatus.TRIGGERED,
-            value=-0.15,
-            threshold=-0.10,
-            severity=RuleSeverity.MEDIUM,
-        ),
-        RuleResult(
-            rule_id="R003",
-            rule_name="EBITDA margin below threshold",
-            category="profitability",
-            status=RuleStatus.TRIGGERED,
-            value=-0.05,
-            threshold=0.0,
-            severity=RuleSeverity.MEDIUM,
-        ),
-        RuleResult(
-            rule_id="R004",
-            rule_name="Leverage above threshold",
-            category="leverage",
-            status=RuleStatus.NOT_TRIGGERED,
-            value=3.5,
-            threshold=5.0,
-            severity=RuleSeverity.HIGH,
-        ),
+        make_result("R001", RuleStatus.NOT_EVALUABLE),
+        make_result("R002", RuleStatus.NOT_EVALUABLE),
+        make_result("R003", RuleStatus.TRIGGERED),
     ]
 
     calculator = AssessmentStatusCalculator()
 
     status = calculator.calculate(results)
 
-    assert status == AssessmentStatus.CRITICAL
+    assert status == AssessmentStatus.ATTENTION

@@ -1,6 +1,12 @@
+from unittest.mock import MagicMock
+
+from src.models.assessment import Assessment
 from src.models.assessment_status import AssessmentStatus
 from src.models.position import CreditPosition
+from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
+from src.rules.result import RuleResult
+from src.services.assessment_service import AssessmentService
 
 
 def test_assessment_service_generates_critical_assessment(
@@ -21,7 +27,6 @@ def test_assessment_service_generates_critical_assessment(
     assert assessment.position_id == "POS001"
     assert assessment.status == AssessmentStatus.CRITICAL
 
-    # One result must be produced for every configured rule.
     assert len(assessment.rule_results) == len(
         assessment_service.rule_engine.rules
     )
@@ -37,10 +42,7 @@ def test_assessment_service_generates_critical_assessment(
         for comment in assessment.comments
     }
 
-    # Every triggered rule must generate exactly one comment.
     assert comment_rule_ids == triggered_rules
-
-    # Every comment must correspond to a triggered rule.
     assert len(assessment.comments) == len(triggered_rules)
 
 
@@ -62,18 +64,15 @@ def test_assessment_service_generates_normal_assessment_when_rule_is_not_evaluab
     assert assessment.position_id == "POS002"
     assert assessment.status == AssessmentStatus.NORMAL
 
-    # One result must be produced for every configured rule.
     assert len(assessment.rule_results) == len(
         assessment_service.rule_engine.rules
     )
 
-    # A NORMAL assessment must not contain triggered rules.
     assert all(
         result.status != RuleStatus.TRIGGERED
         for result in assessment.rule_results
     )
 
-    # No triggered rule means no comments.
     assert assessment.comments == []
 
 
@@ -95,18 +94,15 @@ def test_assessment_service_generates_normal_assessment(
     assert assessment.position_id == "POS003"
     assert assessment.status == AssessmentStatus.NORMAL
 
-    # One result must be produced for every configured rule.
     assert len(assessment.rule_results) == len(
         assessment_service.rule_engine.rules
     )
 
-    # A NORMAL assessment must not contain triggered rules.
     assert all(
         result.status != RuleStatus.TRIGGERED
         for result in assessment.rule_results
     )
 
-    # No triggered rule means no comments.
     assert assessment.comments == []
 
 
@@ -128,7 +124,6 @@ def test_assessment_service_generates_attention_assessment(
     assert assessment.position_id == "POS004"
     assert assessment.status == AssessmentStatus.ATTENTION
 
-    # One result must be produced for every configured rule.
     assert len(assessment.rule_results) == len(
         assessment_service.rule_engine.rules
     )
@@ -144,8 +139,102 @@ def test_assessment_service_generates_attention_assessment(
         for comment in assessment.comments
     }
 
-    # Every triggered rule must generate exactly one comment.
     assert comment_rule_ids == triggered_rules
-
-    # Every comment must correspond to a triggered rule.
     assert len(assessment.comments) == len(triggered_rules)
+
+
+def test_assessment_service_builds_assessment_from_dependencies():
+    position = CreditPosition(
+        position_id="POS005",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=3.5,
+        interest_expense=40000,
+    )
+
+    rule_engine = MagicMock()
+    comment_engine = MagicMock()
+    status_calculator = MagicMock()
+
+    result = RuleResult(
+        rule_id="R001",
+        rule_name="Revenue Growth",
+        category="revenue",
+        status=RuleStatus.TRIGGERED,
+        value=-0.15,
+        threshold=-0.10,
+        severity=RuleSeverity.MEDIUM,
+    )
+
+    rule_engine.evaluate.return_value = [result]
+
+    comment = MagicMock()
+    comment_engine.generate.return_value = comment
+
+    status_calculator.calculate.return_value = AssessmentStatus.CRITICAL
+
+    service = AssessmentService(
+        rule_engine=rule_engine,
+        comment_engine=comment_engine,
+        status_calculator=status_calculator,
+    )
+
+    assessment = service.assess(position)
+
+    assert isinstance(assessment, Assessment)
+    assert assessment.position_id == position.position_id
+    assert assessment.rule_results == [result]
+    assert assessment.comments == [comment]
+    assert assessment.status == AssessmentStatus.CRITICAL
+
+    rule_engine.evaluate.assert_called_once_with(position)
+    comment_engine.generate.assert_called_once_with(result)
+    status_calculator.calculate.assert_called_once_with([result])
+
+
+def test_assessment_service_ignores_missing_comments():
+    position = CreditPosition(
+        position_id="POS006",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=3.5,
+        interest_expense=40000,
+    )
+
+    rule_engine = MagicMock()
+    comment_engine = MagicMock()
+    status_calculator = MagicMock()
+
+    result_1 = MagicMock()
+    result_2 = MagicMock()
+
+    rule_engine.evaluate.return_value = [
+        result_1,
+        result_2,
+    ]
+
+    comment_1 = MagicMock()
+
+    comment_engine.generate.side_effect = [
+        comment_1,
+        None,
+    ]
+
+    status_calculator.calculate.return_value = AssessmentStatus.ATTENTION
+
+    service = AssessmentService(
+        rule_engine=rule_engine,
+        comment_engine=comment_engine,
+        status_calculator=status_calculator,
+    )
+
+    assessment = service.assess(position)
+
+    assert assessment.comments == [comment_1]
+    assert len(assessment.comments) == 1
+
+    assert comment_engine.generate.call_count == 2
