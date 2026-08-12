@@ -1,6 +1,9 @@
 from unittest.mock import Mock
 
 from src.agents.analysis.analysis_agent import AnalysisAgent
+from src.agents.reporting.deterministic_report_generator import (
+    DeterministicReportGenerator,
+)
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.agents.workflow.assessment_workflow import AssessmentWorkflow
 from src.models.assessment_status import AssessmentStatus
@@ -27,7 +30,9 @@ def test_orchestrator_returns_report(assessment_service):
     workflow = AssessmentWorkflow(
         assessment_service=assessment_service,
         analysis_agent=AnalysisAgent(),
-        reporting_agent=ReportingAgent(),
+        reporting_agent=ReportingAgent(
+            report_generator=DeterministicReportGenerator(),
+        ),
     )
 
     orchestrator = AssessmentOrchestrator(
@@ -54,7 +59,9 @@ def test_orchestrator_preserves_assessment_status(assessment_service):
     workflow = AssessmentWorkflow(
         assessment_service=assessment_service,
         analysis_agent=AnalysisAgent(),
-        reporting_agent=ReportingAgent(),
+        reporting_agent=ReportingAgent(
+            report_generator=DeterministicReportGenerator(),
+        ),
     )
 
     orchestrator = AssessmentOrchestrator(
@@ -121,6 +128,7 @@ def test_default_orchestrator_creates_valid_orchestrator():
         orchestrator.workflow.reporting_agent,
         ReportingAgent,
     )
+
 
 def test_orchestrator_depends_only_on_workflow():
 

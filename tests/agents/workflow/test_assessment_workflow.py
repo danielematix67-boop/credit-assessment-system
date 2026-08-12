@@ -7,7 +7,9 @@ from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_workflow import AssessmentWorkflowResult
 from src.models.position import CreditPosition
 from src.models.report import Report
-
+from src.agents.reporting.deterministic_report_generator import (
+    DeterministicReportGenerator,
+)
 
 def test_assessment_workflow_executes_all_stages(
     assessment_service,
@@ -26,7 +28,9 @@ def test_assessment_workflow_executes_all_stages(
     workflow = AssessmentWorkflow(
         assessment_service=assessment_service,
         analysis_agent=AnalysisAgent(),
-        reporting_agent=ReportingAgent(),
+        reporting_agent=ReportingAgent(
+            report_generator=DeterministicReportGenerator(),
+        ),
     )
 
     result = workflow.run(position)
