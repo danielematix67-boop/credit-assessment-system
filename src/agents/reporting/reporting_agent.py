@@ -38,3 +38,41 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
             findings=analysis.key_findings,
             limitations=analysis.limitations,
         )
+
+def test_reporting_agent_handles_empty_analysis():
+    analysis = AssessmentAnalysis(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.NORMAL,
+        key_findings=[],
+        risk_factors=[],
+        limitations=[],
+    )
+
+    report = ReportingAgent().run(analysis)
+
+    assert report.position_id == "POS001"
+    assert report.assessment_status == AssessmentStatus.NORMAL
+    assert report.findings == []
+    assert report.limitations == []
+    assert report.executive_summary == (
+        "The credit assessment is classified as normal."
+    )
+
+def test_reporting_agent_handles_empty_analysis():
+    analysis = AssessmentAnalysis(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.NORMAL,
+        key_findings=[],
+        risk_factors=[],
+        limitations=[],
+    )
+
+    report = ReportingAgent().run(analysis)
+
+    assert report.position_id == "POS001"
+    assert report.assessment_status == AssessmentStatus.NORMAL
+    assert report.findings == []
+    assert report.limitations == []
+    assert report.executive_summary == (
+        "The credit assessment is classified as normal."
+    )

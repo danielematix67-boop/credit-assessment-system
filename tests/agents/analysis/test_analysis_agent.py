@@ -117,3 +117,123 @@ def test_analysis_agent_does_not_depend_on_rule_ids():
         "Revenue Growth Deterioration",
         "High Leverage",
     ]
+
+def test_analysis_agent_ignores_not_triggered_rules():
+
+    assessment = Assessment(
+        position_id="POS001",
+        status=AssessmentStatus.ATTENTION,
+        rule_results=[
+            RuleResult(
+                rule_id="R001",
+                rule_name="Revenue Growth",
+                category="Financial",
+                status=RuleStatus.TRIGGERED,
+                value=-0.15,
+                threshold=-0.10,
+                severity=None,
+            ),
+            RuleResult(
+                rule_id="R002",
+                rule_name="Positive EBITDA",
+                category="Financial",
+                status=RuleStatus.NOT_TRIGGERED,
+                value=250000,
+                threshold=0,
+                severity=None,
+            ),
+        ],
+        comments=[],
+    )
+
+    agent = AnalysisAgent()
+
+    analysis = agent.run(assessment)
+
+    assert analysis.key_findings == [
+        "Revenue Growth",
+    ]
+
+    assert analysis.risk_factors == [
+        "Revenue Growth",
+    ]
+
+    assert analysis.limitations == []
+
+def test_analysis_agent_handles_normal_assessment():
+
+    assessment = Assessment(
+        position_id="POS001",
+        status=AssessmentStatus.NORMAL,
+        rule_results=[
+            RuleResult(
+                rule_id="R001",
+                rule_name="Revenue Growth",
+                category="Financial",
+                status=RuleStatus.NOT_TRIGGERED,
+                value=0.05,
+                threshold=-0.10,
+                severity=None,
+            ),
+            RuleResult(
+                rule_id="R002",
+                rule_name="Positive EBITDA",
+                category="Financial",
+                status=RuleStatus.NOT_TRIGGERED,
+                value=250000,
+                threshold=0,
+                severity=None,
+            ),
+        ],
+        comments=[],
+    )
+
+    agent = AnalysisAgent()
+
+    analysis = agent.run(assessment)
+
+    assert analysis.position_id == "POS001"
+    assert analysis.assessment_status == AssessmentStatus.NORMAL
+    assert analysis.key_findings == []
+    assert analysis.risk_factors == []
+    assert analysis.limitations == []
+
+def test_analysis_agent_reports_not_evaluable_rules_as_limitations():
+
+    assessment = Assessment(
+        position_id="POS001",
+        status=AssessmentStatus.NORMAL,
+        rule_results=[
+            RuleResult(
+                rule_id="R001",
+                rule_name="Revenue Growth",
+                category="Financial",
+                status=RuleStatus.NOT_EVALUABLE,
+                value=None,
+                threshold=-0.10,
+                severity=None,
+            ),
+            RuleResult(
+                rule_id="R002",
+                rule_name="EBITDA Margin",
+                category="Financial",
+                status=RuleStatus.NOT_EVALUABLE,
+                value=None,
+                threshold=0,
+                severity=None,
+            ),
+        ],
+        comments=[],
+    )
+
+    agent = AnalysisAgent()
+
+    analysis = agent.run(assessment)
+
+    assert analysis.key_findings == []
+    assert analysis.risk_factors == []
+
+    assert analysis.limitations == [
+        "Revenue Growth",
+        "EBITDA Margin",
+    ]
