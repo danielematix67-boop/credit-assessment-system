@@ -6,9 +6,6 @@ from src.agents.reporting.reporting_agent import ReportingAgent
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.models.report import Report
-from src.agents.reporting.deterministic_report_generator import (
-    DeterministicReportGenerator,
-)
 
 def test_reporting_agent_implements_agent_contract():
 

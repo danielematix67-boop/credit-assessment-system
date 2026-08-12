@@ -269,7 +269,7 @@ def test_comment_engine_does_not_modify_rule_result():
     original_result = result
 
     engine = CommentEngine()
-    comment = engine.generate(result)
+    engine = engine.generate(result)
 
     assert result is original_result
     assert result.value == -0.15
