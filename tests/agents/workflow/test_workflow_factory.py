@@ -60,3 +60,19 @@ def test_workflow_factory_can_create_llm_workflow():
         workflow.reporting_agent.report_generator,
         LLMReportGenerator,
     )
+
+def test_llm_workflow_factory_creates_llm_reporting_agent():
+
+    workflow = create_default_assessment_workflow(
+        use_llm=True,
+    )
+
+    assert isinstance(
+        workflow.reporting_agent,
+        ReportingAgent,
+    )
+
+    assert isinstance(
+        workflow.reporting_agent.report_generator,
+        LLMReportGenerator,
+    )
