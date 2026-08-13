@@ -242,3 +242,54 @@ def test_analysis_agent_reports_not_evaluable_rules_as_limitations():
         "Revenue Growth",
         "EBITDA Margin",
     ]
+
+def test_analysis_agent_selects_only_high_severity_risk_factors():
+
+    assessment = Assessment(
+        position_id="POS001",
+        status=AssessmentStatus.CRITICAL,
+        rule_results=[
+            RuleResult(
+                rule_id="R001",
+                rule_name="High Severity Risk",
+                category="Financial",
+                status=RuleStatus.TRIGGERED,
+                value=-0.20,
+                threshold=-0.10,
+                severity=RuleSeverity.HIGH,
+            ),
+            RuleResult(
+                rule_id="R002",
+                rule_name="Medium Severity Risk",
+                category="Financial",
+                status=RuleStatus.TRIGGERED,
+                value=5.0,
+                threshold=4.0,
+                severity=RuleSeverity.MEDIUM,
+            ),
+            RuleResult(
+                rule_id="R003",
+                rule_name="Low Severity Risk",
+                category="Financial",
+                status=RuleStatus.TRIGGERED,
+                value=1.0,
+                threshold=0.5,
+                severity=RuleSeverity.LOW,
+            ),
+        ],
+        comments=[],
+    )
+
+    agent = AnalysisAgent()
+
+    analysis = agent.run(assessment)
+
+    assert analysis.key_findings == [
+        "High Severity Risk",
+        "Medium Severity Risk",
+        "Low Severity Risk",
+    ]
+
+    assert analysis.risk_factors == [
+        "High Severity Risk",
+    ]
