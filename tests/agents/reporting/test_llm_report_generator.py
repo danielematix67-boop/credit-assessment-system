@@ -268,3 +268,91 @@ def test_llm_report_generator_prompt_enforces_factual_constraints():
     assert "Do not invent financial data" in prompt
     assert "Do not make a credit decision" in prompt
     assert "Generate only the executive summary" in prompt
+
+def test_llm_report_generator_accepts_attention_status():
+    analysis = AssessmentAnalysis(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.ATTENTION,
+        key_findings=[
+            "Revenue Growth Deterioration",
+        ],
+        risk_factors=[
+            "High Leverage",
+        ],
+        limitations=[],
+    )
+
+    client = MockLLMClient(
+        response="ATTENTION assessment identified.",
+    )
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+    )
+
+    report = generator.generate(analysis)
+
+    assert report.assessment_status == AssessmentStatus.ATTENTION
+    assert report.executive_summary == (
+        "ATTENTION assessment identified."
+    )
+
+
+def test_llm_report_generator_accepts_normal_status():
+    analysis = AssessmentAnalysis(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.NORMAL,
+        key_findings=[],
+        risk_factors=[],
+        limitations=[],
+    )
+
+    client = MockLLMClient(
+        response="NORMAL assessment. No critical issues identified.",
+    )
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+    )
+
+    report = generator.generate(analysis)
+
+    assert report.assessment_status == AssessmentStatus.NORMAL
+    assert report.executive_summary == (
+        "NORMAL assessment. No critical issues identified."
+    )
+
+
+def test_llm_report_generator_preserves_limitations():
+    analysis = AssessmentAnalysis(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.ATTENTION,
+        key_findings=[
+            "Revenue Growth Deterioration",
+        ],
+        risk_factors=[],
+        limitations=[
+            "Interest Coverage Ratio",
+            "EBITDA Inventory Contribution",
+        ],
+    )
+
+    client = MockLLMClient(
+        response=(
+            "ATTENTION assessment identified. "
+            "Some indicators could not be evaluated."
+        ),
+    )
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+    )
+
+    report = generator.generate(analysis)
+
+    assert report.assessment_status == AssessmentStatus.ATTENTION
+
+    assert report.limitations == [
+        "Interest Coverage Ratio",
+        "EBITDA Inventory Contribution",
+    ]
