@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock
+
 import pytest
+
 from src.agents.reporting.llm_report_generator import LLMReportGenerator
 from src.llm.client import LLMClient
 from src.llm.mock_client import MockLLMClient
@@ -37,7 +39,7 @@ def test_llm_report_generator_uses_llm_client():
     llm_client = MagicMock(spec=LLMClient)
 
     llm_client.generate.return_value = (
-        "The assessment indicates a critical credit position."
+        "The assessment indicates a CRITICAL credit position."
     )
 
     generator = LLMReportGenerator(llm_client)
@@ -51,13 +53,14 @@ def test_llm_report_generator_uses_llm_client():
 
     assert (
         report.executive_summary
-        == "The assessment indicates a critical credit position."
+        == "The assessment indicates a CRITICAL credit position."
     )
 
     assert report.findings == analysis.key_findings
     assert report.limitations == analysis.limitations
 
     llm_client.generate.assert_called_once()
+
 
 def test_llm_report_generator_builds_prompt_from_analysis():
 
@@ -77,6 +80,7 @@ def test_llm_report_generator_builds_prompt_from_analysis():
     )
 
     llm_client = MagicMock(spec=LLMClient)
+
     llm_client.generate.return_value = (
         "CRITICAL assessment identified. Generated summary."
     )
@@ -111,7 +115,9 @@ def test_llm_report_generator_includes_analysis_in_prompt():
         ],
     )
 
-    client = MockLLMClient()
+    client = MockLLMClient(
+        response="CRITICAL assessment identified.",
+    )
 
     generator = LLMReportGenerator(
         llm_client=client,
@@ -125,6 +131,7 @@ def test_llm_report_generator_includes_analysis_in_prompt():
     assert "Revenue Growth" in prompt
     assert "Negative EBITDA" in prompt
     assert "EBITDA Inventory Contribution" in prompt
+
 
 def test_llm_report_generator_accepts_valid_response():
 
@@ -155,6 +162,7 @@ def test_llm_report_generator_accepts_valid_response():
         "CRITICAL assessment identified."
     )
 
+
 def test_llm_report_generator_rejects_empty_response():
 
     analysis = AssessmentAnalysis(
@@ -178,6 +186,7 @@ def test_llm_report_generator_rejects_empty_response():
         match="LLM returned an empty response",
     ):
         generator.generate(analysis)
+
 
 def test_llm_report_generator_rejects_inconsistent_status():
 
@@ -203,7 +212,9 @@ def test_llm_report_generator_rejects_inconsistent_status():
     ):
         generator.generate(analysis)
 
+
 def test_llm_report_generator_preserves_structured_assessment_data():
+
     analysis = AssessmentAnalysis(
         position_id="POS001",
         assessment_status=AssessmentStatus.CRITICAL,
@@ -242,7 +253,9 @@ def test_llm_report_generator_preserves_structured_assessment_data():
         "The company has experienced revenue deterioration."
     )
 
+
 def test_llm_report_generator_prompt_enforces_factual_constraints():
+
     analysis = AssessmentAnalysis(
         position_id="POS001",
         assessment_status=AssessmentStatus.CRITICAL,
@@ -269,7 +282,9 @@ def test_llm_report_generator_prompt_enforces_factual_constraints():
     assert "Do not make a credit decision" in prompt
     assert "Generate only the executive summary" in prompt
 
+
 def test_llm_report_generator_accepts_attention_status():
+
     analysis = AssessmentAnalysis(
         position_id="POS001",
         assessment_status=AssessmentStatus.ATTENTION,
@@ -299,6 +314,7 @@ def test_llm_report_generator_accepts_attention_status():
 
 
 def test_llm_report_generator_accepts_normal_status():
+
     analysis = AssessmentAnalysis(
         position_id="POS001",
         assessment_status=AssessmentStatus.NORMAL,
@@ -324,6 +340,7 @@ def test_llm_report_generator_accepts_normal_status():
 
 
 def test_llm_report_generator_preserves_limitations():
+
     analysis = AssessmentAnalysis(
         position_id="POS001",
         assessment_status=AssessmentStatus.ATTENTION,
@@ -356,3 +373,73 @@ def test_llm_report_generator_preserves_limitations():
         "Interest Coverage Ratio",
         "EBITDA Inventory Contribution",
     ]
+
+
+def test_llm_report_generator_accepts_paraphrased_findings():
+
+    analysis = AssessmentAnalysis(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.CRITICAL,
+        key_findings=[
+            "Revenue Growth",
+            "Negative EBITDA",
+        ],
+        risk_factors=[
+            "High Leverage",
+        ],
+        limitations=[],
+    )
+
+    client = MockLLMClient(
+        response=(
+            "CRITICAL assessment identified. "
+            "The company experienced a deterioration in revenue "
+            "and reported negative operating earnings."
+        ),
+    )
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+    )
+
+    report = generator.generate(analysis)
+
+    assert report.executive_summary == client.response
+    assert report.assessment_status == analysis.assessment_status
+    assert report.findings == analysis.key_findings
+
+
+def test_llm_report_generator_accepts_complete_response():
+
+    analysis = AssessmentAnalysis(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.CRITICAL,
+        key_findings=[
+            "Revenue Growth",
+            "Negative EBITDA",
+        ],
+        risk_factors=[
+            "Negative EBITDA",
+        ],
+        limitations=[
+            "Interest Coverage Ratio",
+        ],
+    )
+
+    client = MockLLMClient(
+        response=(
+            "CRITICAL assessment identified. "
+            "The assessment shows Revenue Growth deterioration "
+            "and Negative EBITDA. "
+            "Negative EBITDA is a risk factor. "
+            "Interest Coverage Ratio is a limitation."
+        ),
+    )
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+    )
+
+    report = generator.generate(analysis)
+
+    assert report.executive_summary == client.response
