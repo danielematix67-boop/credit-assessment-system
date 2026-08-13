@@ -202,3 +202,69 @@ def test_llm_report_generator_rejects_inconsistent_status():
         match="LLM response does not contain the assessment status",
     ):
         generator.generate(analysis)
+
+def test_llm_report_generator_preserves_structured_assessment_data():
+    analysis = AssessmentAnalysis(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.CRITICAL,
+        key_findings=[
+            "Revenue Growth",
+            "Negative EBITDA",
+        ],
+        risk_factors=[
+            "High Leverage",
+        ],
+        limitations=[
+            "Interest Coverage Ratio",
+        ],
+    )
+
+    client = MockLLMClient(
+        response=(
+            "CRITICAL assessment identified. "
+            "The company has experienced revenue deterioration."
+        ),
+    )
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+    )
+
+    report = generator.generate(analysis)
+
+    assert report.position_id == analysis.position_id
+    assert report.assessment_status == analysis.assessment_status
+    assert report.findings == analysis.key_findings
+    assert report.limitations == analysis.limitations
+
+    assert report.executive_summary == (
+        "CRITICAL assessment identified. "
+        "The company has experienced revenue deterioration."
+    )
+
+def test_llm_report_generator_prompt_enforces_factual_constraints():
+    analysis = AssessmentAnalysis(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.CRITICAL,
+        key_findings=["Negative EBITDA"],
+        risk_factors=["High Leverage"],
+        limitations=[],
+    )
+
+    client = MockLLMClient(
+        response="CRITICAL assessment identified.",
+    )
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+    )
+
+    generator.generate(analysis)
+
+    prompt = client.last_prompt
+
+    assert "EXCLUSIVELY" in prompt
+    assert "Do not introduce facts" in prompt
+    assert "Do not invent financial data" in prompt
+    assert "Do not make a credit decision" in prompt
+    assert "Generate only the executive summary" in prompt
