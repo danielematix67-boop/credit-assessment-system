@@ -18,6 +18,10 @@ def create_default_assessment_workflow(
 
     analysis_agent = AnalysisAgent()
 
+    deterministic_report_generator = (
+        DeterministicReportGenerator()
+    )
+
     if use_llm:
         if llm_client is None:
             raise ValueError(
@@ -27,12 +31,16 @@ def create_default_assessment_workflow(
         report_generator = LLMReportGenerator(
             llm_client=llm_client,
         )
-    else:
-        report_generator = DeterministicReportGenerator()
 
-    reporting_agent = ReportingAgent(
-        report_generator=report_generator,
-    )
+        reporting_agent = ReportingAgent(
+            report_generator=report_generator,
+            fallback_generator=deterministic_report_generator,
+        )
+
+    else:
+        reporting_agent = ReportingAgent(
+            report_generator=deterministic_report_generator,
+        )
 
     return AssessmentWorkflow(
         assessment_service=assessment_service,

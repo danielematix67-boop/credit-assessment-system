@@ -117,3 +117,48 @@ def test_llm_cannot_change_deterministic_assessment():
     # The LLM is only responsible for generating
     # the executive summary.
     assert result.report.executive_summary
+
+def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails():
+
+    position = CreditPosition(
+        position_id="POS001",
+        revenue_growth=-0.15,
+        ebitda=-50000,
+        profit_loss=-50000,
+        ebitda_margin=-0.05,
+        pfn_to_ebitda=6.0,
+        interest_expense=40000,
+    )
+
+    class FailingLLMClient:
+
+        def generate(self, prompt: str) -> str:
+            raise RuntimeError(
+                "LLM service unavailable"
+            )
+
+    workflow = create_default_assessment_workflow(
+        use_llm=True,
+        llm_client=FailingLLMClient(),
+    )
+
+    result = workflow.run(position)
+
+    # The deterministic assessment must remain valid.
+    assert result.assessment.status == AssessmentStatus.CRITICAL
+
+    # The analysis must preserve the deterministic assessment.
+    assert result.analysis.assessment_status == (
+        result.assessment.status
+    )
+
+    # A deterministic fallback report must still be generated.
+    assert result.report is not None
+    assert result.report.assessment_status == (
+        result.assessment.status
+    )
+
+    assert result.report.position_id == "POS001"
+    assert result.report.executive_summary
+    assert result.report.findings
+    assert isinstance(result.report.limitations, list)
