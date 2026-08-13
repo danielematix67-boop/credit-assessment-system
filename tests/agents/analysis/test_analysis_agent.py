@@ -3,6 +3,7 @@ from src.agents.base.agent import Agent
 from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
+from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
@@ -27,7 +28,7 @@ def test_analysis_agent_produces_structured_analysis():
                 status=RuleStatus.TRIGGERED,
                 value=-0.15,
                 threshold=-0.10,
-                severity=None,
+                severity=RuleSeverity.HIGH,
             ),
             RuleResult(
                 rule_id="R002",
@@ -36,7 +37,7 @@ def test_analysis_agent_produces_structured_analysis():
                 status=RuleStatus.TRIGGERED,
                 value=-50000,
                 threshold=0,
-                severity=None,
+                severity=RuleSeverity.HIGH,
             ),
             RuleResult(
                 rule_id="R006",
@@ -45,7 +46,7 @@ def test_analysis_agent_produces_structured_analysis():
                 status=RuleStatus.NOT_EVALUABLE,
                 value=None,
                 threshold=0,
-                severity=None,
+                severity=RuleSeverity.MEDIUM,
             ),
         ],
         comments=[],
@@ -87,7 +88,7 @@ def test_analysis_agent_does_not_depend_on_rule_ids():
                 status=RuleStatus.TRIGGERED,
                 value=-0.15,
                 threshold=-0.10,
-                severity=None,
+                severity=RuleSeverity.HIGH,
             ),
             RuleResult(
                 rule_id="CUSTOM_002",
@@ -96,7 +97,7 @@ def test_analysis_agent_does_not_depend_on_rule_ids():
                 status=RuleStatus.TRIGGERED,
                 value=6.0,
                 threshold=5.0,
-                severity=None,
+                severity=RuleSeverity.MEDIUM,
             ),
         ],
         comments=[],
@@ -108,15 +109,17 @@ def test_analysis_agent_does_not_depend_on_rule_ids():
 
     assert analysis.assessment_status == AssessmentStatus.ATTENTION
 
+    # All triggered rules are findings.
     assert analysis.key_findings == [
         "Revenue Growth Deterioration",
         "High Leverage",
     ]
 
+    # Only HIGH severity triggered rules are risk factors.
     assert analysis.risk_factors == [
         "Revenue Growth Deterioration",
-        "High Leverage",
     ]
+
 
 def test_analysis_agent_ignores_not_triggered_rules():
 
@@ -131,7 +134,7 @@ def test_analysis_agent_ignores_not_triggered_rules():
                 status=RuleStatus.TRIGGERED,
                 value=-0.15,
                 threshold=-0.10,
-                severity=None,
+                severity=RuleSeverity.HIGH,
             ),
             RuleResult(
                 rule_id="R002",
@@ -140,7 +143,7 @@ def test_analysis_agent_ignores_not_triggered_rules():
                 status=RuleStatus.NOT_TRIGGERED,
                 value=250000,
                 threshold=0,
-                severity=None,
+                severity=RuleSeverity.LOW,
             ),
         ],
         comments=[],
@@ -160,6 +163,7 @@ def test_analysis_agent_ignores_not_triggered_rules():
 
     assert analysis.limitations == []
 
+
 def test_analysis_agent_handles_normal_assessment():
 
     assessment = Assessment(
@@ -173,7 +177,7 @@ def test_analysis_agent_handles_normal_assessment():
                 status=RuleStatus.NOT_TRIGGERED,
                 value=0.05,
                 threshold=-0.10,
-                severity=None,
+                severity=RuleSeverity.LOW,
             ),
             RuleResult(
                 rule_id="R002",
@@ -182,7 +186,7 @@ def test_analysis_agent_handles_normal_assessment():
                 status=RuleStatus.NOT_TRIGGERED,
                 value=250000,
                 threshold=0,
-                severity=None,
+                severity=RuleSeverity.LOW,
             ),
         ],
         comments=[],
@@ -198,6 +202,7 @@ def test_analysis_agent_handles_normal_assessment():
     assert analysis.risk_factors == []
     assert analysis.limitations == []
 
+
 def test_analysis_agent_reports_not_evaluable_rules_as_limitations():
 
     assessment = Assessment(
@@ -211,7 +216,7 @@ def test_analysis_agent_reports_not_evaluable_rules_as_limitations():
                 status=RuleStatus.NOT_EVALUABLE,
                 value=None,
                 threshold=-0.10,
-                severity=None,
+                severity=RuleSeverity.MEDIUM,
             ),
             RuleResult(
                 rule_id="R002",
@@ -220,7 +225,7 @@ def test_analysis_agent_reports_not_evaluable_rules_as_limitations():
                 status=RuleStatus.NOT_EVALUABLE,
                 value=None,
                 threshold=0,
-                severity=None,
+                severity=RuleSeverity.MEDIUM,
             ),
         ],
         comments=[],

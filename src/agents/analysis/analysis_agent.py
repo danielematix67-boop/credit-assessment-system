@@ -1,6 +1,7 @@
 from src.agents.base.agent import Agent
 from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
+from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 
 
@@ -31,6 +32,7 @@ class AnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
         risk_factors = [
             result.rule_name
             for result in triggered_rules
+            if result.severity == RuleSeverity.HIGH
         ]
 
         limitations = [
