@@ -18,6 +18,11 @@ class LLMReportGenerator(ReportGenerator):
 
         response = self.llm_client.generate(prompt)
 
+        response = self._validate_response(
+            response,
+            analysis,
+        )
+
         return Report(
             position_id=analysis.position_id,
             assessment_status=analysis.assessment_status,
@@ -25,6 +30,27 @@ class LLMReportGenerator(ReportGenerator):
             findings=analysis.key_findings,
             limitations=analysis.limitations,
         )
+
+    def _validate_response(
+        self,
+        response: str,
+        analysis: AssessmentAnalysis,
+    ) -> str:
+
+        if not response.strip():
+            raise ValueError(
+                "LLM returned an empty response"
+            )
+
+        status = analysis.assessment_status.value
+
+        if status not in response.upper():
+            raise ValueError(
+                "LLM response does not contain "
+                "the assessment status"
+            )
+
+        return response
 
     def _build_prompt(
         self,

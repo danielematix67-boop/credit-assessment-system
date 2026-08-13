@@ -79,3 +79,40 @@ def test_credit_assessment_llm_workflow():
     assert result.report.executive_summary
     assert result.report.findings
     assert isinstance(result.report.limitations, list)
+
+def test_llm_cannot_change_deterministic_assessment():
+
+    position = CreditPosition(
+        position_id="POS001",
+        revenue_growth=-0.15,
+        ebitda=-50000,
+        profit_loss=-50000,
+        ebitda_margin=-0.05,
+        pfn_to_ebitda=6.0,
+        interest_expense=40000,
+    )
+
+    workflow = create_default_assessment_workflow(
+        use_llm=True,
+        llm_client=MockLLMClient(),
+    )
+
+    result = workflow.run(position)
+
+    # The assessment status is determined by the
+    # deterministic assessment engine.
+    assert result.assessment.status == AssessmentStatus.CRITICAL
+
+    # The analysis must preserve the deterministic status.
+    assert result.analysis.assessment_status == (
+        result.assessment.status
+    )
+
+    # The generated report must preserve the same status.
+    assert result.report.assessment_status == (
+        result.assessment.status
+    )
+
+    # The LLM is only responsible for generating
+    # the executive summary.
+    assert result.report.executive_summary
