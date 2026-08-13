@@ -32,11 +32,27 @@ class LLMReportGenerator(ReportGenerator):
     ) -> str:
 
         return (
-            "Generate a concise credit assessment summary.\n\n"
-            f"Assessment status: {analysis.assessment_status.value}\n"
+            "You are a credit assessment reporting assistant.\n\n"
+            "Your task is to write a concise executive summary based "
+            "EXCLUSIVELY on the structured assessment provided below.\n\n"
+
+            "STRICT RULES:\n"
+            "- Do not introduce facts that are not present in the assessment.\n"
+            "- Do not invent financial data, causes, explanations, or trends.\n"
+            "- Do not modify the assessment status.\n"
+            "- Do not make a credit decision.\n"
+            "- Do not provide recommendations unless they are explicitly "
+            "contained in the assessment.\n"
+            "- Clearly distinguish between findings and limitations.\n"
+            "- If information is missing or not evaluable, do not infer it.\n"
+            "- Use professional and concise credit-risk language.\n\n"
+
+            "ASSESSMENT:\n"
+            f"Assessment status: "
+            f"{analysis.assessment_status.value}\n"
             f"Key findings: {analysis.key_findings}\n"
             f"Risk factors: {analysis.risk_factors}\n"
             f"Limitations: {analysis.limitations}\n\n"
-            "The summary must be factual and must not introduce "
-            "information that is not contained in the assessment."
+
+            "Generate only the executive summary."
         )

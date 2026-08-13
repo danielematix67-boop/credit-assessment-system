@@ -15,4 +15,4 @@ def test_mock_llm_client_generates_text():
 
     result = client.generate("Test prompt")
 
-    assert result == "Generated text"
+    assert result == "Mock LLM response"

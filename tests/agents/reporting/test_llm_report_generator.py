@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 from src.agents.reporting.llm_report_generator import LLMReportGenerator
 from src.llm.client import LLMClient
+from src.llm.mock_client import MockLLMClient
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.models.report import Report
@@ -89,3 +90,35 @@ def test_llm_report_generator_builds_prompt_from_analysis():
     assert "Negative EBITDA" in prompt
     assert "High leverage" in prompt
     assert "Interest Coverage Ratio" in prompt
+
+def test_llm_report_generator_includes_analysis_in_prompt():
+
+    analysis = AssessmentAnalysis(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.CRITICAL,
+        key_findings=[
+            "Revenue Growth",
+            "Negative EBITDA",
+        ],
+        risk_factors=[
+            "Negative EBITDA",
+        ],
+        limitations=[
+            "EBITDA Inventory Contribution",
+        ],
+    )
+
+    client = MockLLMClient()
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+    )
+
+    generator.generate(analysis)
+
+    prompt = client.last_prompt
+
+    assert "CRITICAL" in prompt
+    assert "Revenue Growth" in prompt
+    assert "Negative EBITDA" in prompt
+    assert "EBITDA Inventory Contribution" in prompt
