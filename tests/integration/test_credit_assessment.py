@@ -1,13 +1,17 @@
-from src.agents.workflow.workflow_factory import create_default_assessment_workflow
+from src.agents.reporting.llm_report_generator import LLMReportGenerator
+from src.agents.workflow.workflow_factory import (
+    create_default_assessment_workflow,
+)
+from src.llm.mock_client import MockLLMClient
 from src.models.assessment_status import AssessmentStatus
 from src.models.position import CreditPosition
 from src.orchestration.orchestrator_factory import (
     create_default_orchestrator,
 )
 
-from src.agents.reporting.llm_report_generator import LLMReportGenerator
 
 def test_credit_assessment_end_to_end():
+
     position = CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
@@ -22,18 +26,13 @@ def test_credit_assessment_end_to_end():
 
     result = orchestrator.run(position)
 
-    # The orchestrator returns the final Report.
     assert result.position_id == "POS001"
     assert result.assessment_status == AssessmentStatus.CRITICAL
 
-    # A critical assessment must produce a non-empty executive summary.
     assert result.executive_summary
-
-    # A critical assessment must contain findings.
     assert result.findings
-
-    # Limitations may be empty when all required indicators are evaluable.
     assert isinstance(result.limitations, list)
+
 
 def test_credit_assessment_llm_workflow():
 
@@ -49,6 +48,7 @@ def test_credit_assessment_llm_workflow():
 
     workflow = create_default_assessment_workflow(
         use_llm=True,
+        llm_client=MockLLMClient(),
     )
 
     assert isinstance(
@@ -75,3 +75,7 @@ def test_credit_assessment_llm_workflow():
         result.report.assessment_status
         == result.assessment.status
     )
+
+    assert result.report.executive_summary
+    assert result.report.findings
+    assert isinstance(result.report.limitations, list)

@@ -57,3 +57,35 @@ def test_llm_report_generator_uses_llm_client():
     assert report.limitations == analysis.limitations
 
     llm_client.generate.assert_called_once()
+
+def test_llm_report_generator_builds_prompt_from_analysis():
+
+    analysis = AssessmentAnalysis(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.CRITICAL,
+        key_findings=[
+            "Revenue Growth Deterioration",
+            "Negative EBITDA",
+        ],
+        risk_factors=[
+            "High leverage",
+        ],
+        limitations=[
+            "Interest Coverage Ratio",
+        ],
+    )
+
+    llm_client = MagicMock(spec=LLMClient)
+    llm_client.generate.return_value = "Generated summary"
+
+    generator = LLMReportGenerator(llm_client)
+
+    generator.generate(analysis)
+
+    prompt = llm_client.generate.call_args.args[0]
+
+    assert "CRITICAL" in prompt
+    assert "Revenue Growth Deterioration" in prompt
+    assert "Negative EBITDA" in prompt
+    assert "High leverage" in prompt
+    assert "Interest Coverage Ratio" in prompt
