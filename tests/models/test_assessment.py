@@ -9,84 +9,85 @@ from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
 
-def test_assessment_stores_position_id_rule_results_findings_and_status():
-    rule_result = RuleResult(
-        rule_id="R001",
-        rule_name="Revenue growth deterioration",
-        category="revenue",
+@pytest.fixture
+def rule_result():
+    return RuleResult(
+        rule_id="TEST_RULE",
+        rule_name="Test Rule",
+        category="test",
         status=RuleStatus.TRIGGERED,
-        value=-0.15,
-        threshold=-0.10,
+        value=1.0,
+        threshold=0.0,
         severity=RuleSeverity.MEDIUM,
     )
 
-    comment = Comment(
-        rule_id="R001",
-        text=(
-            "Revenue deterioration detected. "
-            "Revenue growth: -15.0% (threshold: -10.0%)."
-        ),
+
+@pytest.fixture
+def comment():
+    return Comment(
+        rule_id="TEST_RULE",
+        text="Test comment.",
     )
 
-    finding = RuleFinding(
+
+@pytest.fixture
+def finding(rule_result, comment):
+    return RuleFinding(
         result=rule_result,
         comment=comment,
     )
 
-    assessment = Assessment(
-        position_id="POS001",
+
+@pytest.fixture
+def assessment(rule_result, finding):
+    return Assessment(
+        position_id="TEST_POSITION",
         rule_results=[rule_result],
         findings=[finding],
         status=AssessmentStatus.ATTENTION,
     )
 
-    assert assessment.position_id == "POS001"
+
+def test_assessment_stores_provided_data(
+    assessment,
+    rule_result,
+    finding,
+):
+    assert assessment.position_id == "TEST_POSITION"
     assert assessment.rule_results == [rule_result]
     assert assessment.findings == [finding]
     assert assessment.status == AssessmentStatus.ATTENTION
 
 
-def test_assessment_stores_complete_assessment_data():
-    rule_result = RuleResult(
-        rule_id="R001",
-        rule_name="Revenue growth deterioration",
-        category="revenue",
-        status=RuleStatus.TRIGGERED,
-        value=-0.15,
-        threshold=-0.10,
-        severity=RuleSeverity.MEDIUM,
-    )
+def test_assessment_preserves_rule_finding_relationship(
+    assessment,
+    rule_result,
+    finding,
+):
+    assert assessment.rule_results[0] is rule_result
+    assert assessment.findings[0] is finding
+    assert assessment.findings[0].result is rule_result
 
-    comment = Comment(
-        rule_id="R001",
-        text="Revenue deterioration detected.",
-    )
 
-    finding = RuleFinding(
-        result=rule_result,
-        comment=comment,
-    )
-
+@pytest.mark.parametrize(
+    "status",
+    list(AssessmentStatus),
+)
+def test_assessment_accepts_valid_status(
+    rule_result,
+    finding,
+    status,
+):
     assessment = Assessment(
-        position_id="POS001",
+        position_id="TEST_POSITION",
         rule_results=[rule_result],
         findings=[finding],
-        status=AssessmentStatus.ATTENTION,
+        status=status,
     )
 
-    assert assessment.position_id == "POS001"
-    assert assessment.rule_results == [rule_result]
-    assert assessment.findings == [finding]
-    assert assessment.status == AssessmentStatus.ATTENTION
+    assert assessment.status == status
 
 
-def test_assessment_is_immutable():
-    assessment = Assessment(
-        position_id="POS001",
-        rule_results=[],
-        findings=[],
-        status=AssessmentStatus.NORMAL,
-    )
-
+def test_assessment_is_immutable(assessment):
     with pytest.raises(AttributeError):
         assessment.status = AssessmentStatus.CRITICAL

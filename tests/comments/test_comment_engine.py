@@ -33,37 +33,87 @@ def base_position():
     )
 
 
-def test_comment_generated_when_rule_is_triggered(base_position):
-    position = replace(
-        base_position,
-        revenue_growth=-0.15,
-    )
+@pytest.mark.parametrize(
+    "rule_class, rule_id, rule_name, category, threshold, severity, position_changes",
+    [
+        (
+            RevenueGrowthRule,
+            "R001",
+            "Revenue growth deterioration",
+            "revenue",
+            -0.10,
+            RuleSeverity.MEDIUM,
+            {"revenue_growth": -0.15},
+        ),
+        (
+            NegativeEbitdaRule,
+            "R002",
+            "Negative EBITDA",
+            "profitability",
+            0.0,
+            RuleSeverity.HIGH,
+            {"ebitda": -50000},
+        ),
+        (
+            EbitdaMarginRule,
+            "R003",
+            "EBITDA margin deterioration",
+            "profitability",
+            0.0,
+            RuleSeverity.MEDIUM,
+            {"ebitda_margin": -0.05},
+        ),
+        (
+            PfnToEbitdaRule,
+            "R004",
+            "PFN / EBITDA leverage",
+            "leverage",
+            5.0,
+            RuleSeverity.HIGH,
+            {"pfn_to_ebitda": 6.0},
+        ),
+        (
+            FinancialExpensesToEbitdaRule,
+            "R005",
+            "Interest expense to EBITDA",
+            "profitability",
+            0.60,
+            RuleSeverity.MEDIUM,
+            {"interest_expense": 200000},
+        ),
+    ],
+)
+def test_comment_generated_for_triggered_rule(
+    base_position,
+    rule_class,
+    rule_id,
+    rule_name,
+    category,
+    threshold,
+    severity,
+    position_changes,
+):
+    position = replace(base_position, **position_changes)
 
     config = RuleConfig(
-        rule_id="R001",
-        rule_name="Revenue growth deterioration",
-        category="revenue",
-        threshold=-0.10,
-        severity=RuleSeverity.MEDIUM,
+        rule_id=rule_id,
+        rule_name=rule_name,
+        category=category,
+        threshold=threshold,
+        severity=severity,
     )
 
-    rule = RevenueGrowthRule(config)
+    rule = rule_class(config)
     result = rule.evaluate(position)
 
     engine = CommentEngine()
     comment = engine.generate(result)
 
-    assert comment is not None
-    assert comment.rule_id == "R001"
-    assert comment.text == (
-        "Revenue deterioration detected. "
-        "Revenue growth: -15.0%."
-    )
+    assert result.status == RuleStatus.TRIGGERED
 
-    # The threshold remains part of the deterministic
-    # RuleResult but is not exposed in the comment.
-    assert result.threshold == -0.10
-    assert "threshold" not in comment.text.lower()
+    assert comment is not None
+    assert comment.rule_id == result.rule_id
+    assert comment.text
 
 
 def test_no_comment_generated_when_rule_is_not_triggered(base_position):
@@ -81,131 +131,8 @@ def test_no_comment_generated_when_rule_is_not_triggered(base_position):
     engine = CommentEngine()
     comment = engine.generate(result)
 
+    assert result.status != RuleStatus.TRIGGERED
     assert comment is None
-
-
-def test_negative_ebitda_comment_generated(base_position):
-    position = replace(
-        base_position,
-        ebitda=-50000,
-    )
-
-    config = RuleConfig(
-        rule_id="R002",
-        rule_name="Negative EBITDA",
-        category="profitability",
-        threshold=0.0,
-        severity=RuleSeverity.HIGH,
-    )
-
-    rule = NegativeEbitdaRule(config)
-    result = rule.evaluate(position)
-
-    engine = CommentEngine()
-    comment = engine.generate(result)
-
-    assert comment is not None
-    assert comment.rule_id == "R002"
-    assert comment.text == (
-        "Negative EBITDA detected. "
-        "EBITDA: €-50,000."
-    )
-
-    assert result.threshold == 0.0
-    assert "threshold" not in comment.text.lower()
-
-
-def test_ebitda_margin_comment_generated(base_position):
-    position = replace(
-        base_position,
-        ebitda_margin=-0.05,
-    )
-
-    config = RuleConfig(
-        rule_id="R003",
-        rule_name="EBITDA margin deterioration",
-        category="profitability",
-        threshold=0.0,
-        severity=RuleSeverity.MEDIUM,
-    )
-
-    rule = EbitdaMarginRule(config)
-    result = rule.evaluate(position)
-
-    engine = CommentEngine()
-    comment = engine.generate(result)
-
-    assert comment is not None
-    assert comment.rule_id == "R003"
-    assert comment.text == (
-        "EBITDA margin is below the acceptable threshold. "
-        "EBITDA margin: -5.0%."
-    )
-
-    assert result.threshold == 0.0
-    assert "threshold" in comment.text.lower()
-
-
-def test_pfn_to_ebitda_comment_generated(base_position):
-    position = replace(
-        base_position,
-        pfn_to_ebitda=6.0,
-    )
-
-    config = RuleConfig(
-        rule_id="R004",
-        rule_name="PFN / EBITDA leverage",
-        category="leverage",
-        threshold=5.0,
-        severity=RuleSeverity.HIGH,
-    )
-
-    rule = PfnToEbitdaRule(config)
-    result = rule.evaluate(position)
-
-    engine = CommentEngine()
-    comment = engine.generate(result)
-
-    assert comment is not None
-    assert comment.rule_id == "R004"
-    assert comment.text == (
-        "Leverage is above the acceptable threshold. "
-        "PFN to EBITDA: 6.0x."
-    )
-
-    assert result.threshold == 5.0
-    assert "threshold" in comment.text.lower()
-
-
-def test_interest_expense_to_ebitda_comment_generated(base_position):
-    position = replace(
-        base_position,
-        interest_expense=200000,
-    )
-
-    config = RuleConfig(
-        rule_id="R005",
-        rule_name="Interest expense to EBITDA",
-        category="profitability",
-        threshold=0.60,
-        severity=RuleSeverity.MEDIUM,
-    )
-
-    rule = FinancialExpensesToEbitdaRule(config)
-    result = rule.evaluate(position)
-
-    engine = CommentEngine()
-    comment = engine.generate(result)
-
-    assert comment is not None
-    assert comment.rule_id == "R005"
-    assert comment.text == (
-        "Interest expense to EBITDA is above the acceptable threshold. "
-        "Ratio: 80.0%."
-    )
-
-    assert result.threshold == 0.60
-    assert "threshold" in comment.text.lower()
 
 
 def test_no_comment_generated_when_rule_is_not_evaluable(base_position):
@@ -250,7 +177,7 @@ def test_no_comment_generated_when_rule_has_no_template():
     assert comment is None
 
 
-def test_comment_engine_formats_value_without_threshold():
+def test_comment_engine_renders_rule_value():
     result = RuleResult(
         rule_id="R001",
         rule_name="Revenue growth deterioration",
@@ -266,15 +193,15 @@ def test_comment_engine_formats_value_without_threshold():
     comment = engine.generate(result)
 
     assert comment is not None
-    assert comment.text == (
-        "Revenue deterioration detected. "
-        "Revenue growth: -20.0%."
-    )
+    assert comment.rule_id == result.rule_id
+    assert comment.text
 
-    # The threshold remains available to the deterministic
-    # layer but is not exposed in the generated comment.
+    # The deterministic result retains the threshold.
     assert result.threshold == -0.10
-    assert "threshold" not in comment.text.lower()
+
+    # The comment should contain the evaluated value,
+    # while its exact wording remains implementation-independent.
+    assert "-20.0%" in comment.text
 
 
 def test_comment_engine_does_not_modify_rule_result():

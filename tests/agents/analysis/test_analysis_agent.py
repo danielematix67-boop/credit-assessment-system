@@ -1,3 +1,5 @@
+import pytest
+
 from src.agents.analysis.analysis_agent import AnalysisAgent
 from src.agents.base.agent import Agent
 from src.comments.comment import Comment
@@ -10,455 +12,355 @@ from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
 
-def test_analysis_agent_implements_agent_contract():
-
-    agent = AnalysisAgent()
-
-    assert isinstance(agent, Agent)
+@pytest.fixture
+def analysis_agent():
+    return AnalysisAgent()
 
 
-def test_analysis_agent_produces_structured_analysis():
-
-    revenue_result = RuleResult(
-        rule_id="R001",
-        rule_name="Revenue Growth",
-        category="Financial",
-        status=RuleStatus.TRIGGERED,
-        value=-0.15,
-        threshold=-0.10,
-        severity=RuleSeverity.HIGH,
+def make_rule_result(
+    *,
+    rule_id: str = "TEST_RULE",
+    rule_name: str = "Test rule",
+    status: RuleStatus = RuleStatus.TRIGGERED,
+    severity: RuleSeverity = RuleSeverity.HIGH,
+    value: float | None = None,
+    threshold: float | None = None,
+) -> RuleResult:
+    return RuleResult(
+        rule_id=rule_id,
+        rule_name=rule_name,
+        category="TEST_CATEGORY",
+        status=status,
+        value=value,
+        threshold=threshold,
+        severity=severity,
     )
 
-    ebitda_result = RuleResult(
-        rule_id="R002",
-        rule_name="Negative EBITDA",
-        category="Financial",
-        status=RuleStatus.TRIGGERED,
-        value=-50000,
-        threshold=0,
-        severity=RuleSeverity.HIGH,
-    )
 
-    inventory_result = RuleResult(
-        rule_id="R006",
-        rule_name="EBITDA Inventory Contribution",
-        category="Financial",
-        status=RuleStatus.NOT_EVALUABLE,
-        value=None,
-        threshold=0,
-        severity=RuleSeverity.MEDIUM,
-    )
-
-    findings = [
-        RuleFinding(
-            result=revenue_result,
-            comment=Comment(
-                rule_id="R001",
-                text="Revenue deterioration detected.",
-            ),
+def make_finding(
+    result: RuleResult,
+    text: str,
+) -> RuleFinding:
+    return RuleFinding(
+        result=result,
+        comment=Comment(
+            rule_id=result.rule_id,
+            text=text,
         ),
-        RuleFinding(
-            result=ebitda_result,
-            comment=Comment(
-                rule_id="R002",
-                text="Negative EBITDA detected.",
-            ),
+    )
+
+
+def make_assessment(
+    *,
+    position_id: str = "TEST_POSITION",
+    status: AssessmentStatus = AssessmentStatus.ATTENTION,
+    rule_results: list[RuleResult],
+    findings: list[RuleFinding],
+) -> Assessment:
+    return Assessment(
+        position_id=position_id,
+        status=status,
+        rule_results=rule_results,
+        findings=findings,
+    )
+
+
+def test_analysis_agent_implements_agent_contract(
+    analysis_agent,
+):
+    assert isinstance(analysis_agent, Agent)
+
+
+def test_analysis_agent_produces_structured_analysis(
+    analysis_agent,
+):
+    triggered_results = [
+        make_rule_result(
+            status=RuleStatus.TRIGGERED,
+            severity=RuleSeverity.HIGH,
         ),
-        RuleFinding(
-            result=inventory_result,
-            comment=Comment(
-                rule_id="R006",
-                text="EBITDA Inventory Contribution could not be evaluated.",
-            ),
+        make_rule_result(
+            status=RuleStatus.TRIGGERED,
+            severity=RuleSeverity.HIGH,
         ),
     ]
 
-    assessment = Assessment(
-        position_id="POS001",
+    not_evaluable_result = make_rule_result(
+        status=RuleStatus.NOT_EVALUABLE,
+        severity=RuleSeverity.MEDIUM,
+    )
+
+    triggered_comments = [
+        "First triggered finding.",
+        "Second triggered finding.",
+    ]
+
+    limitation_comment = "Unavailable metric could not be evaluated."
+
+    findings = [
+        make_finding(
+            triggered_results[0],
+            triggered_comments[0],
+        ),
+        make_finding(
+            triggered_results[1],
+            triggered_comments[1],
+        ),
+        make_finding(
+            not_evaluable_result,
+            limitation_comment,
+        ),
+    ]
+
+    assessment = make_assessment(
         status=AssessmentStatus.CRITICAL,
         rule_results=[
-            revenue_result,
-            ebitda_result,
-            inventory_result,
+            *triggered_results,
+            not_evaluable_result,
         ],
         findings=findings,
     )
 
-    analysis = AnalysisAgent().run(assessment)
+    analysis = analysis_agent.run(assessment)
 
     assert isinstance(analysis, AssessmentAnalysis)
-    assert analysis.position_id == "POS001"
-    assert analysis.assessment_status == AssessmentStatus.CRITICAL
+    assert analysis.position_id == assessment.position_id
+    assert analysis.assessment_status == assessment.status
 
-    assert analysis.key_findings == [
-        "Revenue deterioration detected.",
-        "Negative EBITDA detected.",
-    ]
-
-    assert analysis.risk_factors == [
-        "Revenue deterioration detected.",
-        "Negative EBITDA detected.",
-    ]
-
-    assert analysis.limitations == [
-        "EBITDA Inventory Contribution",
-    ]
+    assert analysis.key_findings == triggered_comments
+    assert analysis.risk_factors == triggered_comments
+    assert analysis.limitations == [limitation_comment]
 
 
-def test_analysis_agent_uses_comment_text_for_key_findings():
-
-    result = RuleResult(
-        rule_id="R001",
-        rule_name="Revenue Growth",
-        category="Financial",
+def test_analysis_agent_uses_comment_text_for_key_findings(
+    analysis_agent,
+):
+    result = make_rule_result(
         status=RuleStatus.TRIGGERED,
-        value=-0.15,
-        threshold=-0.10,
-        severity=RuleSeverity.HIGH,
+        severity=RuleSeverity.MEDIUM,
     )
 
-    finding = RuleFinding(
-        result=result,
-        comment=Comment(
-            rule_id="R001",
-            text="Custom revenue deterioration comment.",
-        ),
+    comment_text = "Custom finding generated by the comment engine."
+
+    finding = make_finding(
+        result,
+        comment_text,
     )
 
-    assessment = Assessment(
-        position_id="POS001",
-        status=AssessmentStatus.ATTENTION,
+    assessment = make_assessment(
         rule_results=[result],
         findings=[finding],
     )
 
-    analysis = AnalysisAgent().run(assessment)
+    analysis = analysis_agent.run(assessment)
 
-    assert analysis.key_findings == [
-        "Custom revenue deterioration comment.",
-    ]
+    assert analysis.key_findings == [comment_text]
 
 
-def test_analysis_agent_uses_comment_text_for_risk_factors():
-
-    result = RuleResult(
-        rule_id="R001",
-        rule_name="Revenue Growth",
-        category="Financial",
+def test_analysis_agent_uses_comment_text_for_risk_factors(
+    analysis_agent,
+):
+    result = make_rule_result(
         status=RuleStatus.TRIGGERED,
-        value=-0.15,
-        threshold=-0.10,
         severity=RuleSeverity.HIGH,
     )
 
-    finding = RuleFinding(
-        result=result,
-        comment=Comment(
-            rule_id="R001",
-            text="Severe revenue deterioration identified.",
-        ),
+    comment_text = "Custom high-severity risk identified."
+
+    finding = make_finding(
+        result,
+        comment_text,
     )
 
-    assessment = Assessment(
-        position_id="POS001",
+    assessment = make_assessment(
         status=AssessmentStatus.CRITICAL,
         rule_results=[result],
         findings=[finding],
     )
 
-    analysis = AnalysisAgent().run(assessment)
+    analysis = analysis_agent.run(assessment)
 
-    assert analysis.risk_factors == [
-        "Severe revenue deterioration identified.",
+    assert analysis.risk_factors == [comment_text]
+
+
+def test_analysis_agent_does_not_depend_on_rule_ids(
+    analysis_agent,
+):
+    results = [
+        make_rule_result(
+            rule_id="ARBITRARY_ID_A",
+            status=RuleStatus.TRIGGERED,
+            severity=RuleSeverity.HIGH,
+        ),
+        make_rule_result(
+            rule_id="COMPLETELY_DIFFERENT_ID",
+            status=RuleStatus.TRIGGERED,
+            severity=RuleSeverity.MEDIUM,
+        ),
     ]
 
+    comments = [
+        "First arbitrary finding.",
+        "Second arbitrary finding.",
+    ]
 
-def test_analysis_agent_does_not_depend_on_rule_ids():
+    findings = [
+        make_finding(results[0], comments[0]),
+        make_finding(results[1], comments[1]),
+    ]
 
-    revenue_result = RuleResult(
-        rule_id="CUSTOM_001",
-        rule_name="Revenue Growth Deterioration",
-        category="Financial",
+    assessment = make_assessment(
+        rule_results=results,
+        findings=findings,
+    )
+
+    analysis = analysis_agent.run(assessment)
+
+    assert analysis.assessment_status == assessment.status
+    assert analysis.key_findings == comments
+    assert analysis.risk_factors == [comments[0]]
+
+
+def test_analysis_agent_ignores_not_triggered_rules(
+    analysis_agent,
+):
+    triggered_result = make_rule_result(
         status=RuleStatus.TRIGGERED,
-        value=-0.15,
-        threshold=-0.10,
         severity=RuleSeverity.HIGH,
     )
 
-    leverage_result = RuleResult(
-        rule_id="CUSTOM_002",
-        rule_name="High Leverage",
-        category="Financial",
-        status=RuleStatus.TRIGGERED,
-        value=6.0,
-        threshold=5.0,
-        severity=RuleSeverity.MEDIUM,
-    )
-
-    assessment = Assessment(
-        position_id="POS001",
-        status=AssessmentStatus.ATTENTION,
-        rule_results=[
-            revenue_result,
-            leverage_result,
-        ],
-        findings=[
-            RuleFinding(
-                result=revenue_result,
-                comment=Comment(
-                    rule_id="CUSTOM_001",
-                    text="Revenue deterioration detected.",
-                ),
-            ),
-            RuleFinding(
-                result=leverage_result,
-                comment=Comment(
-                    rule_id="CUSTOM_002",
-                    text="High leverage detected.",
-                ),
-            ),
-        ],
-    )
-
-    analysis = AnalysisAgent().run(assessment)
-
-    assert analysis.assessment_status == AssessmentStatus.ATTENTION
-
-    assert analysis.key_findings == [
-        "Revenue deterioration detected.",
-        "High leverage detected.",
-    ]
-
-    assert analysis.risk_factors == [
-        "Revenue deterioration detected.",
-    ]
-
-
-def test_analysis_agent_ignores_not_triggered_rules():
-
-    revenue_result = RuleResult(
-        rule_id="R001",
-        rule_name="Revenue Growth",
-        category="Financial",
-        status=RuleStatus.TRIGGERED,
-        value=-0.15,
-        threshold=-0.10,
-        severity=RuleSeverity.HIGH,
-    )
-
-    ebitda_result = RuleResult(
-        rule_id="R002",
-        rule_name="Positive EBITDA",
-        category="Financial",
+    not_triggered_result = make_rule_result(
         status=RuleStatus.NOT_TRIGGERED,
-        value=250000,
-        threshold=0,
         severity=RuleSeverity.LOW,
     )
 
-    assessment = Assessment(
-        position_id="POS001",
-        status=AssessmentStatus.ATTENTION,
+    triggered_comment = "Triggered finding."
+
+    assessment = make_assessment(
         rule_results=[
-            revenue_result,
-            ebitda_result,
+            triggered_result,
+            not_triggered_result,
         ],
         findings=[
-            RuleFinding(
-                result=revenue_result,
-                comment=Comment(
-                    rule_id="R001",
-                    text="Revenue deterioration detected.",
-                ),
+            make_finding(
+                triggered_result,
+                triggered_comment,
             ),
         ],
     )
 
-    analysis = AnalysisAgent().run(assessment)
+    analysis = analysis_agent.run(assessment)
 
-    assert analysis.key_findings == [
-        "Revenue deterioration detected.",
-    ]
-
-    assert analysis.risk_factors == [
-        "Revenue deterioration detected.",
-    ]
-
+    assert analysis.key_findings == [triggered_comment]
+    assert analysis.risk_factors == [triggered_comment]
     assert analysis.limitations == []
 
 
-def test_analysis_agent_handles_normal_assessment():
+def test_analysis_agent_handles_normal_assessment(
+    analysis_agent,
+):
+    results = [
+        make_rule_result(
+            status=RuleStatus.NOT_TRIGGERED,
+            severity=RuleSeverity.LOW,
+        ),
+        make_rule_result(
+            status=RuleStatus.NOT_TRIGGERED,
+            severity=RuleSeverity.LOW,
+        ),
+    ]
 
-    revenue_result = RuleResult(
-        rule_id="R001",
-        rule_name="Revenue Growth",
-        category="Financial",
-        status=RuleStatus.NOT_TRIGGERED,
-        value=0.05,
-        threshold=-0.10,
-        severity=RuleSeverity.LOW,
-    )
-
-    ebitda_result = RuleResult(
-        rule_id="R002",
-        rule_name="Positive EBITDA",
-        category="Financial",
-        status=RuleStatus.NOT_TRIGGERED,
-        value=250000,
-        threshold=0,
-        severity=RuleSeverity.LOW,
-    )
-
-    assessment = Assessment(
-        position_id="POS001",
+    assessment = make_assessment(
         status=AssessmentStatus.NORMAL,
-        rule_results=[
-            revenue_result,
-            ebitda_result,
-        ],
+        rule_results=results,
         findings=[],
     )
 
-    analysis = AnalysisAgent().run(assessment)
+    analysis = analysis_agent.run(assessment)
 
-    assert analysis.position_id == "POS001"
-    assert analysis.assessment_status == AssessmentStatus.NORMAL
+    assert analysis.position_id == assessment.position_id
+    assert analysis.assessment_status == assessment.status
     assert analysis.key_findings == []
     assert analysis.risk_factors == []
     assert analysis.limitations == []
 
 
-def test_analysis_agent_reports_not_evaluable_rules_as_limitations():
+def test_analysis_agent_reports_not_evaluable_rules_as_limitations(
+    analysis_agent,
+):
+    results = [
+        make_rule_result(
+            status=RuleStatus.NOT_EVALUABLE,
+            severity=RuleSeverity.MEDIUM,
+        ),
+        make_rule_result(
+            status=RuleStatus.NOT_EVALUABLE,
+            severity=RuleSeverity.LOW,
+        ),
+    ]
 
-    revenue_result = RuleResult(
-        rule_id="R001",
-        rule_name="Revenue Growth",
-        category="Financial",
-        status=RuleStatus.NOT_EVALUABLE,
-        value=None,
-        threshold=-0.10,
-        severity=RuleSeverity.MEDIUM,
-    )
+    limitation_comments = [
+        "First unavailable metric could not be evaluated.",
+        "Second unavailable metric could not be evaluated.",
+    ]
 
-    margin_result = RuleResult(
-        rule_id="R002",
-        rule_name="EBITDA Margin",
-        category="Financial",
-        status=RuleStatus.NOT_EVALUABLE,
-        value=None,
-        threshold=0,
-        severity=RuleSeverity.MEDIUM,
-    )
+    findings = [
+        make_finding(results[0], limitation_comments[0]),
+        make_finding(results[1], limitation_comments[1]),
+    ]
 
-    assessment = Assessment(
-        position_id="POS001",
+    assessment = make_assessment(
         status=AssessmentStatus.NORMAL,
-        rule_results=[
-            revenue_result,
-            margin_result,
-        ],
-        findings=[
-            RuleFinding(
-                result=revenue_result,
-                comment=Comment(
-                    rule_id="R001",
-                    text="Revenue Growth could not be evaluated.",
-                ),
-            ),
-            RuleFinding(
-                result=margin_result,
-                comment=Comment(
-                    rule_id="R002",
-                    text="EBITDA Margin could not be evaluated.",
-                ),
-            ),
-        ],
+        rule_results=results,
+        findings=findings,
     )
 
-    analysis = AnalysisAgent().run(assessment)
+    analysis = analysis_agent.run(assessment)
 
     assert analysis.key_findings == []
     assert analysis.risk_factors == []
-
-    assert analysis.limitations == [
-        "Revenue Growth",
-        "EBITDA Margin",
-    ]
+    assert analysis.limitations == limitation_comments
 
 
-def test_analysis_agent_selects_only_high_severity_risk_factors():
-
-    high_result = RuleResult(
-        rule_id="R001",
-        rule_name="High Severity Risk",
-        category="Financial",
+@pytest.mark.parametrize(
+    "severity, expected_as_risk_factor",
+    [
+        (RuleSeverity.HIGH, True),
+        (RuleSeverity.MEDIUM, False),
+        (RuleSeverity.LOW, False),
+    ],
+)
+def test_analysis_agent_selects_high_severity_risk_factors(
+    analysis_agent,
+    severity,
+    expected_as_risk_factor,
+):
+    result = make_rule_result(
         status=RuleStatus.TRIGGERED,
-        value=-0.20,
-        threshold=-0.10,
-        severity=RuleSeverity.HIGH,
+        severity=severity,
     )
 
-    medium_result = RuleResult(
-        rule_id="R002",
-        rule_name="Medium Severity Risk",
-        category="Financial",
-        status=RuleStatus.TRIGGERED,
-        value=5.0,
-        threshold=4.0,
-        severity=RuleSeverity.MEDIUM,
-    )
+    comment_text = f"Risk associated with {severity.value} severity."
 
-    low_result = RuleResult(
-        rule_id="R003",
-        rule_name="Low Severity Risk",
-        category="Financial",
-        status=RuleStatus.TRIGGERED,
-        value=1.0,
-        threshold=0.5,
-        severity=RuleSeverity.LOW,
-    )
-
-    assessment = Assessment(
-        position_id="POS001",
+    assessment = make_assessment(
         status=AssessmentStatus.CRITICAL,
-        rule_results=[
-            high_result,
-            medium_result,
-            low_result,
-        ],
+        rule_results=[result],
         findings=[
-            RuleFinding(
-                result=high_result,
-                comment=Comment(
-                    rule_id="R001",
-                    text="High severity risk detected.",
-                ),
-            ),
-            RuleFinding(
-                result=medium_result,
-                comment=Comment(
-                    rule_id="R002",
-                    text="Medium severity risk detected.",
-                ),
-            ),
-            RuleFinding(
-                result=low_result,
-                comment=Comment(
-                    rule_id="R003",
-                    text="Low severity risk detected.",
-                ),
+            make_finding(
+                result,
+                comment_text,
             ),
         ],
     )
 
-    analysis = AnalysisAgent().run(assessment)
+    analysis = analysis_agent.run(assessment)
 
-    assert analysis.key_findings == [
-        "High severity risk detected.",
-        "Medium severity risk detected.",
-        "Low severity risk detected.",
-    ]
+    assert analysis.key_findings == [comment_text]
 
-    assert analysis.risk_factors == [
-        "High severity risk detected.",
-    ]
+    expected_risk_factors = (
+        [comment_text]
+        if expected_as_risk_factor
+        else []
+    )
+
+    assert analysis.risk_factors == expected_risk_factors

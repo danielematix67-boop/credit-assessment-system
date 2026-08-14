@@ -1,5 +1,7 @@
 from unittest.mock import Mock
 
+import pytest
+
 from src.agents.analysis.analysis_agent import AnalysisAgent
 from src.agents.reporting.deterministic_report_generator import (
     DeterministicReportGenerator,
@@ -16,8 +18,9 @@ from src.orchestration.orchestrator_factory import (
 )
 
 
-def test_orchestrator_returns_report(assessment_service):
-    position = CreditPosition(
+@pytest.fixture
+def critical_position():
+    return CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
         ebitda=-50000,
@@ -27,7 +30,23 @@ def test_orchestrator_returns_report(assessment_service):
         interest_expense=40000,
     )
 
-    workflow = AssessmentWorkflow(
+
+@pytest.fixture
+def normal_position():
+    return CreditPosition(
+        position_id="POS002",
+        revenue_growth=0.10,
+        ebitda=100000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        pfn_to_ebitda=2.0,
+        interest_expense=20000,
+    )
+
+
+@pytest.fixture
+def deterministic_workflow(assessment_service):
+    return AssessmentWorkflow(
         assessment_service=assessment_service,
         analysis_agent=AnalysisAgent(),
         reporting_agent=ReportingAgent(
@@ -35,56 +54,38 @@ def test_orchestrator_returns_report(assessment_service):
         ),
     )
 
-    orchestrator = AssessmentOrchestrator(
-        workflow=workflow,
+
+@pytest.fixture
+def orchestrator(deterministic_workflow):
+    return AssessmentOrchestrator(
+        workflow=deterministic_workflow,
     )
 
-    report = orchestrator.run(position)
+
+def test_orchestrator_returns_report(
+    orchestrator,
+    critical_position,
+):
+    report = orchestrator.run(critical_position)
 
     assert isinstance(report, Report)
-    assert report.position_id == position.position_id
+    assert report.position_id == critical_position.position_id
 
 
-def test_orchestrator_preserves_assessment_status(assessment_service):
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
-    )
+def test_orchestrator_preserves_assessment_status(
+    assessment_service,
+    orchestrator,
+    critical_position,
+):
+    assessment = assessment_service.assess(critical_position)
 
-    workflow = AssessmentWorkflow(
-        assessment_service=assessment_service,
-        analysis_agent=AnalysisAgent(),
-        reporting_agent=ReportingAgent(
-            report_generator=DeterministicReportGenerator(),
-        ),
-    )
-
-    orchestrator = AssessmentOrchestrator(
-        workflow=workflow,
-    )
-
-    assessment = assessment_service.assess(position)
-    report = orchestrator.run(position)
+    report = orchestrator.run(critical_position)
 
     assert report.assessment_status == assessment.status
 
 
 def test_orchestrator_delegates_execution_to_workflow():
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
-    )
-
+    position = Mock(spec=CreditPosition)
     expected_report = Mock(spec=Report)
 
     workflow = Mock(spec=AssessmentWorkflow)
@@ -131,66 +132,54 @@ def test_default_orchestrator_creates_valid_orchestrator():
 
 
 def test_orchestrator_depends_only_on_workflow():
+    position = Mock(spec=CreditPosition)
+    position.position_id = "TEST_POSITION"
 
-    class TestWorkflow:
+    expected_report = Report(
+        position_id=position.position_id,
+        assessment_status=AssessmentStatus.NORMAL,
+        executive_summary="Test summary",
+        findings=[],
+        limitations=[],
+    )
 
-        def run(self, position):
-            return AssessmentWorkflowResult(
-                assessment=None,
-                analysis=None,
-                report=Report(
-                    position_id=position.position_id,
-                    assessment_status=AssessmentStatus.NORMAL,
-                    executive_summary="Test summary",
-                    findings=[],
-                    limitations=[],
-                ),
-            )
+    workflow = Mock(spec=AssessmentWorkflow)
 
-    workflow = TestWorkflow()
+    workflow.run.return_value = AssessmentWorkflowResult(
+        assessment=None,
+        analysis=None,
+        report=expected_report,
+    )
 
     orchestrator = AssessmentOrchestrator(
         workflow=workflow,
     )
 
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=0.10,
-        ebitda=100000,
-        profit_loss=50000,
-        ebitda_margin=0.10,
-        pfn_to_ebitda=2.0,
-        interest_expense=20000,
-    )
-
     report = orchestrator.run(position)
 
     assert isinstance(report, Report)
-    assert report.position_id == "POS001"
-    assert report.executive_summary == "Test summary"
+    assert report is expected_report
+    assert report.position_id == position.position_id
 
 
-def test_orchestrator_preserves_findings_from_workflow():
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
-    )
-
-    expected_findings = [
-        "Revenue deterioration detected.",
-        "Negative EBITDA detected.",
-    ]
+@pytest.mark.parametrize(
+    "findings",
+    [
+        [],
+        ["Finding A"],
+        ["Finding A", "Finding B"],
+        ["Custom finding", "Another finding", "Third finding"],
+    ],
+)
+def test_orchestrator_preserves_findings_from_workflow(findings):
+    position = Mock(spec=CreditPosition)
+    position.position_id = "TEST_POSITION"
 
     expected_report = Report(
-        position_id="POS001",
+        position_id=position.position_id,
         assessment_status=AssessmentStatus.CRITICAL,
         executive_summary="Generated report",
-        findings=expected_findings,
+        findings=findings,
         limitations=[],
     )
 
@@ -210,4 +199,4 @@ def test_orchestrator_preserves_findings_from_workflow():
 
     workflow.run.assert_called_once_with(position)
 
-    assert report.findings == expected_findings
+    assert report.findings == findings

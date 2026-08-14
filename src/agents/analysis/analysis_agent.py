@@ -36,7 +36,7 @@ class AnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
         ]
 
         limitations = [
-            finding.result.rule_name
+            finding.comment.text
             for finding in not_evaluable_findings
         ]
 
