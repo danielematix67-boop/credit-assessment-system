@@ -135,7 +135,6 @@ def test_orchestrator_depends_only_on_workflow():
     class TestWorkflow:
 
         def run(self, position):
-
             return AssessmentWorkflowResult(
                 assessment=None,
                 analysis=None,
@@ -169,3 +168,46 @@ def test_orchestrator_depends_only_on_workflow():
     assert isinstance(report, Report)
     assert report.position_id == "POS001"
     assert report.executive_summary == "Test summary"
+
+
+def test_orchestrator_preserves_findings_from_workflow():
+    position = CreditPosition(
+        position_id="POS001",
+        revenue_growth=-0.15,
+        ebitda=-50000,
+        profit_loss=-50000,
+        ebitda_margin=-0.05,
+        pfn_to_ebitda=6.0,
+        interest_expense=40000,
+    )
+
+    expected_findings = [
+        "Revenue deterioration detected.",
+        "Negative EBITDA detected.",
+    ]
+
+    expected_report = Report(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.CRITICAL,
+        executive_summary="Generated report",
+        findings=expected_findings,
+        limitations=[],
+    )
+
+    workflow = Mock(spec=AssessmentWorkflow)
+
+    workflow.run.return_value = AssessmentWorkflowResult(
+        assessment=None,
+        analysis=None,
+        report=expected_report,
+    )
+
+    orchestrator = AssessmentOrchestrator(
+        workflow=workflow,
+    )
+
+    report = orchestrator.run(position)
+
+    workflow.run.assert_called_once_with(position)
+
+    assert report.findings == expected_findings
