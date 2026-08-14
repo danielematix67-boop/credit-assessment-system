@@ -7,10 +7,14 @@ from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.financial.revenue.revenue_growth import RevenueGrowthRule
-from src.rules.financial.profitability.negative_ebitda import NegativeEbitdaRule
+from src.rules.financial.profitability.negative_ebitda import (
+    NegativeEbitdaRule,
+)
 from src.rules.financial.margins.ebitda_margin import EbitdaMarginRule
 from src.rules.result import RuleResult
-from src.rules.sustainability.leverage.pfn_to_ebitda import PfnToEbitdaRule
+from src.rules.sustainability.leverage.pfn_to_ebitda import (
+    PfnToEbitdaRule,
+)
 from src.rules.financial.profitability.financial_expenses_to_ebitda import (
     FinancialExpensesToEbitdaRule,
 )
@@ -53,9 +57,13 @@ def test_comment_generated_when_rule_is_triggered(base_position):
     assert comment.rule_id == "R001"
     assert comment.text == (
         "Revenue deterioration detected. "
-        "Revenue growth: -15.0% "
-        "(threshold: -10.0%)."
+        "Revenue growth: -15.0%."
     )
+
+    # The threshold remains part of the deterministic
+    # RuleResult but is not exposed in the comment.
+    assert result.threshold == -0.10
+    assert "threshold" not in comment.text.lower()
 
 
 def test_no_comment_generated_when_rule_is_not_triggered(base_position):
@@ -100,9 +108,11 @@ def test_negative_ebitda_comment_generated(base_position):
     assert comment.rule_id == "R002"
     assert comment.text == (
         "Negative EBITDA detected. "
-        "EBITDA: €-50,000 "
-        "(threshold: €0)."
+        "EBITDA: €-50,000."
     )
+
+    assert result.threshold == 0.0
+    assert "threshold" not in comment.text.lower()
 
 
 def test_ebitda_margin_comment_generated(base_position):
@@ -129,9 +139,11 @@ def test_ebitda_margin_comment_generated(base_position):
     assert comment.rule_id == "R003"
     assert comment.text == (
         "EBITDA margin is below the acceptable threshold. "
-        "EBITDA margin: -5.0% "
-        "(threshold: 0.0%)."
+        "EBITDA margin: -5.0%."
     )
+
+    assert result.threshold == 0.0
+    assert "threshold" in comment.text.lower()
 
 
 def test_pfn_to_ebitda_comment_generated(base_position):
@@ -158,9 +170,11 @@ def test_pfn_to_ebitda_comment_generated(base_position):
     assert comment.rule_id == "R004"
     assert comment.text == (
         "Leverage is above the acceptable threshold. "
-        "PFN to EBITDA: 6.0x "
-        "(threshold: 5.0x)."
+        "PFN to EBITDA: 6.0x."
     )
+
+    assert result.threshold == 5.0
+    assert "threshold" in comment.text.lower()
 
 
 def test_interest_expense_to_ebitda_comment_generated(base_position):
@@ -187,9 +201,11 @@ def test_interest_expense_to_ebitda_comment_generated(base_position):
     assert comment.rule_id == "R005"
     assert comment.text == (
         "Interest expense to EBITDA is above the acceptable threshold. "
-        "Ratio: 80.0% "
-        "(threshold: 60.0%)."
+        "Ratio: 80.0%."
     )
+
+    assert result.threshold == 0.60
+    assert "threshold" in comment.text.lower()
 
 
 def test_no_comment_generated_when_rule_is_not_evaluable(base_position):
@@ -215,6 +231,7 @@ def test_no_comment_generated_when_rule_is_not_evaluable(base_position):
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert comment is None
 
+
 def test_no_comment_generated_when_rule_has_no_template():
     result = RuleResult(
         rule_id="R999",
@@ -233,7 +250,7 @@ def test_no_comment_generated_when_rule_has_no_template():
     assert comment is None
 
 
-def test_comment_engine_formats_value_and_threshold():
+def test_comment_engine_formats_value_without_threshold():
     result = RuleResult(
         rule_id="R001",
         rule_name="Revenue growth deterioration",
@@ -251,9 +268,14 @@ def test_comment_engine_formats_value_and_threshold():
     assert comment is not None
     assert comment.text == (
         "Revenue deterioration detected. "
-        "Revenue growth: -20.0% "
-        "(threshold: -10.0%)."
+        "Revenue growth: -20.0%."
     )
+
+    # The threshold remains available to the deterministic
+    # layer but is not exposed in the generated comment.
+    assert result.threshold == -0.10
+    assert "threshold" not in comment.text.lower()
+
 
 def test_comment_engine_does_not_modify_rule_result():
     result = RuleResult(
@@ -269,7 +291,9 @@ def test_comment_engine_does_not_modify_rule_result():
     original_result = result
 
     engine = CommentEngine()
-    engine = engine.generate(result)
+    comment = engine.generate(result)
+
+    assert comment is not None
 
     assert result is original_result
     assert result.value == -0.15

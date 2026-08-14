@@ -1,49 +1,26 @@
-# Comment templates define the human-readable messages associated with each rule.
-#
-# Templates should remain separate from rule logic so that wording can be changed
-# without modifying the rules.
-
-
 COMMENTS = {
     "R001": (
         "Revenue deterioration detected. "
-        "Revenue growth: {value:.1%} "
-        "(threshold: {threshold:.1%})."
+        "Revenue growth: {value:.1%}."
     ),
-
     "R002": (
         "Negative EBITDA detected. "
-        "EBITDA: €{value:,.0f} "
-        "(threshold: €{threshold:,.0f})."
+        "EBITDA: €{value:,.0f}."
     ),
-
     "R003": (
         "EBITDA margin is below the acceptable threshold. "
-        "EBITDA margin: {value:.1%} "
-        "(threshold: {threshold:.1%})."
+        "EBITDA margin: {value:.1%}."
     ),
-
     "R004": (
         "Leverage is above the acceptable threshold. "
-        "PFN to EBITDA: {value:.1f}x "
-        "(threshold: {threshold:.1f}x)."
+        "PFN to EBITDA: {value:.1f}x."
     ),
-
     "R005": (
         "Interest expense to EBITDA is above the acceptable threshold. "
-        "Ratio: {value:.1%} "
-        "(threshold: {threshold:.1%})."
+        "Ratio: {value:.1%}."
     ),
-
-    "R006": (
-        "Negative profit/loss detected. "
-        "Profit/Loss: €{value:,.0f} "
-        "(threshold: €{threshold:,.0f})."
-    ),
-
     "R007": (
         "EBITDA does not sufficiently cover interest expense. "
-        "Interest coverage ratio: {value:.1f}x "
-        "(threshold: {threshold:.1f}x)."
+        "Interest coverage ratio: {value:.1f}x."
     ),
 }

@@ -59,8 +59,9 @@ class LLMReportGenerator(ReportGenerator):
 
         return (
             "You are a credit assessment reporting assistant.\n\n"
+
             "Your task is to write a concise executive summary based "
-            "EXCLUSIVELY on the structured assessment analysis provided below..\n\n"
+            "EXCLUSIVELY on the structured assessment analysis provided below.\n\n"
 
             "STRICT RULES:\n"
             "- Do not introduce facts that are not present in the assessment.\n"
@@ -71,7 +72,13 @@ class LLMReportGenerator(ReportGenerator):
             "contained in the assessment.\n"
             "- Clearly distinguish between findings and limitations.\n"
             "- If information is missing or not evaluable, do not infer it.\n"
-            "- Use professional and concise credit-risk language.\n\n"
+            "- Use professional and concise credit-risk language.\n"
+            "- Do not disclose internal rule thresholds in the executive summary.\n"
+            "- Do not reproduce threshold values from the assessment.\n"
+            "- You may describe a metric as above, below, or outside an "
+            "acceptable level when this is supported by the findings.\n"
+            "- Preserve the factual values of financial metrics when they "
+            "are explicitly provided in the findings.\n\n"
 
             "ASSESSMENT:\n"
             f"Assessment status: "
