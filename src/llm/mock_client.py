@@ -8,7 +8,7 @@ class MockLLMClient(LLMClient):
         response: str = "CRITICAL assessment identified.",
     ):
         self.response = response
-        self.last_prompt = None
+        self.last_prompt: str | None = None
 
     def generate(self, prompt: str) -> str:
         self.last_prompt = prompt

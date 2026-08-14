@@ -2,7 +2,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.agents.reporting.llm_report_generator import LLMReportGenerator
+from src.agents.reporting.llm_report_generator import (
+    LLMReportGenerator,
+)
 from src.llm.client import LLMClient
 from src.llm.mock_client import MockLLMClient
 from src.models.analysis_finding import AnalysisFinding
@@ -10,6 +12,11 @@ from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.models.report import Report, ReportFindingGroup
 from src.rules.base.severity import RuleSeverity
+
+
+# ============================================================
+# Fixtures
+# ============================================================
 
 
 @pytest.fixture
@@ -44,7 +51,10 @@ def critical_analysis():
                 rule_id="R005",
                 category="profitability",
                 severity=RuleSeverity.MEDIUM,
-                text="Interest expense to EBITDA could not be evaluated.",
+                text=(
+                    "Interest expense to EBITDA "
+                    "could not be evaluated."
+                ),
             ),
         ],
     )
@@ -79,17 +89,9 @@ def normal_analysis():
     )
 
 
-@pytest.fixture
-def analyses(
-    critical_analysis,
-    attention_analysis,
-    normal_analysis,
-):
-    return [
-        critical_analysis,
-        attention_analysis,
-        normal_analysis,
-    ]
+# ============================================================
+# Helpers
+# ============================================================
 
 
 def findings_by_category_from_analysis(analysis):
@@ -108,6 +110,11 @@ def findings_by_category_from_analysis(analysis):
         )
         for category, findings in categories.items()
     ]
+
+
+# ============================================================
+# Contract and basic generation
+# ============================================================
 
 
 def test_llm_report_generator_implements_report_generator_contract():
@@ -136,9 +143,11 @@ def test_llm_report_generator_uses_llm_client(
     assert isinstance(report, Report)
 
     assert report.position_id == critical_analysis.position_id
+
     assert report.assessment_status == (
         critical_analysis.assessment_status
     )
+
     assert report.executive_summary == response
 
     assert report.findings_by_category == (
@@ -152,6 +161,11 @@ def test_llm_report_generator_uses_llm_client(
     )
 
     client.generate.assert_called_once()
+
+
+# ============================================================
+# Prompt construction
+# ============================================================
 
 
 def test_llm_report_generator_builds_prompt_from_analysis(
@@ -205,39 +219,13 @@ def test_llm_report_generator_includes_assessment_status_in_prompt(
 
     generator.generate(analysis)
 
-    assert status.value in client.last_prompt
-
-
-@pytest.mark.parametrize(
-    "status",
-    list(AssessmentStatus),
-)
-def test_llm_report_generator_accepts_valid_assessment_status(
-    status,
-):
-    analysis = AssessmentAnalysis(
-        position_id="TEST_POSITION",
-        assessment_status=status,
-        key_findings=[],
-        risk_factors=[],
-        limitations=[],
+    assert (
+        f"Assessment status: {status.value}"
+        in client.last_prompt
     )
 
-    response = f"{status.value} assessment identified."
 
-    client = MockLLMClient(response=response)
-
-    generator = LLMReportGenerator(client)
-
-    report = generator.generate(analysis)
-
-    assert report.assessment_status == status
-    assert report.executive_summary == response
-    assert report.findings_by_category == []
-    assert report.limitations == []
-
-
-def test_llm_report_generator_accepts_valid_response(
+def test_llm_report_generator_prompt_contains_all_structured_sections(
     critical_analysis,
 ):
     client = MockLLMClient(
@@ -249,114 +237,43 @@ def test_llm_report_generator_accepts_valid_response(
 
     generator = LLMReportGenerator(client)
 
-    report = generator.generate(critical_analysis)
+    generator.generate(critical_analysis)
 
-    assert report.executive_summary == client.response
+    prompt = client.last_prompt
 
-    assert report.findings_by_category == (
-        findings_by_category_from_analysis(
-            critical_analysis
-        )
+    # The prompt must expose the three structured
+    # sections used by the reporting agent.
+    assert "Key findings:" in prompt
+    assert "Risk factors:" in prompt
+    assert "Limitations:" in prompt
+
+    # Assessment status must be explicitly provided.
+    assert (
+        f"Assessment status: "
+        f"{critical_analysis.assessment_status.value}"
+        in prompt
     )
 
-    assert report.limitations == (
-        critical_analysis.limitations
-    )
+    # Every key finding must be available to the LLM.
+    for finding in critical_analysis.key_findings:
+        assert finding.rule_id in prompt
+        assert finding.category in prompt
+        assert finding.severity.value in prompt
+        assert finding.text in prompt
 
+    # Every risk factor must be available to the LLM.
+    for risk in critical_analysis.risk_factors:
+        assert risk.rule_id in prompt
+        assert risk.category in prompt
+        assert risk.severity.value in prompt
+        assert risk.text in prompt
 
-def test_llm_report_generator_rejects_empty_response(
-    critical_analysis,
-):
-    client = MockLLMClient(response="")
-
-    generator = LLMReportGenerator(client)
-
-    with pytest.raises(
-        ValueError,
-        match="LLM returned an empty response",
-    ):
-        generator.generate(critical_analysis)
-
-
-@pytest.mark.parametrize(
-    "status",
-    list(AssessmentStatus),
-)
-def test_llm_report_generator_rejects_inconsistent_status(status):
-    analysis = AssessmentAnalysis(
-        position_id="TEST_POSITION",
-        assessment_status=status,
-        key_findings=[],
-        risk_factors=[],
-        limitations=[],
-    )
-
-    inconsistent_statuses = [
-        candidate
-        for candidate in AssessmentStatus
-        if candidate != status
-    ]
-
-    if not inconsistent_statuses:
-        pytest.skip("No inconsistent status available.")
-
-    inconsistent_status = inconsistent_statuses[0]
-
-    client = MockLLMClient(
-        response=(
-            f"The assessment is "
-            f"{inconsistent_status.value}."
-        ),
-    )
-
-    generator = LLMReportGenerator(client)
-
-    with pytest.raises(
-        ValueError,
-        match="LLM response does not contain the assessment status",
-    ):
-        generator.generate(analysis)
-
-
-@pytest.mark.parametrize(
-    "analysis_fixture",
-    [
-        "critical_analysis",
-        "attention_analysis",
-        "normal_analysis",
-    ],
-)
-def test_llm_report_generator_preserves_structured_assessment_data(
-    request,
-    analysis_fixture,
-):
-    analysis = request.getfixturevalue(analysis_fixture)
-
-    client = MockLLMClient(
-        response=(
-            f"{analysis.assessment_status.value} "
-            "assessment identified."
-        ),
-    )
-
-    generator = LLMReportGenerator(client)
-
-    report = generator.generate(analysis)
-
-    assert report.position_id == analysis.position_id
-    assert report.assessment_status == analysis.assessment_status
-
-    # Findings remain deterministic and structured.
-    assert report.findings_by_category == (
-        findings_by_category_from_analysis(
-            analysis
-        )
-    )
-
-    # Limitations remain deterministic and structured.
-    assert report.limitations == analysis.limitations
-
-    assert report.executive_summary == client.response
+    # Every limitation must be available to the LLM.
+    for limitation in critical_analysis.limitations:
+        assert limitation.rule_id in prompt
+        assert limitation.category in prompt
+        assert limitation.severity.value in prompt
+        assert limitation.text in prompt
 
 
 def test_llm_report_generator_prompt_enforces_factual_constraints(
@@ -391,32 +308,153 @@ def test_llm_report_generator_prompt_enforces_factual_constraints(
         assert constraint in prompt
 
 
-def test_llm_report_generator_preserves_limitations(
-    attention_analysis,
+def test_llm_report_generator_uses_analysis_as_structured_input(
+    critical_analysis,
 ):
     client = MockLLMClient(
         response=(
-            f"{attention_analysis.assessment_status.value} "
+            f"{critical_analysis.assessment_status.value} "
             "assessment identified."
         ),
     )
 
     generator = LLMReportGenerator(client)
 
-    report = generator.generate(attention_analysis)
+    report = generator.generate(critical_analysis)
 
-    assert report.assessment_status == (
-        attention_analysis.assessment_status
+    prompt = client.last_prompt
+
+    expected_content = (
+        critical_analysis.key_findings
+        + critical_analysis.risk_factors
+        + critical_analysis.limitations
+    )
+
+    for finding in expected_content:
+        assert finding.text in prompt
+
+    # Structured report data remains deterministic.
+    assert report.findings_by_category == (
+        findings_by_category_from_analysis(
+            critical_analysis
+        )
     )
 
     assert report.limitations == (
-        attention_analysis.limitations
+        critical_analysis.limitations
     )
+
+
+# ============================================================
+# Valid assessment statuses
+# ============================================================
+
+
+@pytest.mark.parametrize(
+    "status",
+    list(AssessmentStatus),
+)
+def test_llm_report_generator_accepts_valid_assessment_status(
+    status,
+):
+    analysis = AssessmentAnalysis(
+        position_id="TEST_POSITION",
+        assessment_status=status,
+        key_findings=[],
+        risk_factors=[],
+        limitations=[],
+    )
+
+    response = f"{status.value} assessment identified."
+
+    client = MockLLMClient(response=response)
+
+    generator = LLMReportGenerator(client)
+
+    report = generator.generate(analysis)
+
+    assert report.assessment_status == status
+    assert report.executive_summary == response
+    assert report.findings_by_category == []
+    assert report.limitations == []
+
+
+@pytest.mark.parametrize(
+    "status",
+    list(AssessmentStatus),
+)
+def test_llm_report_generator_rejects_inconsistent_status(
+    status,
+):
+    analysis = AssessmentAnalysis(
+        position_id="TEST_POSITION",
+        assessment_status=status,
+        key_findings=[],
+        risk_factors=[],
+        limitations=[],
+    )
+
+    inconsistent_statuses = [
+        candidate
+        for candidate in AssessmentStatus
+        if candidate != status
+    ]
+
+    if not inconsistent_statuses:
+        pytest.skip(
+            "No inconsistent status available."
+        )
+
+    inconsistent_status = inconsistent_statuses[0]
+
+    client = MockLLMClient(
+        response=(
+            f"The assessment is "
+            f"{inconsistent_status.value}."
+        ),
+    )
+
+    generator = LLMReportGenerator(client)
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "LLM response does not contain "
+            "the assessment status"
+        ),
+    ):
+        generator.generate(analysis)
+
+
+# ============================================================
+# Response validation
+# ============================================================
+
+
+def test_llm_report_generator_accepts_valid_response(
+    critical_analysis,
+):
+    client = MockLLMClient(
+        response=(
+            f"{critical_analysis.assessment_status.value} "
+            "assessment identified."
+        ),
+    )
+
+    generator = LLMReportGenerator(client)
+
+    report = generator.generate(critical_analysis)
+
+    assert report.executive_summary == client.response
 
     assert report.findings_by_category == (
         findings_by_category_from_analysis(
-            attention_analysis
+            critical_analysis
         )
+    )
+
+    assert report.limitations == (
+        critical_analysis.limitations
     )
 
 
@@ -426,7 +464,8 @@ def test_llm_report_generator_accepts_paraphrased_findings(
     response = (
         f"{critical_analysis.assessment_status.value} "
         "assessment identified. "
-        "The assessment contains a number of relevant observations."
+        "The assessment contains a number of "
+        "relevant observations."
     )
 
     client = MockLLMClient(response=response)
@@ -485,40 +524,141 @@ def test_llm_report_generator_accepts_complete_response(
     )
 
 
-def test_llm_report_generator_uses_analysis_as_structured_input(
+def test_llm_report_generator_rejects_empty_response(
     critical_analysis,
 ):
+    client = MockLLMClient(response="")
+
+    generator = LLMReportGenerator(client)
+
+    with pytest.raises(
+        ValueError,
+        match="LLM returned an empty response",
+    ):
+        generator.generate(critical_analysis)
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        "   ",
+        "\n",
+        "\t",
+    ],
+)
+def test_llm_report_generator_rejects_whitespace_only_response(
+    critical_analysis,
+    response,
+):
+    client = MockLLMClient(response=response)
+
+    generator = LLMReportGenerator(client)
+
+    with pytest.raises(
+        ValueError,
+        match="LLM returned an empty response",
+    ):
+        generator.generate(critical_analysis)
+
+
+def test_llm_report_generator_propagates_llm_client_errors(
+    critical_analysis,
+):
+    client = MagicMock(spec=LLMClient)
+
+    client.generate.side_effect = RuntimeError(
+        "Gemini API unavailable"
+    )
+
+    generator = LLMReportGenerator(client)
+
+    with pytest.raises(
+        RuntimeError,
+        match="Gemini API unavailable",
+    ):
+        generator.generate(critical_analysis)
+
+    client.generate.assert_called_once()
+
+
+# ============================================================
+# Structured data preservation
+# ============================================================
+
+
+@pytest.mark.parametrize(
+    "analysis_fixture",
+    [
+        "critical_analysis",
+        "attention_analysis",
+        "normal_analysis",
+    ],
+)
+def test_llm_report_generator_preserves_structured_assessment_data(
+    request,
+    analysis_fixture,
+):
+    analysis = request.getfixturevalue(
+        analysis_fixture
+    )
+
     client = MockLLMClient(
         response=(
-            f"{critical_analysis.assessment_status.value} "
+            f"{analysis.assessment_status.value} "
             "assessment identified."
         ),
     )
 
     generator = LLMReportGenerator(client)
 
-    report = generator.generate(critical_analysis)
+    report = generator.generate(analysis)
 
-    prompt = client.last_prompt
-
-    expected_content = (
-        critical_analysis.key_findings
-        + critical_analysis.risk_factors
-        + critical_analysis.limitations
+    assert report.position_id == analysis.position_id
+    assert report.assessment_status == (
+        analysis.assessment_status
     )
 
-    for finding in expected_content:
-        assert finding.text in prompt
-
-    # Deterministic structured report data must be preserved.
+    # Findings remain deterministic and structured.
     assert report.findings_by_category == (
         findings_by_category_from_analysis(
-            critical_analysis
+            analysis
         )
     )
 
+    # Limitations remain deterministic and structured.
     assert report.limitations == (
-        critical_analysis.limitations
+        analysis.limitations
+    )
+
+    assert report.executive_summary == client.response
+
+
+def test_llm_report_generator_preserves_limitations(
+    attention_analysis,
+):
+    client = MockLLMClient(
+        response=(
+            f"{attention_analysis.assessment_status.value} "
+            "assessment identified."
+        ),
+    )
+
+    generator = LLMReportGenerator(client)
+
+    report = generator.generate(attention_analysis)
+
+    assert report.assessment_status == (
+        attention_analysis.assessment_status
+    )
+
+    assert report.limitations == (
+        attention_analysis.limitations
+    )
+
+    assert report.findings_by_category == (
+        findings_by_category_from_analysis(
+            attention_analysis
+        )
     )
 
 
@@ -534,7 +674,9 @@ def test_llm_report_generator_preserves_position_and_status(
     request,
     analysis_fixture,
 ):
-    analysis = request.getfixturevalue(analysis_fixture)
+    analysis = request.getfixturevalue(
+        analysis_fixture
+    )
 
     client = MockLLMClient(
         response=(
@@ -548,4 +690,145 @@ def test_llm_report_generator_preserves_position_and_status(
     report = generator.generate(analysis)
 
     assert report.position_id == analysis.position_id
-    assert report.assessment_status == analysis.assessment_status
+    assert report.assessment_status == (
+        analysis.assessment_status
+    )
+
+
+def test_llm_report_generator_does_not_modify_analysis(
+    critical_analysis,
+):
+    original_key_findings = list(
+        critical_analysis.key_findings
+    )
+    original_risk_factors = list(
+        critical_analysis.risk_factors
+    )
+    original_limitations = list(
+        critical_analysis.limitations
+    )
+
+    client = MockLLMClient(
+        response=(
+            f"{critical_analysis.assessment_status.value} "
+            "assessment identified."
+        ),
+    )
+
+    generator = LLMReportGenerator(client)
+
+    generator.generate(critical_analysis)
+
+    assert (
+        critical_analysis.key_findings
+        == original_key_findings
+    )
+
+    assert (
+        critical_analysis.risk_factors
+        == original_risk_factors
+    )
+
+    assert (
+        critical_analysis.limitations
+        == original_limitations
+    )
+
+
+def test_llm_report_generator_does_not_use_llm_response_as_structured_data(
+    critical_analysis,
+):
+    client = MockLLMClient(
+        response=(
+            f"{critical_analysis.assessment_status.value} "
+            "assessment identified. "
+            "Invented finding that does not exist "
+            "in the analysis."
+        ),
+    )
+
+    generator = LLMReportGenerator(client)
+
+    report = generator.generate(critical_analysis)
+
+    report_findings = [
+        finding
+        for group in report.findings_by_category
+        for finding in group.findings
+    ]
+
+    assert report_findings == (
+        critical_analysis.key_findings
+    )
+
+    assert report.limitations == (
+        critical_analysis.limitations
+    )
+
+    assert all(
+        finding.text
+        != (
+            "Invented finding that does not exist "
+            "in the analysis."
+        )
+        for finding in report_findings
+    )
+
+
+def test_llm_report_generator_preserves_finding_order_within_categories(
+    critical_analysis,
+):
+    client = MockLLMClient(
+        response=(
+            f"{critical_analysis.assessment_status.value} "
+            "assessment identified."
+        ),
+    )
+
+    generator = LLMReportGenerator(client)
+
+    report = generator.generate(critical_analysis)
+
+    report_findings = [
+        finding
+        for group in report.findings_by_category
+        for finding in group.findings
+    ]
+
+    assert report_findings == (
+        critical_analysis.key_findings
+    )
+
+
+# ============================================================
+# Empty analysis
+# ============================================================
+
+
+def test_llm_report_generator_supports_empty_analysis(
+    normal_analysis,
+):
+    client = MockLLMClient(
+        response=(
+            f"{normal_analysis.assessment_status.value} "
+            "assessment identified."
+        ),
+    )
+
+    generator = LLMReportGenerator(client)
+
+    report = generator.generate(normal_analysis)
+
+    assert report.position_id == (
+        normal_analysis.position_id
+    )
+
+    assert report.assessment_status == (
+        normal_analysis.assessment_status
+    )
+
+    assert report.executive_summary == client.response
+
+    assert report.findings_by_category == []
+
+    assert report.limitations == []

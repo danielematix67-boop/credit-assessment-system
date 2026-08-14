@@ -12,6 +12,11 @@ from src.models.report import Report, ReportFindingGroup
 from src.rules.base.severity import RuleSeverity
 
 
+# ============================================================
+# Fixtures
+# ============================================================
+
+
 @pytest.fixture
 def analysis():
     return AssessmentAnalysis(
@@ -55,10 +60,21 @@ def generator():
     return MagicMock(spec=ReportGenerator)
 
 
+# ============================================================
+# Helpers
+# ============================================================
+
+
 def build_report(
     analysis,
     executive_summary="Generated report",
 ):
+    """
+    Build a deterministic Report from the supplied analysis.
+
+    The helper mirrors the information-preservation contract
+    expected from the ReportingAgent.
+    """
     categories = {}
 
     for finding in analysis.key_findings:
@@ -85,6 +101,7 @@ def build_report(
 
 
 def flatten_report_findings(report):
+    """Flatten report findings into a single list."""
     return [
         finding
         for group in report.findings_by_category
@@ -92,10 +109,22 @@ def flatten_report_findings(report):
     ]
 
 
-def test_reporting_agent_implements_agent_contract(generator):
+# ============================================================
+# Agent contract
+# ============================================================
+
+
+def test_reporting_agent_implements_agent_contract(
+    generator,
+):
     agent = ReportingAgent(generator)
 
     assert isinstance(agent, Agent)
+
+
+# ============================================================
+# Primary generator
+# ============================================================
 
 
 def test_reporting_agent_delegates_report_generation(
@@ -127,21 +156,34 @@ def test_reporting_agent_preserves_analysis_content(
     report = agent.run(analysis)
 
     assert report.position_id == analysis.position_id
-    assert report.assessment_status == analysis.assessment_status
+    assert report.assessment_status == (
+        analysis.assessment_status
+    )
+
     assert (
         flatten_report_findings(report)
         == analysis.key_findings
     )
+
     assert report.limitations == analysis.limitations
 
     generator.generate.assert_called_once_with(analysis)
 
 
+# ============================================================
+# Fallback behaviour
+# ============================================================
+
+
 def test_reporting_agent_uses_fallback_when_primary_generator_fails(
     analysis,
 ):
-    primary_generator = MagicMock(spec=ReportGenerator)
-    fallback_generator = MagicMock(spec=ReportGenerator)
+    primary_generator = MagicMock(
+        spec=ReportGenerator,
+    )
+    fallback_generator = MagicMock(
+        spec=ReportGenerator,
+    )
 
     expected_report = build_report(
         analysis,
@@ -152,7 +194,9 @@ def test_reporting_agent_uses_fallback_when_primary_generator_fails(
         "LLM service unavailable"
     )
 
-    fallback_generator.generate.return_value = expected_report
+    fallback_generator.generate.return_value = (
+        expected_report
+    )
 
     agent = ReportingAgent(
         report_generator=primary_generator,
@@ -163,8 +207,130 @@ def test_reporting_agent_uses_fallback_when_primary_generator_fails(
 
     assert report is expected_report
 
-    primary_generator.generate.assert_called_once_with(analysis)
-    fallback_generator.generate.assert_called_once_with(analysis)
+    primary_generator.generate.assert_called_once_with(
+        analysis
+    )
+
+    fallback_generator.generate.assert_called_once_with(
+        analysis
+    )
+
+
+def test_reporting_agent_fallback_preserves_analysis_content(
+    analysis,
+):
+    primary_generator = MagicMock(
+        spec=ReportGenerator,
+    )
+    fallback_generator = MagicMock(
+        spec=ReportGenerator,
+    )
+
+    primary_generator.generate.side_effect = RuntimeError(
+        "Gemini API unavailable"
+    )
+
+    fallback_report = build_report(
+        analysis,
+        executive_summary="Deterministic fallback report",
+    )
+
+    fallback_generator.generate.return_value = (
+        fallback_report
+    )
+
+    agent = ReportingAgent(
+        report_generator=primary_generator,
+        fallback_generator=fallback_generator,
+    )
+
+    report = agent.run(analysis)
+
+    assert report.position_id == analysis.position_id
+
+    assert report.assessment_status == (
+        analysis.assessment_status
+    )
+
+    assert (
+        flatten_report_findings(report)
+        == analysis.key_findings
+    )
+
+    assert report.limitations == analysis.limitations
+
+
+def test_reporting_agent_passes_same_analysis_to_fallback(
+    analysis,
+):
+    primary_generator = MagicMock(
+        spec=ReportGenerator,
+    )
+    fallback_generator = MagicMock(
+        spec=ReportGenerator,
+    )
+
+    primary_generator.generate.side_effect = RuntimeError(
+        "Primary generator failed"
+    )
+
+    fallback_generator.generate.return_value = (
+        build_report(analysis)
+    )
+
+    agent = ReportingAgent(
+        report_generator=primary_generator,
+        fallback_generator=fallback_generator,
+    )
+
+    agent.run(analysis)
+
+    fallback_generator.generate.assert_called_once_with(
+        analysis
+    )
+
+    passed_analysis = (
+        fallback_generator.generate.call_args.args[0]
+    )
+
+    assert passed_analysis is analysis
+
+
+def test_reporting_agent_does_not_call_fallback_when_primary_succeeds(
+    analysis,
+):
+    primary_generator = MagicMock(
+        spec=ReportGenerator,
+    )
+    fallback_generator = MagicMock(
+        spec=ReportGenerator,
+    )
+
+    expected_report = build_report(analysis)
+
+    primary_generator.generate.return_value = (
+        expected_report
+    )
+
+    agent = ReportingAgent(
+        report_generator=primary_generator,
+        fallback_generator=fallback_generator,
+    )
+
+    report = agent.run(analysis)
+
+    assert report is expected_report
+
+    primary_generator.generate.assert_called_once_with(
+        analysis
+    )
+
+    fallback_generator.generate.assert_not_called()
+
+
+# ============================================================
+# Failure without fallback
+# ============================================================
 
 
 def test_reporting_agent_raises_when_primary_fails_without_fallback(
@@ -183,21 +349,84 @@ def test_reporting_agent_raises_when_primary_fails_without_fallback(
     ):
         agent.run(analysis)
 
-    generator.generate.assert_called_once_with(analysis)
-
-
-def test_reporting_agent_passes_same_analysis_to_fallback(
-    analysis,
-):
-    primary_generator = MagicMock(spec=ReportGenerator)
-    fallback_generator = MagicMock(spec=ReportGenerator)
-
-    primary_generator.generate.side_effect = RuntimeError(
-        "Primary generator failed"
+    generator.generate.assert_called_once_with(
+        analysis
     )
 
-    fallback_generator.generate.return_value = build_report(
-        analysis
+
+# ============================================================
+# Analysis immutability
+# ============================================================
+
+
+def test_reporting_agent_does_not_modify_analysis(
+    analysis,
+    generator,
+):
+    original_key_findings = list(
+        analysis.key_findings
+    )
+
+    original_risk_factors = list(
+        analysis.risk_factors
+    )
+
+    original_limitations = list(
+        analysis.limitations
+    )
+
+    generator.generate.return_value = (
+        build_report(analysis)
+    )
+
+    agent = ReportingAgent(generator)
+
+    agent.run(analysis)
+
+    assert (
+        analysis.key_findings
+        == original_key_findings
+    )
+
+    assert (
+        analysis.risk_factors
+        == original_risk_factors
+    )
+
+    assert (
+        analysis.limitations
+        == original_limitations
+    )
+
+
+def test_reporting_agent_does_not_modify_analysis_on_fallback(
+    analysis,
+):
+    primary_generator = MagicMock(
+        spec=ReportGenerator,
+    )
+    fallback_generator = MagicMock(
+        spec=ReportGenerator,
+    )
+
+    original_key_findings = list(
+        analysis.key_findings
+    )
+
+    original_risk_factors = list(
+        analysis.risk_factors
+    )
+
+    original_limitations = list(
+        analysis.limitations
+    )
+
+    primary_generator.generate.side_effect = RuntimeError(
+        "LLM unavailable"
+    )
+
+    fallback_generator.generate.return_value = (
+        build_report(analysis)
     )
 
     agent = ReportingAgent(
@@ -207,32 +436,25 @@ def test_reporting_agent_passes_same_analysis_to_fallback(
 
     agent.run(analysis)
 
-    fallback_generator.generate.assert_called_once_with(analysis)
-
-    passed_analysis = (
-        fallback_generator.generate.call_args.args[0]
+    assert (
+        analysis.key_findings
+        == original_key_findings
     )
 
-    assert passed_analysis is analysis
+    assert (
+        analysis.risk_factors
+        == original_risk_factors
+    )
+
+    assert (
+        analysis.limitations
+        == original_limitations
+    )
 
 
-def test_reporting_agent_does_not_modify_analysis(
-    analysis,
-    generator,
-):
-    original_key_findings = list(analysis.key_findings)
-    original_risk_factors = list(analysis.risk_factors)
-    original_limitations = list(analysis.limitations)
-
-    generator.generate.return_value = build_report(analysis)
-
-    agent = ReportingAgent(generator)
-
-    agent.run(analysis)
-
-    assert analysis.key_findings == original_key_findings
-    assert analysis.risk_factors == original_risk_factors
-    assert analysis.limitations == original_limitations
+# ============================================================
+# Content independence
+# ============================================================
 
 
 @pytest.mark.parametrize(
@@ -365,7 +587,9 @@ def test_reporting_agent_is_independent_of_analysis_content(
         limitations=limitations,
     )
 
-    generator.generate.return_value = build_report(analysis)
+    generator.generate.return_value = (
+        build_report(analysis)
+    )
 
     agent = ReportingAgent(generator)
 
@@ -375,6 +599,9 @@ def test_reporting_agent_is_independent_of_analysis_content(
         flatten_report_findings(report)
         == key_findings
     )
+
     assert report.limitations == limitations
 
-    generator.generate.assert_called_once_with(analysis)
+    generator.generate.assert_called_once_with(
+        analysis
+    )

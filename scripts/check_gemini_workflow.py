@@ -9,6 +9,14 @@ from src.models.position import CreditPosition
 
 
 # ============================================================
+# Configuration
+# ============================================================
+
+SEPARATOR = "=" * 72
+SUB_SEPARATOR = "-" * 72
+
+
+# ============================================================
 # Helpers
 # ============================================================
 
@@ -27,9 +35,7 @@ def finding_signature(finding):
 
 
 def flatten_report_findings(report):
-    """
-    Extract report findings into normalized tuples.
-    """
+    """Extract report findings into normalized tuples."""
     return [
         finding_signature(finding)
         for finding_group in report.findings_by_category
@@ -39,9 +45,8 @@ def flatten_report_findings(report):
 
 def normalize_limitations(limitations):
     """
-    Normalize limitations because the report may contain either:
-    - strings
-    - AnalysisFinding objects
+    Normalize limitations because the report may contain either
+    strings or AnalysisFinding objects.
     """
     normalized = []
 
@@ -63,6 +68,10 @@ def print_warning(message):
     print(f"  [WARN] {message}")
 
 
+def print_info(message):
+    print(f"  [INFO] {message}")
+
+
 # ============================================================
 # Scenario execution
 # ============================================================
@@ -74,9 +83,13 @@ def run_scenario(
 ) -> dict:
 
     print()
-    print("=" * 72)
+    print(SEPARATOR)
     print(f"  SCENARIO: {name}")
-    print("=" * 72)
+    print(SEPARATOR)
+
+    # --------------------------------------------------------
+    # Workflow
+    # --------------------------------------------------------
 
     workflow = create_default_assessment_workflow(
         use_llm=True,
@@ -86,21 +99,33 @@ def run_scenario(
     result = workflow.run(position)
 
     # --------------------------------------------------------
+    # LLM status
+    # --------------------------------------------------------
+
+    print("\n[0] REPORT GENERATION")
+    print(SUB_SEPARATOR)
+
+    if getattr(result.report, "generated_by_llm", False):
+        print("  Generator: Gemini LLM")
+    else:
+        print("  Generator: Deterministic fallback")
+
+    # --------------------------------------------------------
     # Deterministic assessment
     # --------------------------------------------------------
 
     print("\n[1] DETERMINISTIC ASSESSMENT")
-    print("-" * 72)
+    print(SUB_SEPARATOR)
 
     print(f"Status: {result.assessment.status.value}")
-
-    print("\nTriggered rules:")
 
     triggered_rules = [
         rule_result
         for rule_result in result.assessment.rule_results
         if rule_result.status.value == "TRIGGERED"
     ]
+
+    print("\nTriggered rules:")
 
     if triggered_rules:
         for rule_result in triggered_rules:
@@ -119,6 +144,7 @@ def run_scenario(
 
     if not_evaluable_rules:
         print("\nNot evaluable:")
+
         for rule_result in not_evaluable_rules:
             print(
                 f"  - {rule_result.rule_id}: "
@@ -130,7 +156,7 @@ def run_scenario(
     # --------------------------------------------------------
 
     print("\n[2] ANALYSIS AGENT")
-    print("-" * 72)
+    print(SUB_SEPARATOR)
 
     analysis_findings = [
         finding_signature(finding)
@@ -142,21 +168,27 @@ def run_scenario(
     for finding in result.analysis.key_findings:
         print(
             f"  - [{finding.rule_id}] "
-            f"{finding.severity.value} | "
+            f"{finding.severity.value:<6} | "
             f"{finding.category}"
         )
         print(f"    {finding.text}")
 
-    print(f"\nRisk factors: {len(result.analysis.risk_factors)}")
+    print(
+        f"\nRisk factors: "
+        f"{len(result.analysis.risk_factors)}"
+    )
 
     for risk in result.analysis.risk_factors:
         print(
             f"  - [{risk.rule_id}] "
-            f"{risk.severity.value} | "
+            f"{risk.severity.value:<6} | "
             f"{risk.text}"
         )
 
-    print(f"\nLimitations: {len(result.analysis.limitations)}")
+    print(
+        f"\nLimitations: "
+        f"{len(result.analysis.limitations)}"
+    )
 
     for limitation in result.analysis.limitations:
         print(
@@ -169,12 +201,13 @@ def run_scenario(
     # --------------------------------------------------------
 
     print("\n[3] REPORT")
-    print("-" * 72)
+    print(SUB_SEPARATOR)
 
     print("Executive summary:")
     print(f"  {result.report.executive_summary}")
 
     report_findings = flatten_report_findings(result.report)
+
     report_limitations = normalize_limitations(
         result.report.limitations
     )
@@ -186,12 +219,15 @@ def run_scenario(
 
         print(
             f"  - [{rule_id}] "
-            f"{severity.value} | "
+            f"{severity.value:<6} | "
             f"{category}"
         )
         print(f"    {text}")
 
-    print(f"\nReport limitations: {len(report_limitations)}")
+    print(
+        f"\nReport limitations: "
+        f"{len(report_limitations)}"
+    )
 
     for limitation in report_limitations:
         print(f"  - {limitation}")
@@ -201,9 +237,10 @@ def run_scenario(
     # --------------------------------------------------------
 
     print("\n[4] CONSISTENCY CHECKS")
-    print("-" * 72)
+    print(SUB_SEPARATOR)
 
     # 1. Assessment status
+
     status_consistent = (
         result.assessment.status
         == result.analysis.assessment_status
@@ -216,17 +253,13 @@ def run_scenario(
     )
 
     # 2. Findings
-    #
-    # IMPORTANT:
-    # We compare sets rather than lists because the LLM is allowed
-    # to reorder findings in the report.
-    #
-    # We still require the complete content to be preserved.
+
     analysis_findings_set = set(analysis_findings)
     report_findings_set = set(report_findings)
 
     findings_consistent = (
-        analysis_findings_set == report_findings_set
+        analysis_findings_set
+        == report_findings_set
     )
 
     print_check(
@@ -235,6 +268,7 @@ def run_scenario(
     )
 
     # 3. Limitations
+
     analysis_limitations = normalize_limitations(
         result.analysis.limitations
     )
@@ -250,6 +284,7 @@ def run_scenario(
     )
 
     # 4. Risk factors
+
     triggered_rule_ids = {
         rule_result.rule_id
         for rule_result in result.assessment.rule_results
@@ -261,8 +296,10 @@ def run_scenario(
         for risk in result.analysis.risk_factors
     }
 
-    risk_factors_traceable = risk_factor_rule_ids.issubset(
-        triggered_rule_ids
+    risk_factors_traceable = (
+        risk_factor_rule_ids.issubset(
+            triggered_rule_ids
+        )
     )
 
     print_check(
@@ -278,28 +315,38 @@ def run_scenario(
         print("\n  Finding mismatch:")
 
         missing_from_report = (
-            analysis_findings_set - report_findings_set
+            analysis_findings_set
+            - report_findings_set
         )
 
         unexpected_in_report = (
-            report_findings_set - analysis_findings_set
+            report_findings_set
+            - analysis_findings_set
         )
 
         if missing_from_report:
             print("  Missing from report:")
+
             for finding in sorted(
                 missing_from_report,
                 key=lambda x: x[0],
             ):
-                print(f"    - [{finding[0]}] {finding[3]}")
+                print(
+                    f"    - [{finding[0]}] "
+                    f"{finding[3]}"
+                )
 
         if unexpected_in_report:
             print("  Unexpected in report:")
+
             for finding in sorted(
                 unexpected_in_report,
                 key=lambda x: x[0],
             ):
-                print(f"    - [{finding[0]}] {finding[3]}")
+                print(
+                    f"    - [{finding[0]}] "
+                    f"{finding[3]}"
+                )
 
     if not limitations_consistent:
         print("\n  Limitation mismatch:")
@@ -316,13 +363,23 @@ def run_scenario(
 
         if missing_limitations:
             print("  Missing from report:")
-            for limitation in sorted(missing_limitations):
-                print(f"    - {limitation}")
+
+            for limitation in sorted(
+                missing_limitations
+            ):
+                print(
+                    f"    - {limitation}"
+                )
 
         if unexpected_limitations:
             print("  Unexpected in report:")
-            for limitation in sorted(unexpected_limitations):
-                print(f"    - {limitation}")
+
+            for limitation in sorted(
+                unexpected_limitations
+            ):
+                print(
+                    f"    - {limitation}"
+                )
 
     # --------------------------------------------------------
     # Scenario result
@@ -337,14 +394,14 @@ def run_scenario(
         ]
     )
 
-    print("\n" + "-" * 72)
+    print("\n" + SUB_SEPARATOR)
 
     if scenario_passed:
         print(f"  RESULT: PASS - {name}")
     else:
         print(f"  RESULT: FAIL - {name}")
 
-    print("-" * 72)
+    print(SUB_SEPARATOR)
 
     return {
         "name": name,
@@ -362,6 +419,24 @@ def run_scenario(
 
 
 def main():
+
+    print(SEPARATOR)
+    print("  CREDIT ASSESSMENT WORKFLOW CHECK")
+    print(SEPARATOR)
+
+    print()
+    print_info(
+        "Testing deterministic assessment, analysis, "
+        "report generation and consistency."
+    )
+    print_info(
+        "LLM generation is optional; deterministic fallback "
+        "must preserve all critical information."
+    )
+
+    # --------------------------------------------------------
+    # Scenarios
+    # --------------------------------------------------------
 
     critical_position = CreditPosition(
         position_id="POS_CRITICAL",
@@ -393,43 +468,45 @@ def main():
         interest_expense=10000,
     )
 
+    scenarios = [
+        ("CRITICAL", critical_position),
+        ("ATTENTION", attention_position),
+        ("NORMAL", normal_position),
+    ]
+
     results = []
 
-    results.append(
-        run_scenario(
-            "CRITICAL",
-            critical_position,
-        )
-    )
+    # --------------------------------------------------------
+    # Run scenarios
+    # --------------------------------------------------------
 
-    results.append(
-        run_scenario(
-            "ATTENTION",
-            attention_position,
+    for name, position in scenarios:
+        results.append(
+            run_scenario(
+                name,
+                position,
+            )
         )
-    )
 
-    results.append(
-        run_scenario(
-            "NORMAL",
-            normal_position,
-        )
-    )
-
-    # ========================================================
+    # --------------------------------------------------------
     # Final summary
-    # ========================================================
+    # --------------------------------------------------------
 
     print()
-    print("=" * 72)
+    print(SEPARATOR)
     print("  FINAL SUMMARY")
-    print("=" * 72)
+    print(SEPARATOR)
 
     for result in results:
-        status = "PASS" if result["passed"] else "FAIL"
+        status = (
+            "PASS"
+            if result["passed"]
+            else "FAIL"
+        )
 
         print(
-            f"  [{status}] {result['name']:<10} | "
+            f"  [{status}] "
+            f"{result['name']:<10} | "
             f"status={result['status']} | "
             f"findings={result['findings']} | "
             f"limitations={result['limitations']} | "
@@ -444,11 +521,21 @@ def main():
     print()
 
     if all_passed:
-        print("  OVERALL RESULT: PASS")
+        print(
+            "  OVERALL RESULT: PASS"
+        )
+        print(
+            "  Deterministic integrity preserved."
+        )
     else:
-        print("  OVERALL RESULT: FAIL")
+        print(
+            "  OVERALL RESULT: FAIL"
+        )
+        print(
+            "  One or more integrity checks failed."
+        )
 
-    print("=" * 72)
+    print(SEPARATOR)
 
 
 if __name__ == "__main__":

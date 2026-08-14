@@ -29,4 +29,9 @@ class GeminiClient(LLMClient):
             contents=prompt,
         )
 
-        return response.text
+        text = response.text
+
+        if text is None:
+            raise ValueError("Gemini returned an empty response")
+
+        return text
