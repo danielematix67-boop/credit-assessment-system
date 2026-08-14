@@ -5,6 +5,14 @@ from src.rules.base.rule import Rule
 from src.rules.base.severity import RuleSeverity
 from src.rules.registry import build_rules, get_default_rules
 
+def test_rule_registry_rejects_unknown_rule_id():
+
+    with pytest.raises(
+        ValueError,
+        match="Unknown rule_id: UNKNOWN_RULE",
+    ):
+        Rule.get_registered_rule("UNKNOWN_RULE")
+
 
 def test_default_rules_registry_returns_rules():
     rules = get_default_rules()

@@ -1,8 +1,8 @@
+import pytest
 from src.agents.analysis.analysis_agent import AnalysisAgent
 from src.agents.reporting.deterministic_report_generator import (
     DeterministicReportGenerator,
 )
-
 from src.agents.reporting.llm_report_generator import LLMReportGenerator
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.agents.workflow.assessment_workflow import AssessmentWorkflow
@@ -64,3 +64,15 @@ def test_workflow_factory_can_create_llm_workflow():
         workflow.reporting_agent.report_generator,
         LLMReportGenerator,
     )
+
+
+def test_workflow_factory_requires_llm_client_when_llm_enabled():
+
+    with pytest.raises(
+        ValueError,
+        match="llm_client is required when use_llm=True",
+    ):
+        create_default_assessment_workflow(
+            use_llm=True,
+            llm_client=None,
+        )
