@@ -11,10 +11,14 @@ def test_report_can_be_created():
         executive_summary=(
             "The credit assessment is classified as critical."
         ),
-        findings=[
-            "Revenue growth deterioration",
-            "Negative EBITDA",
-        ],
+        findings_by_category={
+            "revenue": [
+                "Revenue growth deterioration",
+            ],
+            "profitability": [
+                "Negative EBITDA",
+            ],
+        },
         limitations=[
             "Interest coverage ratio was not evaluable",
         ],
@@ -25,10 +29,16 @@ def test_report_can_be_created():
     assert report.executive_summary == (
         "The credit assessment is classified as critical."
     )
-    assert report.findings == [
-        "Revenue growth deterioration",
-        "Negative EBITDA",
-    ]
+
+    assert report.findings_by_category == {
+        "revenue": [
+            "Revenue growth deterioration",
+        ],
+        "profitability": [
+            "Negative EBITDA",
+        ],
+    }
+
     assert report.limitations == [
         "Interest coverage ratio was not evaluable",
     ]
@@ -41,7 +51,7 @@ def test_report_is_immutable():
         executive_summary=(
             "The credit assessment is classified as critical."
         ),
-        findings=[],
+        findings_by_category={},
         limitations=[],
     )
 

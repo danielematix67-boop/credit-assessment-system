@@ -11,24 +11,11 @@ from src.agents.workflow.assessment_workflow import AssessmentWorkflow
 from src.models.assessment_status import AssessmentStatus
 from src.models.assessment_workflow import AssessmentWorkflowResult
 from src.models.position import CreditPosition
-from src.models.report import Report
+from src.models.report import Report, ReportFindingGroup
 from src.orchestration.orchestrator import AssessmentOrchestrator
 from src.orchestration.orchestrator_factory import (
     create_default_orchestrator,
 )
-
-
-@pytest.fixture
-def critical_position():
-    return CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
-    )
 
 
 @pytest.fixture
@@ -41,6 +28,19 @@ def normal_position():
         ebitda_margin=0.10,
         pfn_to_ebitda=2.0,
         interest_expense=20000,
+    )
+
+
+@pytest.fixture
+def critical_position():
+    return CreditPosition(
+        position_id="POS001",
+        revenue_growth=-0.15,
+        ebitda=-50000,
+        profit_loss=-50000,
+        ebitda_margin=-0.05,
+        pfn_to_ebitda=6.0,
+        interest_expense=40000,
     )
 
 
@@ -139,47 +139,7 @@ def test_orchestrator_depends_only_on_workflow():
         position_id=position.position_id,
         assessment_status=AssessmentStatus.NORMAL,
         executive_summary="Test summary",
-        findings=[],
-        limitations=[],
-    )
-
-    workflow = Mock(spec=AssessmentWorkflow)
-
-    workflow.run.return_value = AssessmentWorkflowResult(
-        assessment=None,
-        analysis=None,
-        report=expected_report,
-    )
-
-    orchestrator = AssessmentOrchestrator(
-        workflow=workflow,
-    )
-
-    report = orchestrator.run(position)
-
-    assert isinstance(report, Report)
-    assert report is expected_report
-    assert report.position_id == position.position_id
-
-
-@pytest.mark.parametrize(
-    "findings",
-    [
-        [],
-        ["Finding A"],
-        ["Finding A", "Finding B"],
-        ["Custom finding", "Another finding", "Third finding"],
-    ],
-)
-def test_orchestrator_preserves_findings_from_workflow(findings):
-    position = Mock(spec=CreditPosition)
-    position.position_id = "TEST_POSITION"
-
-    expected_report = Report(
-        position_id=position.position_id,
-        assessment_status=AssessmentStatus.CRITICAL,
-        executive_summary="Generated report",
-        findings=findings,
+        findings_by_category=[],
         limitations=[],
     )
 
@@ -199,4 +159,75 @@ def test_orchestrator_preserves_findings_from_workflow(findings):
 
     workflow.run.assert_called_once_with(position)
 
-    assert report.findings == findings
+    assert isinstance(report, Report)
+    assert report is expected_report
+    assert report.position_id == position.position_id
+
+
+@pytest.mark.parametrize(
+    "findings_by_category",
+    [
+        [],
+        [
+            ReportFindingGroup(
+                category="revenue",
+                findings=[],
+            ),
+        ],
+        [
+            ReportFindingGroup(
+                category="revenue",
+                findings=[],
+            ),
+            ReportFindingGroup(
+                category="profitability",
+                findings=[],
+            ),
+        ],
+        [
+            ReportFindingGroup(
+                category="revenue",
+                findings=[],
+            ),
+            ReportFindingGroup(
+                category="profitability",
+                findings=[],
+            ),
+            ReportFindingGroup(
+                category="leverage",
+                findings=[],
+            ),
+        ],
+    ],
+)
+def test_orchestrator_preserves_findings_by_category(
+    findings_by_category,
+):
+    position = Mock(spec=CreditPosition)
+    position.position_id = "TEST_POSITION"
+
+    expected_report = Report(
+        position_id=position.position_id,
+        assessment_status=AssessmentStatus.CRITICAL,
+        executive_summary="Generated report",
+        findings_by_category=findings_by_category,
+        limitations=[],
+    )
+
+    workflow = Mock(spec=AssessmentWorkflow)
+
+    workflow.run.return_value = AssessmentWorkflowResult(
+        assessment=None,
+        analysis=None,
+        report=expected_report,
+    )
+
+    orchestrator = AssessmentOrchestrator(
+        workflow=workflow,
+    )
+
+    report = orchestrator.run(position)
+
+    workflow.run.assert_called_once_with(position)
+
+    assert report.findings_by_category == findings_by_category

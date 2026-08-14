@@ -11,8 +11,37 @@ from src.orchestration.orchestrator_factory import (
 from src.rules.base.status import RuleStatus
 
 
-def test_credit_assessment_end_to_end():
+def report_findings_by_category(report):
+    """
+    Convert the report's grouped findings into a dictionary
+    keyed by category.
 
+    This allows comparisons with AnalysisFinding objects
+    without depending on the global ordering of categories.
+    """
+    return {
+        group.category: group.findings
+        for group in report.findings_by_category
+    }
+
+
+def analysis_findings_by_category(analysis):
+    """
+    Group analysis findings by category while preserving
+    the order of findings within each category.
+    """
+    findings_by_category = {}
+
+    for finding in analysis.key_findings:
+        findings_by_category.setdefault(
+            finding.category,
+            [],
+        ).append(finding)
+
+    return findings_by_category
+
+
+def test_credit_assessment_end_to_end():
     position = CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
@@ -31,12 +60,11 @@ def test_credit_assessment_end_to_end():
     assert result.assessment_status == AssessmentStatus.CRITICAL
 
     assert result.executive_summary
-    assert result.findings
+    assert result.findings_by_category
     assert isinstance(result.limitations, list)
 
 
 def test_credit_assessment_propagates_findings_through_analysis_and_report():
-
     position = CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
@@ -89,21 +117,27 @@ def test_credit_assessment_propagates_findings_through_analysis_and_report():
     # and the comment text from the deterministic findings.
     assert actual_analysis_findings == expected_findings
 
-    actual_report_findings = [
+    # The report groups findings by category.
+    # Therefore, we compare grouped content rather than
+    # flattening the report and relying on global ordering.
+    report_by_category = report_findings_by_category(report)
+    analysis_by_category = analysis_findings_by_category(analysis)
+
+    assert report_by_category == analysis_by_category
+
+    # Verify that every deterministic finding reached the report.
+    report_finding_pairs = [
         (
             finding.category,
             finding.text,
         )
-        for finding in report.findings
+        for findings in report_by_category.values()
+        for finding in findings
     ]
 
-    # The deterministic report must preserve the findings
-    # produced by the analysis layer.
-    assert actual_report_findings == actual_analysis_findings
-
-    # Therefore, both category and original rule comment
-    # must reach the final report unchanged.
-    assert actual_report_findings == expected_findings
+    assert sorted(report_finding_pairs) == sorted(
+        actual_analysis_findings
+    )
 
     # Limitations must also propagate from the analysis
     # to the final report.
@@ -111,7 +145,6 @@ def test_credit_assessment_propagates_findings_through_analysis_and_report():
 
 
 def test_credit_assessment_llm_workflow():
-
     position = CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
@@ -154,14 +187,20 @@ def test_credit_assessment_llm_workflow():
 
     assert result.report.executive_summary
 
-    # Findings and limitations remain deterministic
-    # and are preserved by the LLM reporting workflow.
-    assert result.report.findings == result.analysis.key_findings
-    assert result.report.limitations == result.analysis.limitations
+    # Findings remain deterministic and structured.
+    # The LLM must not modify them.
+    assert (
+        report_findings_by_category(result.report)
+        == analysis_findings_by_category(result.analysis)
+    )
+
+    assert (
+        result.report.limitations
+        == result.analysis.limitations
+    )
 
 
 def test_llm_cannot_change_deterministic_assessment():
-
     position = CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
@@ -199,13 +238,19 @@ def test_llm_cannot_change_deterministic_assessment():
     # the executive summary.
     assert result.report.executive_summary
 
-    # Findings and limitations must remain deterministic.
-    assert result.report.findings == result.analysis.key_findings
-    assert result.report.limitations == result.analysis.limitations
+    # Findings must remain deterministic.
+    assert (
+        report_findings_by_category(result.report)
+        == analysis_findings_by_category(result.analysis)
+    )
+
+    assert (
+        result.report.limitations
+        == result.analysis.limitations
+    )
 
 
 def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails():
-
     position = CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
@@ -217,7 +262,6 @@ def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails():
     )
 
     class FailingLLMClient:
-
         def generate(self, prompt: str) -> str:
             raise RuntimeError(
                 "LLM service unavailable"
@@ -251,12 +295,18 @@ def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails():
 
     # The fallback report must preserve deterministic
     # findings and limitations.
-    assert result.report.findings == result.analysis.key_findings
-    assert result.report.limitations == result.analysis.limitations
+    assert (
+        report_findings_by_category(result.report)
+        == analysis_findings_by_category(result.analysis)
+    )
+
+    assert (
+        result.report.limitations
+        == result.analysis.limitations
+    )
 
 
 def test_llm_cannot_replace_deterministic_findings():
-
     position = CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
@@ -283,17 +333,27 @@ def test_llm_cannot_replace_deterministic_findings():
 
     # The report findings must come from the deterministic
     # assessment/analysis pipeline, not from the LLM.
-    assert result.report.findings == result.analysis.key_findings
+    assert (
+        report_findings_by_category(result.report)
+        == analysis_findings_by_category(result.analysis)
+    )
+
+    report_findings = [
+        finding
+        for findings in report_findings_by_category(
+            result.report
+        ).values()
+        for finding in findings
+    ]
 
     assert all(
         finding.text
         != "The company shows severe financial deterioration."
-        for finding in result.report.findings
+        for finding in report_findings
     )
 
 
 def test_llm_cannot_replace_deterministic_limitations():
-
     position = CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
@@ -320,11 +380,13 @@ def test_llm_cannot_replace_deterministic_limitations():
 
     # Limitations must remain those identified by
     # the deterministic assessment pipeline.
-    assert result.report.limitations == result.analysis.limitations
+    assert (
+        result.report.limitations
+        == result.analysis.limitations
+    )
 
 
 def test_not_evaluable_rules_do_not_generate_findings():
-
     position = CreditPosition(
         position_id="POS_NORMAL",
         revenue_growth=0.05,
@@ -366,4 +428,8 @@ def test_not_evaluable_rules_do_not_generate_findings():
     )
 
     assert result.analysis.key_findings == []
-    assert result.report.findings == []
+
+    assert (
+        report_findings_by_category(result.report)
+        == {}
+    )

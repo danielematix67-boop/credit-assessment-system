@@ -29,7 +29,11 @@ def test_assessment_workflow_result_can_be_created():
         executive_summary=(
             "The credit assessment is classified as critical."
         ),
-        findings=["Negative EBITDA"],
+        findings_by_category={
+            "profitability": [
+                "Negative EBITDA",
+            ],
+        },
         limitations=[],
     )
 
@@ -66,7 +70,7 @@ def test_assessment_workflow_result_is_immutable():
         executive_summary=(
             "The credit assessment is classified as normal."
         ),
-        findings=[],
+        findings_by_category={},
         limitations=[],
     )
 
@@ -77,4 +81,4 @@ def test_assessment_workflow_result_is_immutable():
     )
 
     with pytest.raises(AttributeError):
-        result.report = report
+        result.report = None

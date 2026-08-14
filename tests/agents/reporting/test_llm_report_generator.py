@@ -5,9 +5,11 @@ import pytest
 from src.agents.reporting.llm_report_generator import LLMReportGenerator
 from src.llm.client import LLMClient
 from src.llm.mock_client import MockLLMClient
+from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
-from src.models.report import Report
+from src.models.report import Report, ReportFindingGroup
+from src.rules.base.severity import RuleSeverity
 
 
 @pytest.fixture
@@ -16,14 +18,34 @@ def critical_analysis():
         position_id="TEST_POSITION",
         assessment_status=AssessmentStatus.CRITICAL,
         key_findings=[
-            "Finding A",
-            "Finding B",
+            AnalysisFinding(
+                rule_id="R001",
+                category="revenue",
+                severity=RuleSeverity.MEDIUM,
+                text="Revenue deterioration detected.",
+            ),
+            AnalysisFinding(
+                rule_id="R002",
+                category="profitability",
+                severity=RuleSeverity.HIGH,
+                text="Negative EBITDA detected.",
+            ),
         ],
         risk_factors=[
-            "Risk A",
+            AnalysisFinding(
+                rule_id="R002",
+                category="profitability",
+                severity=RuleSeverity.HIGH,
+                text="Negative EBITDA detected.",
+            ),
         ],
         limitations=[
-            "Limitation A",
+            AnalysisFinding(
+                rule_id="R005",
+                category="profitability",
+                severity=RuleSeverity.MEDIUM,
+                text="Interest expense to EBITDA could not be evaluated.",
+            ),
         ],
     )
 
@@ -34,11 +56,14 @@ def attention_analysis():
         position_id="TEST_POSITION",
         assessment_status=AssessmentStatus.ATTENTION,
         key_findings=[
-            "Finding A",
+            AnalysisFinding(
+                rule_id="R001",
+                category="revenue",
+                severity=RuleSeverity.MEDIUM,
+                text="Revenue deterioration detected.",
+            ),
         ],
-        risk_factors=[
-            "Risk A",
-        ],
+        risk_factors=[],
         limitations=[],
     )
 
@@ -67,6 +92,24 @@ def analyses(
     ]
 
 
+def findings_by_category_from_analysis(analysis):
+    categories = {}
+
+    for finding in analysis.key_findings:
+        categories.setdefault(
+            finding.category,
+            [],
+        ).append(finding)
+
+    return [
+        ReportFindingGroup(
+            category=category,
+            findings=findings,
+        )
+        for category, findings in categories.items()
+    ]
+
+
 def test_llm_report_generator_implements_report_generator_contract():
     client = MagicMock(spec=LLMClient)
 
@@ -75,7 +118,9 @@ def test_llm_report_generator_implements_report_generator_contract():
     assert isinstance(generator, LLMReportGenerator)
 
 
-def test_llm_report_generator_uses_llm_client(critical_analysis):
+def test_llm_report_generator_uses_llm_client(
+    critical_analysis,
+):
     response = (
         f"{critical_analysis.assessment_status.value} "
         "assessment identified."
@@ -96,9 +141,15 @@ def test_llm_report_generator_uses_llm_client(critical_analysis):
     )
     assert report.executive_summary == response
 
-    # Structured information remains deterministic.
-    assert report.findings == critical_analysis.key_findings
-    assert report.limitations == critical_analysis.limitations
+    assert report.findings_by_category == (
+        findings_by_category_from_analysis(
+            critical_analysis
+        )
+    )
+
+    assert report.limitations == (
+        critical_analysis.limitations
+    )
 
     client.generate.assert_called_once()
 
@@ -127,8 +178,8 @@ def test_llm_report_generator_builds_prompt_from_analysis(
         + critical_analysis.limitations
     )
 
-    for item in expected_content:
-        assert item in prompt
+    for finding in expected_content:
+        assert finding.text in prompt
 
 
 @pytest.mark.parametrize(
@@ -182,8 +233,8 @@ def test_llm_report_generator_accepts_valid_assessment_status(
 
     assert report.assessment_status == status
     assert report.executive_summary == response
-    assert report.findings == analysis.key_findings
-    assert report.limitations == analysis.limitations
+    assert report.findings_by_category == []
+    assert report.limitations == []
 
 
 def test_llm_report_generator_accepts_valid_response(
@@ -201,8 +252,16 @@ def test_llm_report_generator_accepts_valid_response(
     report = generator.generate(critical_analysis)
 
     assert report.executive_summary == client.response
-    assert report.findings == critical_analysis.key_findings
-    assert report.limitations == critical_analysis.limitations
+
+    assert report.findings_by_category == (
+        findings_by_category_from_analysis(
+            critical_analysis
+        )
+    )
+
+    assert report.limitations == (
+        critical_analysis.limitations
+    )
 
 
 def test_llm_report_generator_rejects_empty_response(
@@ -287,10 +346,14 @@ def test_llm_report_generator_preserves_structured_assessment_data(
     assert report.position_id == analysis.position_id
     assert report.assessment_status == analysis.assessment_status
 
-    # The LLM cannot modify deterministic findings.
-    assert report.findings == analysis.key_findings
+    # Findings remain deterministic and structured.
+    assert report.findings_by_category == (
+        findings_by_category_from_analysis(
+            analysis
+        )
+    )
 
-    # The LLM cannot modify deterministic limitations.
+    # Limitations remain deterministic and structured.
     assert report.limitations == analysis.limitations
 
     assert report.executive_summary == client.response
@@ -345,8 +408,16 @@ def test_llm_report_generator_preserves_limitations(
     assert report.assessment_status == (
         attention_analysis.assessment_status
     )
-    assert report.limitations == attention_analysis.limitations
-    assert report.findings == attention_analysis.key_findings
+
+    assert report.limitations == (
+        attention_analysis.limitations
+    )
+
+    assert report.findings_by_category == (
+        findings_by_category_from_analysis(
+            attention_analysis
+        )
+    )
 
 
 def test_llm_report_generator_accepts_paraphrased_findings(
@@ -364,15 +435,23 @@ def test_llm_report_generator_accepts_paraphrased_findings(
 
     report = generator.generate(critical_analysis)
 
-    # The LLM may paraphrase the deterministic analysis.
+    # The LLM may paraphrase the executive summary.
     assert report.executive_summary == client.response
 
     # Structured information remains deterministic.
     assert report.assessment_status == (
         critical_analysis.assessment_status
     )
-    assert report.findings == critical_analysis.key_findings
-    assert report.limitations == critical_analysis.limitations
+
+    assert report.findings_by_category == (
+        findings_by_category_from_analysis(
+            critical_analysis
+        )
+    )
+
+    assert report.limitations == (
+        critical_analysis.limitations
+    )
 
 
 def test_llm_report_generator_accepts_complete_response(
@@ -395,8 +474,15 @@ def test_llm_report_generator_accepts_complete_response(
 
     # Structured information is preserved independently
     # from the generated executive summary.
-    assert report.findings == critical_analysis.key_findings
-    assert report.limitations == critical_analysis.limitations
+    assert report.findings_by_category == (
+        findings_by_category_from_analysis(
+            critical_analysis
+        )
+    )
+
+    assert report.limitations == (
+        critical_analysis.limitations
+    )
 
 
 def test_llm_report_generator_uses_analysis_as_structured_input(
@@ -421,12 +507,19 @@ def test_llm_report_generator_uses_analysis_as_structured_input(
         + critical_analysis.limitations
     )
 
-    for item in expected_content:
-        assert item in prompt
+    for finding in expected_content:
+        assert finding.text in prompt
 
     # Deterministic structured report data must be preserved.
-    assert report.findings == critical_analysis.key_findings
-    assert report.limitations == critical_analysis.limitations
+    assert report.findings_by_category == (
+        findings_by_category_from_analysis(
+            critical_analysis
+        )
+    )
+
+    assert report.limitations == (
+        critical_analysis.limitations
+    )
 
 
 @pytest.mark.parametrize(
