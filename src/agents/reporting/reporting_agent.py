@@ -46,13 +46,23 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
         self.report_generator = report_generator
         self.fallback_generator = fallback_generator
 
+        # Runtime diagnostics for observability.
+        self.last_generator_used: str | None = None
+        self.last_error: str | None = None
+
     def run(
         self,
         analysis: AssessmentAnalysis,
     ) -> Report:
 
+        # Reset runtime diagnostics for every execution.
+        self.last_generator_used = None
+        self.last_error = None
+
         try:
             report = self.report_generator.generate(analysis)
+
+            self.last_generator_used = "PRIMARY"
 
             print(
                 "\n  [LLM] Report generated successfully."
@@ -66,6 +76,9 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
                 raise
 
             error_message = _get_llm_error_message(exc)
+
+            self.last_error = error_message
+            self.last_generator_used = "FALLBACK"
 
             logger.warning(
                 "Primary report generator failed: %s",

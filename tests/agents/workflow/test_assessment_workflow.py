@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 from src.agents.analysis.analysis_agent import AnalysisAgent
 from src.agents.base.agent import Agent
 from src.agents.reporting.deterministic_report_generator import (
@@ -8,6 +10,7 @@ from src.agents.workflow.assessment_workflow import AssessmentWorkflow
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
+from src.models.assessment_status import AssessmentStatus
 from src.models.assessment_workflow import AssessmentWorkflowResult
 from src.models.position import CreditPosition
 from src.models.report import Report, ReportFindingGroup
@@ -46,6 +49,9 @@ def test_assessment_workflow_executes_all_stages(
     assert result.report.assessment_status == (
         result.assessment.status
     )
+
+    assert result.report_generator_used == "PRIMARY"
+    assert result.report_generation_error is None
 
 
 def test_assessment_workflow_accepts_agent_contracts(
@@ -166,3 +172,102 @@ def test_assessment_workflow_accepts_agent_contracts(
     ]
 
     assert result.report.limitations == []
+
+    # Generic agents do not expose reporting telemetry.
+    assert result.report_generator_used is None
+    assert result.report_generation_error is None
+
+
+def test_assessment_workflow_propagates_primary_reporting_status():
+    reporting_agent = MagicMock()
+
+    reporting_agent.run.return_value = Report(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.CRITICAL,
+        executive_summary="Generated report",
+        findings_by_category=[],
+        limitations=[],
+    )
+
+    reporting_agent.last_generator_used = "PRIMARY"
+    reporting_agent.last_error = None
+
+    workflow = AssessmentWorkflow(
+        assessment_service=MagicMock(),
+        analysis_agent=MagicMock(),
+        reporting_agent=reporting_agent,
+    )
+
+    assessment = MagicMock()
+    assessment.position_id = "POS001"
+
+    analysis = MagicMock()
+    analysis.position_id = "POS001"
+
+    workflow.assessment_service.assess.return_value = assessment
+    workflow.analysis_agent.run.return_value = analysis
+
+    result = workflow.run(
+        CreditPosition(
+            position_id="POS001",
+            revenue_growth=-0.15,
+            ebitda=-50000,
+            profit_loss=-50000,
+            ebitda_margin=-0.05,
+            pfn_to_ebitda=6.0,
+            interest_expense=40000,
+        )
+    )
+
+    assert result.report_generator_used == "PRIMARY"
+    assert result.report_generation_error is None
+
+
+def test_assessment_workflow_propagates_fallback_reporting_status():
+    reporting_agent = MagicMock()
+
+    reporting_agent.run.return_value = Report(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.CRITICAL,
+        executive_summary="Deterministic fallback report",
+        findings_by_category=[],
+        limitations=[],
+    )
+
+    reporting_agent.last_generator_used = "FALLBACK"
+    reporting_agent.last_error = (
+        "Gemini service is temporarily unavailable."
+    )
+
+    workflow = AssessmentWorkflow(
+        assessment_service=MagicMock(),
+        analysis_agent=MagicMock(),
+        reporting_agent=reporting_agent,
+    )
+
+    assessment = MagicMock()
+    assessment.position_id = "POS001"
+
+    analysis = MagicMock()
+    analysis.position_id = "POS001"
+
+    workflow.assessment_service.assess.return_value = assessment
+    workflow.analysis_agent.run.return_value = analysis
+
+    result = workflow.run(
+        CreditPosition(
+            position_id="POS001",
+            revenue_growth=-0.15,
+            ebitda=-50000,
+            profit_loss=-50000,
+            ebitda_margin=-0.05,
+            pfn_to_ebitda=6.0,
+            interest_expense=40000,
+        )
+    )
+
+    assert result.report_generator_used == "FALLBACK"
+
+    assert result.report_generation_error == (
+        "Gemini service is temporarily unavailable."
+    )

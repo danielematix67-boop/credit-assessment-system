@@ -605,3 +605,126 @@ def test_reporting_agent_is_independent_of_analysis_content(
     generator.generate.assert_called_once_with(
         analysis
     )
+
+def test_reporting_agent_records_primary_generator_usage(
+    analysis,
+    generator,
+):
+    expected_report = build_report(analysis)
+
+    generator.generate.return_value = expected_report
+
+    agent = ReportingAgent(generator)
+
+    report = agent.run(analysis)
+
+    assert report is expected_report
+    assert agent.last_generator_used == "PRIMARY"
+    assert agent.last_error is None
+
+    generator.generate.assert_called_once_with(
+        analysis
+    )
+
+
+def test_reporting_agent_records_fallback_usage_and_error(
+    analysis,
+):
+    primary_generator = MagicMock(
+        spec=ReportGenerator,
+    )
+    fallback_generator = MagicMock(
+        spec=ReportGenerator,
+    )
+
+    primary_generator.generate.side_effect = RuntimeError(
+        "LLM service unavailable"
+    )
+
+    fallback_generator.generate.return_value = (
+        build_report(
+            analysis,
+            executive_summary="Deterministic fallback report",
+        )
+    )
+
+    agent = ReportingAgent(
+        report_generator=primary_generator,
+        fallback_generator=fallback_generator,
+    )
+
+    report = agent.run(analysis)
+
+    assert report.executive_summary == (
+        "Deterministic fallback report"
+    )
+
+    assert agent.last_generator_used == "FALLBACK"
+    assert (
+        agent.last_error
+        == "Gemini service is temporarily unavailable."
+    )
+
+    primary_generator.generate.assert_called_once_with(
+        analysis
+    )
+
+    fallback_generator.generate.assert_called_once_with(
+        analysis
+    )
+
+
+def test_reporting_agent_resets_runtime_diagnostics(
+    analysis,
+):
+    primary_generator = MagicMock(
+        spec=ReportGenerator,
+    )
+    fallback_generator = MagicMock(
+        spec=ReportGenerator,
+    )
+
+    # --------------------------------------------------------
+    # First execution: primary fails -> fallback
+    # --------------------------------------------------------
+
+    primary_generator.generate.side_effect = RuntimeError(
+        "LLM service unavailable"
+    )
+
+    fallback_generator.generate.return_value = (
+        build_report(analysis)
+    )
+
+    agent = ReportingAgent(
+        report_generator=primary_generator,
+        fallback_generator=fallback_generator,
+    )
+
+    agent.run(analysis)
+
+    assert agent.last_generator_used == "FALLBACK"
+    assert agent.last_error == (
+        "Gemini service is temporarily unavailable."
+    )
+
+    # --------------------------------------------------------
+    # Second execution: primary succeeds
+    # --------------------------------------------------------
+
+    primary_generator.generate.side_effect = None
+    primary_generator.generate.return_value = (
+        build_report(
+            analysis,
+            executive_summary="LLM generated report",
+        )
+    )
+
+    report = agent.run(analysis)
+
+    assert report.executive_summary == (
+        "LLM generated report"
+    )
+
+    assert agent.last_generator_used == "PRIMARY"
+    assert agent.last_error is None

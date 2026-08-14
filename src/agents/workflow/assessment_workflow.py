@@ -30,8 +30,22 @@ class AssessmentWorkflow:
 
         report = self.reporting_agent.run(analysis)
 
+        report_generator_used = getattr(
+            self.reporting_agent,
+            "last_generator_used",
+            None,
+        )
+
+        report_generation_error = getattr(
+            self.reporting_agent,
+            "last_error",
+            None,
+        )
+
         return AssessmentWorkflowResult(
             assessment=assessment,
             analysis=analysis,
             report=report,
+            report_generator_used=report_generator_used,
+            report_generation_error=report_generation_error,
         )
