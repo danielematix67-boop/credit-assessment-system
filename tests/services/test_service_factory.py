@@ -32,9 +32,9 @@ def test_default_assessment_service_generates_critical_assessment():
         for result in assessment.rule_results
     }
 
-    comments = {
-        comment.rule_id: comment
-        for comment in assessment.comments
+    findings = {
+        finding.result.rule_id: finding
+        for finding in assessment.findings
     }
 
     # The assessment must contain only results for configured rules.
@@ -54,8 +54,13 @@ def test_default_assessment_service_generates_critical_assessment():
 
     assert len(triggered_rules) >= 2
 
-    # Only triggered rules with a configured comment generate comments.
-    assert set(comments).issubset(triggered_rules)
+    # Only triggered rules with a configured comment generate findings.
+    assert set(findings).issubset(triggered_rules)
+
+    # Every finding must contain the result and its associated comment.
+    for finding in assessment.findings:
+        assert finding.result.status == RuleStatus.TRIGGERED
+        assert finding.comment.rule_id == finding.result.rule_id
 
 
 def test_default_assessment_service_generates_normal_assessment():
@@ -100,5 +105,5 @@ def test_default_assessment_service_generates_normal_assessment():
         for result in assessment.rule_results
     )
 
-    # No triggered rule means no comments.
-    assert assessment.comments == []
+    # No triggered rule means no findings.
+    assert assessment.findings == []

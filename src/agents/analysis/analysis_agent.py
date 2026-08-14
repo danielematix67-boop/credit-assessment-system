@@ -12,32 +12,32 @@ class AnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
         assessment: Assessment,
     ) -> AssessmentAnalysis:
 
-        triggered_rules = [
-            result
-            for result in assessment.rule_results
-            if result.status == RuleStatus.TRIGGERED
+        triggered_findings = [
+            finding
+            for finding in assessment.findings
+            if finding.result.status == RuleStatus.TRIGGERED
         ]
 
-        not_evaluable_rules = [
-            result
-            for result in assessment.rule_results
-            if result.status == RuleStatus.NOT_EVALUABLE
+        not_evaluable_findings = [
+            finding
+            for finding in assessment.findings
+            if finding.result.status == RuleStatus.NOT_EVALUABLE
         ]
 
         key_findings = [
-            result.rule_name
-            for result in triggered_rules
+            finding.comment.text
+            for finding in triggered_findings
         ]
 
         risk_factors = [
-            result.rule_name
-            for result in triggered_rules
-            if result.severity == RuleSeverity.HIGH
+            finding.comment.text
+            for finding in triggered_findings
+            if finding.result.severity == RuleSeverity.HIGH
         ]
 
         limitations = [
-            result.rule_name
-            for result in not_evaluable_rules
+            finding.result.rule_name
+            for finding in not_evaluable_findings
         ]
 
         return AssessmentAnalysis(

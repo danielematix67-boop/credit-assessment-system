@@ -3,12 +3,13 @@ import pytest
 from src.comments.comment import Comment
 from src.models.assessment import Assessment
 from src.models.assessment_status import AssessmentStatus
+from src.models.rule_finding import RuleFinding
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
 
-def test_assessment_stores_position_id_rule_results_comments_and_status():
+def test_assessment_stores_position_id_rule_results_findings_and_status():
     rule_result = RuleResult(
         rule_id="R001",
         rule_name="Revenue growth deterioration",
@@ -27,17 +28,23 @@ def test_assessment_stores_position_id_rule_results_comments_and_status():
         ),
     )
 
+    finding = RuleFinding(
+        result=rule_result,
+        comment=comment,
+    )
+
     assessment = Assessment(
         position_id="POS001",
         rule_results=[rule_result],
-        comments=[comment],
+        findings=[finding],
         status=AssessmentStatus.ATTENTION,
     )
 
     assert assessment.position_id == "POS001"
     assert assessment.rule_results == [rule_result]
-    assert assessment.comments == [comment]
+    assert assessment.findings == [finding]
     assert assessment.status == AssessmentStatus.ATTENTION
+
 
 def test_assessment_stores_complete_assessment_data():
     rule_result = RuleResult(
@@ -55,23 +62,29 @@ def test_assessment_stores_complete_assessment_data():
         text="Revenue deterioration detected.",
     )
 
+    finding = RuleFinding(
+        result=rule_result,
+        comment=comment,
+    )
+
     assessment = Assessment(
         position_id="POS001",
         rule_results=[rule_result],
-        comments=[comment],
+        findings=[finding],
         status=AssessmentStatus.ATTENTION,
     )
 
     assert assessment.position_id == "POS001"
     assert assessment.rule_results == [rule_result]
-    assert assessment.comments == [comment]
+    assert assessment.findings == [finding]
     assert assessment.status == AssessmentStatus.ATTENTION
+
 
 def test_assessment_is_immutable():
     assessment = Assessment(
         position_id="POS001",
         rule_results=[],
-        comments=[],
+        findings=[],
         status=AssessmentStatus.NORMAL,
     )
 

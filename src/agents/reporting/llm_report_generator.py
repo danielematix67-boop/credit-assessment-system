@@ -60,7 +60,7 @@ class LLMReportGenerator(ReportGenerator):
         return (
             "You are a credit assessment reporting assistant.\n\n"
             "Your task is to write a concise executive summary based "
-            "EXCLUSIVELY on the structured assessment provided below.\n\n"
+            "EXCLUSIVELY on the structured assessment analysis provided below..\n\n"
 
             "STRICT RULES:\n"
             "- Do not introduce facts that are not present in the assessment.\n"

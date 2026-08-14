@@ -12,9 +12,9 @@ from src.models.report import Report
 
 def test_llm_report_generator_implements_report_generator_contract():
 
-    generator = MagicMock(spec=LLMClient)
+    llm_client = MagicMock(spec=LLMClient)
 
-    report_generator = LLMReportGenerator(generator)
+    report_generator = LLMReportGenerator(llm_client)
 
     assert isinstance(report_generator, LLMReportGenerator)
 
@@ -25,14 +25,14 @@ def test_llm_report_generator_uses_llm_client():
         position_id="POS001",
         assessment_status=AssessmentStatus.CRITICAL,
         key_findings=[
-            "Revenue Growth Deterioration",
-            "Negative EBITDA",
+            "Revenue deterioration detected.",
+            "Negative EBITDA detected.",
         ],
         risk_factors=[
-            "High leverage",
+            "Negative EBITDA detected.",
         ],
         limitations=[
-            "Interest Coverage Ratio",
+            "Interest Coverage Ratio could not be evaluated.",
         ],
     )
 
@@ -48,15 +48,17 @@ def test_llm_report_generator_uses_llm_client():
 
     assert isinstance(report, Report)
 
-    assert report.position_id == "POS001"
-    assert report.assessment_status == AssessmentStatus.CRITICAL
+    assert report.position_id == analysis.position_id
+    assert report.assessment_status == analysis.assessment_status
 
-    assert (
-        report.executive_summary
-        == "The assessment indicates a CRITICAL credit position."
+    assert report.executive_summary == (
+        "The assessment indicates a CRITICAL credit position."
     )
 
+    # Structured findings remain deterministic.
     assert report.findings == analysis.key_findings
+
+    # Structured limitations remain deterministic.
     assert report.limitations == analysis.limitations
 
     llm_client.generate.assert_called_once()
@@ -68,21 +70,21 @@ def test_llm_report_generator_builds_prompt_from_analysis():
         position_id="POS001",
         assessment_status=AssessmentStatus.CRITICAL,
         key_findings=[
-            "Revenue Growth Deterioration",
-            "Negative EBITDA",
+            "Revenue deterioration detected.",
+            "Negative EBITDA detected.",
         ],
         risk_factors=[
-            "High leverage",
+            "High leverage detected.",
         ],
         limitations=[
-            "Interest Coverage Ratio",
+            "Interest Coverage Ratio could not be evaluated.",
         ],
     )
 
     llm_client = MagicMock(spec=LLMClient)
 
     llm_client.generate.return_value = (
-        "CRITICAL assessment identified. Generated summary."
+        "CRITICAL assessment identified."
     )
 
     generator = LLMReportGenerator(llm_client)
@@ -92,10 +94,16 @@ def test_llm_report_generator_builds_prompt_from_analysis():
     prompt = llm_client.generate.call_args[0][0]
 
     assert "CRITICAL" in prompt
-    assert "Revenue Growth Deterioration" in prompt
-    assert "Negative EBITDA" in prompt
-    assert "High leverage" in prompt
-    assert "Interest Coverage Ratio" in prompt
+
+    # Findings originating from rule comments.
+    assert "Revenue deterioration detected." in prompt
+    assert "Negative EBITDA detected." in prompt
+
+    # Risk factors originating from high-severity findings.
+    assert "High leverage detected." in prompt
+
+    # Limitations originating from not-evaluable findings.
+    assert "Interest Coverage Ratio could not be evaluated." in prompt
 
 
 def test_llm_report_generator_includes_analysis_in_prompt():
@@ -104,14 +112,14 @@ def test_llm_report_generator_includes_analysis_in_prompt():
         position_id="POS001",
         assessment_status=AssessmentStatus.CRITICAL,
         key_findings=[
-            "Revenue Growth",
-            "Negative EBITDA",
+            "Revenue deterioration detected.",
+            "Negative EBITDA detected.",
         ],
         risk_factors=[
-            "Negative EBITDA",
+            "Negative EBITDA detected.",
         ],
         limitations=[
-            "EBITDA Inventory Contribution",
+            "EBITDA Inventory Contribution could not be evaluated.",
         ],
     )
 
@@ -128,9 +136,9 @@ def test_llm_report_generator_includes_analysis_in_prompt():
     prompt = client.last_prompt
 
     assert "CRITICAL" in prompt
-    assert "Revenue Growth" in prompt
-    assert "Negative EBITDA" in prompt
-    assert "EBITDA Inventory Contribution" in prompt
+    assert "Revenue deterioration detected." in prompt
+    assert "Negative EBITDA detected." in prompt
+    assert "EBITDA Inventory Contribution could not be evaluated." in prompt
 
 
 def test_llm_report_generator_accepts_valid_response():
@@ -139,11 +147,11 @@ def test_llm_report_generator_accepts_valid_response():
         position_id="POS001",
         assessment_status=AssessmentStatus.CRITICAL,
         key_findings=[
-            "Revenue Growth",
-            "Negative EBITDA",
+            "Revenue deterioration detected.",
+            "Negative EBITDA detected.",
         ],
         risk_factors=[
-            "Negative EBITDA",
+            "Negative EBITDA detected.",
         ],
         limitations=[],
     )
@@ -161,6 +169,9 @@ def test_llm_report_generator_accepts_valid_response():
     assert report.executive_summary == (
         "CRITICAL assessment identified."
     )
+
+    assert report.findings == analysis.key_findings
+    assert report.limitations == analysis.limitations
 
 
 def test_llm_report_generator_rejects_empty_response():
@@ -219,14 +230,14 @@ def test_llm_report_generator_preserves_structured_assessment_data():
         position_id="POS001",
         assessment_status=AssessmentStatus.CRITICAL,
         key_findings=[
-            "Revenue Growth",
-            "Negative EBITDA",
+            "Revenue deterioration detected.",
+            "Negative EBITDA detected.",
         ],
         risk_factors=[
-            "High Leverage",
+            "High leverage detected.",
         ],
         limitations=[
-            "Interest Coverage Ratio",
+            "Interest Coverage Ratio could not be evaluated.",
         ],
     )
 
@@ -245,7 +256,11 @@ def test_llm_report_generator_preserves_structured_assessment_data():
 
     assert report.position_id == analysis.position_id
     assert report.assessment_status == analysis.assessment_status
+
+    # The LLM cannot modify deterministic findings.
     assert report.findings == analysis.key_findings
+
+    # The LLM cannot modify deterministic limitations.
     assert report.limitations == analysis.limitations
 
     assert report.executive_summary == (
@@ -259,9 +274,15 @@ def test_llm_report_generator_prompt_enforces_factual_constraints():
     analysis = AssessmentAnalysis(
         position_id="POS001",
         assessment_status=AssessmentStatus.CRITICAL,
-        key_findings=["Negative EBITDA"],
-        risk_factors=["High Leverage"],
-        limitations=[],
+        key_findings=[
+            "Negative EBITDA detected.",
+        ],
+        risk_factors=[
+            "High leverage detected.",
+        ],
+        limitations=[
+            "Interest Coverage Ratio could not be evaluated.",
+        ],
     )
 
     client = MockLLMClient(
@@ -279,7 +300,11 @@ def test_llm_report_generator_prompt_enforces_factual_constraints():
     assert "EXCLUSIVELY" in prompt
     assert "Do not introduce facts" in prompt
     assert "Do not invent financial data" in prompt
+    assert "Do not modify the assessment status" in prompt
     assert "Do not make a credit decision" in prompt
+    assert "Do not provide recommendations" in prompt
+    assert "Clearly distinguish between findings and limitations" in prompt
+    assert "If information is missing or not evaluable" in prompt
     assert "Generate only the executive summary" in prompt
 
 
@@ -289,10 +314,10 @@ def test_llm_report_generator_accepts_attention_status():
         position_id="POS001",
         assessment_status=AssessmentStatus.ATTENTION,
         key_findings=[
-            "Revenue Growth Deterioration",
+            "Revenue deterioration detected.",
         ],
         risk_factors=[
-            "High Leverage",
+            "High leverage detected.",
         ],
         limitations=[],
     )
@@ -308,9 +333,13 @@ def test_llm_report_generator_accepts_attention_status():
     report = generator.generate(analysis)
 
     assert report.assessment_status == AssessmentStatus.ATTENTION
+
     assert report.executive_summary == (
         "ATTENTION assessment identified."
     )
+
+    assert report.findings == analysis.key_findings
+    assert report.limitations == analysis.limitations
 
 
 def test_llm_report_generator_accepts_normal_status():
@@ -334,9 +363,13 @@ def test_llm_report_generator_accepts_normal_status():
     report = generator.generate(analysis)
 
     assert report.assessment_status == AssessmentStatus.NORMAL
+
     assert report.executive_summary == (
         "NORMAL assessment. No critical issues identified."
     )
+
+    assert report.findings == analysis.key_findings
+    assert report.limitations == analysis.limitations
 
 
 def test_llm_report_generator_preserves_limitations():
@@ -345,12 +378,12 @@ def test_llm_report_generator_preserves_limitations():
         position_id="POS001",
         assessment_status=AssessmentStatus.ATTENTION,
         key_findings=[
-            "Revenue Growth Deterioration",
+            "Revenue deterioration detected.",
         ],
         risk_factors=[],
         limitations=[
-            "Interest Coverage Ratio",
-            "EBITDA Inventory Contribution",
+            "Interest Coverage Ratio could not be evaluated.",
+            "EBITDA Inventory Contribution could not be evaluated.",
         ],
     )
 
@@ -369,10 +402,8 @@ def test_llm_report_generator_preserves_limitations():
 
     assert report.assessment_status == AssessmentStatus.ATTENTION
 
-    assert report.limitations == [
-        "Interest Coverage Ratio",
-        "EBITDA Inventory Contribution",
-    ]
+    assert report.limitations == analysis.limitations
+    assert report.findings == analysis.key_findings
 
 
 def test_llm_report_generator_accepts_paraphrased_findings():
@@ -381,11 +412,11 @@ def test_llm_report_generator_accepts_paraphrased_findings():
         position_id="POS001",
         assessment_status=AssessmentStatus.CRITICAL,
         key_findings=[
-            "Revenue Growth",
-            "Negative EBITDA",
+            "Revenue deterioration detected.",
+            "Negative EBITDA detected.",
         ],
         risk_factors=[
-            "High Leverage",
+            "High leverage detected.",
         ],
         limitations=[],
     )
@@ -404,9 +435,13 @@ def test_llm_report_generator_accepts_paraphrased_findings():
 
     report = generator.generate(analysis)
 
+    # The LLM may paraphrase the comments in the executive summary.
     assert report.executive_summary == client.response
+
+    # But the structured data remains deterministic.
     assert report.assessment_status == analysis.assessment_status
     assert report.findings == analysis.key_findings
+    assert report.limitations == analysis.limitations
 
 
 def test_llm_report_generator_accepts_complete_response():
@@ -415,24 +450,23 @@ def test_llm_report_generator_accepts_complete_response():
         position_id="POS001",
         assessment_status=AssessmentStatus.CRITICAL,
         key_findings=[
-            "Revenue Growth",
-            "Negative EBITDA",
+            "Revenue deterioration detected.",
+            "Negative EBITDA detected.",
         ],
         risk_factors=[
-            "Negative EBITDA",
+            "Negative EBITDA detected.",
         ],
         limitations=[
-            "Interest Coverage Ratio",
+            "Interest Coverage Ratio could not be evaluated.",
         ],
     )
 
     client = MockLLMClient(
         response=(
             "CRITICAL assessment identified. "
-            "The assessment shows Revenue Growth deterioration "
-            "and Negative EBITDA. "
-            "Negative EBITDA is a risk factor. "
-            "Interest Coverage Ratio is a limitation."
+            "The assessment shows revenue deterioration "
+            "and negative EBITDA. "
+            "Interest Coverage Ratio could not be evaluated."
         ),
     )
 
@@ -443,3 +477,46 @@ def test_llm_report_generator_accepts_complete_response():
     report = generator.generate(analysis)
 
     assert report.executive_summary == client.response
+
+    # Structured information is preserved independently
+    # from the generated executive summary.
+    assert report.findings == analysis.key_findings
+    assert report.limitations == analysis.limitations
+
+
+def test_llm_report_generator_uses_comment_text_as_structured_input():
+
+    analysis = AssessmentAnalysis(
+        position_id="POS001",
+        assessment_status=AssessmentStatus.CRITICAL,
+        key_findings=[
+            "CUSTOM COMMENT: revenue deterioration detected.",
+        ],
+        risk_factors=[
+            "CUSTOM COMMENT: revenue deterioration detected.",
+        ],
+        limitations=[
+            "CUSTOM COMMENT: indicator could not be evaluated.",
+        ],
+    )
+
+    client = MockLLMClient(
+        response="CRITICAL assessment identified.",
+    )
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+    )
+
+    report = generator.generate(analysis)
+
+    prompt = client.last_prompt
+
+    # The reporting layer must use the structured analysis
+    # produced by the AnalysisAgent, including comment text.
+    assert "CUSTOM COMMENT: revenue deterioration detected." in prompt
+    assert "CUSTOM COMMENT: indicator could not be evaluated." in prompt
+
+    # The deterministic structured report data must also preserve it.
+    assert report.findings == analysis.key_findings
+    assert report.limitations == analysis.limitations

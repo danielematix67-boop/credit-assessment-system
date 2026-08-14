@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 from src.models.assessment import Assessment
 from src.models.assessment_status import AssessmentStatus
 from src.models.position import CreditPosition
+from src.models.rule_finding import RuleFinding
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
@@ -37,13 +38,13 @@ def test_assessment_service_generates_critical_assessment(
         if result.status == RuleStatus.TRIGGERED
     }
 
-    comment_rule_ids = {
-        comment.rule_id
-        for comment in assessment.comments
+    finding_rule_ids = {
+        finding.result.rule_id
+        for finding in assessment.findings
     }
 
-    assert comment_rule_ids == triggered_rules
-    assert len(assessment.comments) == len(triggered_rules)
+    assert finding_rule_ids == triggered_rules
+    assert len(assessment.findings) == len(triggered_rules)
 
 
 def test_assessment_service_generates_normal_assessment_when_rule_is_not_evaluable(
@@ -73,7 +74,7 @@ def test_assessment_service_generates_normal_assessment_when_rule_is_not_evaluab
         for result in assessment.rule_results
     )
 
-    assert assessment.comments == []
+    assert assessment.findings == []
 
 
 def test_assessment_service_generates_normal_assessment(
@@ -103,7 +104,7 @@ def test_assessment_service_generates_normal_assessment(
         for result in assessment.rule_results
     )
 
-    assert assessment.comments == []
+    assert assessment.findings == []
 
 
 def test_assessment_service_generates_attention_assessment(
@@ -134,13 +135,13 @@ def test_assessment_service_generates_attention_assessment(
         if result.status == RuleStatus.TRIGGERED
     }
 
-    comment_rule_ids = {
-        comment.rule_id
-        for comment in assessment.comments
+    finding_rule_ids = {
+        finding.result.rule_id
+        for finding in assessment.findings
     }
 
-    assert comment_rule_ids == triggered_rules
-    assert len(assessment.comments) == len(triggered_rules)
+    assert finding_rule_ids == triggered_rules
+    assert len(assessment.findings) == len(triggered_rules)
 
 
 def test_assessment_service_builds_assessment_from_dependencies():
@@ -183,10 +184,15 @@ def test_assessment_service_builds_assessment_from_dependencies():
 
     assessment = service.assess(position)
 
+    expected_finding = RuleFinding(
+        result=result,
+        comment=comment,
+    )
+
     assert isinstance(assessment, Assessment)
     assert assessment.position_id == position.position_id
     assert assessment.rule_results == [result]
-    assert assessment.comments == [comment]
+    assert assessment.findings == [expected_finding]
     assert assessment.status == AssessmentStatus.CRITICAL
 
     rule_engine.evaluate.assert_called_once_with(position)
@@ -234,7 +240,8 @@ def test_assessment_service_ignores_missing_comments():
 
     assessment = service.assess(position)
 
-    assert assessment.comments == [comment_1]
-    assert len(assessment.comments) == 1
+    assert len(assessment.findings) == 1
+    assert assessment.findings[0].result == result_1
+    assert assessment.findings[0].comment == comment_1
 
     assert comment_engine.generate.call_count == 2

@@ -11,7 +11,7 @@ def test_assessment_workflow_result_can_be_created():
     assessment = Assessment(
         position_id="POS001",
         rule_results=[],
-        comments=[],
+        findings=[],
         status=AssessmentStatus.CRITICAL,
     )
 
@@ -43,11 +43,12 @@ def test_assessment_workflow_result_can_be_created():
     assert result.analysis is analysis
     assert result.report is report
 
+
 def test_assessment_workflow_result_is_immutable():
     assessment = Assessment(
         position_id="POS001",
         rule_results=[],
-        comments=[],
+        findings=[],
         status=AssessmentStatus.NORMAL,
     )
 
