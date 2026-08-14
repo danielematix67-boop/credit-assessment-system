@@ -1,3 +1,5 @@
+# python -m scripts.check_gemini_workflow
+
 from src.agents.workflow.workflow_factory import (
     create_default_assessment_workflow,
 )
@@ -9,6 +11,7 @@ def run_scenario(
     name: str,
     position: CreditPosition,
 ) -> None:
+
     print("\n" + "=" * 70)
     print(f"SCENARIO: {name}")
     print("=" * 70)
@@ -20,23 +23,81 @@ def run_scenario(
 
     result = workflow.run(position)
 
+    print("\n--- DETERMINISTIC ASSESSMENT ---")
+
     print("\nAssessment status:")
     print(result.assessment.status)
 
+    print("\nRule results:")
+    for rule_result in result.assessment.rule_results:
+        print(
+            f"- {rule_result.rule_id}: "
+            f"{rule_result.rule_name} | "
+            f"{rule_result.status.value}"
+        )
+
+    print("\nComments:")
+    for finding in result.assessment.findings:
+        print(
+            f"- [{finding.comment.rule_id}] "
+            f"{finding.comment.text}"
+        )
+
+    print("\n--- ANALYSIS AGENT ---")
+
     print("\nKey findings:")
-    print(result.analysis.key_findings)
+    for finding in result.analysis.key_findings:
+        print(f"- {finding}")
 
     print("\nRisk factors:")
-    print(result.analysis.risk_factors)
+    for risk in result.analysis.risk_factors:
+        print(f"- {risk}")
 
     print("\nLimitations:")
-    print(result.analysis.limitations)
+    for limitation in result.analysis.limitations:
+        print(f"- {limitation}")
 
-    print("\nGenerated report:")
+    print("\n--- LLM REPORT ---")
+
+    print("\nGenerated executive summary:")
     print(result.report.executive_summary)
+
+    print("\n--- CONSISTENCY CHECKS ---")
+
+    status_consistent = (
+        result.assessment.status
+        == result.analysis.assessment_status
+        == result.report.assessment_status
+    )
+
+    findings_consistent = (
+        result.analysis.key_findings
+        == result.report.findings
+    )
+
+    limitations_consistent = (
+        result.analysis.limitations
+        == result.report.limitations
+    )
+
+    print(
+        f"Assessment status preserved: "
+        f"{'PASS' if status_consistent else 'FAIL'}"
+    )
+
+    print(
+        f"Findings preserved: "
+        f"{'PASS' if findings_consistent else 'FAIL'}"
+    )
+
+    print(
+        f"Limitations preserved: "
+        f"{'PASS' if limitations_consistent else 'FAIL'}"
+    )
 
 
 def main():
+
     critical_position = CreditPosition(
         position_id="POS_CRITICAL",
         revenue_growth=-0.15,
@@ -85,3 +146,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

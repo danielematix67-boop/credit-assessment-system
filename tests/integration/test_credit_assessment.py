@@ -296,3 +296,48 @@ def test_llm_cannot_replace_deterministic_limitations():
     # Limitations must remain those identified by
     # the deterministic assessment pipeline.
     assert result.report.limitations == result.analysis.limitations
+
+def test_not_evaluable_rules_do_not_generate_findings():
+
+    position = CreditPosition(
+        position_id="POS_NORMAL",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=100000,
+        ebitda_margin=0.15,
+        pfn_to_ebitda=2.0,
+        interest_expense=10000,
+    )
+
+    workflow = create_default_assessment_workflow(
+        use_llm=False,
+    )
+
+    result = workflow.run(position)
+
+    assert result.assessment.status == AssessmentStatus.NORMAL
+
+    not_evaluable_results = [
+        rule_result
+        for rule_result in result.assessment.rule_results
+        if rule_result.status == RuleStatus.NOT_EVALUABLE
+    ]
+
+    assert not_evaluable_results
+
+    not_evaluable_rule_ids = {
+        rule_result.rule_id
+        for rule_result in not_evaluable_results
+    }
+
+    finding_rule_ids = {
+        finding.result.rule_id
+        for finding in result.assessment.findings
+    }
+
+    assert finding_rule_ids.isdisjoint(
+        not_evaluable_rule_ids
+    )
+
+    assert result.analysis.key_findings == []
+    assert result.report.findings == []
