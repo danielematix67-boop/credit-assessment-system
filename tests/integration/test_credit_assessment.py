@@ -35,7 +35,7 @@ def test_credit_assessment_end_to_end():
     assert isinstance(result.limitations, list)
 
 
-def test_credit_assessment_propagates_comments_through_analysis_and_report():
+def test_credit_assessment_propagates_findings_through_analysis_and_report():
 
     position = CreditPosition(
         position_id="POS001",
@@ -61,25 +61,49 @@ def test_credit_assessment_propagates_comments_through_analysis_and_report():
     # by the deterministic rule engine.
     assert assessment.findings
 
-    triggered_comments = [
-        finding.comment.text
+    triggered_findings = [
+        finding
         for finding in assessment.findings
         if finding.result.status == RuleStatus.TRIGGERED
     ]
 
-    assert triggered_comments
+    assert triggered_findings
 
-    # The AnalysisAgent must consume the comments
-    # associated with triggered rule findings.
-    assert analysis.key_findings == triggered_comments
+    expected_findings = [
+        (
+            finding.result.category,
+            finding.comment.text,
+        )
+        for finding in triggered_findings
+    ]
 
-    # The deterministic report must preserve
-    # the findings produced by the analysis layer.
-    assert report.findings == analysis.key_findings
+    actual_analysis_findings = [
+        (
+            finding.category,
+            finding.text,
+        )
+        for finding in analysis.key_findings
+    ]
 
-    # Therefore, the original rule comments must
-    # reach the final report unchanged.
-    assert report.findings == triggered_comments
+    # The AnalysisAgent must propagate both the category
+    # and the comment text from the deterministic findings.
+    assert actual_analysis_findings == expected_findings
+
+    actual_report_findings = [
+        (
+            finding.category,
+            finding.text,
+        )
+        for finding in report.findings
+    ]
+
+    # The deterministic report must preserve the findings
+    # produced by the analysis layer.
+    assert actual_report_findings == actual_analysis_findings
+
+    # Therefore, both category and original rule comment
+    # must reach the final report unchanged.
+    assert actual_report_findings == expected_findings
 
     # Limitations must also propagate from the analysis
     # to the final report.
@@ -261,9 +285,10 @@ def test_llm_cannot_replace_deterministic_findings():
     # assessment/analysis pipeline, not from the LLM.
     assert result.report.findings == result.analysis.key_findings
 
-    assert (
-        "The company shows severe financial deterioration."
-        not in result.report.findings
+    assert all(
+        finding.text
+        != "The company shows severe financial deterioration."
+        for finding in result.report.findings
     )
 
 
@@ -296,6 +321,7 @@ def test_llm_cannot_replace_deterministic_limitations():
     # Limitations must remain those identified by
     # the deterministic assessment pipeline.
     assert result.report.limitations == result.analysis.limitations
+
 
 def test_not_evaluable_rules_do_not_generate_findings():
 

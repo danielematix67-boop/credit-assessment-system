@@ -1,11 +1,35 @@
 from src.agents.base.agent import Agent
+from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
+from src.models.rule_finding import RuleFinding
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 
 
 class AnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
+
+    @staticmethod
+    def _to_analysis_finding(
+        finding: RuleFinding,
+    ) -> AnalysisFinding:
+        return AnalysisFinding(
+            rule_id=finding.result.rule_id,
+            category=finding.result.category,
+            severity=finding.result.severity,
+            text=finding.comment.text,
+        )
+
+    @staticmethod
+    def _to_limitation(
+        result,
+    ) -> AnalysisFinding:
+        return AnalysisFinding(
+            rule_id=result.rule_id,
+            category=result.category,
+            severity=result.severity,
+            text=result.rule_name,
+        )
 
     def run(
         self,
@@ -18,26 +42,26 @@ class AnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
             if finding.result.status == RuleStatus.TRIGGERED
         ]
 
-        not_evaluable_findings = [
-            finding
-            for finding in assessment.findings
-            if finding.result.status == RuleStatus.NOT_EVALUABLE
+        not_evaluable_results = [
+            result
+            for result in assessment.rule_results
+            if result.status == RuleStatus.NOT_EVALUABLE
         ]
 
         key_findings = [
-            finding.comment.text
+            self._to_analysis_finding(finding)
             for finding in triggered_findings
         ]
 
         risk_factors = [
-            finding.comment.text
+            self._to_analysis_finding(finding)
             for finding in triggered_findings
             if finding.result.severity == RuleSeverity.HIGH
         ]
 
         limitations = [
-            finding.comment.text
-            for finding in not_evaluable_findings
+            self._to_limitation(result)
+            for result in not_evaluable_results
         ]
 
         return AssessmentAnalysis(

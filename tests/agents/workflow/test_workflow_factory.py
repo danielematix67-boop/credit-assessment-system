@@ -81,7 +81,7 @@ def test_workflow_factory_requires_llm_client_when_llm_enabled():
         )
 
 
-def test_default_workflow_factory_propagates_rule_comments():
+def test_default_workflow_factory_propagates_rule_findings():
 
     position = CreditPosition(
         position_id="POS001",
@@ -99,24 +99,34 @@ def test_default_workflow_factory_propagates_rule_comments():
 
     result = workflow.run(position)
 
-    assessment_comments = [
-        finding.comment.text
+    triggered_findings = [
+        finding
         for finding in result.assessment.findings
         if finding.result.status == RuleStatus.TRIGGERED
     ]
 
-    assert assessment_comments
+    assert triggered_findings
 
-    assert result.analysis.key_findings == (
-        assessment_comments
-    )
+    expected_key_findings = [
+        (
+            finding.result.category,
+            finding.comment.text,
+        )
+        for finding in triggered_findings
+    ]
 
-    assert result.report.findings == (
-        assessment_comments
-    )
+    actual_key_findings = [
+        (
+            finding.category,
+            finding.text,
+        )
+        for finding in result.analysis.key_findings
+    ]
+
+    assert actual_key_findings == expected_key_findings
 
 
-def test_workflow_factory_preserves_comments_with_llm():
+def test_workflow_factory_preserves_categories_with_llm():
 
     position = CreditPosition(
         position_id="POS001",
@@ -137,23 +147,33 @@ def test_workflow_factory_preserves_comments_with_llm():
 
     result = workflow.run(position)
 
-    assessment_comments = [
-        finding.comment.text
+    triggered_findings = [
+        finding
         for finding in result.assessment.findings
         if finding.result.status == RuleStatus.TRIGGERED
+    ]
+
+    expected_key_findings = [
+        (
+            finding.result.category,
+            finding.comment.text,
+        )
+        for finding in triggered_findings
+    ]
+
+    actual_key_findings = [
+        (
+            finding.category,
+            finding.text,
+        )
+        for finding in result.analysis.key_findings
     ]
 
     assert result.assessment.status == (
         AssessmentStatus.CRITICAL
     )
 
-    assert result.analysis.key_findings == (
-        assessment_comments
-    )
-
-    assert result.report.findings == (
-        assessment_comments
-    )
+    assert actual_key_findings == expected_key_findings
 
     assert result.report.assessment_status == (
         result.assessment.status
