@@ -106,7 +106,11 @@ def create_workflow(
 
     if reporting_mode == "LLM + Fallback":
 
-        llm_client = GeminiClient()
+        api_key = st.secrets["GEMINI_API_KEY"]
+
+        llm_client = GeminiClient(
+            api_key=api_key,
+        )
 
         llm_report_generator = LLMReportGenerator(
             llm_client=llm_client,

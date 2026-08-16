@@ -9,12 +9,23 @@ class GeminiClient(LLMClient):
 
     def __init__(
         self,
+        api_key: str | None = None,
         model: str = "gemini-3.5-flash",
     ):
-        api_key = os.environ["GEMINI_API_KEY"]
+        resolved_api_key = (
+            api_key
+            or os.getenv("GEMINI_API_KEY")
+        )
+
+        if not resolved_api_key:
+            raise ValueError(
+                "Gemini API key not configured. "
+                "Set GEMINI_API_KEY in the environment "
+                "or provide it explicitly."
+            )
 
         self.client = genai.Client(
-            api_key=api_key,
+            api_key=resolved_api_key,
         )
 
         self.model = model
@@ -32,6 +43,8 @@ class GeminiClient(LLMClient):
         text = response.text
 
         if text is None:
-            raise ValueError("Gemini returned an empty response")
+            raise ValueError(
+                "Gemini returned an empty response"
+            )
 
         return text
