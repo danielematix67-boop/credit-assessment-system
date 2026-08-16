@@ -1,5 +1,5 @@
 from dataclasses import fields
-from typing import Any, get_type_hints
+from typing import Any
 
 from src.models.position import CreditPosition
 
@@ -130,10 +130,6 @@ def build_demo_position(
         scenario_name
     ]["values"]
 
-    type_hints = get_type_hints(
-        CreditPosition
-    )
-
     position_data: dict[str, Any] = {}
 
     for field in fields(CreditPosition):
@@ -141,12 +137,12 @@ def build_demo_position(
         field_name = field.name
 
         if field_name in scenario_values:
+
             position_data[field_name] = (
                 scenario_values[field_name]
             )
-            continue
 
-        field_type = type_hints[field_name]
+            continue
 
         # If a field is added to CreditPosition in the future,
         # fail explicitly rather than silently inventing financial data.
