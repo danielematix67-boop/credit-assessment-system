@@ -64,8 +64,11 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
 
             self.last_generator_used = "PRIMARY"
 
+            generator_name = type(self.report_generator).__name__
+
             print(
-                "\n  [LLM] Report generated successfully."
+                f"\n  [PRIMARY] Report generated successfully "
+                f"({generator_name})."
             )
 
             return report
