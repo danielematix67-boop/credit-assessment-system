@@ -21,7 +21,7 @@ from src.orchestration.orchestrator_factory import (
 @pytest.fixture
 def normal_position():
     return CreditPosition(
-        position_id="POS002",
+        position_id="TEST_POSITION",
         revenue_growth=0.10,
         ebitda=100000,
         profit_loss=50000,
@@ -34,7 +34,7 @@ def normal_position():
 @pytest.fixture
 def critical_position():
     return CreditPosition(
-        position_id="POS001",
+        position_id="TEST_POSITION",
         revenue_growth=-0.15,
         ebitda=-50000,
         profit_loss=-50000,
@@ -77,11 +77,13 @@ def test_orchestrator_preserves_assessment_status(
     orchestrator,
     critical_position,
 ):
-    assessment = assessment_service.assess(critical_position)
+    expected_status = assessment_service.assess(
+        critical_position
+    ).status
 
     report = orchestrator.run(critical_position)
 
-    assert report.assessment_status == assessment.status
+    assert report.assessment_status == expected_status
 
 
 def test_orchestrator_delegates_execution_to_workflow():
@@ -89,7 +91,6 @@ def test_orchestrator_delegates_execution_to_workflow():
     expected_report = Mock(spec=Report)
 
     workflow = Mock(spec=AssessmentWorkflow)
-
     workflow.run.return_value = AssessmentWorkflowResult(
         assessment=None,
         analysis=None,
@@ -103,7 +104,6 @@ def test_orchestrator_delegates_execution_to_workflow():
     result = orchestrator.run(position)
 
     workflow.run.assert_called_once_with(position)
-
     assert result is expected_report
 
 
@@ -133,12 +133,39 @@ def test_default_orchestrator_creates_valid_orchestrator():
 
 def test_orchestrator_depends_only_on_workflow():
     position = Mock(spec=CreditPosition)
-    position.position_id = "TEST_POSITION"
+    expected_report = Mock(spec=Report)
 
+    workflow = Mock(spec=AssessmentWorkflow)
+
+    workflow.run.return_value = AssessmentWorkflowResult(
+        assessment=None,
+        analysis=None,
+        report=expected_report,
+    )
+
+    orchestrator = AssessmentOrchestrator(
+        workflow=workflow,
+    )
+
+    result = orchestrator.run(position)
+
+    workflow.run.assert_called_once_with(position)
+
+    assert result is expected_report
+
+
+@pytest.mark.parametrize(
+    "status",
+    list(AssessmentStatus),
+)
+def test_orchestrator_preserves_report_status(
+    status,
+):
+    position = Mock(spec=CreditPosition)
     expected_report = Report(
-        position_id=position.position_id,
-        assessment_status=AssessmentStatus.NORMAL,
-        executive_summary="Test summary",
+        position_id="TEST_POSITION",
+        assessment_status=status,
+        executive_summary="Generated report",
         findings_by_category=[],
         limitations=[],
     )
@@ -157,11 +184,7 @@ def test_orchestrator_depends_only_on_workflow():
 
     report = orchestrator.run(position)
 
-    workflow.run.assert_called_once_with(position)
-
-    assert isinstance(report, Report)
-    assert report is expected_report
-    assert report.position_id == position.position_id
+    assert report.assessment_status == status
 
 
 @pytest.mark.parametrize(
@@ -170,31 +193,31 @@ def test_orchestrator_depends_only_on_workflow():
         [],
         [
             ReportFindingGroup(
-                category="revenue",
+                category="category",
                 findings=[],
             ),
         ],
         [
             ReportFindingGroup(
-                category="revenue",
+                category="category_a",
                 findings=[],
             ),
             ReportFindingGroup(
-                category="profitability",
+                category="category_b",
                 findings=[],
             ),
         ],
         [
             ReportFindingGroup(
-                category="revenue",
+                category="category_a",
                 findings=[],
             ),
             ReportFindingGroup(
-                category="profitability",
+                category="category_b",
                 findings=[],
             ),
             ReportFindingGroup(
-                category="leverage",
+                category="category_c",
                 findings=[],
             ),
         ],
@@ -204,11 +227,10 @@ def test_orchestrator_preserves_findings_by_category(
     findings_by_category,
 ):
     position = Mock(spec=CreditPosition)
-    position.position_id = "TEST_POSITION"
 
     expected_report = Report(
-        position_id=position.position_id,
-        assessment_status=AssessmentStatus.CRITICAL,
+        position_id="TEST_POSITION",
+        assessment_status=AssessmentStatus.NORMAL,
         executive_summary="Generated report",
         findings_by_category=findings_by_category,
         limitations=[],

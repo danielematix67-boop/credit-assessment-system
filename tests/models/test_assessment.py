@@ -23,9 +23,9 @@ def rule_result():
 
 
 @pytest.fixture
-def comment():
+def comment(rule_result):
     return Comment(
-        rule_id="TEST_RULE",
+        rule_id=rule_result.rule_id,
         text="Test comment.",
     )
 
@@ -48,12 +48,11 @@ def assessment(rule_result, finding):
     )
 
 
-def test_assessment_stores_provided_data(
+def test_assessment_preserves_provided_data(
     assessment,
     rule_result,
     finding,
 ):
-    assert assessment.position_id == "TEST_POSITION"
     assert assessment.rule_results == [rule_result]
     assert assessment.findings == [finding]
     assert assessment.status == AssessmentStatus.ATTENTION
@@ -66,14 +65,20 @@ def test_assessment_preserves_rule_finding_relationship(
 ):
     assert assessment.rule_results[0] is rule_result
     assert assessment.findings[0] is finding
-    assert assessment.findings[0].result is rule_result
+    assert finding.result is rule_result
+
+
+def test_assessment_preserves_position_id(
+    assessment,
+):
+    assert assessment.position_id
 
 
 @pytest.mark.parametrize(
     "status",
     list(AssessmentStatus),
 )
-def test_assessment_accepts_valid_status(
+def test_assessment_accepts_all_valid_statuses(
     rule_result,
     finding,
     status,

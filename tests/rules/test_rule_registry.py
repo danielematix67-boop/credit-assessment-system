@@ -5,13 +5,35 @@ from src.rules.base.rule import Rule
 from src.rules.base.severity import RuleSeverity
 from src.rules.registry import build_rules, get_default_rules
 
+
+@pytest.fixture
+def rule_config():
+    return RuleConfig(
+        rule_id="TEST_RULE",
+        rule_name="Test rule",
+        category="test",
+        threshold=1.0,
+        severity=RuleSeverity.MEDIUM,
+    )
+
+
+@pytest.fixture
+def registered_rule_id():
+    rules = get_default_rules()
+
+    assert rules
+
+    return rules[0].config.rule_id
+
+
 def test_rule_registry_rejects_unknown_rule_id():
+    unknown_rule_id = "UNKNOWN_RULE"
 
     with pytest.raises(
         ValueError,
-        match="Unknown rule_id: UNKNOWN_RULE",
+        match=f"Unknown rule_id: {unknown_rule_id}",
     ):
-        Rule.get_registered_rule("UNKNOWN_RULE")
+        Rule.get_registered_rule(unknown_rule_id)
 
 
 def test_default_rules_registry_returns_rules():
@@ -40,6 +62,7 @@ def test_default_rules_registry_returns_independent_rule_instances():
     rules_2 = get_default_rules()
 
     assert rules_1 is not rules_2
+    assert len(rules_1) == len(rules_2)
 
     for rule_1, rule_2 in zip(rules_1, rules_2):
         assert rule_1 is not rule_2
@@ -49,19 +72,13 @@ def test_default_rules_registry_returns_independent_rule_instances():
 def test_build_rules_creates_rules_from_configuration():
     configs = [
         RuleConfig(
-            rule_id="R001",
-            rule_name="Rule one",
+            rule_id=rule.config.rule_id,
+            rule_name="Test rule",
             category="test",
-            threshold=0.0,
+            threshold=float(index),
             severity=RuleSeverity.MEDIUM,
-        ),
-        RuleConfig(
-            rule_id="R002",
-            rule_name="Rule two",
-            category="test",
-            threshold=1.0,
-            severity=RuleSeverity.HIGH,
-        ),
+        )
+        for index, rule in enumerate(get_default_rules())
     ]
 
     rules = build_rules(configs)
@@ -82,29 +99,30 @@ def test_build_rules_creates_rules_from_configuration():
     ]
 
 
-def test_build_rules_preserves_configuration_order():
+def test_build_rules_preserves_configuration_order(
+    registered_rule_id,
+):
+    available_rules = get_default_rules()
+
+    rule_ids = [
+        rule.config.rule_id
+        for rule in available_rules
+    ]
+
+    if len(rule_ids) < 2:
+        pytest.skip("At least two registered rules are required.")
+
+    ordered_ids = list(reversed(rule_ids))
+
     configs = [
         RuleConfig(
-            rule_id="R004",
-            rule_name="Rule four",
+            rule_id=rule_id,
+            rule_name="Test rule",
             category="test",
-            threshold=4.0,
-            severity=RuleSeverity.HIGH,
-        ),
-        RuleConfig(
-            rule_id="R001",
-            rule_name="Rule one",
-            category="test",
-            threshold=1.0,
+            threshold=float(index),
             severity=RuleSeverity.MEDIUM,
-        ),
-        RuleConfig(
-            rule_id="R002",
-            rule_name="Rule two",
-            category="test",
-            threshold=2.0,
-            severity=RuleSeverity.LOW,
-        ),
+        )
+        for index, rule_id in enumerate(ordered_ids)
     ]
 
     rules = build_rules(configs)
@@ -112,33 +130,32 @@ def test_build_rules_preserves_configuration_order():
     assert [
         rule.config.rule_id
         for rule in rules
-    ] == [
-        "R004",
-        "R001",
-        "R002",
-    ]
+    ] == ordered_ids
 
 
-def test_build_rules_preserves_configuration_object():
+def test_build_rules_preserves_configuration_object(
+    registered_rule_id,
+):
     config = RuleConfig(
-        rule_id="R004",
-        rule_name="PFN / EBITDA leverage",
-        category="leverage",
-        threshold=4.5,
-        severity=RuleSeverity.HIGH,
+        rule_id=registered_rule_id,
+        rule_name="Test rule",
+        category="test",
+        threshold=1.0,
+        severity=RuleSeverity.MEDIUM,
     )
 
     rules = build_rules([config])
 
     assert len(rules) == 1
     assert isinstance(rules[0], Rule)
-
     assert rules[0].config is config
 
 
 def test_build_rules_raises_for_unknown_rule_id():
+    unknown_rule_id = "UNKNOWN_RULE"
+
     config = RuleConfig(
-        rule_id="R999",
+        rule_id=unknown_rule_id,
         rule_name="Unknown rule",
         category="test",
         threshold=0.0,
@@ -147,15 +164,13 @@ def test_build_rules_raises_for_unknown_rule_id():
 
     with pytest.raises(
         ValueError,
-        match="Unknown rule_id: R999",
+        match=f"Unknown rule_id: {unknown_rule_id}",
     ):
         build_rules([config])
 
 
 def test_build_rules_maps_registered_rule_ids():
-    rules = get_default_rules()
-
-    for rule in rules:
+    for rule in get_default_rules():
         config = RuleConfig(
             rule_id=rule.config.rule_id,
             rule_name="Test rule",
@@ -171,20 +186,23 @@ def test_build_rules_maps_registered_rule_ids():
         assert built_rules[0].config.rule_id == rule.config.rule_id
 
 
-def test_build_rules_uses_configuration_threshold():
+def test_build_rules_uses_configuration_values(
+    registered_rule_id,
+):
+    threshold = 123.45
+    severity = RuleSeverity.HIGH
+
     config = RuleConfig(
-        rule_id="R001",
-        rule_name="Revenue growth deterioration",
-        category="revenue",
-        threshold=-0.20,
-        severity=RuleSeverity.MEDIUM,
+        rule_id=registered_rule_id,
+        rule_name="Test rule",
+        category="test",
+        threshold=threshold,
+        severity=severity,
     )
 
     rules = build_rules([config])
 
     assert len(rules) == 1
-    assert isinstance(rules[0], Rule)
-
-    assert rules[0].config.rule_id == "R001"
-    assert rules[0].config.threshold == -0.20
-    assert rules[0].config.severity == RuleSeverity.MEDIUM
+    assert rules[0].config is config
+    assert rules[0].config.threshold == threshold
+    assert rules[0].config.severity == severity

@@ -5,36 +5,34 @@ from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
 
-def test_rule_result_stores_evaluation_result():
-    result = RuleResult(
-        rule_id="R001",
-        rule_name="Revenue growth deterioration",
-        category="revenue",
+@pytest.fixture
+def rule_result():
+    return RuleResult(
+        rule_id="TEST_RULE",
+        rule_name="Test rule",
+        category="test",
         status=RuleStatus.TRIGGERED,
-        value=-0.15,
-        threshold=-0.10,
+        value=1.0,
+        threshold=0.0,
         severity=RuleSeverity.MEDIUM,
     )
 
-    assert result.rule_id == "R001"
-    assert result.rule_name == "Revenue growth deterioration"
-    assert result.category == "revenue"
-    assert result.status == RuleStatus.TRIGGERED
-    assert result.value == -0.15
-    assert result.threshold == -0.10
-    assert result.severity == RuleSeverity.MEDIUM
+
+def test_rule_result_stores_provided_data(rule_result):
+    expected_values = {
+        "rule_id": "TEST_RULE",
+        "rule_name": "Test rule",
+        "category": "test",
+        "status": RuleStatus.TRIGGERED,
+        "value": 1.0,
+        "threshold": 0.0,
+        "severity": RuleSeverity.MEDIUM,
+    }
+
+    for field, expected_value in expected_values.items():
+        assert getattr(rule_result, field) == expected_value
 
 
-def test_rule_result_is_immutable():
-    result = RuleResult(
-        rule_id="R001",
-        rule_name="Revenue growth deterioration",
-        category="revenue",
-        status=RuleStatus.TRIGGERED,
-        value=-0.15,
-        threshold=-0.10,
-        severity=RuleSeverity.MEDIUM,
-    )
-
+def test_rule_result_is_immutable(rule_result):
     with pytest.raises(AttributeError):
-        result.status = RuleStatus.NOT_TRIGGERED
+        rule_result.status = RuleStatus.NOT_TRIGGERED

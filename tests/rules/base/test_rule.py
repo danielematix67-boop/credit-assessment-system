@@ -20,8 +20,8 @@ class DummyRule(Rule):
     """
     Minimal rule implementation used to test the Rule base class.
 
-    The rule itself does not implement any business logic.
-    The tests focus on the generic severity-resolution mechanism
+    The rule itself does not implement business logic.
+    Tests focus on the generic severity-resolution mechanism
     provided by the Rule base class.
     """
 
@@ -29,7 +29,6 @@ class DummyRule(Rule):
         self,
         position: CreditPosition,
     ) -> RuleResult:
-
         return self._result(
             value=position.revenue_growth,
             status=RuleStatus.TRIGGERED,
@@ -48,7 +47,7 @@ def base_config() -> RuleConfig:
 
 
 @pytest.fixture
-def multi_severity_config() -> RuleConfig:
+def higher_is_worse_config() -> RuleConfig:
     return RuleConfig(
         rule_id="TEST_RULE",
         rule_name="Test rule",
@@ -95,7 +94,7 @@ def lower_is_worse_config() -> RuleConfig:
     )
 
 
-def test_rule_uses_default_severity_when_no_thresholds_are_configured(
+def test_rule_uses_default_severity_without_thresholds(
     base_config,
 ):
     rule = DummyRule(base_config)
@@ -105,7 +104,7 @@ def test_rule_uses_default_severity_when_no_thresholds_are_configured(
         status=RuleStatus.TRIGGERED,
     )
 
-    assert result.severity == RuleSeverity.LOW
+    assert result.severity == base_config.severity
 
 
 @pytest.mark.parametrize(
@@ -120,12 +119,12 @@ def test_rule_uses_default_severity_when_no_thresholds_are_configured(
         (5.5, RuleSeverity.HIGH),
     ],
 )
-def test_rule_resolves_severity_from_thresholds(
-    multi_severity_config,
+def test_rule_resolves_severity_for_higher_is_worse_direction(
+    higher_is_worse_config,
     value,
     expected_severity,
 ):
-    rule = DummyRule(multi_severity_config)
+    rule = DummyRule(higher_is_worse_config)
 
     result = rule._result(
         value=value,
@@ -133,19 +132,6 @@ def test_rule_resolves_severity_from_thresholds(
     )
 
     assert result.severity == expected_severity
-
-
-def test_rule_uses_highest_reached_threshold(
-    multi_severity_config,
-):
-    rule = DummyRule(multi_severity_config)
-
-    result = rule._result(
-        value=5.5,
-        status=RuleStatus.TRIGGERED,
-    )
-
-    assert result.severity == RuleSeverity.HIGH
 
 
 @pytest.mark.parametrize(
@@ -158,7 +144,7 @@ def test_rule_uses_highest_reached_threshold(
         (-25.0, RuleSeverity.HIGH),
     ],
 )
-def test_rule_resolves_severity_when_lower_values_are_worse(
+def test_rule_resolves_severity_for_lower_is_worse_direction(
     lower_is_worse_config,
     value,
     expected_severity,
@@ -173,68 +159,40 @@ def test_rule_resolves_severity_when_lower_values_are_worse(
     assert result.severity == expected_severity
 
 
-def test_rule_uses_lowest_reached_threshold_when_lower_values_are_worse(
-    lower_is_worse_config,
+@pytest.mark.parametrize(
+    "config_fixture",
+    [
+        "higher_is_worse_config",
+        "lower_is_worse_config",
+    ],
+)
+def test_rule_uses_default_severity_when_value_is_none(
+    request,
+    config_fixture,
 ):
-    rule = DummyRule(lower_is_worse_config)
+    config = request.getfixturevalue(config_fixture)
 
-    result = rule._result(
-        value=-25.0,
-        status=RuleStatus.TRIGGERED,
-    )
-
-    assert result.severity == RuleSeverity.HIGH
-
-
-def test_rule_returns_default_severity_when_value_is_none(
-    multi_severity_config,
-):
-    rule = DummyRule(multi_severity_config)
+    rule = DummyRule(config)
 
     result = rule._result(
         value=None,
         status=RuleStatus.NOT_EVALUABLE,
     )
 
-    assert result.severity == RuleSeverity.LOW
+    assert result.severity == config.severity
 
 
 def test_rule_explicit_severity_overrides_threshold_resolution(
-    multi_severity_config,
+    higher_is_worse_config,
 ):
-    rule = DummyRule(multi_severity_config)
+    rule = DummyRule(higher_is_worse_config)
+
+    explicit_severity = RuleSeverity.LOW
 
     result = rule._result(
         value=5.5,
         status=RuleStatus.TRIGGERED,
-        severity=RuleSeverity.LOW,
+        severity=explicit_severity,
     )
 
-    assert result.severity == RuleSeverity.LOW
-
-def test_lower_is_worse_debug(
-    lower_is_worse_config,
-):
-    rule = DummyRule(lower_is_worse_config)
-
-    print(
-        "\nDIRECTION:",
-        rule.config.severity_direction,
-    )
-
-    print(
-        "THRESHOLDS:",
-        rule.config.severity_thresholds,
-    )
-
-    print(
-        "SEVERITY -20:",
-        rule._severity(-20.0),
-    )
-
-    print(
-        "SEVERITY -25:",
-        rule._severity(-25.0),
-    )
-
-    assert True
+    assert result.severity == explicit_severity

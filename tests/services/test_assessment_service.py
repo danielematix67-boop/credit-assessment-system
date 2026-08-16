@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock
 
+import pytest
+
 from src.models.assessment import Assessment
 from src.models.assessment_status import AssessmentStatus
 from src.models.position import CreditPosition
@@ -10,26 +12,90 @@ from src.rules.result import RuleResult
 from src.services.assessment_service import AssessmentService
 
 
-def test_assessment_service_generates_critical_assessment(
+@pytest.fixture(
+    params=[
+        pytest.param(
+            {
+                "position_id": "CRITICAL_POSITION",
+                "revenue_growth": -0.15,
+                "ebitda": -50000,
+                "profit_loss": -50000,
+                "ebitda_margin": -0.05,
+                "pfn_to_ebitda": 6.0,
+                "interest_expense": 40000,
+                "expected_status": AssessmentStatus.CRITICAL,
+            },
+            id="critical",
+        ),
+        pytest.param(
+            {
+                "position_id": "NORMAL_POSITION",
+                "revenue_growth": 0.05,
+                "ebitda": 250000,
+                "profit_loss": 50000,
+                "ebitda_margin": 0.10,
+                "pfn_to_ebitda": 3.5,
+                "interest_expense": 40000,
+                "expected_status": AssessmentStatus.NORMAL,
+            },
+            id="normal",
+        ),
+        pytest.param(
+            {
+                "position_id": "ATTENTION_POSITION",
+                "revenue_growth": 0.05,
+                "ebitda": 250000,
+                "profit_loss": 50000,
+                "ebitda_margin": 0.10,
+                "pfn_to_ebitda": 6.0,
+                "interest_expense": 40000,
+                "expected_status": AssessmentStatus.ATTENTION,
+            },
+            id="attention",
+        ),
+    ]
+)
+def assessment_scenario(request):
+    return request.param
+
+
+@pytest.fixture
+def assessment_position(assessment_scenario):
+    scenario = assessment_scenario.copy()
+
+    scenario.pop("expected_status")
+
+    return CreditPosition(**scenario)
+
+
+def test_assessment_service_generates_expected_assessment(
     assessment_service,
+    assessment_position,
+    assessment_scenario,
 ):
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
+    assessment = assessment_service.assess(
+        assessment_position
     )
 
-    assessment = assessment_service.assess(position)
+    assert isinstance(assessment, Assessment)
+    assert assessment.position_id == assessment_position.position_id
 
-    assert assessment.position_id == "POS001"
-    assert assessment.status == AssessmentStatus.CRITICAL
+    assert (
+        assessment.status
+        == assessment_scenario["expected_status"]
+    )
 
     assert len(assessment.rule_results) == len(
         assessment_service.rule_engine.rules
+    )
+
+
+def test_assessment_service_creates_findings_for_triggered_rules(
+    assessment_service,
+    assessment_position,
+):
+    assessment = assessment_service.assess(
+        assessment_position
     )
 
     triggered_rules = {
@@ -47,11 +113,11 @@ def test_assessment_service_generates_critical_assessment(
     assert len(assessment.findings) == len(triggered_rules)
 
 
-def test_assessment_service_generates_normal_assessment_when_rule_is_not_evaluable(
+def test_assessment_service_does_not_create_findings_for_non_triggered_rules(
     assessment_service,
 ):
     position = CreditPosition(
-        position_id="POS002",
+        position_id="NON_EVALUABLE_POSITION",
         revenue_growth=None,
         ebitda=250000,
         profit_loss=50000,
@@ -62,91 +128,17 @@ def test_assessment_service_generates_normal_assessment_when_rule_is_not_evaluab
 
     assessment = assessment_service.assess(position)
 
-    assert assessment.position_id == "POS002"
-    assert assessment.status == AssessmentStatus.NORMAL
-
-    assert len(assessment.rule_results) == len(
-        assessment_service.rule_engine.rules
-    )
-
     assert all(
         result.status != RuleStatus.TRIGGERED
         for result in assessment.rule_results
     )
 
     assert assessment.findings == []
-
-
-def test_assessment_service_generates_normal_assessment(
-    assessment_service,
-):
-    position = CreditPosition(
-        position_id="POS003",
-        revenue_growth=0.05,
-        ebitda=250000,
-        profit_loss=50000,
-        ebitda_margin=0.10,
-        pfn_to_ebitda=3.5,
-        interest_expense=40000,
-    )
-
-    assessment = assessment_service.assess(position)
-
-    assert assessment.position_id == "POS003"
-    assert assessment.status == AssessmentStatus.NORMAL
-
-    assert len(assessment.rule_results) == len(
-        assessment_service.rule_engine.rules
-    )
-
-    assert all(
-        result.status != RuleStatus.TRIGGERED
-        for result in assessment.rule_results
-    )
-
-    assert assessment.findings == []
-
-
-def test_assessment_service_generates_attention_assessment(
-    assessment_service,
-):
-    position = CreditPosition(
-        position_id="POS004",
-        revenue_growth=0.05,
-        ebitda=250000,
-        profit_loss=50000,
-        ebitda_margin=0.10,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
-    )
-
-    assessment = assessment_service.assess(position)
-
-    assert assessment.position_id == "POS004"
-    assert assessment.status == AssessmentStatus.ATTENTION
-
-    assert len(assessment.rule_results) == len(
-        assessment_service.rule_engine.rules
-    )
-
-    triggered_rules = {
-        result.rule_id
-        for result in assessment.rule_results
-        if result.status == RuleStatus.TRIGGERED
-    }
-
-    finding_rule_ids = {
-        finding.result.rule_id
-        for finding in assessment.findings
-    }
-
-    assert finding_rule_ids == triggered_rules
-    assert len(assessment.findings) == len(triggered_rules)
 
 
 def test_assessment_service_builds_assessment_from_dependencies():
     position = CreditPosition(
-        position_id="POS005",
+        position_id="TEST_POSITION",
         revenue_growth=0.05,
         ebitda=250000,
         profit_loss=50000,
@@ -160,12 +152,12 @@ def test_assessment_service_builds_assessment_from_dependencies():
     status_calculator = MagicMock()
 
     result = RuleResult(
-        rule_id="R001",
-        rule_name="Revenue Growth",
-        category="revenue",
+        rule_id="TEST_RULE",
+        rule_name="Test rule",
+        category="test",
         status=RuleStatus.TRIGGERED,
-        value=-0.15,
-        threshold=-0.10,
+        value=1.0,
+        threshold=0.0,
         severity=RuleSeverity.MEDIUM,
     )
 
@@ -174,7 +166,8 @@ def test_assessment_service_builds_assessment_from_dependencies():
     comment = MagicMock()
     comment_engine.generate.return_value = comment
 
-    status_calculator.calculate.return_value = AssessmentStatus.CRITICAL
+    expected_status = AssessmentStatus.CRITICAL
+    status_calculator.calculate.return_value = expected_status
 
     service = AssessmentService(
         rule_engine=rule_engine,
@@ -193,16 +186,16 @@ def test_assessment_service_builds_assessment_from_dependencies():
     assert assessment.position_id == position.position_id
     assert assessment.rule_results == [result]
     assert assessment.findings == [expected_finding]
-    assert assessment.status == AssessmentStatus.CRITICAL
+    assert assessment.status == expected_status
 
     rule_engine.evaluate.assert_called_once_with(position)
     comment_engine.generate.assert_called_once_with(result)
     status_calculator.calculate.assert_called_once_with([result])
 
 
-def test_assessment_service_ignores_missing_comments():
+def test_assessment_service_skips_results_without_comments():
     position = CreditPosition(
-        position_id="POS006",
+        position_id="TEST_POSITION",
         revenue_growth=0.05,
         ebitda=250000,
         profit_loss=50000,
@@ -215,22 +208,23 @@ def test_assessment_service_ignores_missing_comments():
     comment_engine = MagicMock()
     status_calculator = MagicMock()
 
-    result_1 = MagicMock()
-    result_2 = MagicMock()
+    result_with_comment = MagicMock()
+    result_without_comment = MagicMock()
 
     rule_engine.evaluate.return_value = [
-        result_1,
-        result_2,
+        result_with_comment,
+        result_without_comment,
     ]
 
-    comment_1 = MagicMock()
+    comment = MagicMock()
 
     comment_engine.generate.side_effect = [
-        comment_1,
+        comment,
         None,
     ]
 
-    status_calculator.calculate.return_value = AssessmentStatus.ATTENTION
+    expected_status = AssessmentStatus.ATTENTION
+    status_calculator.calculate.return_value = expected_status
 
     service = AssessmentService(
         rule_engine=rule_engine,
@@ -240,8 +234,11 @@ def test_assessment_service_ignores_missing_comments():
 
     assessment = service.assess(position)
 
-    assert len(assessment.findings) == 1
-    assert assessment.findings[0].result == result_1
-    assert assessment.findings[0].comment == comment_1
+    assert assessment.findings == [
+        RuleFinding(
+            result=result_with_comment,
+            comment=comment,
+        )
+    ]
 
     assert comment_engine.generate.call_count == 2

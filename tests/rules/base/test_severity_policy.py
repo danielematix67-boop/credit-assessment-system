@@ -48,95 +48,91 @@ def higher_is_worse_policy():
     )
 
 
-def test_lower_is_worse_returns_none_when_no_threshold_is_reached(
+def test_lower_is_worse_returns_none_before_first_threshold(
     lower_is_worse_policy,
 ):
+    first_threshold = lower_is_worse_policy.thresholds[0].threshold
+
     assert (
-        lower_is_worse_policy.evaluate(0.11)
+        lower_is_worse_policy.evaluate(first_threshold + 1)
+        is None
+    )
+
+
+def test_higher_is_worse_returns_none_before_first_threshold(
+    higher_is_worse_policy,
+):
+    first_threshold = higher_is_worse_policy.thresholds[0].threshold
+
+    assert (
+        higher_is_worse_policy.evaluate(first_threshold - 1)
         is None
     )
 
 
 @pytest.mark.parametrize(
-    "value, expected_severity",
+    "policy_fixture",
     [
-        (0.10, RuleSeverity.LOW),
-        (0.09, RuleSeverity.LOW),
-        (0.05, RuleSeverity.MEDIUM),
-        (0.049, RuleSeverity.MEDIUM),
-        (0.00, RuleSeverity.HIGH),
-        (-0.01, RuleSeverity.HIGH),
+        "lower_is_worse_policy",
+        "higher_is_worse_policy",
     ],
 )
-def test_lower_is_worse_assigns_expected_severity(
-    lower_is_worse_policy,
-    value,
-    expected_severity,
+def test_threshold_boundaries_are_inclusive(
+    request,
+    policy_fixture,
 ):
-    assert (
-        lower_is_worse_policy.evaluate(value)
-        == expected_severity
-    )
+    policy = request.getfixturevalue(policy_fixture)
+
+    for threshold in policy.thresholds:
+        assert (
+            policy.evaluate(threshold.threshold)
+            == threshold.severity
+        )
 
 
 @pytest.mark.parametrize(
-    "value, expected_severity",
+    "policy_fixture",
     [
-        (2.9, None),
-        (3.0, RuleSeverity.LOW),
-        (3.1, RuleSeverity.LOW),
-        (4.0, RuleSeverity.MEDIUM),
-        (4.1, RuleSeverity.MEDIUM),
-        (5.0, RuleSeverity.HIGH),
-        (5.1, RuleSeverity.HIGH),
+        "lower_is_worse_policy",
+        "higher_is_worse_policy",
     ],
 )
-def test_higher_is_worse_assigns_expected_severity(
-    higher_is_worse_policy,
-    value,
-    expected_severity,
+def test_policy_assigns_configured_severity_at_each_threshold(
+    request,
+    policy_fixture,
 ):
-    assert (
-        higher_is_worse_policy.evaluate(value)
-        == expected_severity
-    )
+    policy = request.getfixturevalue(policy_fixture)
+
+    for threshold in policy.thresholds:
+        assert (
+            policy.evaluate(threshold.threshold)
+            == threshold.severity
+        )
 
 
-def test_lower_is_worse_boundary_is_inclusive(
+def test_lower_is_worse_selects_worst_reached_severity(
     lower_is_worse_policy,
 ):
-    assert (
-        lower_is_worse_policy.evaluate(0.10)
-        == RuleSeverity.LOW
-    )
+    worst_threshold = lower_is_worse_policy.thresholds[-1]
 
     assert (
-        lower_is_worse_policy.evaluate(0.05)
-        == RuleSeverity.MEDIUM
-    )
-
-    assert (
-        lower_is_worse_policy.evaluate(0.00)
-        == RuleSeverity.HIGH
+        lower_is_worse_policy.evaluate(
+            worst_threshold.threshold - 1
+        )
+        == worst_threshold.severity
     )
 
 
-def test_higher_is_worse_boundary_is_inclusive(
+def test_higher_is_worse_selects_worst_reached_severity(
     higher_is_worse_policy,
 ):
-    assert (
-        higher_is_worse_policy.evaluate(3.0)
-        == RuleSeverity.LOW
-    )
+    worst_threshold = higher_is_worse_policy.thresholds[-1]
 
     assert (
-        higher_is_worse_policy.evaluate(4.0)
-        == RuleSeverity.MEDIUM
-    )
-
-    assert (
-        higher_is_worse_policy.evaluate(5.0)
-        == RuleSeverity.HIGH
+        higher_is_worse_policy.evaluate(
+            worst_threshold.threshold + 1
+        )
+        == worst_threshold.severity
     )
 
 

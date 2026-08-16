@@ -9,97 +9,152 @@ from src.services.assessment_status_calculator import (
 )
 
 
-def make_result(
-    rule_id: str,
-    status: RuleStatus,
-) -> RuleResult:
+def make_result(status: RuleStatus) -> RuleResult:
     return RuleResult(
-        rule_id=rule_id,
-        rule_name=f"Test rule {rule_id}",
+        rule_id="TEST_RULE",
+        rule_name="Test rule",
         category="test",
         status=status,
-        value=1.0 if status != RuleStatus.NOT_EVALUABLE else None,
+        value=(
+            1.0
+            if status != RuleStatus.NOT_EVALUABLE
+            else None
+        ),
         threshold=0.0,
         severity=RuleSeverity.MEDIUM,
     )
 
 
 @pytest.mark.parametrize(
-    "results, expected_status",
+    "rule_statuses, expected_status",
     [
         (
             [],
             AssessmentStatus.NORMAL,
         ),
         (
-            [
-                make_result("R001", RuleStatus.NOT_TRIGGERED),
-                make_result("R002", RuleStatus.NOT_TRIGGERED),
-            ],
+            [RuleStatus.NOT_TRIGGERED],
             AssessmentStatus.NORMAL,
         ),
         (
             [
-                make_result("R001", RuleStatus.NOT_EVALUABLE),
-                make_result("R002", RuleStatus.NOT_EVALUABLE),
+                RuleStatus.NOT_TRIGGERED,
+                RuleStatus.NOT_TRIGGERED,
             ],
             AssessmentStatus.NORMAL,
         ),
         (
+            [RuleStatus.NOT_EVALUABLE],
+            AssessmentStatus.NORMAL,
+        ),
+        (
             [
-                make_result("R001", RuleStatus.TRIGGERED),
+                RuleStatus.NOT_EVALUABLE,
+                RuleStatus.NOT_EVALUABLE,
+            ],
+            AssessmentStatus.NORMAL,
+        ),
+        (
+            [RuleStatus.TRIGGERED],
+            AssessmentStatus.ATTENTION,
+        ),
+        (
+            [
+                RuleStatus.TRIGGERED,
+                RuleStatus.NOT_EVALUABLE,
             ],
             AssessmentStatus.ATTENTION,
         ),
         (
             [
-                make_result("R001", RuleStatus.TRIGGERED),
-                make_result("R002", RuleStatus.NOT_EVALUABLE),
+                RuleStatus.TRIGGERED,
+                RuleStatus.NOT_TRIGGERED,
             ],
             AssessmentStatus.ATTENTION,
         ),
         (
             [
-                make_result("R001", RuleStatus.TRIGGERED),
-                make_result("R002", RuleStatus.TRIGGERED),
+                RuleStatus.TRIGGERED,
+                RuleStatus.TRIGGERED,
+            ],
+            AssessmentStatus.CRITICAL,
+        ),
+        (
+            [
+                RuleStatus.TRIGGERED,
+                RuleStatus.TRIGGERED,
+                RuleStatus.NOT_EVALUABLE,
             ],
             AssessmentStatus.CRITICAL,
         ),
     ],
 )
-def test_assessment_status_calculator(
-    results,
+def test_assessment_status_is_derived_from_rule_statuses(
+    rule_statuses,
     expected_status,
 ):
-    calculator = AssessmentStatusCalculator()
-
-    status = calculator.calculate(results)
-
-    assert status == expected_status
-
-def test_only_triggered_rules_affect_assessment_status():
     results = [
-        make_result("R001", RuleStatus.TRIGGERED),
-        make_result("R002", RuleStatus.NOT_EVALUABLE),
-        make_result("R003", RuleStatus.NOT_TRIGGERED),
-        make_result("R004", RuleStatus.NOT_EVALUABLE),
+        make_result(status)
+        for status in rule_statuses
     ]
 
     calculator = AssessmentStatusCalculator()
 
-    status = calculator.calculate(results)
+    assert calculator.calculate(results) == expected_status
 
-    assert status == AssessmentStatus.ATTENTION
 
-def test_not_evaluable_rules_do_not_count_as_triggered():
+@pytest.mark.parametrize(
+    "non_triggered_status",
+    [
+        RuleStatus.NOT_TRIGGERED,
+        RuleStatus.NOT_EVALUABLE,
+    ],
+)
+def test_non_triggered_rules_do_not_affect_attention_status(
+    non_triggered_status,
+):
     results = [
-        make_result("R001", RuleStatus.NOT_EVALUABLE),
-        make_result("R002", RuleStatus.NOT_EVALUABLE),
-        make_result("R003", RuleStatus.TRIGGERED),
+        make_result(RuleStatus.TRIGGERED),
+        make_result(non_triggered_status),
     ]
 
     calculator = AssessmentStatusCalculator()
 
-    status = calculator.calculate(results)
+    assert (
+        calculator.calculate(results)
+        == AssessmentStatus.ATTENTION
+    )
 
-    assert status == AssessmentStatus.ATTENTION
+
+@pytest.mark.parametrize(
+    "additional_statuses",
+    [
+        [],
+        [RuleStatus.NOT_TRIGGERED],
+        [RuleStatus.NOT_EVALUABLE],
+        [
+            RuleStatus.NOT_TRIGGERED,
+            RuleStatus.NOT_EVALUABLE,
+        ],
+    ],
+)
+def test_multiple_triggered_rules_remain_critical(
+    additional_statuses,
+):
+    rule_statuses = [
+        RuleStatus.TRIGGERED,
+        RuleStatus.TRIGGERED,
+        *additional_statuses,
+    ]
+
+    results = [
+        make_result(status)
+        for status in rule_statuses
+    ]
+
+    calculator = AssessmentStatusCalculator()
+
+    assert (
+        calculator.calculate(results)
+        == AssessmentStatus.CRITICAL
+    )

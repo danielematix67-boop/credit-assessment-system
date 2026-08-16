@@ -21,9 +21,9 @@ def rule_result():
 
 
 @pytest.fixture
-def comment():
+def comment(rule_result):
     return Comment(
-        rule_id="TEST_RULE",
+        rule_id=rule_result.rule_id,
         text="Test comment.",
     )
 
@@ -36,7 +36,7 @@ def finding(rule_result, comment):
     )
 
 
-def test_rule_finding_stores_result_and_comment(
+def test_rule_finding_preserves_provided_objects(
     finding,
     rule_result,
     comment,
@@ -45,15 +45,29 @@ def test_rule_finding_stores_result_and_comment(
     assert finding.comment is comment
 
 
-def test_rule_finding_links_result_and_comment_by_rule_id(
+def test_rule_finding_preserves_rule_id_relationship(
     finding,
 ):
     assert finding.result.rule_id == finding.comment.rule_id
 
 
+def test_rule_finding_preserves_result_rule_id(
+    finding,
+    rule_result,
+):
+    assert finding.result.rule_id == rule_result.rule_id
+
+
+def test_rule_finding_preserves_comment_rule_id(
+    finding,
+    comment,
+):
+    assert finding.comment.rule_id == comment.rule_id
+
+
 def test_rule_finding_is_immutable(finding):
     with pytest.raises(AttributeError):
-        finding.comment = Comment(
-            rule_id=finding.comment.rule_id,
-            text="Modified comment.",
-        )
+        finding.comment = None
+
+    with pytest.raises(AttributeError):
+        finding.result = None
