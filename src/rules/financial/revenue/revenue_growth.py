@@ -7,12 +7,20 @@ from src.rules.result import RuleResult
 @Rule.register("R001")
 class RevenueGrowthRule(Rule):
 
-    def evaluate(self, position: CreditPosition) -> RuleResult:
+    def evaluate(
+        self,
+        position: CreditPosition,
+    ) -> RuleResult:
 
         value = position.revenue_growth
 
         if value is None:
-            return self._not_evaluable()
+
+            return self._not_evaluable(
+                reason=(
+                    "Revenue growth is not available."
+                ),
+            )
 
         status = (
             RuleStatus.TRIGGERED

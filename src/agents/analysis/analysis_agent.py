@@ -5,6 +5,7 @@ from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.rule_finding import RuleFinding
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
+from src.rules.result import RuleResult
 
 
 class AnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
@@ -22,13 +23,17 @@ class AnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
 
     @staticmethod
     def _to_limitation(
-        result,
+        result: RuleResult,
     ) -> AnalysisFinding:
         return AnalysisFinding(
             rule_id=result.rule_id,
             category=result.category,
             severity=result.severity,
-            text=result.rule_name,
+            text=(
+                result.reason
+                if result.reason is not None
+                else f"{result.rule_name} could not be evaluated."
+            ),
         )
 
     def run(

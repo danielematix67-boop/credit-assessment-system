@@ -137,6 +137,10 @@ def test_analysis_agent_produces_structured_analysis(
         for finding in analysis.key_findings
     )
 
+    # --------------------------------------------------------
+    # Key findings
+    # --------------------------------------------------------
+
     assert [finding.text for finding in analysis.key_findings] == (
         triggered_comments
     )
@@ -155,6 +159,10 @@ def test_analysis_agent_produces_structured_analysis(
         result.severity
         for result in triggered_results
     ]
+
+    # --------------------------------------------------------
+    # Risk factors
+    # --------------------------------------------------------
 
     assert [finding.text for finding in analysis.risk_factors] == (
         triggered_comments
@@ -175,8 +183,12 @@ def test_analysis_agent_produces_structured_analysis(
         for result in triggered_results
     ]
 
+    # --------------------------------------------------------
+    # Limitations
+    # --------------------------------------------------------
+
     assert [finding.text for finding in analysis.limitations] == [
-        not_evaluable_result.rule_name
+        f"{not_evaluable_result.rule_name} could not be evaluated."
     ]
 
     assert [finding.rule_id for finding in analysis.limitations] == [
@@ -427,7 +439,7 @@ def test_analysis_agent_reports_not_evaluable_rules_as_limitations(
     assert analysis.risk_factors == []
 
     assert [finding.text for finding in analysis.limitations] == [
-        result.rule_name
+        f"{result.rule_name} could not be evaluated."
         for result in results
     ]
 
@@ -465,7 +477,9 @@ def test_analysis_agent_selects_high_severity_risk_factors(
         severity=severity,
     )
 
-    comment_text = f"Risk associated with {severity.value} severity."
+    comment_text = (
+        f"Risk associated with {severity.value} severity."
+    )
 
     assessment = make_assessment(
         status=AssessmentStatus.CRITICAL,

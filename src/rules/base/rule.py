@@ -15,7 +15,10 @@ class Rule(ABC):
         self.config = config
 
     @abstractmethod
-    def evaluate(self, position: CreditPosition) -> RuleResult:
+    def evaluate(
+        self,
+        position: CreditPosition,
+    ) -> RuleResult:
         pass
 
     def _result(
@@ -23,7 +26,9 @@ class Rule(ABC):
         *,
         value: float | None,
         status: RuleStatus,
+        reason: str | None = None,
     ) -> RuleResult:
+
         return RuleResult(
             rule_id=self.config.rule_id,
             rule_name=self.config.rule_name,
@@ -32,23 +37,37 @@ class Rule(ABC):
             value=value,
             threshold=self.config.threshold,
             severity=self.config.severity,
+            reason=reason,
         )
 
-    def _not_evaluable(self) -> RuleResult:
+    def _not_evaluable(
+        self,
+        reason: str,
+    ) -> RuleResult:
+
         return self._result(
             value=None,
             status=RuleStatus.NOT_EVALUABLE,
+            reason=reason,
         )
 
     @classmethod
-    def register(cls, rule_id: str):
-        def decorator(rule_class: type["Rule"]) -> type["Rule"]:
+    def register(
+        cls,
+        rule_id: str,
+    ):
+
+        def decorator(
+            rule_class: type["Rule"],
+        ) -> type["Rule"]:
+
             if rule_id in cls._registry:
                 raise ValueError(
                     f"Rule already registered: {rule_id}"
                 )
 
             cls._registry[rule_id] = rule_class
+
             return rule_class
 
         return decorator
@@ -58,9 +77,12 @@ class Rule(ABC):
         cls,
         rule_id: str,
     ) -> type["Rule"]:
+
         try:
             return cls._registry[rule_id]
+
         except KeyError:
+
             raise ValueError(
                 f"Unknown rule_id: {rule_id}"
             ) from None

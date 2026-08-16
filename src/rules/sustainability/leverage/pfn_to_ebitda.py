@@ -10,12 +10,19 @@ class PfnToEbitdaRule(Rule):
     Triggers when PFN / EBITDA exceeds the defined leverage threshold.
     """
 
-    def evaluate(self, position: CreditPosition) -> RuleResult:
+    def evaluate(
+        self,
+        position: CreditPosition,
+    ) -> RuleResult:
 
         value = position.pfn_to_ebitda
 
         if value is None:
-            return self._not_evaluable()
+            return self._not_evaluable(
+                reason=(
+                    "PFN / EBITDA is not available."
+                ),
+            )
 
         status = (
             RuleStatus.TRIGGERED

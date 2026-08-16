@@ -6,20 +6,47 @@ from src.rules.result import RuleResult
 
 @Rule.register("R006")
 class EbitdaInventoryContributionRule(Rule):
+    """
+    Triggers when the contribution of the change in finished
+    goods inventory to EBITDA exceeds the defined threshold.
 
-    def evaluate(self, position: CreditPosition) -> RuleResult:
+    The rule is not evaluable when EBITDA or the inventory
+    variation is missing, or when EBITDA is not positive.
+    """
 
-        if (
-            position.ebitda is None
-            or position.change_in_finished_goods_inventory is None
-            or position.ebitda <= 0
-        ):
-            return self._not_evaluable()
+    def evaluate(
+        self,
+        position: CreditPosition,
+    ) -> RuleResult:
 
-        value = (
+        ebitda = position.ebitda
+        inventory_change = (
             position.change_in_finished_goods_inventory
-            / position.ebitda
         )
+
+        if ebitda is None:
+            return self._not_evaluable(
+                reason="EBITDA is not available.",
+            )
+
+        if inventory_change is None:
+            return self._not_evaluable(
+                reason=(
+                    "Change in finished goods inventory "
+                    "is not available."
+                ),
+            )
+
+        if ebitda <= 0:
+            return self._not_evaluable(
+                reason=(
+                    "EBITDA must be greater than zero "
+                    "to calculate the inventory contribution "
+                    "to EBITDA."
+                ),
+            )
+
+        value = inventory_change / ebitda
 
         status = (
             RuleStatus.TRIGGERED

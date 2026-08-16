@@ -7,16 +7,39 @@ from src.rules.result import RuleResult
 @Rule.register("R005")
 class FinancialExpensesToEbitdaRule(Rule):
     """
-    Triggers when interest expense exceeds the defined proportion of EBITDA.
+    Triggers when interest expense exceeds the defined proportion
+    of EBITDA.
     """
 
-    def evaluate(self, position: CreditPosition) -> RuleResult:
+    def evaluate(
+        self,
+        position: CreditPosition,
+    ) -> RuleResult:
 
         interest_expense = position.interest_expense
         ebitda = position.ebitda
 
-        if interest_expense is None or ebitda is None or ebitda <= 0:
-            return self._not_evaluable()
+        if interest_expense is None:
+
+            return self._not_evaluable(
+                reason="Interest expense is not available.",
+            )
+
+        if ebitda is None:
+
+            return self._not_evaluable(
+                reason="EBITDA is not available.",
+            )
+
+        if ebitda <= 0:
+
+            return self._not_evaluable(
+                reason=(
+                    "EBITDA must be greater than zero "
+                    "to calculate the financial expenses "
+                    "to EBITDA ratio."
+                ),
+            )
 
         value = interest_expense / ebitda
 

@@ -10,16 +10,34 @@ class InterestCoverageRatioRule(Rule):
     Triggers when EBITDA does not sufficiently cover interest expense.
     """
 
-    def evaluate(self, position: CreditPosition) -> RuleResult:
+    def evaluate(
+        self,
+        position: CreditPosition,
+    ) -> RuleResult:
+
         ebitda = position.ebitda
         interest_expense = position.interest_expense
 
-        if (
-            ebitda is None
-            or interest_expense is None
-            or interest_expense <= 0
-        ):
-            return self._not_evaluable()
+        if ebitda is None:
+
+            return self._not_evaluable(
+                reason="EBITDA is not available.",
+            )
+
+        if interest_expense is None:
+
+            return self._not_evaluable(
+                reason="Interest expense is not available.",
+            )
+
+        if interest_expense <= 0:
+
+            return self._not_evaluable(
+                reason=(
+                    "Interest expense must be greater than zero "
+                    "to calculate the interest coverage ratio."
+                ),
+            )
 
         value = ebitda / interest_expense
 
