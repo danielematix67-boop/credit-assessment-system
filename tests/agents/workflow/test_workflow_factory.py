@@ -4,36 +4,61 @@ from src.agents.analysis.analysis_agent import AnalysisAgent
 from src.agents.reporting.deterministic_report_generator import (
     DeterministicReportGenerator,
 )
-from src.agents.reporting.llm_report_generator import LLMReportGenerator
+from src.agents.reporting.llm_report_generator import (
+    LLMReportGenerator,
+)
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.agents.workflow.assessment_workflow import AssessmentWorkflow
 from src.agents.workflow.workflow_factory import (
     create_default_assessment_workflow,
 )
 from src.llm.mock_client import MockLLMClient
-from src.models.assessment_status import AssessmentStatus
+from src.models.assessment_workflow import AssessmentWorkflowResult
 from src.models.position import CreditPosition
 from src.rules.base.status import RuleStatus
 
 
-def test_default_workflow_factory_creates_valid_workflow():
+# ============================================================
+# Fixtures
+# ============================================================
 
+
+@pytest.fixture
+def representative_position():
+    """
+    Generic valid position used to verify that the
+    factory-created workflow can execute end-to-end.
+
+    The test does not depend on any specific rule
+    being triggered.
+    """
+    return CreditPosition(
+        position_id="TEST_POSITION",
+        revenue_growth=0.0,
+        ebitda=1.0,
+        profit_loss=1.0,
+        ebitda_margin=0.0,
+        pfn_to_ebitda=0.0,
+        interest_expense=0.0,
+    )
+
+
+@pytest.fixture
+def llm_client():
+    return MockLLMClient()
+
+
+# ============================================================
+# Factory construction
+# ============================================================
+
+
+def test_factory_creates_default_workflow():
     workflow = create_default_assessment_workflow()
 
-    assert isinstance(
-        workflow,
-        AssessmentWorkflow,
-    )
-
-    assert isinstance(
-        workflow.analysis_agent,
-        AnalysisAgent,
-    )
-
-    assert isinstance(
-        workflow.reporting_agent,
-        ReportingAgent,
-    )
+    assert isinstance(workflow, AssessmentWorkflow)
+    assert isinstance(workflow.analysis_agent, AnalysisAgent)
+    assert isinstance(workflow.reporting_agent, ReportingAgent)
 
     assert isinstance(
         workflow.reporting_agent.report_generator,
@@ -41,27 +66,15 @@ def test_default_workflow_factory_creates_valid_workflow():
     )
 
 
-def test_workflow_factory_can_create_llm_workflow():
-
+def test_factory_creates_llm_workflow(llm_client):
     workflow = create_default_assessment_workflow(
         use_llm=True,
-        llm_client=MockLLMClient(),
+        llm_client=llm_client,
     )
 
-    assert isinstance(
-        workflow,
-        AssessmentWorkflow,
-    )
-
-    assert isinstance(
-        workflow.analysis_agent,
-        AnalysisAgent,
-    )
-
-    assert isinstance(
-        workflow.reporting_agent,
-        ReportingAgent,
-    )
+    assert isinstance(workflow, AssessmentWorkflow)
+    assert isinstance(workflow.analysis_agent, AnalysisAgent)
+    assert isinstance(workflow.reporting_agent, ReportingAgent)
 
     assert isinstance(
         workflow.reporting_agent.report_generator,
@@ -69,35 +82,78 @@ def test_workflow_factory_can_create_llm_workflow():
     )
 
 
-def test_workflow_factory_requires_llm_client_when_llm_enabled():
-
+def test_factory_rejects_missing_llm_client_when_llm_enabled():
     with pytest.raises(
         ValueError,
         match="llm_client is required when use_llm=True",
     ):
         create_default_assessment_workflow(
             use_llm=True,
-            llm_client=None,
         )
 
 
-def test_default_workflow_factory_propagates_rule_findings():
+# ============================================================
+# Workflow execution
+# ============================================================
 
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
+
+@pytest.mark.parametrize(
+    "use_llm",
+    [False, True],
+)
+def test_factory_creates_executable_workflow(
+    representative_position,
+    llm_client,
+    use_llm,
+):
+    workflow = create_default_assessment_workflow(
+        use_llm=use_llm,
+        llm_client=llm_client if use_llm else None,
     )
 
+    result = workflow.run(representative_position)
+
+    assert isinstance(result, AssessmentWorkflowResult)
+
+    assert (
+        result.assessment.position_id
+        == representative_position.position_id
+    )
+
+    assert (
+        result.analysis.position_id
+        == result.assessment.position_id
+    )
+
+    assert (
+        result.report.position_id
+        == result.assessment.position_id
+    )
+
+    assert (
+        result.analysis.assessment_status
+        == result.assessment.status
+    )
+
+    assert (
+        result.report.assessment_status
+        == result.assessment.status
+    )
+
+
+# ============================================================
+# Rule findings propagation
+# ============================================================
+
+
+def test_factory_preserves_triggered_rule_findings(
+    representative_position,
+):
     workflow = create_default_assessment_workflow(
         use_llm=False,
     )
 
-    result = workflow.run(position)
+    result = workflow.run(representative_position)
 
     triggered_findings = [
         finding
@@ -105,76 +161,143 @@ def test_default_workflow_factory_propagates_rule_findings():
         if finding.result.status == RuleStatus.TRIGGERED
     ]
 
-    assert triggered_findings
-
-    expected_key_findings = [
+    expected_findings = [
         (
+            finding.result.rule_id,
             finding.result.category,
+            finding.result.severity,
             finding.comment.text,
         )
         for finding in triggered_findings
     ]
 
-    actual_key_findings = [
+    actual_findings = [
         (
+            finding.rule_id,
             finding.category,
+            finding.severity,
             finding.text,
         )
         for finding in result.analysis.key_findings
     ]
 
-    assert actual_key_findings == expected_key_findings
+    assert actual_findings == expected_findings
 
 
-def test_workflow_factory_preserves_categories_with_llm():
-
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
+def test_factory_does_not_create_findings_not_present_in_assessment(
+    representative_position,
+):
+    workflow = create_default_assessment_workflow(
+        use_llm=False,
     )
 
+    result = workflow.run(representative_position)
+
+    assessment_rule_ids = {
+        finding.result.rule_id
+        for finding in result.assessment.findings
+        if finding.result.status == RuleStatus.TRIGGERED
+    }
+
+    analysis_rule_ids = {
+        finding.rule_id
+        for finding in result.analysis.key_findings
+    }
+
+    assert analysis_rule_ids <= assessment_rule_ids
+
+
+# ============================================================
+# LLM structured-data preservation
+# ============================================================
+
+
+def test_llm_workflow_preserves_deterministic_assessment_data(
+    representative_position,
+    llm_client,
+):
     workflow = create_default_assessment_workflow(
         use_llm=True,
-        llm_client=MockLLMClient(
-            response="CRITICAL assessment identified.",
-        ),
+        llm_client=llm_client,
     )
 
-    result = workflow.run(position)
+    result = workflow.run(representative_position)
 
-    triggered_findings = [
+    assessment_findings = [
         finding
         for finding in result.assessment.findings
         if finding.result.status == RuleStatus.TRIGGERED
     ]
 
-    expected_key_findings = [
+    expected_findings = [
         (
+            finding.result.rule_id,
             finding.result.category,
+            finding.result.severity,
             finding.comment.text,
         )
-        for finding in triggered_findings
+        for finding in assessment_findings
     ]
 
-    actual_key_findings = [
+    actual_findings = [
         (
+            finding.rule_id,
             finding.category,
+            finding.severity,
             finding.text,
         )
         for finding in result.analysis.key_findings
     ]
 
-    assert result.assessment.status == (
-        AssessmentStatus.CRITICAL
+    assert actual_findings == expected_findings
+
+    assert (
+        result.report.assessment_status
+        == result.assessment.status
     )
 
-    assert actual_key_findings == expected_key_findings
 
-    assert result.report.assessment_status == (
-        result.assessment.status
+def test_llm_workflow_preserves_assessment_status(
+    representative_position,
+    llm_client,
+):
+    workflow = create_default_assessment_workflow(
+        use_llm=True,
+        llm_client=llm_client,
     )
+
+    result = workflow.run(representative_position)
+
+    assert (
+        result.analysis.assessment_status
+        == result.assessment.status
+    )
+
+    assert (
+        result.report.assessment_status
+        == result.assessment.status
+    )
+
+
+# ============================================================
+# Factory independence from rule identifiers
+# ============================================================
+
+
+def test_factory_does_not_require_specific_rule_identifiers(
+    representative_position,
+):
+    workflow = create_default_assessment_workflow(
+        use_llm=False,
+    )
+
+    result = workflow.run(representative_position)
+
+    for finding in result.analysis.key_findings:
+        assert finding.rule_id
+
+    for finding in result.analysis.risk_factors:
+        assert finding.rule_id
+
+    for finding in result.analysis.limitations:
+        assert finding.rule_id

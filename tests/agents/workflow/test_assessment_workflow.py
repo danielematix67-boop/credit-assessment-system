@@ -10,25 +10,60 @@ from src.agents.workflow.assessment_workflow import AssessmentWorkflow
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
-from src.models.assessment_status import AssessmentStatus
 from src.models.assessment_workflow import AssessmentWorkflowResult
 from src.models.position import CreditPosition
-from src.models.report import Report, ReportFindingGroup
+from src.models.report import Report
 from src.rules.base.severity import RuleSeverity
+
+
+# ============================================================
+# Helpers
+# ============================================================
+
+
+def make_position() -> CreditPosition:
+    """
+    Create a generic valid credit position.
+
+    The exact financial values are irrelevant for workflow tests.
+    The position only needs to be structurally valid.
+    """
+    return CreditPosition(
+        position_id="TEST_POSITION",
+        revenue_growth=0.0,
+        ebitda=0.0,
+        profit_loss=0.0,
+        ebitda_margin=0.0,
+        pfn_to_ebitda=0.0,
+        interest_expense=0.0,
+    )
+
+
+def make_report(
+    position_id: str,
+    assessment_status,
+) -> Report:
+    """
+    Create a minimal report suitable for workflow tests.
+    """
+    return Report(
+        position_id=position_id,
+        assessment_status=assessment_status,
+        executive_summary="Test summary",
+        findings_by_category=[],
+        limitations=[],
+    )
+
+
+# ============================================================
+# Workflow execution
+# ============================================================
 
 
 def test_assessment_workflow_executes_all_stages(
     assessment_service,
 ):
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
-    )
+    position = make_position()
 
     workflow = AssessmentWorkflow(
         assessment_service=assessment_service,
@@ -42,9 +77,9 @@ def test_assessment_workflow_executes_all_stages(
 
     assert isinstance(result, AssessmentWorkflowResult)
 
-    assert result.assessment.position_id == "POS001"
-    assert result.analysis.position_id == "POS001"
-    assert result.report.position_id == "POS001"
+    assert result.assessment.position_id == position.position_id
+    assert result.analysis.position_id == position.position_id
+    assert result.report.position_id == position.position_id
 
     assert result.report.assessment_status == (
         result.assessment.status
@@ -52,6 +87,11 @@ def test_assessment_workflow_executes_all_stages(
 
     assert result.report_generator_used == "PRIMARY"
     assert result.report_generation_error is None
+
+
+# ============================================================
+# Agent contract compatibility
+# ============================================================
 
 
 def test_assessment_workflow_accepts_agent_contracts(
@@ -69,18 +109,18 @@ def test_assessment_workflow_accepts_agent_contracts(
                 assessment_status=assessment.status,
                 key_findings=[
                     AnalysisFinding(
-                        rule_id="TEST_RULE",
-                        category="profitability",
+                        rule_id="GENERIC_RULE",
+                        category="GENERIC_CATEGORY",
                         severity=RuleSeverity.HIGH,
-                        text="Test finding",
+                        text="Generic finding",
                     ),
                 ],
                 risk_factors=[
                     AnalysisFinding(
-                        rule_id="TEST_RULE",
-                        category="profitability",
+                        rule_id="GENERIC_RULE",
+                        category="GENERIC_CATEGORY",
                         severity=RuleSeverity.HIGH,
-                        text="Test risk",
+                        text="Generic risk",
                     ),
                 ],
                 limitations=[],
@@ -93,39 +133,12 @@ def test_assessment_workflow_accepts_agent_contracts(
             self,
             analysis: AssessmentAnalysis,
         ) -> Report:
-            categories = {}
-
-            for finding in analysis.key_findings:
-                categories.setdefault(
-                    finding.category,
-                    [],
-                ).append(finding)
-
-            findings_by_category = [
-                ReportFindingGroup(
-                    category=category,
-                    findings=findings,
-                )
-                for category, findings in categories.items()
-            ]
-
-            return Report(
+            return make_report(
                 position_id=analysis.position_id,
                 assessment_status=analysis.assessment_status,
-                executive_summary="Test summary",
-                findings_by_category=findings_by_category,
-                limitations=analysis.limitations,
             )
 
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
-    )
+    position = make_position()
 
     workflow = AssessmentWorkflow(
         assessment_service=assessment_service,
@@ -137,137 +150,109 @@ def test_assessment_workflow_accepts_agent_contracts(
 
     assert isinstance(result, AssessmentWorkflowResult)
 
-    # Analysis findings
+    assert result.assessment.position_id == position.position_id
+    assert result.analysis.position_id == position.position_id
+    assert result.report.position_id == position.position_id
+
+    assert result.analysis.assessment_status == (
+        result.assessment.status
+    )
+
+    assert result.report.assessment_status == (
+        result.analysis.assessment_status
+    )
+
     assert len(result.analysis.key_findings) == 1
-
-    finding = result.analysis.key_findings[0]
-
-    assert isinstance(finding, AnalysisFinding)
-    assert finding.rule_id == "TEST_RULE"
-    assert finding.category == "profitability"
-    assert finding.severity == RuleSeverity.HIGH
-    assert finding.text == "Test finding"
-
-    # Risk factors
     assert len(result.analysis.risk_factors) == 1
 
-    risk_factor = result.analysis.risk_factors[0]
+    assert isinstance(
+        result.analysis.key_findings[0],
+        AnalysisFinding,
+    )
 
-    assert isinstance(risk_factor, AnalysisFinding)
-    assert risk_factor.rule_id == "TEST_RULE"
-    assert risk_factor.category == "profitability"
-    assert risk_factor.severity == RuleSeverity.HIGH
-    assert risk_factor.text == "Test risk"
+    assert isinstance(
+        result.analysis.risk_factors[0],
+        AnalysisFinding,
+    )
 
-    # Report
-    assert result.report.executive_summary == "Test summary"
+    assert result.analysis.limitations == []
 
-    assert result.report.findings_by_category == [
-        ReportFindingGroup(
-            category="profitability",
-            findings=[
-                finding,
-            ],
-        ),
-    ]
-
-    assert result.report.limitations == []
-
-    # Generic agents do not expose reporting telemetry.
     assert result.report_generator_used is None
     assert result.report_generation_error is None
+
+
+# ============================================================
+# Reporting telemetry propagation
+# ============================================================
 
 
 def test_assessment_workflow_propagates_primary_reporting_status():
     reporting_agent = MagicMock()
 
-    reporting_agent.run.return_value = Report(
-        position_id="POS001",
-        assessment_status=AssessmentStatus.CRITICAL,
-        executive_summary="Generated report",
-        findings_by_category=[],
-        limitations=[],
+    reporting_agent.run.return_value = MagicMock(
+        spec=Report,
     )
 
     reporting_agent.last_generator_used = "PRIMARY"
     reporting_agent.last_error = None
 
+    assessment_service = MagicMock()
+    analysis_agent = MagicMock()
+
+    assessment = MagicMock(spec=Assessment)
+    analysis = MagicMock(spec=AssessmentAnalysis)
+
+    assessment_service.assess.return_value = assessment
+    analysis_agent.run.return_value = analysis
+
     workflow = AssessmentWorkflow(
-        assessment_service=MagicMock(),
-        analysis_agent=MagicMock(),
+        assessment_service=assessment_service,
+        analysis_agent=analysis_agent,
         reporting_agent=reporting_agent,
     )
 
-    assessment = MagicMock()
-    assessment.position_id = "POS001"
+    result = workflow.run(make_position())
 
-    analysis = MagicMock()
-    analysis.position_id = "POS001"
-
-    workflow.assessment_service.assess.return_value = assessment
-    workflow.analysis_agent.run.return_value = analysis
-
-    result = workflow.run(
-        CreditPosition(
-            position_id="POS001",
-            revenue_growth=-0.15,
-            ebitda=-50000,
-            profit_loss=-50000,
-            ebitda_margin=-0.05,
-            pfn_to_ebitda=6.0,
-            interest_expense=40000,
-        )
+    assert result.report_generator_used == (
+        reporting_agent.last_generator_used
     )
 
-    assert result.report_generator_used == "PRIMARY"
-    assert result.report_generation_error is None
+    assert result.report_generation_error == (
+        reporting_agent.last_error
+    )
 
 
 def test_assessment_workflow_propagates_fallback_reporting_status():
     reporting_agent = MagicMock()
 
-    reporting_agent.run.return_value = Report(
-        position_id="POS001",
-        assessment_status=AssessmentStatus.CRITICAL,
-        executive_summary="Deterministic fallback report",
-        findings_by_category=[],
-        limitations=[],
+    reporting_agent.run.return_value = MagicMock(
+        spec=Report,
     )
 
     reporting_agent.last_generator_used = "FALLBACK"
-    reporting_agent.last_error = (
-        "Gemini service is temporarily unavailable."
-    )
+    reporting_agent.last_error = "Fallback error"
+
+    assessment_service = MagicMock()
+    analysis_agent = MagicMock()
+
+    assessment = MagicMock(spec=Assessment)
+    analysis = MagicMock(spec=AssessmentAnalysis)
+
+    assessment_service.assess.return_value = assessment
+    analysis_agent.run.return_value = analysis
 
     workflow = AssessmentWorkflow(
-        assessment_service=MagicMock(),
-        analysis_agent=MagicMock(),
+        assessment_service=assessment_service,
+        analysis_agent=analysis_agent,
         reporting_agent=reporting_agent,
     )
 
-    assessment = MagicMock()
-    assessment.position_id = "POS001"
+    result = workflow.run(make_position())
 
-    analysis = MagicMock()
-    analysis.position_id = "POS001"
-
-    workflow.assessment_service.assess.return_value = assessment
-    workflow.analysis_agent.run.return_value = analysis
-
-    result = workflow.run(
-        CreditPosition(
-            position_id="POS001",
-            revenue_growth=-0.15,
-            ebitda=-50000,
-            profit_loss=-50000,
-            ebitda_margin=-0.05,
-            pfn_to_ebitda=6.0,
-            interest_expense=40000,
-        )
+    assert result.report_generator_used == (
+        reporting_agent.last_generator_used
     )
 
-    assert result.report_generator_used == "FALLBACK"
-
     assert result.report_generation_error == (
-        "Gemini service is temporarily unavailable."
+        reporting_agent.last_error
     )

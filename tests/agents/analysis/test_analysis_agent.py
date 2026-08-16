@@ -43,13 +43,13 @@ def make_rule_result(
 
 def make_finding(
     result: RuleResult,
-    text: str,
+    text: str | None = None,
 ) -> RuleFinding:
     return RuleFinding(
         result=result,
         comment=Comment(
             rule_id=result.rule_id,
-            text=text,
+            text=text or f"Finding for {result.rule_id}.",
         ),
     )
 
@@ -58,14 +58,14 @@ def make_assessment(
     *,
     position_id: str = "TEST_POSITION",
     status: AssessmentStatus = AssessmentStatus.ATTENTION,
-    rule_results: list[RuleResult],
-    findings: list[RuleFinding],
+    rule_results: list[RuleResult] | None = None,
+    findings: list[RuleFinding] | None = None,
 ) -> Assessment:
     return Assessment(
         position_id=position_id,
         status=status,
-        rule_results=rule_results,
-        findings=findings,
+        rule_results=rule_results or [],
+        findings=findings or [],
     )
 
 
@@ -80,41 +80,27 @@ def test_analysis_agent_produces_structured_analysis(
 ):
     triggered_results = [
         make_rule_result(
-            rule_id="RULE_A",
-            category="revenue",
-            status=RuleStatus.TRIGGERED,
-            severity=RuleSeverity.HIGH,
-        ),
-        make_rule_result(
-            rule_id="RULE_B",
-            category="profitability",
-            status=RuleStatus.TRIGGERED,
-            severity=RuleSeverity.HIGH,
-        ),
+            rule_id=f"TRIGGERED_{index}",
+            category=f"CATEGORY_{index}",
+            severity=severity,
+        )
+        for index, severity in enumerate(
+            [RuleSeverity.HIGH, RuleSeverity.MEDIUM],
+            start=1,
+        )
     ]
 
     not_evaluable_result = make_rule_result(
-        rule_id="RULE_C",
+        rule_id="NOT_EVALUABLE",
         rule_name="Unavailable metric",
-        category="profitability",
+        category="UNAVAILABLE_CATEGORY",
         status=RuleStatus.NOT_EVALUABLE,
         severity=RuleSeverity.MEDIUM,
     )
 
-    triggered_comments = [
-        "First triggered finding.",
-        "Second triggered finding.",
-    ]
-
     findings = [
-        make_finding(
-            triggered_results[0],
-            triggered_comments[0],
-        ),
-        make_finding(
-            triggered_results[1],
-            triggered_comments[1],
-        ),
+        make_finding(result)
+        for result in triggered_results
     ]
 
     assessment = make_assessment(
@@ -137,140 +123,90 @@ def test_analysis_agent_produces_structured_analysis(
         for finding in analysis.key_findings
     )
 
-    # --------------------------------------------------------
-    # Key findings
-    # --------------------------------------------------------
-
-    assert [finding.text for finding in analysis.key_findings] == (
-        triggered_comments
-    )
-
-    assert [finding.rule_id for finding in analysis.key_findings] == [
-        result.rule_id
-        for result in triggered_results
+    expected_findings = [
+        (
+            finding.comment.text,
+            finding.result.rule_id,
+            finding.result.category,
+            finding.result.severity,
+        )
+        for finding in findings
     ]
 
-    assert [finding.category for finding in analysis.key_findings] == [
-        result.category
-        for result in triggered_results
+    actual_findings = [
+        (
+            finding.text,
+            finding.rule_id,
+            finding.category,
+            finding.severity,
+        )
+        for finding in analysis.key_findings
     ]
 
-    assert [finding.severity for finding in analysis.key_findings] == [
-        result.severity
-        for result in triggered_results
+    assert actual_findings == expected_findings
+
+    expected_risk_factors = [
+        finding
+        for finding in analysis.key_findings
+        if finding.severity == RuleSeverity.HIGH
     ]
 
-    # --------------------------------------------------------
-    # Risk factors
-    # --------------------------------------------------------
+    assert analysis.risk_factors == expected_risk_factors
 
-    assert [finding.text for finding in analysis.risk_factors] == (
-        triggered_comments
-    )
-
-    assert [finding.rule_id for finding in analysis.risk_factors] == [
-        result.rule_id
-        for result in triggered_results
+    expected_limitations = [
+        (
+            f"{result.rule_name} could not be evaluated.",
+            result.rule_id,
+            result.category,
+            result.severity,
+        )
+        for result in [not_evaluable_result]
     ]
 
-    assert [finding.category for finding in analysis.risk_factors] == [
-        result.category
-        for result in triggered_results
+    actual_limitations = [
+        (
+            finding.text,
+            finding.rule_id,
+            finding.category,
+            finding.severity,
+        )
+        for finding in analysis.limitations
     ]
 
-    assert [finding.severity for finding in analysis.risk_factors] == [
-        result.severity
-        for result in triggered_results
-    ]
-
-    # --------------------------------------------------------
-    # Limitations
-    # --------------------------------------------------------
-
-    assert [finding.text for finding in analysis.limitations] == [
-        f"{not_evaluable_result.rule_name} could not be evaluated."
-    ]
-
-    assert [finding.rule_id for finding in analysis.limitations] == [
-        not_evaluable_result.rule_id
-    ]
-
-    assert [finding.category for finding in analysis.limitations] == [
-        not_evaluable_result.category
-    ]
-
-    assert [finding.severity for finding in analysis.limitations] == [
-        not_evaluable_result.severity
-    ]
+    assert actual_limitations == expected_limitations
 
 
-def test_analysis_agent_uses_comment_text_for_key_findings(
+def test_analysis_agent_preserves_comment_text(
     analysis_agent,
 ):
     result = make_rule_result(
-        rule_id="CUSTOM_RULE",
-        category="custom_category",
-        status=RuleStatus.TRIGGERED,
+        rule_id="ARBITRARY_RULE",
+        category="ARBITRARY_CATEGORY",
         severity=RuleSeverity.MEDIUM,
     )
 
     comment_text = "Custom finding generated by the comment engine."
 
-    finding = make_finding(
-        result,
-        comment_text,
-    )
-
     assessment = make_assessment(
         rule_results=[result],
-        findings=[finding],
+        findings=[
+            make_finding(
+                result,
+                comment_text,
+            )
+        ],
     )
 
     analysis = analysis_agent.run(assessment)
 
     assert len(analysis.key_findings) == 1
 
-    analysis_finding = analysis.key_findings[0]
+    finding = analysis.key_findings[0]
 
-    assert analysis_finding.text == comment_text
-    assert analysis_finding.rule_id == result.rule_id
-    assert analysis_finding.category == result.category
-    assert analysis_finding.severity == result.severity
-
-
-def test_analysis_agent_uses_comment_text_for_risk_factors(
-    analysis_agent,
-):
-    result = make_rule_result(
-        rule_id="CUSTOM_RULE",
-        category="custom_category",
-        status=RuleStatus.TRIGGERED,
-        severity=RuleSeverity.HIGH,
-    )
-
-    comment_text = "Custom high-severity risk identified."
-
-    finding = make_finding(
-        result,
-        comment_text,
-    )
-
-    assessment = make_assessment(
-        status=AssessmentStatus.CRITICAL,
-        rule_results=[result],
-        findings=[finding],
-    )
-
-    analysis = analysis_agent.run(assessment)
-
-    assert len(analysis.risk_factors) == 1
-
-    risk_factor = analysis.risk_factors[0]
-
-    assert risk_factor.text == comment_text
-    assert risk_factor.rule_id == result.rule_id
-    assert risk_factor.category == result.category
-    assert risk_factor.severity == RuleSeverity.HIGH
+    assert finding.text == comment_text
+    assert finding.rule_id == result.rule_id
+    assert finding.category == result.category
+    assert finding.severity == result.severity
 
 
 def test_analysis_agent_does_not_depend_on_rule_ids(
@@ -279,26 +215,19 @@ def test_analysis_agent_does_not_depend_on_rule_ids(
     results = [
         make_rule_result(
             rule_id="ARBITRARY_ID_A",
-            category="category_a",
-            status=RuleStatus.TRIGGERED,
+            category="CATEGORY_A",
             severity=RuleSeverity.HIGH,
         ),
         make_rule_result(
             rule_id="COMPLETELY_DIFFERENT_ID",
-            category="category_b",
-            status=RuleStatus.TRIGGERED,
+            category="CATEGORY_B",
             severity=RuleSeverity.MEDIUM,
         ),
     ]
 
-    comments = [
-        "First arbitrary finding.",
-        "Second arbitrary finding.",
-    ]
-
     findings = [
-        make_finding(results[0], comments[0]),
-        make_finding(results[1], comments[1]),
+        make_finding(result)
+        for result in results
     ]
 
     assessment = make_assessment(
@@ -310,22 +239,35 @@ def test_analysis_agent_does_not_depend_on_rule_ids(
 
     assert analysis.assessment_status == assessment.status
 
-    assert [finding.text for finding in analysis.key_findings] == (
-        comments
-    )
-
-    assert [finding.rule_id for finding in analysis.key_findings] == [
+    assert [
+        finding.rule_id
+        for finding in analysis.key_findings
+    ] == [
         result.rule_id
         for result in results
     ]
 
-    assert [finding.category for finding in analysis.key_findings] == [
+    assert [
+        finding.category
+        for finding in analysis.key_findings
+    ] == [
         result.category
         for result in results
     ]
 
-    assert [finding.text for finding in analysis.risk_factors] == [
-        comments[0]
+    assert [
+        finding.text
+        for finding in analysis.key_findings
+    ] == [
+        finding.comment.text
+        for finding in findings
+    ]
+
+    assert [
+        finding.rule_id
+        for finding in analysis.risk_factors
+    ] == [
+        results[0].rule_id
     ]
 
 
@@ -333,63 +275,51 @@ def test_analysis_agent_ignores_not_triggered_rules(
     analysis_agent,
 ):
     triggered_result = make_rule_result(
-        rule_id="TRIGGERED_RULE",
-        category="triggered_category",
         status=RuleStatus.TRIGGERED,
         severity=RuleSeverity.HIGH,
     )
 
     not_triggered_result = make_rule_result(
-        rule_id="NOT_TRIGGERED_RULE",
-        category="ignored_category",
+        rule_id="NOT_TRIGGERED",
         status=RuleStatus.NOT_TRIGGERED,
         severity=RuleSeverity.LOW,
     )
 
-    triggered_comment = "Triggered finding."
+    triggered_finding = make_finding(triggered_result)
 
     assessment = make_assessment(
         rule_results=[
             triggered_result,
             not_triggered_result,
         ],
-        findings=[
-            make_finding(
-                triggered_result,
-                triggered_comment,
-            ),
-        ],
+        findings=[triggered_finding],
     )
 
     analysis = analysis_agent.run(assessment)
 
     assert [
-        finding.text for finding in analysis.key_findings
-    ] == [triggered_comment]
-
-    assert [
-        finding.rule_id for finding in analysis.key_findings
+        finding.rule_id
+        for finding in analysis.key_findings
     ] == [triggered_result.rule_id]
 
     assert [
-        finding.text for finding in analysis.risk_factors
-    ] == [triggered_comment]
+        finding.rule_id
+        for finding in analysis.risk_factors
+    ] == [triggered_result.rule_id]
 
     assert analysis.limitations == []
 
 
-def test_analysis_agent_handles_normal_assessment(
+def test_analysis_agent_handles_assessment_without_triggered_rules(
     analysis_agent,
 ):
     results = [
         make_rule_result(
+            rule_id=f"RULE_{index}",
             status=RuleStatus.NOT_TRIGGERED,
             severity=RuleSeverity.LOW,
-        ),
-        make_rule_result(
-            status=RuleStatus.NOT_TRIGGERED,
-            severity=RuleSeverity.LOW,
-        ),
+        )
+        for index in range(2)
     ]
 
     assessment = make_assessment(
@@ -412,19 +342,16 @@ def test_analysis_agent_reports_not_evaluable_rules_as_limitations(
 ):
     results = [
         make_rule_result(
-            rule_id="UNAVAILABLE_A",
-            rule_name="Unavailable revenue metric",
-            category="revenue",
+            rule_id=f"UNAVAILABLE_{index}",
+            rule_name=f"Unavailable metric {index}",
+            category=f"CATEGORY_{index}",
             status=RuleStatus.NOT_EVALUABLE,
-            severity=RuleSeverity.MEDIUM,
-        ),
-        make_rule_result(
-            rule_id="UNAVAILABLE_B",
-            rule_name="Unavailable profitability metric",
-            category="profitability",
-            status=RuleStatus.NOT_EVALUABLE,
-            severity=RuleSeverity.LOW,
-        ),
+            severity=severity,
+        )
+        for index, severity in enumerate(
+            [RuleSeverity.MEDIUM, RuleSeverity.LOW],
+            start=1,
+        )
     ]
 
     assessment = make_assessment(
@@ -438,25 +365,27 @@ def test_analysis_agent_reports_not_evaluable_rules_as_limitations(
     assert analysis.key_findings == []
     assert analysis.risk_factors == []
 
-    assert [finding.text for finding in analysis.limitations] == [
-        f"{result.rule_name} could not be evaluated."
+    expected_limitations = [
+        (
+            f"{result.rule_name} could not be evaluated.",
+            result.rule_id,
+            result.category,
+            result.severity,
+        )
         for result in results
     ]
 
-    assert [finding.rule_id for finding in analysis.limitations] == [
-        result.rule_id
-        for result in results
+    actual_limitations = [
+        (
+            finding.text,
+            finding.rule_id,
+            finding.category,
+            finding.severity,
+        )
+        for finding in analysis.limitations
     ]
 
-    assert [finding.category for finding in analysis.limitations] == [
-        result.category
-        for result in results
-    ]
-
-    assert [finding.severity for finding in analysis.limitations] == [
-        result.severity
-        for result in results
-    ]
+    assert actual_limitations == expected_limitations
 
 
 @pytest.mark.parametrize(
@@ -473,30 +402,21 @@ def test_analysis_agent_selects_high_severity_risk_factors(
     expected_as_risk_factor,
 ):
     result = make_rule_result(
-        status=RuleStatus.TRIGGERED,
         severity=severity,
     )
 
-    comment_text = (
-        f"Risk associated with {severity.value} severity."
-    )
+    finding = make_finding(result)
 
     assessment = make_assessment(
         status=AssessmentStatus.CRITICAL,
         rule_results=[result],
-        findings=[
-            make_finding(
-                result,
-                comment_text,
-            ),
-        ],
+        findings=[finding],
     )
 
     analysis = analysis_agent.run(assessment)
 
-    assert [finding.text for finding in analysis.key_findings] == [
-        comment_text
-    ]
+    assert len(analysis.key_findings) == 1
+    assert analysis.key_findings[0].text == finding.comment.text
 
     expected_risk_factors = (
         analysis.key_findings

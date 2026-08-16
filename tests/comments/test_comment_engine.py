@@ -1,228 +1,282 @@
 import pytest
-from dataclasses import replace
 
 from src.comments.comment_engine import CommentEngine
-from src.models.position import CreditPosition
-from src.rules.base.config import RuleConfig
+from src.comments.templates import COMMENTS
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
-from src.rules.financial.revenue.revenue_growth import RevenueGrowthRule
-from src.rules.financial.profitability.negative_ebitda import (
-    NegativeEbitdaRule,
-)
-from src.rules.financial.margins.ebitda_margin import EbitdaMarginRule
 from src.rules.result import RuleResult
-from src.rules.sustainability.leverage.pfn_to_ebitda import (
-    PfnToEbitdaRule,
-)
-from src.rules.financial.profitability.financial_expenses_to_ebitda import (
-    FinancialExpensesToEbitdaRule,
-)
+
+
+# ============================================================
+# Fixtures
+# ============================================================
 
 
 @pytest.fixture
-def base_position():
-    return CreditPosition(
-        position_id="POS001",
-        revenue_growth=0.05,
-        ebitda=250000,
-        profit_loss=50000,
-        ebitda_margin=0.10,
-        pfn_to_ebitda=3.5,
-        interest_expense=40000,
-    )
+def comment_engine():
+    return CommentEngine()
 
 
-@pytest.mark.parametrize(
-    "rule_class, rule_id, rule_name, category, threshold, severity, position_changes",
-    [
-        (
-            RevenueGrowthRule,
-            "R001",
-            "Revenue growth deterioration",
-            "revenue",
-            -0.10,
-            RuleSeverity.MEDIUM,
-            {"revenue_growth": -0.15},
-        ),
-        (
-            NegativeEbitdaRule,
-            "R002",
-            "Negative EBITDA",
-            "profitability",
-            0.0,
-            RuleSeverity.HIGH,
-            {"ebitda": -50000},
-        ),
-        (
-            EbitdaMarginRule,
-            "R003",
-            "EBITDA margin deterioration",
-            "profitability",
-            0.0,
-            RuleSeverity.MEDIUM,
-            {"ebitda_margin": -0.05},
-        ),
-        (
-            PfnToEbitdaRule,
-            "R004",
-            "PFN / EBITDA leverage",
-            "leverage",
-            5.0,
-            RuleSeverity.HIGH,
-            {"pfn_to_ebitda": 6.0},
-        ),
-        (
-            FinancialExpensesToEbitdaRule,
-            "R005",
-            "Interest expense to EBITDA",
-            "profitability",
-            0.60,
-            RuleSeverity.MEDIUM,
-            {"interest_expense": 200000},
-        ),
-    ],
-)
-def test_comment_generated_for_triggered_rule(
-    base_position,
-    rule_class,
+@pytest.fixture
+def supported_rule_ids():
+    """
+    Return all rule IDs for which a comment template exists.
+    """
+    assert COMMENTS, "No comment templates are configured."
+
+    return tuple(COMMENTS)
+
+
+# ============================================================
+# Helpers
+# ============================================================
+
+
+def make_rule_result(
+    *,
     rule_id,
-    rule_name,
-    category,
-    threshold,
-    severity,
-    position_changes,
+    status=RuleStatus.TRIGGERED,
+    value=1.0,
+    threshold=0.0,
+    rule_name="Test rule",
+    category="test",
+    severity=RuleSeverity.MEDIUM,
 ):
-    position = replace(base_position, **position_changes)
-
-    config = RuleConfig(
+    return RuleResult(
         rule_id=rule_id,
         rule_name=rule_name,
         category=category,
+        status=status,
+        value=value,
         threshold=threshold,
         severity=severity,
     )
 
-    rule = rule_class(config)
-    result = rule.evaluate(position)
 
-    engine = CommentEngine()
-    comment = engine.generate(result)
+def get_unsupported_rule_id():
+    """
+    Return an ID that is guaranteed not to have a configured
+    comment template.
+    """
+    rule_id = "__UNSUPPORTED_RULE__"
 
-    assert result.status == RuleStatus.TRIGGERED
+    while rule_id in COMMENTS:
+        rule_id = f"_{rule_id}_"
+
+    return rule_id
+
+
+# ============================================================
+# Contract
+# ============================================================
+
+
+@pytest.mark.parametrize(
+    "rule_id",
+    tuple(COMMENTS),
+)
+def test_comment_engine_generates_comment_for_supported_rule(
+    comment_engine,
+    rule_id,
+):
+    result = make_rule_result(
+        rule_id=rule_id,
+    )
+
+    comment = comment_engine.generate(result)
 
     assert comment is not None
     assert comment.rule_id == result.rule_id
     assert comment.text
 
 
-def test_no_comment_generated_when_rule_is_not_triggered(base_position):
-    config = RuleConfig(
-        rule_id="R001",
-        rule_name="Revenue growth deterioration",
-        category="revenue",
-        threshold=-0.10,
-        severity=RuleSeverity.MEDIUM,
+def test_comment_engine_returns_none_for_unsupported_rule(
+    comment_engine,
+):
+    result = make_rule_result(
+        rule_id=get_unsupported_rule_id(),
     )
 
-    rule = RevenueGrowthRule(config)
-    result = rule.evaluate(base_position)
-
-    engine = CommentEngine()
-    comment = engine.generate(result)
-
-    assert result.status != RuleStatus.TRIGGERED
-    assert comment is None
-
-
-def test_no_comment_generated_when_rule_is_not_evaluable(base_position):
-    position = replace(
-        base_position,
-        revenue_growth=None,
-    )
-
-    config = RuleConfig(
-        rule_id="R001",
-        rule_name="Revenue growth deterioration",
-        category="revenue",
-        threshold=-0.10,
-        severity=RuleSeverity.MEDIUM,
-    )
-
-    rule = RevenueGrowthRule(config)
-    result = rule.evaluate(position)
-
-    engine = CommentEngine()
-    comment = engine.generate(result)
-
-    assert result.status == RuleStatus.NOT_EVALUABLE
-    assert comment is None
-
-
-def test_no_comment_generated_when_rule_has_no_template():
-    result = RuleResult(
-        rule_id="R999",
-        rule_name="Custom rule",
-        category="test",
-        status=RuleStatus.TRIGGERED,
-        value=10.0,
-        threshold=5.0,
-        severity=RuleSeverity.MEDIUM,
-    )
-
-    engine = CommentEngine()
-
-    comment = engine.generate(result)
+    comment = comment_engine.generate(result)
 
     assert comment is None
 
 
-def test_comment_engine_renders_rule_value():
-    result = RuleResult(
-        rule_id="R001",
-        rule_name="Revenue growth deterioration",
-        category="revenue",
-        status=RuleStatus.TRIGGERED,
-        value=-0.20,
-        threshold=-0.10,
-        severity=RuleSeverity.MEDIUM,
+# ============================================================
+# Rule status
+# ============================================================
+
+
+@pytest.mark.parametrize(
+    "status",
+    tuple(RuleStatus),
+)
+def test_comment_engine_only_generates_comments_for_triggered_results(
+    comment_engine,
+    supported_rule_ids,
+    status,
+):
+    rule_id = supported_rule_ids[0]
+
+    result = make_rule_result(
+        rule_id=rule_id,
+        status=status,
     )
 
-    engine = CommentEngine()
+    comment = comment_engine.generate(result)
 
-    comment = engine.generate(result)
+    if status == RuleStatus.TRIGGERED:
+        assert comment is not None
+        assert comment.rule_id == result.rule_id
+        assert comment.text
+    else:
+        assert comment is None
+
+
+# ============================================================
+# Template coverage
+# ============================================================
+
+
+def test_comment_engine_supports_all_configured_templates(
+    comment_engine,
+    supported_rule_ids,
+):
+    for rule_id in supported_rule_ids:
+        result = make_rule_result(
+            rule_id=rule_id,
+        )
+
+        comment = comment_engine.generate(result)
+
+        assert comment is not None
+        assert comment.rule_id == rule_id
+        assert comment.text
+
+
+# ============================================================
+# Template rendering
+# ============================================================
+
+
+@pytest.mark.parametrize(
+    "rule_id, template",
+    tuple(COMMENTS.items()),
+)
+def test_comment_engine_renders_configured_template(
+    comment_engine,
+    rule_id,
+    template,
+):
+    value = 123.456
+
+    result = make_rule_result(
+        rule_id=rule_id,
+        value=value,
+    )
+
+    comment = comment_engine.generate(result)
 
     assert comment is not None
-    assert comment.rule_id == result.rule_id
-    assert comment.text
 
-    # The deterministic result retains the threshold.
-    assert result.threshold == -0.10
+    expected_text = template.format(
+        value=value,
+    )
 
-    # The comment should contain the evaluated value,
-    # while its exact wording remains implementation-independent.
-    assert "-20.0%" in comment.text
+    assert comment.text == expected_text
 
 
-def test_comment_engine_does_not_modify_rule_result():
-    result = RuleResult(
-        rule_id="R001",
-        rule_name="Revenue growth deterioration",
-        category="revenue",
-        status=RuleStatus.TRIGGERED,
-        value=-0.15,
-        threshold=-0.10,
-        severity=RuleSeverity.MEDIUM,
+# ============================================================
+# RuleResult preservation
+# ============================================================
+
+
+@pytest.mark.parametrize(
+    "rule_id",
+    tuple(COMMENTS),
+)
+def test_comment_engine_does_not_modify_rule_result(
+    comment_engine,
+    rule_id,
+):
+    result = make_rule_result(
+        rule_id=rule_id,
+        value=123.0,
+        threshold=100.0,
+        rule_name="Arbitrary rule",
+        category="arbitrary_category",
+        severity=RuleSeverity.HIGH,
+    )
+
+    original_values = (
+        result.rule_id,
+        result.rule_name,
+        result.category,
+        result.status,
+        result.value,
+        result.threshold,
+        result.severity,
     )
 
     original_result = result
 
-    engine = CommentEngine()
-    comment = engine.generate(result)
-
-    assert comment is not None
+    comment_engine.generate(result)
 
     assert result is original_result
-    assert result.value == -0.15
-    assert result.threshold == -0.10
-    assert result.status == RuleStatus.TRIGGERED
+
+    assert (
+        result.rule_id,
+        result.rule_name,
+        result.category,
+        result.status,
+        result.value,
+        result.threshold,
+        result.severity,
+    ) == original_values
+
+
+# ============================================================
+# Metadata independence
+# ============================================================
+
+
+@pytest.mark.parametrize(
+    "rule_id",
+    tuple(COMMENTS),
+)
+def test_comment_engine_uses_rule_id_as_template_key(
+    comment_engine,
+    rule_id,
+):
+    result = make_rule_result(
+        rule_id=rule_id,
+        rule_name="Arbitrary rule name",
+        category="arbitrary_category",
+        severity=RuleSeverity.HIGH,
+    )
+
+    comment = comment_engine.generate(result)
+
+    assert comment is not None
+    assert comment.rule_id == rule_id
+    assert comment.text
+
+
+# ============================================================
+# Missing template handling
+# ============================================================
+
+
+def test_comment_engine_handles_missing_template_gracefully(
+    comment_engine,
+):
+    unsupported_rule_id = get_unsupported_rule_id()
+
+    result = make_rule_result(
+        rule_id=unsupported_rule_id,
+        status=RuleStatus.TRIGGERED,
+    )
+
+    assert result.rule_id not in COMMENTS
+
+    assert comment_engine.generate(result) is None
