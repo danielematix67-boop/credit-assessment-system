@@ -8,13 +8,17 @@ import streamlit as st
 
 
 # ============================================================
-# Project Path
+# Project Paths
 # ============================================================
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+APP_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = APP_DIR.parent
 
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+if str(APP_DIR) not in sys.path:
+    sys.path.insert(0, str(APP_DIR))
 
 
 # ============================================================
@@ -22,6 +26,8 @@ if str(PROJECT_ROOT) not in sys.path:
 # ============================================================
 
 # ruff: noqa: E402
+
+from demo_scenarios import DEMO_SCENARIOS
 
 from src.agents.analysis.analysis_agent import AnalysisAgent
 from src.agents.reporting.deterministic_report_generator import (
@@ -266,104 +272,8 @@ def format_field_description(
 
 
 # ============================================================
-# Demo Scenarios
+# Demo Scenario Builder
 # ============================================================
-
-DEMO_SCENARIOS = {
-
-    "Healthy Company": {
-        "description": (
-            "A financially solid company with positive growth, "
-            "positive profitability, healthy margins and moderate leverage."
-        ),
-        "values": {
-            "position_id": "DEMO-HEALTHY-001",
-            "revenue_growth": 0.08,
-            "ebitda": 500_000.0,
-            "profit_loss": 220_000.0,
-            "ebitda_margin": 0.18,
-            "pfn_to_ebitda": 1.5,
-        },
-    },
-
-    "Revenue Deterioration": {
-        "description": (
-            "A company experiencing a significant contraction in revenues "
-            "while maintaining otherwise relatively stable fundamentals."
-        ),
-        "values": {
-            "position_id": "DEMO-REVENUE-001",
-            "revenue_growth": -0.15,
-            "ebitda": 350_000.0,
-            "profit_loss": 120_000.0,
-            "ebitda_margin": 0.12,
-            "pfn_to_ebitda": 2.0,
-        },
-    },
-
-    "Profitability Stress": {
-        "description": (
-            "A company showing deterioration in profitability and margins "
-            "despite still generating positive EBITDA."
-        ),
-        "values": {
-            "position_id": "DEMO-PROFITABILITY-001",
-            "revenue_growth": 0.02,
-            "ebitda": 150_000.0,
-            "profit_loss": -50_000.0,
-            "ebitda_margin": 0.025,
-            "pfn_to_ebitda": 3.0,
-        },
-    },
-
-    "Leverage Stress": {
-        "description": (
-            "A company with significant financial leverage. "
-            "Operating performance remains positive, but debt capacity "
-            "represents the main risk factor."
-        ),
-        "values": {
-            "position_id": "DEMO-LEVERAGE-001",
-            "revenue_growth": 0.03,
-            "ebitda": 400_000.0,
-            "profit_loss": 100_000.0,
-            "ebitda_margin": 0.14,
-            "pfn_to_ebitda": 6.0,
-        },
-    },
-
-    "Multiple Risk Factors": {
-        "description": (
-            "A distressed company combining revenue contraction, "
-            "negative EBITDA, negative profitability and high leverage."
-        ),
-        "values": {
-            "position_id": "DEMO-MULTIPLE-RISK-001",
-            "revenue_growth": -0.20,
-            "ebitda": -120_000.0,
-            "profit_loss": -180_000.0,
-            "ebitda_margin": -0.08,
-            "pfn_to_ebitda": 7.0,
-        },
-    },
-
-    "Missing Information": {
-        "description": (
-            "A company for which several financial indicators are "
-            "unavailable. This scenario demonstrates NOT_EVALUABLE "
-            "handling and data-quality limitations."
-        ),
-        "values": {
-            "position_id": "DEMO-MISSING-001",
-            "revenue_growth": None,
-            "ebitda": None,
-            "profit_loss": None,
-            "ebitda_margin": None,
-            "pfn_to_ebitda": None,
-        },
-    },
-}
-
 
 def build_demo_position(
     scenario_name: str,
@@ -1053,7 +963,7 @@ with configuration_col2:
     if input_mode == "Demo Scenario":
 
         st.caption(
-            f"Input source: **Demo Scenario**"
+            "Input source: **Demo Scenario**"
         )
 
     else:
@@ -1160,6 +1070,10 @@ if run_button:
         "assessment_input_mode"
     ] = input_mode
 
+    st.session_state[
+        "assessment_reporting_mode"
+    ] = reporting_mode
+
     if input_mode == "Demo Scenario":
 
         st.session_state[
@@ -1178,6 +1092,13 @@ result = st.session_state.get(
 assessment_position = (
     st.session_state.get(
         "assessment_position"
+    )
+)
+
+assessment_reporting_mode = (
+    st.session_state.get(
+        "assessment_reporting_mode",
+        reporting_mode,
     )
 )
 
@@ -1326,7 +1247,7 @@ if result is not None:
 
         elif generator_used == "PRIMARY":
 
-            if reporting_mode == "LLM + Fallback":
+            if assessment_reporting_mode == "LLM + Fallback":
 
                 st.success(
                     "✓ LLM Reporting"
@@ -1673,7 +1594,7 @@ if result is not None:
 
         elif generator_used == "PRIMARY":
 
-            if reporting_mode == "LLM + Fallback":
+            if assessment_reporting_mode == "LLM + Fallback":
 
                 st.success(
                     "Gemini generated the executive report "

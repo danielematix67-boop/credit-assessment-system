@@ -1,57 +1,168 @@
-from typing import Any
+# ============================================================
+# Demo Scenarios
+# ============================================================
 
+DEMO_SCENARIOS = {
 
-DEMO_SCENARIOS: dict[str, dict[str, Any]] = {
+    # --------------------------------------------------------
+    # 1. Healthy
+    # --------------------------------------------------------
+
     "Healthy Company": {
         "description": (
-            "Stable financial profile with healthy profitability "
-            "and moderate leverage."
+            "A financially healthy company with positive revenue growth, "
+            "positive EBITDA and net income, strong EBITDA margin and "
+            "moderate leverage. No material warning rules should be triggered."
         ),
-        "data": {
-            "position_id": "DEMO-001",
-            "revenue_growth": 0.08,
-            "ebitda": 5_000_000.0,
-            "profit_loss": 2_500_000.0,
-            "ebitda_margin": 0.18,
+        "values": {
+            "position_id": "DEMO-HEALTHY-001",
+
+            "revenue_growth": 0.10,
+            "ebitda": 1_000_000.0,
+            "profit_loss": 400_000.0,
+            "ebitda_margin": 0.20,
             "pfn_to_ebitda": 1.5,
         },
     },
-    "Watchlist Company": {
+
+    # --------------------------------------------------------
+    # 2. Moderate deterioration
+    # --------------------------------------------------------
+
+    "Moderate Deterioration": {
         "description": (
-            "Moderate deterioration in financial performance "
-            "requiring closer monitoring."
+            "A company showing simultaneous deterioration in revenue "
+            "growth and EBITDA margin, while profitability and leverage "
+            "remain relatively controlled. This scenario demonstrates "
+            "how multiple warning rules can be triggered at the same time."
         ),
-        "data": {
-            "position_id": "DEMO-002",
-            "revenue_growth": -0.05,
-            "ebitda": 3_000_000.0,
-            "profit_loss": 800_000.0,
-            "ebitda_margin": 0.08,
-            "pfn_to_ebitda": 3.2,
+        "values": {
+            "position_id": "DEMO-MODERATE-001",
+
+            # Revenue deterioration
+            "revenue_growth": -0.12,
+
+            # Still positive
+            "ebitda": 500_000.0,
+            "profit_loss": 100_000.0,
+
+            # Weak margin
+            "ebitda_margin": 0.04,
+
+            # Elevated but not extreme leverage
+            "pfn_to_ebitda": 3.5,
         },
     },
-    "High Risk Company": {
+
+    # --------------------------------------------------------
+    # 3. Profitability + leverage stress
+    # --------------------------------------------------------
+
+    "Profitability and Leverage Stress": {
         "description": (
-            "Significant deterioration in profitability and "
-            "elevated financial leverage."
+            "A company affected by simultaneous profitability deterioration "
+            "and excessive financial leverage. Revenue remains broadly stable, "
+            "allowing the demonstration to isolate multiple financial risk "
+            "dimensions."
         ),
-        "data": {
-            "position_id": "DEMO-003",
-            "revenue_growth": -0.15,
-            "ebitda": 1_200_000.0,
-            "profit_loss": -500_000.0,
+        "values": {
+            "position_id": "DEMO-STRESS-001",
+
+            # Revenue still acceptable
+            "revenue_growth": 0.01,
+
+            # Positive but weak EBITDA
+            "ebitda": 200_000.0,
+
+            # Negative net income
+            "profit_loss": -80_000.0,
+
+            # Very weak margin
+            "ebitda_margin": 0.03,
+
+            # High leverage
+            "pfn_to_ebitda": 5.5,
+        },
+    },
+
+    # --------------------------------------------------------
+    # 4. Severe multi-risk
+    # --------------------------------------------------------
+
+    "Severe Multi-Risk": {
+        "description": (
+            "A severely distressed company combining revenue contraction, "
+            "negative EBITDA, negative profitability, very weak EBITDA margin "
+            "and excessive leverage. This scenario is designed to activate "
+            "several deterministic rules simultaneously."
+        ),
+        "values": {
+            "position_id": "DEMO-MULTI-RISK-001",
+
+            # Severe revenue contraction
+            "revenue_growth": -0.25,
+
+            # Negative EBITDA
+            "ebitda": -200_000.0,
+
+            # Negative profitability
+            "profit_loss": -300_000.0,
+
+            # Negative EBITDA margin
+            "ebitda_margin": -0.10,
+
+            # Very high leverage
+            "pfn_to_ebitda": 8.0,
+        },
+    },
+
+    # --------------------------------------------------------
+    # 5. Mixed risk profile
+    # --------------------------------------------------------
+
+    "Mixed Risk Profile": {
+        "description": (
+            "A company with strong revenue growth but simultaneously weak "
+            "profitability and excessive leverage. This scenario demonstrates "
+            "that a positive indicator does not offset independent rule "
+            "violations in other financial dimensions."
+        ),
+        "values": {
+            "position_id": "DEMO-MIXED-001",
+
+            # Strong revenue growth
+            "revenue_growth": 0.15,
+
+            # Positive EBITDA
+            "ebitda": 300_000.0,
+
+            # Negative net income
+            "profit_loss": -50_000.0,
+
+            # Weak margin
             "ebitda_margin": 0.035,
-            "pfn_to_ebitda": 5.8,
+
+            # Excessive leverage
+            "pfn_to_ebitda": 6.5,
         },
     },
-    "Missing Data Company": {
+
+    # --------------------------------------------------------
+    # 6. Missing information
+    # --------------------------------------------------------
+
+    "Missing Information": {
         "description": (
-            "Financial information is incomplete, demonstrating "
-            "how the system handles non-evaluable rules."
+            "A company with incomplete financial information. Several "
+            "indicators are unavailable, demonstrating NOT_EVALUABLE "
+            "handling and the distinction between financial deterioration "
+            "and insufficient information."
         ),
-        "data": {
-            "position_id": "DEMO-004",
-            "revenue_growth": -0.03,
+        "values": {
+            "position_id": "DEMO-MISSING-001",
+
+            "revenue_growth": -0.05,
+
             "ebitda": None,
             "profit_loss": None,
             "ebitda_margin": None,
@@ -59,45 +170,3 @@ DEMO_SCENARIOS: dict[str, dict[str, Any]] = {
         },
     },
 }
-
-
-def get_demo_scenario_names() -> list[str]:
-    """Return the names of all available demo scenarios."""
-
-    return list(DEMO_SCENARIOS.keys())
-
-
-def get_demo_scenario(
-    scenario_name: str,
-) -> dict[str, Any]:
-    """
-    Return the data associated with a demo scenario.
-    """
-
-    try:
-        scenario = DEMO_SCENARIOS[scenario_name]
-
-    except KeyError:
-        raise ValueError(
-            f"Unknown demo scenario: {scenario_name}"
-        ) from None
-
-    return scenario["data"].copy()
-
-
-def get_demo_scenario_description(
-    scenario_name: str,
-) -> str:
-    """
-    Return the description associated with a demo scenario.
-    """
-
-    try:
-        scenario = DEMO_SCENARIOS[scenario_name]
-
-    except KeyError:
-        raise ValueError(
-            f"Unknown demo scenario: {scenario_name}"
-        ) from None
-
-    return str(scenario["description"])
