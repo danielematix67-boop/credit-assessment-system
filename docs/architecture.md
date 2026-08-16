@@ -2,15 +2,29 @@
 
 ## 1. Architectural Overview
 
-The `credit-assessment-system` is designed as a modular credit assessment prototype that separates **deterministic assessment logic** from **LLM-based reporting**.
+The `credit-assessment-system` is a modular prototype for credit assessment designed around a **hybrid deterministic–generative architecture**.
 
-The system follows a layered architecture in which each component has a clearly defined responsibility.
+The system deliberately separates two fundamentally different responsibilities:
 
-The fundamental architectural principle is:
+1. **Credit assessment**, which is performed exclusively through deterministic and explicitly configured business rules.
+2. **Report generation**, where an LLM may be used to transform structured assessment results into a concise natural-language executive summary.
 
-> **The deterministic assessment engine makes the assessment; the LLM only supports the reporting process.**
+The core architectural principle is:
 
-The LLM therefore has no authority to determine or modify the final credit assessment status.
+> **The deterministic assessment engine is the source of truth; the LLM is a reporting component with no decision-making authority.**
+
+Consequently, the LLM cannot:
+
+* determine the overall assessment status;
+* modify rule results;
+* modify rule thresholds;
+* modify rule severity;
+* introduce new findings into the structured assessment;
+* remove deterministic findings;
+* change limitations;
+* make an independent credit decision.
+
+The system therefore combines the reproducibility and traceability of deterministic logic with the flexibility of generative natural-language reporting.
 
 The high-level processing flow is:
 
@@ -35,81 +49,119 @@ AssessmentAnalysis
       ▼
 Reporting Agent
       │
-      ├───────────────┐
-      ▼               ▼
-LLM Report      Deterministic Report
-Generator          Generator
-      │               │
-      └───────┬───────┘
-              ▼
-            Report
+      ├──────────────────────┐
+      ▼                      ▼
+LLM Report Generator   Deterministic Report Generator
+      │                      │
+      └───────────┬──────────┘
+                  ▼
+                Report
 ```
+
+This architecture establishes a strict boundary between **assessment authority** and **natural-language generation**.
 
 ---
 
-# 2. High-Level Architecture
+# 2. Architectural Goals
 
-The system is organized into the following conceptual layers:
+The architecture has been designed around the following objectives:
+
+* **Determinism** — identical inputs and rule configurations should produce identical assessment results.
+* **Traceability** — each assessment result should be attributable to explicit rules and structured findings.
+* **Explainability** — the system should expose the reasoning chain from financial indicators to assessment findings.
+* **Modularity** — individual components should be replaceable without redesigning the entire system.
+* **Testability** — deterministic components should be testable without external dependencies.
+* **LLM isolation** — external generative services should not directly influence the assessment domain.
+* **Fault tolerance** — failure of the LLM service should not invalidate the deterministic assessment.
+* **Provider independence** — the reporting layer should not depend directly on a specific LLM provider.
+
+These goals lead to a layered architecture in which responsibilities are explicitly separated.
+
+---
+
+# 3. High-Level Architecture
+
+The system can be conceptually divided into five layers:
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
-│                    ORCHESTRATION                         │
+│                  ORCHESTRATION LAYER                     │
 │                                                          │
-│              Orchestrator / Workflow                    │
+│                  Orchestrator                            │
+│                       │                                  │
+│                  AssessmentWorkflow                      │
 └──────────────────────────┬───────────────────────────────┘
                            │
                            ▼
 ┌──────────────────────────────────────────────────────────┐
-│                    ASSESSMENT                            │
+│                  ASSESSMENT LAYER                        │
 │                                                          │
-│     Assessment Service → Rule Engine → Rules             │
+│ CreditPosition → AssessmentService → RuleEngine → Rules │
 └──────────────────────────┬───────────────────────────────┘
                            │
                            ▼
 ┌──────────────────────────────────────────────────────────┐
-│                     ANALYSIS                             │
+│                    ANALYSIS LAYER                        │
 │                                                          │
-│                    Analysis Agent                        │
+│                    AnalysisAgent                        │
+│                           │                              │
+│                           ▼                              │
+│                  AssessmentAnalysis                      │
 └──────────────────────────┬───────────────────────────────┘
                            │
                            ▼
 ┌──────────────────────────────────────────────────────────┐
-│                    REPORTING                             │
+│                   REPORTING LAYER                        │
 │                                                          │
-│ Reporting Agent → LLM Generator / Deterministic Generator│
-└──────────────────────────┬───────────────────────────────┘
-                           │
-                           ▼
-                         Report
+│                  ReportingAgent                         │
+│                       │                                  │
+│              ┌────────┴─────────┐                        │
+│              ▼                  ▼                        │
+│      LLMReportGenerator   DeterministicReportGenerator │
+└──────────────┬──────────────────┬────────────────────────┘
+               │                  │
+               ▼                  │
+          LLMClient               │
+               │                  │
+        ┌──────┴──────┐           │
+        ▼             ▼           │
+   GeminiClient  MockLLMClient     │
+               │                  │
+               └────────┬─────────┘
+                        ▼
+                      Report
 ```
 
-This structure allows the individual components to be tested and evolved independently.
+The architecture deliberately keeps the LLM below the reporting boundary.
+
+The deterministic assessment path does not depend on the availability of the LLM.
 
 ---
 
-# 3. Deterministic Assessment Layer
+# 4. Domain and Assessment Layer
 
-The deterministic assessment layer is the authoritative part of the system.
+The assessment layer represents the core business logic of the system.
 
-It is responsible for evaluating the financial characteristics of a credit position and producing a structured assessment.
+It is responsible for evaluating the financial characteristics of a credit position using explicitly defined rules.
 
-The layer consists primarily of:
+The main components are:
 
 * `CreditPosition`;
-* assessment rules;
+* individual assessment rules;
 * `RuleEngine`;
 * `AssessmentService`;
+* `Assessment`;
 * `AssessmentStatus`.
 
-The output of this layer is an `Assessment` object.
+The output of this layer is an `Assessment` object containing the structured results of the deterministic assessment process.
 
 ---
 
-## 3.1 Credit Position
+## 4.1 Credit Position
 
 `CreditPosition` represents the structured financial information associated with a credit position.
 
-Examples of monitored indicators include:
+Current indicators include:
 
 * revenue growth;
 * EBITDA;
@@ -118,62 +170,179 @@ Examples of monitored indicators include:
 * PFN-to-EBITDA;
 * interest expense.
 
-The position is intentionally represented as structured domain data rather than natural-language input.
+The position is represented as structured domain data rather than natural-language input.
 
-This provides deterministic and testable inputs to the assessment engine.
+For example:
+
+```text
+CreditPosition
+├── position_id
+├── revenue_growth
+├── ebitda
+├── profit_loss
+├── ebitda_margin
+├── pfn_to_ebitda
+└── interest_expense
+```
+
+This design ensures that rule evaluation operates on explicit and typed inputs.
+
+It also makes the assessment process easier to reproduce and test.
 
 ---
 
-## 3.2 Rule Engine
+# 5. Rule Architecture
 
-The rule engine evaluates the financial indicators using explicit business rules.
+The rule architecture encapsulates individual credit-risk conditions.
 
-Each rule encapsulates a specific assessment condition.
+Each rule evaluates a specific financial indicator or relationship and returns a structured `RuleResult`.
 
-Examples include:
+Examples of currently implemented rules include:
 
 ```text
 Revenue Growth Rule
 Negative EBITDA Rule
 EBITDA Margin Rule
 PFN-to-EBITDA Rule
-Financial Expense-to-EBITDA Rule
+Financial Expenses-to-EBITDA Rule
 EBITDA Inventory Contribution Rule
+Interest Coverage Ratio Rule
 ```
 
-Rules return structured results rather than directly modifying the overall assessment.
-
-This provides a clear separation between:
+The conceptual processing chain is:
 
 ```text
-Rule Evaluation
-      ↓
-Rule Results
-      ↓
-Assessment Status
+Financial Indicator
+        │
+        ▼
+Business Rule
+        │
+        ▼
+RuleResult
+        │
+        ├── rule_id
+        ├── category
+        ├── value
+        ├── threshold
+        ├── status
+        └── severity
 ```
 
-The rule engine is therefore deterministic and independently testable.
+Rules do not directly determine the overall credit assessment.
+
+Instead, they provide structured evidence that is subsequently aggregated by the assessment layer.
+
+This separation is important because it prevents individual rules from becoming coupled to the overall assessment workflow.
 
 ---
 
-## 3.3 Assessment Service
+## 5.1 Rule Configuration
 
-The `AssessmentService` coordinates the execution of the deterministic assessment process.
+Rule behavior is separated from the rule implementation through `RuleConfig`.
 
-Its responsibility is to:
+A configuration can define:
+
+* rule identifier;
+* rule name;
+* category;
+* primary threshold;
+* default severity;
+* severity direction;
+* severity thresholds.
+
+For example:
+
+```text
+Rule
+ │
+ ├── RuleConfig
+ │     ├── threshold
+ │     ├── severity
+ │     ├── severity_direction
+ │     └── severity_thresholds
+ │
+ └── evaluate()
+```
+
+`SeverityThreshold` represents a threshold associated with a specific severity level.
+
+This allows the severity policy to be configured independently from the rule implementation.
+
+The rule therefore contains the **calculation logic**, while the configuration contains the **business parameters**.
+
+---
+
+# 6. Rule Engine
+
+The `RuleEngine` is responsible for executing the configured rules against a `CreditPosition`.
+
+Its responsibilities include:
+
+1. receiving the credit position;
+2. executing the applicable rules;
+3. collecting their `RuleResult` objects;
+4. returning the structured rule evaluation results.
+
+The rule engine does not generate natural-language explanations and does not invoke the LLM.
+
+Its role is strictly deterministic.
+
+The resulting architecture is:
+
+```text
+CreditPosition
+      │
+      ▼
+   RuleEngine
+      │
+      ├── Rule 1 → RuleResult
+      ├── Rule 2 → RuleResult
+      ├── Rule 3 → RuleResult
+      └── Rule N → RuleResult
+```
+
+This makes rule evaluation independently testable.
+
+---
+
+# 7. Assessment Service
+
+The `AssessmentService` coordinates the deterministic assessment process.
+
+Its responsibilities are to:
 
 1. receive a `CreditPosition`;
-2. execute the configured rules;
+2. invoke the configured rule engine;
 3. collect the resulting rule evaluations;
-4. determine the overall assessment status;
-5. produce an `Assessment`.
+4. generate structured findings;
+5. determine the overall assessment status;
+6. return an `Assessment`.
 
-The service represents the main entry point into the deterministic assessment domain.
+Conceptually:
+
+```text
+CreditPosition
+      │
+      ▼
+AssessmentService
+      │
+      ├── RuleEngine
+      │      │
+      │      └── RuleResults
+      │
+      ├── Findings
+      │
+      └── AssessmentStatus
+             │
+             ▼
+         Assessment
+```
+
+The assessment service therefore acts as the main application-level entry point into the deterministic assessment domain.
 
 ---
 
-## 3.4 Assessment Status
+# 8. Assessment Status
 
 The system currently supports three principal assessment states:
 
@@ -183,107 +352,143 @@ ATTENTION
 CRITICAL
 ```
 
-The status is determined by deterministic assessment logic.
+The overall status is calculated exclusively from deterministic assessment results.
 
-The LLM does not participate in this calculation.
+The LLM has no role in this calculation.
 
-This guarantees that the same structured input and rule configuration produce the same assessment result.
+Therefore:
+
+```text
+CreditPosition
+      │
+      ▼
+Deterministic Rules
+      │
+      ▼
+Assessment Status
+```
+
+and never:
+
+```text
+CreditPosition
+      │
+      ▼
+LLM
+      │
+      ▼
+Assessment Status
+```
+
+This distinction is one of the most important architectural guarantees of the system.
+
+For a fixed position and fixed rule configuration:
+
+```text
+Same Input + Same Configuration
+                │
+                ▼
+       Same Assessment Result
+```
 
 ---
 
-# 4. Analysis Layer
+# 9. Finding Generation
 
-The analysis layer transforms the structured assessment into a representation suitable for reporting.
+The assessment layer produces structured findings from triggered rule evaluations.
+
+A finding preserves the relationship between the underlying rule result and its human-readable explanation.
+
+Conceptually:
+
+```text
+RuleResult
+    │
+    ▼
+Finding
+├── Rule Result
+└── Comment
+```
+
+This provides traceability from the final report back to the deterministic rule that generated the finding.
+
+The reporting layer therefore does not need to rediscover why a finding exists.
+
+---
+
+# 10. Analysis Layer
+
+The analysis layer transforms the deterministic `Assessment` into an `AssessmentAnalysis`.
 
 It is implemented through the `AnalysisAgent`.
 
-The analysis layer does not independently reassess the credit position.
+The analysis agent does **not** perform a second credit assessment.
 
-Instead, it interprets the deterministic assessment results and organizes them into an `AssessmentAnalysis`.
+Instead, it organizes the information already produced by the deterministic assessment layer into a representation suitable for reporting.
 
-The resulting structure contains elements such as:
+The transformation is:
+
+```text
+Assessment
+    │
+    ▼
+AnalysisAgent
+    │
+    ▼
+AssessmentAnalysis
+```
+
+The resulting structure contains:
 
 * assessment status;
 * key findings;
 * risk factors;
 * limitations.
 
-The flow is:
+The assessment status is propagated directly from the deterministic assessment.
+
+---
+
+## 10.1 AssessmentAnalysis
+
+`AssessmentAnalysis` acts as a controlled boundary between assessment and reporting.
+
+Its structure can be represented as:
 
 ```text
-Assessment
-    │
-    ▼
-Analysis Agent
-    │
-    ▼
 AssessmentAnalysis
+│
+├── Assessment Status
+├── Key Findings
+├── Risk Factors
+└── Limitations
 ```
 
-The assessment status is explicitly preserved during this transformation.
+This intermediate representation has two important purposes:
+
+1. it separates assessment logic from report generation;
+2. it provides the LLM with structured and controlled information.
+
+The LLM therefore does not need to reason over the raw assessment pipeline.
+
+It receives an already structured representation of the assessment.
 
 ---
 
-## 4.1 Analysis Agent
+# 11. Reporting Layer
 
-The `AnalysisAgent` acts as the boundary between assessment and reporting.
+The reporting layer transforms `AssessmentAnalysis` into a final `Report`.
 
-Its responsibility is to transform:
+The central coordinator is the `ReportingAgent`.
 
-```text
-Assessment → AssessmentAnalysis
-```
+The architecture supports two report-generation strategies:
 
-without introducing an independent decision-making mechanism.
+1. `DeterministicReportGenerator`;
+2. `LLMReportGenerator`.
 
-This separation is important because reporting requirements may evolve independently from the underlying assessment rules.
+Both implement the `ReportGenerator` abstraction.
 
----
-
-## 4.2 Assessment Analysis
-
-`AssessmentAnalysis` is the structured representation consumed by the reporting layer.
-
-It separates information into distinct categories:
-
-```text
-Assessment Status
-       │
-       ├── Key Findings
-       │
-       ├── Risk Factors
-       │
-       └── Limitations
-```
-
-This structure provides a controlled input to the LLM.
-
-The LLM therefore operates on already-processed and structured information rather than raw financial data.
-
----
-
-# 5. Reporting Layer
-
-The reporting layer is responsible for producing the final `Report`.
-
-The central component is the `ReportingAgent`.
-
-The reporting layer supports two report generation strategies:
-
-1. deterministic reporting;
-2. LLM-based reporting.
-
-Both generators implement the same `ReportGenerator` abstraction.
-
-This allows the reporting mechanism to be replaced without changing the rest of the workflow.
-
----
-
-## 5.1 Reporting Agent
-
-The `ReportingAgent` receives an `AssessmentAnalysis` and delegates report generation to the configured `ReportGenerator`.
-
-Conceptually:
+This allows the reporting strategy to be changed without modifying the assessment or analysis layers.
 
 ```text
 AssessmentAnalysis
@@ -293,180 +498,311 @@ ReportingAgent
         │
         ▼
 ReportGenerator
+        │
+        ├── LLMReportGenerator
+        │
+        └── DeterministicReportGenerator
 ```
-
-The reporting agent does not contain the actual reporting logic.
-
-Instead, it delegates that responsibility to the selected generator.
-
-This follows the principle of separation of concerns.
 
 ---
 
-## 5.2 Deterministic Report Generator
+# 12. Reporting Agent
 
-`DeterministicReportGenerator` produces a report without using an external LLM.
+The `ReportingAgent` is responsible for coordinating report generation.
 
-Its executive summary is generated from the deterministic assessment status.
-
-For example:
+It receives:
 
 ```text
-NORMAL
-    ↓
-"The credit assessment is classified as normal."
-
-ATTENTION
-    ↓
-"The credit assessment requires attention."
-
-CRITICAL
-    ↓
-"The credit assessment is classified as critical."
+AssessmentAnalysis
 ```
 
-The structured findings and limitations are preserved from the analysis.
+and delegates generation to the configured `ReportGenerator`.
 
-The deterministic generator therefore provides a predictable reporting mechanism and acts as the system's fallback reporting implementation.
+The reporting agent also implements the fallback mechanism.
+
+Its conceptual behavior is:
+
+```text
+ReportingAgent
+      │
+      ▼
+Primary Report Generator
+      │
+      ├── Success ──────────► Report
+      │
+      └── Failure
+             │
+             ▼
+      Fallback Generator
+             │
+             ▼
+           Report
+```
+
+The reporting agent therefore separates:
+
+* **report orchestration** from
+* **report generation**.
+
+It also maintains runtime diagnostics such as:
+
+* `last_generator_used`;
+* `last_error`.
+
+These values provide basic observability of the reporting path.
 
 ---
 
-## 5.3 LLM Report Generator
+# 13. Deterministic Report Generator
 
-`LLMReportGenerator` uses an implementation of the `LLMClient` abstraction to generate the executive summary.
+`DeterministicReportGenerator` produces a report without requiring an external LLM.
 
-The generator constructs a controlled prompt from the `AssessmentAnalysis`.
+Its primary purpose is to provide:
 
-The prompt contains:
+* predictable reporting;
+* offline execution;
+* testability;
+* a reliable fallback mechanism.
 
-* assessment status;
-* key findings;
-* risk factors;
-* limitations;
-* explicit reporting constraints.
+The deterministic generator receives the same `AssessmentAnalysis` used by the LLM generator.
 
-The LLM is instructed to:
+Structured findings and limitations are therefore preserved regardless of the selected reporting strategy.
 
-* use only the supplied assessment information;
-* avoid inventing financial information;
-* avoid changing the assessment status;
+Conceptually:
+
+```text
+AssessmentAnalysis
+        │
+        ▼
+DeterministicReportGenerator
+        │
+        ▼
+      Report
+```
+
+This generator is particularly important from a resilience perspective because it guarantees that failure of an external generative service does not prevent report production.
+
+---
+
+# 14. LLM Report Generator
+
+`LLMReportGenerator` provides the generative reporting implementation.
+
+Its responsibility is intentionally narrow:
+
+> Generate a natural-language executive summary from the structured `AssessmentAnalysis`.
+
+The generator:
+
+1. builds a controlled prompt;
+2. sends the prompt to an `LLMClient`;
+3. receives the generated response;
+4. validates the response;
+5. constructs the final `Report`.
+
+The structured findings and limitations are not generated by the LLM.
+
+They are propagated directly from the deterministic analysis.
+
+Therefore:
+
+```text
+AssessmentAnalysis
+       │
+       ├───────────────► Findings
+       │
+       ├───────────────► Limitations
+       │
+       ▼
+LLMReportGenerator
+       │
+       ▼
+Executive Summary
+       │
+       └───────────────┐
+                       ▼
+                     Report
+```
+
+This is a critical architectural property: **the LLM generates only the narrative component of the report.**
+
+---
+
+# 15. Controlled LLM Prompt
+
+The prompt constructed by `LLMReportGenerator` explicitly constrains the model.
+
+The current prompt instructs the model to:
+
+* use exclusively the supplied assessment information;
+* avoid introducing unsupported facts;
+* avoid inventing financial data;
+* avoid inventing causes or trends;
+* preserve the assessment status;
 * avoid making credit decisions;
 * avoid unsupported recommendations;
 * distinguish findings from limitations;
-* use professional credit-risk language.
+* avoid inferring missing information;
+* use professional credit-risk terminology;
+* avoid disclosing internal rule thresholds;
+* avoid reproducing threshold values.
 
-The generated response is then validated before being included in the final report.
+This establishes a **prompt-level safety boundary**.
+
+However, prompt instructions are not treated as a sufficient technical guarantee.
+
+The generated response is also validated before acceptance.
 
 ---
 
-# 6. LLM Integration
+# 16. LLM Response Validation
+
+The LLM response is treated as **untrusted generated content**.
+
+The current validation layer performs two fundamental checks:
+
+```text
+LLM Response
+      │
+      ▼
+Is the response non-empty?
+      │
+      ▼
+Does it contain the deterministic assessment status?
+      │
+      ▼
+Validated Response
+```
+
+If the response is empty or does not contain the expected assessment status, validation fails.
+
+The reporting agent then activates the deterministic fallback.
+
+This creates the following control mechanism:
+
+```text
+LLM Output
+    │
+    ▼
+Validation
+    │
+    ├── Valid ──────► Report
+    │
+    └── Invalid
+           │
+           ▼
+      Fallback Report
+```
+
+### Future validation extensions
+
+The architecture can be extended with stronger semantic validation, for example:
+
+* checking that required findings are reflected in the summary;
+* checking consistency of reported metrics;
+* detecting unsupported claims;
+* detecting contradictions with deterministic findings;
+* validating structured LLM output against a schema.
+
+These extensions are not currently required for the core prototype but fit naturally within the existing architecture.
+
+---
+
+# 17. LLM Integration
 
 The LLM integration is isolated behind the `LLMClient` abstraction.
 
-This prevents the reporting layer from being directly coupled to a specific LLM provider.
-
-The architecture is:
+The reporting layer therefore does not depend directly on Gemini or another specific provider.
 
 ```text
 LLMReportGenerator
         │
         ▼
-    LLMClient
+     LLMClient
         │
         ├───────────────┐
         ▼               ▼
- MockLLMClient     GeminiClient
+ GeminiClient      MockLLMClient
 ```
+
+This follows the Dependency Inversion Principle and provides provider independence.
 
 ---
 
-## 6.1 LLM Client Abstraction
+# 18. LLM Client Abstraction
 
 `LLMClient` defines the interface required by the reporting layer.
 
-The reporting system therefore depends on an abstraction rather than a specific implementation.
+The application therefore depends on:
 
-This provides:
+```text
+LLMClient
+```
 
-* testability;
-* provider independence;
-* easier replacement of the underlying model;
-* separation between application logic and external services.
+rather than:
+
+```text
+GeminiClient
+```
+
+This allows the underlying provider to be replaced without modifying `LLMReportGenerator`.
+
+Potential future implementations could include:
+
+```text
+GeminiClient
+OpenAIClient
+LocalLLMClient
+MockLLMClient
+```
+
+without changing the reporting architecture.
 
 ---
 
-## 6.2 Mock LLM Client
+# 19. Mock LLM Client
 
-`MockLLMClient` is used for automated tests.
+`MockLLMClient` provides deterministic LLM behavior for automated testing.
 
-It provides deterministic responses without requiring access to an external LLM service.
+It avoids dependencies on:
 
-This is particularly important for unit and integration testing because test results should not depend on:
-
-* network availability;
+* network connectivity;
 * external API availability;
-* model randomness;
+* API quotas;
+* model stochasticity;
 * API costs.
 
----
+The mock also stores the last generated prompt, allowing tests to verify prompt construction when required.
 
-## 6.3 Gemini Client
-
-`GeminiClient` provides the real LLM integration.
-
-It is used during scenario-based validation to evaluate the complete workflow using an actual LLM service.
-
-The provider-specific implementation remains isolated from the rest of the architecture.
+This makes the LLM-dependent reporting layer fully testable without invoking an external model.
 
 ---
 
-# 7. LLM Response Validation
+# 20. Gemini Client
 
-The LLM response is treated as **untrusted generated content**.
+`GeminiClient` provides the concrete integration with the Gemini API.
 
-Before being accepted by the reporting layer, it is validated against the structured assessment.
+Provider-specific concerns remain isolated within this component.
 
-The validation checks include:
+The rest of the application interacts only with the `LLMClient` abstraction.
+
+This separation limits the impact of provider-specific changes on the application architecture.
+
+---
+
+# 21. Fallback Architecture
+
+The reporting architecture implements graceful degradation.
+
+The `ReportingAgent` can be configured with:
 
 ```text
-Generated Response
-        │
-        ▼
-Non-empty?
-        │
-        ▼
-Correct Assessment Status?
-        │
-        ▼
-Required Key Findings Present?
-        │
-        ▼
-Required Risk Factors Present?
-        │
-        ▼
-Validated Response
+Primary Generator
++
+Fallback Generator
 ```
 
-If validation fails, the generated response is rejected.
-
-This prevents the LLM from silently producing a report that is inconsistent with the structured assessment.
-
----
-
-# 8. Fallback Architecture
-
-The reporting architecture includes a deterministic fallback mechanism.
-
-The `ReportingAgent` accepts:
-
-```text
-primary report generator
-fallback report generator
-```
-
-When the primary generator fails, the reporting agent invokes the fallback generator.
-
-The current intended configuration is:
+The intended production-like configuration is:
 
 ```text
 Primary:
@@ -476,7 +812,7 @@ Fallback:
 DeterministicReportGenerator
 ```
 
-The resulting architecture is:
+The complete execution path is:
 
 ```text
                     ReportingAgent
@@ -484,31 +820,74 @@ The resulting architecture is:
                           ▼
                  LLMReportGenerator
                           │
-                    success / failure
+                    generate()
                           │
              ┌────────────┴────────────┐
              │                         │
-          success                   failure
+          success                   exception
              │                         │
              ▼                         ▼
-        LLM Report          DeterministicReportGenerator
+       Validate response       Record failure
+             │                         │
+             │                         ▼
+             │              DeterministicReportGenerator
              │                         │
              └────────────┬────────────┘
                           ▼
                         Report
 ```
 
-The fallback ensures that failure of the external LLM service does not invalidate the deterministic assessment.
+The fallback mechanism is important because the external LLM is not part of the deterministic assessment domain.
+
+An unavailable or malfunctioning LLM therefore affects **report generation**, but not **credit assessment**.
 
 ---
 
-# 9. Workflow Orchestration
+# 22. Error Handling and Observability
 
-The `AssessmentWorkflow` coordinates the main processing stages.
+The `ReportingAgent` records basic runtime diagnostics.
 
-Its responsibility is orchestration rather than business-rule evaluation.
+Two diagnostic attributes are maintained:
 
-The workflow executes:
+```text
+last_generator_used
+last_error
+```
+
+`last_generator_used` identifies whether the report was generated by:
+
+```text
+PRIMARY
+```
+
+or:
+
+```text
+FALLBACK
+```
+
+`last_error` stores a concise human-readable description of the failure encountered by the primary generator.
+
+Provider-specific failures are normalized into application-level messages.
+
+Examples include:
+
+```text
+Gemini API quota exceeded.
+Gemini service is temporarily unavailable.
+Gemini API authentication failed.
+Gemini API access was denied.
+Gemini request timed out.
+LLM report generation failed.
+```
+
+This prevents low-level provider errors from unnecessarily leaking into the application-facing reporting layer.
+
+---
+
+# 23. Workflow Orchestration
+
+`AssessmentWorkflow` coordinates the three main processing stages:
 
 ```text
 1. Assessment
@@ -516,7 +895,7 @@ The workflow executes:
 3. Reporting
 ```
 
-More precisely:
+The complete workflow is:
 
 ```text
 CreditPosition
@@ -542,19 +921,19 @@ Report
 
 The workflow returns an `AssessmentWorkflowResult` containing:
 
-* assessment;
-* analysis;
-* report.
+* `assessment`;
+* `analysis`;
+* `report`.
 
-This provides access to the structured result of each processing stage.
+This intermediate representation is useful for both application logic and testing because each stage remains observable.
 
 ---
 
-# 10. Orchestration Layer
+# 24. Application-Level Orchestration
 
-The system also provides an orchestration layer responsible for executing the complete workflow from the application level.
+The `Orchestrator` provides a higher-level entry point for executing the complete assessment workflow.
 
-The orchestration layer hides the internal construction of the workflow from the caller.
+Its purpose is to hide the internal construction and coordination of the workflow components.
 
 Conceptually:
 
@@ -567,166 +946,135 @@ Orchestrator
      ▼
 AssessmentWorkflow
      │
-     ├── Assessment Service
-     ├── Analysis Agent
-     └── Reporting Agent
+     ├── AssessmentService
+     ├── AnalysisAgent
+     └── ReportingAgent
 ```
 
-This provides a single entry point for executing the credit assessment process.
+This allows the caller to execute the complete process without needing to manually construct the individual components.
 
 ---
 
-# 11. Separation of Responsibilities
+# 25. Factory Pattern
 
-The architecture intentionally separates the system into distinct responsibilities.
+The project uses factory functions to centralize component construction.
 
-| Component                      | Responsibility                                  |
-| ------------------------------ | ----------------------------------------------- |
-| `CreditPosition`               | Represents financial input data                 |
-| Rules                          | Evaluate individual financial conditions        |
-| `RuleEngine`                   | Executes and aggregates rule evaluations        |
-| `AssessmentService`            | Produces the deterministic assessment           |
-| `AnalysisAgent`                | Structures assessment information for reporting |
-| `AssessmentAnalysis`           | Represents structured reporting information     |
-| `ReportingAgent`               | Coordinates report generation                   |
-| `DeterministicReportGenerator` | Generates deterministic reports                 |
-| `LLMReportGenerator`           | Generates natural-language reports using an LLM |
-| `LLMClient`                    | Abstracts the LLM provider                      |
-| `MockLLMClient`                | Provides deterministic LLM behavior for testing |
-| `GeminiClient`                 | Provides real LLM integration                   |
-| `AssessmentWorkflow`           | Coordinates assessment, analysis, and reporting |
-| `Orchestrator`                 | Provides application-level workflow execution   |
-
-This separation reduces coupling between the deterministic domain and the generative component.
-
----
-
-# 12. Architectural Principles
-
-## 12.1 Deterministic Decision Logic
-
-The assessment decision is produced exclusively by explicit and deterministic rules.
-
-The LLM cannot determine:
-
-* whether a position is `NORMAL`;
-* whether a position requires `ATTENTION`;
-* whether a position is `CRITICAL`.
-
-This makes the assessment logic transparent and reproducible.
-
----
-
-## 12.2 Separation of Decision and Reporting
-
-Decision-making and natural-language generation are intentionally separated.
+Examples include:
 
 ```text
-Decision
-   ↓
-Deterministic
-
-Reporting
-   ↓
-Deterministic or LLM-based
+create_default_assessment_workflow()
+create_default_orchestrator()
 ```
 
-This allows the reporting technology to change without changing the underlying assessment logic.
-
----
-
-## 12.3 Dependency Inversion
-
-Higher-level components depend on abstractions rather than concrete implementations.
+Factories encapsulate configuration and dependency wiring.
 
 For example:
 
 ```text
-ReportingAgent
-      ↓
-ReportGenerator
-      ↓
-LLMReportGenerator
-DeterministicReportGenerator
+create_default_assessment_workflow()
+            │
+            ├── AssessmentService
+            ├── AnalysisAgent
+            ├── ReportingAgent
+            ├── LLMReportGenerator
+            └── DeterministicReportGenerator
 ```
+
+This prevents application code from becoming tightly coupled to concrete implementation details.
+
+It also provides a single location where the default architecture can be configured.
+
+---
+
+# 26. Separation of Responsibilities
+
+The main architectural responsibilities can be summarized as follows:
+
+| Component                      | Responsibility                                                 |
+| ------------------------------ | -------------------------------------------------------------- |
+| `CreditPosition`               | Represents structured financial input data                     |
+| Rules                          | Evaluate individual financial conditions                       |
+| `RuleConfig`                   | Defines configurable rule parameters                           |
+| `SeverityThreshold`            | Maps configured thresholds to severity levels                  |
+| `RuleEngine`                   | Executes deterministic rules                                   |
+| `AssessmentService`            | Coordinates deterministic assessment                           |
+| `Assessment`                   | Represents the structured assessment result                    |
+| `AnalysisAgent`                | Transforms assessment results into reporting-oriented analysis |
+| `AssessmentAnalysis`           | Represents structured analysis information                     |
+| `ReportingAgent`               | Coordinates report generation and fallback                     |
+| `ReportGenerator`              | Defines the report-generation abstraction                      |
+| `DeterministicReportGenerator` | Generates deterministic reports                                |
+| `LLMReportGenerator`           | Generates natural-language executive summaries                 |
+| `LLMClient`                    | Abstracts communication with an LLM provider                   |
+| `MockLLMClient`                | Provides deterministic LLM behavior for testing                |
+| `GeminiClient`                 | Provides the concrete Gemini integration                       |
+| `Report`                       | Represents the final report                                    |
+| `AssessmentWorkflow`           | Coordinates assessment, analysis, and reporting                |
+| `Orchestrator`                 | Provides application-level workflow execution                  |
+| Factory functions              | Centralize dependency construction and configuration           |
+
+---
+
+# 27. Data Flow and Information Ownership
+
+An important architectural property is that each processing stage owns a specific type of information.
+
+```text
+CreditPosition
+      │
+      │  Structured financial inputs
+      ▼
+Assessment
+      │
+      │  Rule results + deterministic status
+      ▼
+AssessmentAnalysis
+      │
+      │  Structured findings, risk factors,
+      │  limitations and preserved status
+      ▼
+Report
+      │
+      │  Executive summary + structured findings
+      ▼
+Application / User
+```
+
+Information is progressively transformed, but deterministic information is not delegated to the LLM.
+
+In particular:
+
+```text
+Assessment Status
+       │
+       ├── Assessment
+       ├── AssessmentAnalysis
+       └── Report
+```
+
+must remain consistent across all layers.
 
 Similarly:
 
 ```text
-LLMReportGenerator
-      ↓
-LLMClient
-      ↓
-GeminiClient / MockLLMClient
+Deterministic Findings
+       │
+       ├── Assessment
+       ├── AssessmentAnalysis
+       └── Report
 ```
 
-This improves testability and extensibility.
+must be preserved throughout the workflow.
 
 ---
 
-## 12.4 Single Responsibility
+# 28. Deterministic–Generative Boundary
 
-Each major component has a focused responsibility.
-
-For example:
-
-* rules evaluate individual conditions;
-* the rule engine executes rules;
-* the assessment service coordinates assessment;
-* the analysis agent structures results;
-* the reporting agent coordinates reporting;
-* report generators generate reports;
-* the LLM client communicates with the external model.
-
-This limits the amount of logic that must change when a specific component evolves.
-
----
-
-## 12.5 Explicit Data Flow
-
-The system uses explicit domain objects to communicate between stages.
-
-The principal data flow is:
-
-```text
-CreditPosition
-      ↓
-Assessment
-      ↓
-AssessmentAnalysis
-      ↓
-Report
-```
-
-This makes intermediate results observable and testable.
-
----
-
-## 12.6 Controlled Use of Generative AI
-
-The LLM is deliberately constrained to the reporting layer.
-
-It is not used for:
-
-* rule evaluation;
-* assessment classification;
-* threshold selection;
-* credit decisions;
-* modification of structured assessment results.
-
-Its role is limited to transforming structured information into a professional natural-language executive summary.
-
-This design reduces the potential impact of hallucination or inconsistent model behavior on the deterministic assessment process.
-
----
-
-# 13. Architectural Boundary
-
-The most important boundary in the system is the separation between the deterministic domain and the generative reporting component.
+The most important architectural boundary is between the deterministic assessment domain and the generative reporting layer.
 
 ```text
 ┌─────────────────────────────────────────────────────────┐
-│                 DETERMINISTIC DOMAIN                    │
+│                  DETERMINISTIC DOMAIN                   │
 │                                                         │
 │ CreditPosition                                          │
 │       ↓                                                 │
@@ -738,80 +1086,474 @@ The most important boundary in the system is the separation between the determin
 │       ↓                                                 │
 │ Assessment                                               │
 │       ↓                                                 │
+│ AnalysisAgent                                           │
+│       ↓                                                 │
 │ AssessmentAnalysis                                      │
 │                                                         │
-│             AUTHORITATIVE ASSESSMENT                    │
+│              AUTHORITATIVE INFORMATION                  │
 └──────────────────────────┬──────────────────────────────┘
                            │
+                           │ Controlled structured input
                            ▼
 ┌─────────────────────────────────────────────────────────┐
-│                  GENERATIVE LAYER                       │
+│                    GENERATIVE LAYER                     │
 │                                                         │
+│ ReportingAgent                                          │
+│       ↓                                                 │
 │ LLMReportGenerator                                      │
 │       ↓                                                 │
 │ LLMClient                                               │
 │       ↓                                                 │
 │ External LLM                                            │
 │                                                         │
-│             REPORTING ONLY                               │
+│              NARRATIVE GENERATION ONLY                  │
 └─────────────────────────────────────────────────────────┘
 ```
 
-This boundary is a core design decision of the system.
+This boundary is intentionally asymmetric.
 
-The deterministic domain remains authoritative even when the generative component is unavailable.
+The deterministic layer supplies authoritative information to the generative layer, but the generative layer does not feed decisions back into the deterministic domain.
+
+Therefore, the information flow is effectively:
+
+```text
+Deterministic Domain
+        │
+        ▼
+Generative Layer
+```
+
+and not:
+
+```text
+Deterministic Domain
+        ↕
+Generative Layer
+```
+
+This unidirectional dependency is a key safety and architectural property.
 
 ---
 
-# 14. Architectural Rationale
+# 29. Architectural Principles
 
-The architecture intentionally avoids placing the LLM at the center of the credit assessment process.
+## 29.1 Deterministic Decision Logic
 
-A fully LLM-driven assessment could introduce unnecessary uncertainty into a process that benefits from:
+Credit assessment decisions are produced exclusively through explicit rules and deterministic status-calculation logic.
 
-* reproducibility;
-* traceability;
-* explicit rules;
-* deterministic outcomes;
-* testability.
-
-Instead, the system uses a hybrid architecture:
+The LLM cannot determine whether a position is:
 
 ```text
-Deterministic Logic
-        +
+NORMAL
+ATTENTION
+CRITICAL
+```
+
+This guarantees reproducibility and makes the decision process auditable.
+
+---
+
+## 29.2 Separation of Decision and Reporting
+
+Decision-making and natural-language generation are treated as separate concerns.
+
+```text
+Assessment
+    ↓
+Deterministic
+
+Reporting
+    ↓
+Deterministic OR Generative
+```
+
+Consequently, the reporting technology can evolve without changing the underlying assessment logic.
+
+---
+
+## 29.3 Dependency Inversion
+
+Higher-level components depend on abstractions rather than concrete implementations.
+
+For example:
+
+```text
+ReportingAgent
+      ↓
+ReportGenerator
+      ↓
+├── LLMReportGenerator
+└── DeterministicReportGenerator
+```
+
+and:
+
+```text
+LLMReportGenerator
+      ↓
+LLMClient
+      ↓
+├── GeminiClient
+└── MockLLMClient
+```
+
+This improves testability, maintainability and extensibility.
+
+---
+
+## 29.4 Single Responsibility
+
+Each major component has a focused responsibility.
+
+For example:
+
+* rules evaluate individual financial conditions;
+* the rule engine executes rules;
+* the assessment service coordinates assessment;
+* the analysis agent structures assessment results;
+* the reporting agent coordinates report generation;
+* report generators generate reports;
+* the LLM client communicates with the external model;
+* the orchestrator coordinates application-level execution.
+
+This limits coupling and reduces the potential impact of future changes.
+
+---
+
+## 29.5 Explicit Data Contracts
+
+The system communicates between layers through explicit domain objects:
+
+```text
+CreditPosition
+Assessment
+AssessmentAnalysis
+Report
+```
+
+These objects act as data contracts between architectural stages.
+
+This improves:
+
+* readability;
+* testability;
+* traceability;
+* interface stability.
+
+---
+
+## 29.6 Controlled Use of Generative AI
+
+The LLM is deliberately restricted to the reporting layer.
+
+It is not used for:
+
+* rule evaluation;
+* threshold selection;
+* severity determination;
+* assessment classification;
+* credit decisions;
+* modification of deterministic findings;
+* modification of assessment limitations.
+
+Its role is limited to transforming structured assessment information into professional natural-language reporting.
+
+---
+
+## 29.7 Graceful Degradation
+
+The system is designed so that an external LLM failure does not cause failure of the core assessment process.
+
+The architecture therefore distinguishes:
+
+```text
+Assessment Availability
+        ≠
+LLM Availability
+```
+
+The deterministic assessment remains operational even if:
+
+* the API is unavailable;
+* the API quota is exceeded;
+* authentication fails;
+* the request times out;
+* the model produces an invalid response.
+
+The reporting layer falls back to deterministic report generation.
+
+---
+
+# 30. Testing Strategy and Architectural Verification
+
+The architecture is designed to support verification of the deterministic–generative boundary.
+
+The test suite verifies, among other properties, that:
+
+### Deterministic assessment remains authoritative
+
+```text
+Assessment.status
+        ==
+Analysis.assessment_status
+        ==
+Report.assessment_status
+```
+
+### Deterministic findings are preserved
+
+```text
+Assessment findings
+        ↓
+Analysis findings
+        ↓
+Report findings
+```
+
+### LLM output is limited to the executive summary
+
+The LLM does not replace the structured findings or limitations contained in the deterministic pipeline.
+
+### Invalid LLM responses trigger fallback
+
+For example:
+
+```text
+Empty response
+      ↓
+Validation failure
+      ↓
+Deterministic fallback
+```
+
+or:
+
+```text
+Missing assessment status
+      ↓
+Validation failure
+      ↓
+Deterministic fallback
+```
+
+### External service failures trigger fallback
+
+```text
+LLM exception
+      ↓
+ReportingAgent
+      ↓
+DeterministicReportGenerator
+```
+
+This testing strategy directly verifies the architectural guarantees rather than testing only individual implementation details.
+
+---
+
+# 31. Architectural Rationale
+
+A fully LLM-driven credit assessment could introduce uncertainty into a process that benefits from:
+
+* reproducibility;
+* explicit business rules;
+* deterministic outcomes;
+* traceability;
+* auditability;
+* controlled testing.
+
+The system therefore adopts a hybrid architecture:
+
+```text
+Deterministic Assessment
+          +
 Generative Reporting
 ```
 
-This provides a practical balance between transparency and natural-language generation.
+The deterministic layer provides:
 
-The deterministic layer provides control and explainability, while the LLM provides flexibility in communicating the results.
+* decision consistency;
+* traceability;
+* explicit business logic;
+* controlled severity and threshold configuration.
+
+The generative layer provides:
+
+* natural-language generation;
+* flexible executive summaries;
+* improved communication of structured results.
+
+The two capabilities are therefore complementary rather than interchangeable.
 
 ---
 
-# 15. Current Scope
+# 32. Current Scope
 
-The current architecture is intentionally designed as a prototype.
+The current architecture is intentionally designed as a prototype focused on demonstrating the core assessment and reporting concepts.
 
-It provides the core infrastructure required to demonstrate:
+It currently provides:
 
-* rule-based credit assessment;
-* structured analysis;
-* modular reporting;
-* LLM integration;
+* deterministic rule-based credit assessment;
+* configurable rules and severity policies;
+* structured findings;
+* analysis transformation;
+* modular deterministic reporting;
+* LLM-based reporting;
+* LLM client abstraction;
+* mock LLM support;
+* Gemini integration;
 * LLM response validation;
 * deterministic fallback;
-* end-to-end orchestration.
+* workflow orchestration;
+* application-level orchestration;
+* automated unit and integration testing.
 
-The architecture does not currently introduce additional infrastructure such as:
+The architecture does not currently require additional infrastructure such as:
 
-* databases;
+* relational or NoSQL databases;
 * REST APIs;
-* web applications;
+* web frontends;
 * message queues;
 * distributed services;
 * container orchestration;
 * vector databases;
-* retrieval-augmented generation.
+* retrieval-augmented generation;
+* persistent model memory.
 
-These technologies are not required for the current assessment prototype and can be introduced only if future requirements justify their use.
+These components can be introduced in future iterations if justified by concrete requirements.
+
+---
+
+# 33. Future Extension Points
+
+The current architecture provides several natural extension points.
+
+## 33.1 Additional Rules
+
+New financial indicators can be introduced as additional rule implementations without changing the overall workflow.
+
+```text
+New Rule
+   ↓
+RuleEngine
+   ↓
+AssessmentService
+```
+
+The remaining layers can continue to operate unchanged.
+
+---
+
+## 33.2 Additional LLM Providers
+
+A new provider can be introduced by implementing `LLMClient`.
+
+```text
+LLMClient
+   ├── GeminiClient
+   ├── MockLLMClient
+   └── FutureProviderClient
+```
+
+The reporting architecture remains unchanged.
+
+---
+
+## 33.3 Local LLM
+
+A local model can be introduced through another `LLMClient` implementation.
+
+For example:
+
+```text
+LLMReportGenerator
+        │
+        ▼
+    LLMClient
+        │
+        ├── GeminiClient
+        └── LocalLLMClient
+```
+
+This would allow experimentation with locally hosted models while preserving the existing application architecture.
+
+---
+
+## 33.4 Structured LLM Output
+
+The reporting layer could be extended to require schema-constrained LLM output rather than free-form text.
+
+For example:
+
+```text
+LLM
+ │
+ ▼
+Structured Response
+ │
+ ├── Executive Summary
+ ├── Mentioned Findings
+ └── Risk Statements
+```
+
+The response could then be validated against the deterministic `AssessmentAnalysis` before being rendered into the final report.
+
+---
+
+## 33.5 Stronger Semantic Validation
+
+The current validation layer can be extended to detect:
+
+* unsupported claims;
+* contradictions;
+* missing findings;
+* inconsistent financial values;
+* unsupported causal explanations;
+* unsupported recommendations.
+
+This would strengthen the boundary between deterministic assessment and generated narrative.
+
+---
+
+# 34. Summary
+
+The architecture implements a controlled hybrid approach to credit assessment.
+
+The complete processing chain is:
+
+```text
+CreditPosition
+      │
+      ▼
+Deterministic Rules
+      │
+      ▼
+Rule Results
+      │
+      ▼
+Assessment
+      │
+      ▼
+AnalysisAgent
+      │
+      ▼
+AssessmentAnalysis
+      │
+      ▼
+ReportingAgent
+      │
+      ├───────────────┐
+      ▼               ▼
+LLM Generator   Deterministic Generator
+      │               │
+      └───────┬───────┘
+              ▼
+            Report
+```
+
+The central architectural guarantee is:
+
+> **The deterministic assessment engine remains the authoritative source of truth, while the LLM is restricted to controlled natural-language reporting.**
+
+This separation provides a practical combination of deterministic decision logic, traceability and explainability with the flexibility of generative AI.
+
+Most importantly, the architecture ensures that the failure, inconsistency or unavailability of the generative component cannot alter the underlying credit assessment.
