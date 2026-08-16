@@ -41,8 +41,8 @@ def analysis_findings_by_category(analysis):
     return findings_by_category
 
 
-def test_credit_assessment_end_to_end():
-    position = CreditPosition(
+def make_critical_position() -> CreditPosition:
+    return CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
         ebitda=-50000,
@@ -51,6 +51,22 @@ def test_credit_assessment_end_to_end():
         pfn_to_ebitda=6.0,
         interest_expense=40000,
     )
+
+
+def make_normal_position() -> CreditPosition:
+    return CreditPosition(
+        position_id="POS_NORMAL",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=100000,
+        ebitda_margin=0.15,
+        pfn_to_ebitda=2.0,
+        interest_expense=10000,
+    )
+
+
+def test_credit_assessment_end_to_end():
+    position = make_critical_position()
 
     orchestrator = create_default_orchestrator()
 
@@ -65,15 +81,7 @@ def test_credit_assessment_end_to_end():
 
 
 def test_credit_assessment_propagates_findings_through_analysis_and_report():
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
-    )
+    position = make_critical_position()
 
     workflow = create_default_assessment_workflow(
         use_llm=False,
@@ -118,8 +126,6 @@ def test_credit_assessment_propagates_findings_through_analysis_and_report():
     assert actual_analysis_findings == expected_findings
 
     # The report groups findings by category.
-    # Therefore, we compare grouped content rather than
-    # flattening the report and relying on global ordering.
     report_by_category = report_findings_by_category(report)
     analysis_by_category = analysis_findings_by_category(analysis)
 
@@ -145,19 +151,15 @@ def test_credit_assessment_propagates_findings_through_analysis_and_report():
 
 
 def test_credit_assessment_llm_workflow():
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
+    position = make_critical_position()
+
+    llm_client = MockLLMClient(
+        response="CRITICAL assessment identified.",
     )
 
     workflow = create_default_assessment_workflow(
         use_llm=True,
-        llm_client=MockLLMClient(),
+        llm_client=llm_client,
     )
 
     assert isinstance(
@@ -187,6 +189,14 @@ def test_credit_assessment_llm_workflow():
 
     assert result.report.executive_summary
 
+    # The primary LLM generator must have been used.
+    assert (
+        workflow.reporting_agent.last_generator_used
+        == "PRIMARY"
+    )
+
+    assert workflow.reporting_agent.last_error is None
+
     # Findings remain deterministic and structured.
     # The LLM must not modify them.
     assert (
@@ -194,26 +204,92 @@ def test_credit_assessment_llm_workflow():
         == analysis_findings_by_category(result.analysis)
     )
 
+    # Limitations remain deterministic.
     assert (
         result.report.limitations
         == result.analysis.limitations
     )
 
 
-def test_llm_cannot_change_deterministic_assessment():
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
+def test_llm_prompt_contains_assessment_and_safety_constraints():
+    position = make_critical_position()
+
+    llm_client = MockLLMClient(
+        response="CRITICAL assessment identified.",
     )
 
     workflow = create_default_assessment_workflow(
         use_llm=True,
-        llm_client=MockLLMClient(),
+        llm_client=llm_client,
+    )
+
+    result = workflow.run(position)
+
+    assert result.report.executive_summary
+    assert llm_client.last_prompt is not None
+
+    prompt = llm_client.last_prompt
+
+    # The deterministic assessment must be passed to the LLM.
+    assert "Assessment status:" in prompt
+    assert AssessmentStatus.CRITICAL.value in prompt
+    assert "Key findings:" in prompt
+    assert "Risk factors:" in prompt
+    assert "Limitations:" in prompt
+
+    # The LLM must operate exclusively on the structured
+    # assessment provided by the deterministic pipeline.
+    assert (
+        "Do not introduce facts that are not present"
+        in prompt
+    )
+
+    assert (
+        "Do not invent financial data"
+        in prompt
+    )
+
+    assert (
+        "Do not modify the assessment status"
+        in prompt
+    )
+
+    assert (
+        "Do not make a credit decision"
+        in prompt
+    )
+
+    assert (
+        "If information is missing or not evaluable"
+        in prompt
+    )
+
+    # Internal rule thresholds must not be exposed
+    # through the executive summary.
+    assert (
+        "Do not disclose internal rule thresholds"
+        in prompt
+    )
+
+    assert (
+        "Do not reproduce threshold values"
+        in prompt
+    )
+
+
+def test_llm_cannot_change_deterministic_assessment():
+    position = make_critical_position()
+
+    llm_client = MockLLMClient(
+        response=(
+            "CRITICAL assessment identified. "
+            "The company shows severe financial deterioration."
+        ),
+    )
+
+    workflow = create_default_assessment_workflow(
+        use_llm=True,
+        llm_client=llm_client,
     )
 
     result = workflow.run(position)
@@ -238,28 +314,195 @@ def test_llm_cannot_change_deterministic_assessment():
     # the executive summary.
     assert result.report.executive_summary
 
-    # Findings must remain deterministic.
+    # Findings remain deterministic.
     assert (
         report_findings_by_category(result.report)
         == analysis_findings_by_category(result.analysis)
     )
 
+    # Limitations remain deterministic.
     assert (
         result.report.limitations
         == result.analysis.limitations
     )
 
 
-def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails():
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
+def test_llm_cannot_replace_deterministic_findings():
+    position = make_critical_position()
+
+    llm_client = MockLLMClient(
+        response=(
+            "CRITICAL assessment identified. "
+            "The company shows severe financial deterioration."
+        ),
     )
+
+    workflow = create_default_assessment_workflow(
+        use_llm=True,
+        llm_client=llm_client,
+    )
+
+    result = workflow.run(position)
+
+    # Report findings must come from the deterministic
+    # assessment/analysis pipeline.
+    assert (
+        report_findings_by_category(result.report)
+        == analysis_findings_by_category(result.analysis)
+    )
+
+    report_findings = [
+        finding
+        for findings in report_findings_by_category(
+            result.report
+        ).values()
+        for finding in findings
+    ]
+
+    assert all(
+        finding.text
+        != "The company shows severe financial deterioration."
+        for finding in report_findings
+    )
+
+
+def test_llm_cannot_replace_deterministic_limitations():
+    position = make_critical_position()
+
+    llm_client = MockLLMClient(
+        response=(
+            "CRITICAL assessment identified. "
+            "All relevant indicators were considered."
+        ),
+    )
+
+    workflow = create_default_assessment_workflow(
+        use_llm=True,
+        llm_client=llm_client,
+    )
+
+    result = workflow.run(position)
+
+    # Limitations must remain those identified by
+    # the deterministic assessment pipeline.
+    assert (
+        result.report.limitations
+        == result.analysis.limitations
+    )
+
+
+def test_llm_response_is_rejected_when_empty():
+    position = make_critical_position()
+
+    llm_client = MockLLMClient(
+        response="   ",
+    )
+
+    workflow = create_default_assessment_workflow(
+        use_llm=True,
+        llm_client=llm_client,
+    )
+
+    result = workflow.run(position)
+
+    # Empty LLM output must cause the deterministic
+    # fallback generator to be used.
+    assert result.report is not None
+
+    assert (
+        workflow.reporting_agent.last_generator_used
+        == "FALLBACK"
+    )
+
+    assert (
+        workflow.reporting_agent.last_error
+        == "LLM report generation failed."
+    )
+
+    assert (
+        result.report.assessment_status
+        == result.assessment.status
+    )
+
+
+def test_llm_response_is_rejected_when_status_is_missing():
+    position = make_critical_position()
+
+    llm_client = MockLLMClient(
+        response=(
+            "The company shows significant financial "
+            "deterioration and elevated risk."
+        ),
+    )
+
+    workflow = create_default_assessment_workflow(
+        use_llm=True,
+        llm_client=llm_client,
+    )
+
+    result = workflow.run(position)
+
+    # The response does not contain "CRITICAL".
+    # Therefore, response validation must fail.
+    assert result.report is not None
+
+    assert (
+        workflow.reporting_agent.last_generator_used
+        == "FALLBACK"
+    )
+
+    assert (
+        workflow.reporting_agent.last_error
+        == "LLM report generation failed."
+    )
+
+    # The deterministic assessment remains authoritative.
+    assert (
+        result.assessment.status
+        == AssessmentStatus.CRITICAL
+    )
+
+    assert (
+        result.report.assessment_status
+        == result.assessment.status
+    )
+
+
+def test_llm_response_is_accepted_when_status_is_present():
+    position = make_critical_position()
+
+    llm_client = MockLLMClient(
+        response=(
+            "The assessment status is CRITICAL. "
+            "The assessment identifies significant "
+            "financial weaknesses."
+        ),
+    )
+
+    workflow = create_default_assessment_workflow(
+        use_llm=True,
+        llm_client=llm_client,
+    )
+
+    result = workflow.run(position)
+
+    # The response passes validation and the primary
+    # generator remains active.
+    assert (
+        workflow.reporting_agent.last_generator_used
+        == "PRIMARY"
+    )
+
+    assert workflow.reporting_agent.last_error is None
+
+    assert (
+        result.report.executive_summary
+        == llm_client.response
+    )
+
+
+def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails():
+    position = make_critical_position()
 
     class FailingLLMClient:
         def generate(self, prompt: str) -> str:
@@ -285,6 +528,7 @@ def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails():
 
     # A deterministic fallback report must still be generated.
     assert result.report is not None
+
     assert (
         result.report.assessment_status
         == result.assessment.status
@@ -292,6 +536,17 @@ def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails():
 
     assert result.report.position_id == "POS001"
     assert result.report.executive_summary
+
+    # The fallback generator must have been used.
+    assert (
+        workflow.reporting_agent.last_generator_used
+        == "FALLBACK"
+    )
+
+    assert (
+        workflow.reporting_agent.last_error
+        == "Gemini service is temporarily unavailable."
+    )
 
     # The fallback report must preserve deterministic
     # findings and limitations.
@@ -306,96 +561,8 @@ def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails():
     )
 
 
-def test_llm_cannot_replace_deterministic_findings():
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
-    )
-
-    llm_client = MockLLMClient(
-        response=(
-            "CRITICAL assessment identified. "
-            "The company shows severe financial deterioration."
-        ),
-    )
-
-    workflow = create_default_assessment_workflow(
-        use_llm=True,
-        llm_client=llm_client,
-    )
-
-    result = workflow.run(position)
-
-    # The report findings must come from the deterministic
-    # assessment/analysis pipeline, not from the LLM.
-    assert (
-        report_findings_by_category(result.report)
-        == analysis_findings_by_category(result.analysis)
-    )
-
-    report_findings = [
-        finding
-        for findings in report_findings_by_category(
-            result.report
-        ).values()
-        for finding in findings
-    ]
-
-    assert all(
-        finding.text
-        != "The company shows severe financial deterioration."
-        for finding in report_findings
-    )
-
-
-def test_llm_cannot_replace_deterministic_limitations():
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=-0.15,
-        ebitda=-50000,
-        profit_loss=-50000,
-        ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
-        interest_expense=40000,
-    )
-
-    llm_client = MockLLMClient(
-        response=(
-            "CRITICAL assessment identified. "
-            "All relevant indicators were considered."
-        ),
-    )
-
-    workflow = create_default_assessment_workflow(
-        use_llm=True,
-        llm_client=llm_client,
-    )
-
-    result = workflow.run(position)
-
-    # Limitations must remain those identified by
-    # the deterministic assessment pipeline.
-    assert (
-        result.report.limitations
-        == result.analysis.limitations
-    )
-
-
 def test_not_evaluable_rules_do_not_generate_findings():
-    position = CreditPosition(
-        position_id="POS_NORMAL",
-        revenue_growth=0.05,
-        ebitda=250000,
-        profit_loss=100000,
-        ebitda_margin=0.15,
-        pfn_to_ebitda=2.0,
-        interest_expense=10000,
-    )
+    position = make_normal_position()
 
     workflow = create_default_assessment_workflow(
         use_llm=False,

@@ -4,14 +4,6 @@ from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
 
-# Each rule represents one independent business rule.
-#
-# A rule evaluates a CreditPosition and returns exactly one RuleResult.
-#
-# Related rules may live in the same module, but each rule must have
-# its own configuration.
-
-
 @Rule.register("R002")
 class NegativeEbitdaRule(Rule):
 

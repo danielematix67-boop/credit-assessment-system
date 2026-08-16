@@ -3,17 +3,18 @@ import pytest
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
+from src.rules.base.severity_direction import SeverityDirection
 from src.rules.base.severity_threshold import SeverityThreshold
 from src.rules.base.status import RuleStatus
-from src.rules.financial.profitability.financial_expenses_to_ebitda import (
-    FinancialExpensesToEbitdaRule,
+from src.rules.financial.profitability.interest_coverage_ratio import (
+    InterestCoverageRatioRule,
 )
 
 
-RULE_ID = "TEST_RULE"
-RULE_NAME = "Test interest expense to EBITDA"
-CATEGORY = "test"
-THRESHOLD = 0.60
+RULE_ID = "R007"
+RULE_NAME = "Interest coverage ratio"
+CATEGORY = "profitability"
+THRESHOLD = 2.00
 DEFAULT_SEVERITY = RuleSeverity.LOW
 
 
@@ -25,13 +26,14 @@ def rule_config():
         category=CATEGORY,
         threshold=THRESHOLD,
         severity=DEFAULT_SEVERITY,
+        severity_direction=SeverityDirection.LOWER_IS_WORSE,
         severity_thresholds=(
             SeverityThreshold(
-                threshold=0.40,
+                threshold=1.50,
                 severity=RuleSeverity.MEDIUM,
             ),
             SeverityThreshold(
-                threshold=0.60,
+                threshold=1.00,
                 severity=RuleSeverity.HIGH,
             ),
         ),
@@ -40,7 +42,7 @@ def rule_config():
 
 @pytest.fixture
 def rule(rule_config):
-    return FinancialExpensesToEbitdaRule(rule_config)
+    return InterestCoverageRatioRule(rule_config)
 
 
 def make_position(
@@ -76,36 +78,37 @@ def assert_result_metadata(result, config):
     ),
     [
         (
-            250_000,
             50_000,
-            0.20,
+            50_000,
+            1.00,
+            RuleStatus.TRIGGERED,
+            RuleSeverity.HIGH,
+        ),
+        (
+            75_000,
+            50_000,
+            1.50,
+            RuleStatus.TRIGGERED,
+            RuleSeverity.MEDIUM,
+        ),
+        (
+            100_000,
+            50_000,
+            2.00,
             RuleStatus.NOT_TRIGGERED,
             RuleSeverity.LOW,
         ),
         (
-            250_000,
-            100_000,
-            0.40,
-            RuleStatus.NOT_TRIGGERED,
-            RuleSeverity.MEDIUM,
-        ),
-        (
-            250_000,
             150_000,
-            0.60,
+            50_000,
+            3.00,
             RuleStatus.NOT_TRIGGERED,
-            RuleSeverity.HIGH,
-        ),
-        (
-            250_000,
-            200_000,
-            0.80,
-            RuleStatus.TRIGGERED,
-            RuleSeverity.HIGH,
+            RuleSeverity.LOW,
         ),
     ],
 )
-def test_interest_expense_to_ebitda_rule_evaluates_ratio(
+
+def test_interest_coverage_ratio_rule_evaluates_ratio(
     rule,
     rule_config,
     ebitda,
@@ -127,16 +130,31 @@ def test_interest_expense_to_ebitda_rule_evaluates_ratio(
     assert result.severity == expected_severity
 
 
+def test_interest_coverage_ratio_threshold_is_exclusive(
+    rule,
+):
+    position = make_position(
+        ebitda=100_000,
+        interest_expense=50_000,
+    )
+
+    result = rule.evaluate(position)
+
+    assert result.value == 2.00
+    assert result.status == RuleStatus.NOT_TRIGGERED
+    assert result.severity == RuleSeverity.LOW
+
+
 @pytest.mark.parametrize(
     ("ebitda", "interest_expense"),
     [
-        (-50_000, 40_000),
-        (None, 100_000),
-        (0, 40_000),
-        (250_000, None),
+        (None, 50_000),
+        (100_000, None),
+        (100_000, 0),
+        (100_000, -10_000),
     ],
 )
-def test_interest_expense_to_ebitda_rule_is_not_evaluable(
+def test_interest_coverage_ratio_rule_is_not_evaluable(
     rule,
     rule_config,
     ebitda,
@@ -155,23 +173,24 @@ def test_interest_expense_to_ebitda_rule_is_not_evaluable(
     assert result.severity == rule_config.severity
 
 
-def test_interest_expense_to_ebitda_rule_uses_configured_threshold():
+def test_interest_coverage_ratio_rule_uses_configured_threshold():
     config = RuleConfig(
         rule_id="CUSTOM_RULE",
-        rule_name="Custom rule",
+        rule_name="Custom interest coverage ratio",
         category=CATEGORY,
-        threshold=1.00,
+        threshold=1.50,
         severity=RuleSeverity.MEDIUM,
+        severity_direction=SeverityDirection.LOWER_IS_WORSE,
     )
 
     position = make_position(
-        ebitda=250_000,
-        interest_expense=200_000,
+        ebitda=75_000,
+        interest_expense=50_000,
     )
 
-    result = FinancialExpensesToEbitdaRule(config).evaluate(position)
+    result = InterestCoverageRatioRule(config).evaluate(position)
 
     assert_result_metadata(result, config)
+    assert result.value == 1.50
     assert result.status == RuleStatus.NOT_TRIGGERED
-    assert result.value == 0.80
     assert result.severity == RuleSeverity.MEDIUM

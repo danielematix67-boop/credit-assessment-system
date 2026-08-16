@@ -4,39 +4,76 @@ rules:
     category: revenue
     threshold: -0.10
     severity: MEDIUM
+    severity_direction: LOWER_IS_WORSE
+    severity_thresholds:
+      - threshold: -0.10
+        severity: MEDIUM
+      - threshold: -0.30
+        severity: HIGH
 
   - rule_id: R002
     rule_name: Negative EBITDA
     category: profitability
     threshold: 0.0
     severity: HIGH
+    severity_direction: LOWER_IS_WORSE
 
   - rule_id: R003
     rule_name: EBITDA margin deterioration
     category: profitability
     threshold: 0.0
     severity: MEDIUM
+    severity_direction: LOWER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.0
+        severity: MEDIUM
+      - threshold: -0.10
+        severity: HIGH
 
   - rule_id: R004
     rule_name: PFN / EBITDA leverage
     category: leverage
     threshold: 5.0
-    severity: HIGH
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 5.0
+        severity: MEDIUM
+      - threshold: 7.0
+        severity: HIGH
 
   - rule_id: R005
     rule_name: Interest expense to EBITDA
     category: profitability
     threshold: 0.60
     severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.60
+        severity: MEDIUM
+      - threshold: 1.00
+        severity: HIGH
 
   - rule_id: R006
     rule_name: EBITDA materially supported by finished goods inventory increase
     category: profitability_quality
     threshold: 0.30
     severity: MEDIUM
-  
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.30
+        severity: MEDIUM
+      - threshold: 0.50
+        severity: HIGH
+
   - rule_id: R007
     rule_name: Interest coverage ratio
     category: profitability
     threshold: 2.0
     severity: MEDIUM
+    severity_direction: LOWER_IS_WORSE
+    severity_thresholds:
+      - threshold: 2.0
+        severity: MEDIUM
+      - threshold: 1.0
+        severity: HIGH

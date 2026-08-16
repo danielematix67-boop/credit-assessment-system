@@ -19,9 +19,7 @@ class PfnToEbitdaRule(Rule):
 
         if value is None:
             return self._not_evaluable(
-                reason=(
-                    "PFN / EBITDA is not available."
-                ),
+                reason="PFN / EBITDA is not available.",
             )
 
         status = (

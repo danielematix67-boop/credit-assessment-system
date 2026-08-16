@@ -1,6 +1,7 @@
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
+from src.rules.base.severity_direction import SeverityDirection
 from src.rules.base.status import RuleStatus
 from src.rules.financial.margins.ebitda_margin import EbitdaMarginRule
 
@@ -11,6 +12,7 @@ R003_CONFIG = RuleConfig(
     category="profitability",
     threshold=0.0,
     severity=RuleSeverity.MEDIUM,
+    severity_direction=SeverityDirection.LOWER_IS_WORSE,
 )
 
 
@@ -96,6 +98,7 @@ def test_ebitda_margin_rule_uses_configured_threshold():
         category=R003_CONFIG.category,
         threshold=-0.10,
         severity=RuleSeverity.HIGH,
+        severity_direction=SeverityDirection.LOWER_IS_WORSE,
     )
 
     ebitda_margin = -0.05

@@ -15,11 +15,8 @@ class RevenueGrowthRule(Rule):
         value = position.revenue_growth
 
         if value is None:
-
             return self._not_evaluable(
-                reason=(
-                    "Revenue growth is not available."
-                ),
+                reason="Revenue growth is not available.",
             )
 
         status = (
