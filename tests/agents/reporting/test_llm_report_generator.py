@@ -163,6 +163,21 @@ def test_llm_report_generator_implements_report_generator_contract(
     assert isinstance(generator, ReportGenerator)
 
 
+def test_llm_report_generator_accepts_llm_client_contract(
+    analysis,
+):
+    client = MagicMock(spec=LLMClient)
+    client.generate.return_value = valid_response(
+        analysis
+    )
+
+    generator = LLMReportGenerator(client)
+
+    report = generator.generate(analysis)
+
+    assert isinstance(report, Report)
+
+
 # ============================================================
 # Basic generation
 # ============================================================
@@ -297,6 +312,9 @@ def test_llm_report_generator_includes_all_analysis_content(
     )
 
     for finding in expected_findings:
+        assert finding.rule_id in prompt
+        assert finding.category in prompt
+        assert finding.severity.value in prompt
         assert finding.text in prompt
 
 
@@ -315,17 +333,78 @@ def test_llm_report_generator_prompt_contains_reporting_constraints(
 
     expected_constraints = [
         "EXCLUSIVELY",
+        "deterministic rule-based assessment engine",
+        "already been performed",
+        "ONLY to transform",
         "Do not introduce facts",
         "Do not invent financial data",
         "Do not modify the assessment status",
+        "Do not change the severity",
         "Do not make a credit decision",
+        "Do not override or reinterpret",
         "Do not provide recommendations",
         "Clearly distinguish between findings and limitations",
-        "Generate only the executive summary",
+        "Do not disclose internal rule thresholds",
+        "Do not reproduce threshold values",
+        "Preserve the factual values",
+        "Generate ONLY the executive summary",
     ]
 
     for constraint in expected_constraints:
         assert constraint in prompt
+
+
+def test_llm_report_generator_prompt_explicitly_separates_assessment_and_generation(
+    analysis,
+):
+    client = MockLLMClient(
+        response=valid_response(analysis),
+    )
+
+    generator = LLMReportGenerator(client)
+
+    generator.generate(analysis)
+
+    prompt = client.last_prompt
+
+    assert (
+        "The credit assessment has already been performed"
+        in prompt
+    )
+
+    assert (
+        "Your role is ONLY to transform"
+        in prompt
+    )
+
+    assert (
+        "You must NOT reassess the credit position"
+        in prompt
+    )
+
+
+def test_llm_report_generator_prompt_protects_deterministic_assessment(
+    analysis,
+):
+    client = MockLLMClient(
+        response=valid_response(analysis),
+    )
+
+    generator = LLMReportGenerator(client)
+
+    generator.generate(analysis)
+
+    prompt = client.last_prompt
+
+    expected_protections = [
+        "Do not modify the assessment status.",
+        "Do not change the severity or meaning of any finding.",
+        "Do not override or reinterpret the deterministic assessment.",
+        "Do not make a credit decision.",
+    ]
+
+    for protection in expected_protections:
+        assert protection in prompt
 
 
 # ============================================================

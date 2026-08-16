@@ -231,7 +231,10 @@ def test_reporting_agent_propagates_primary_error_without_fallback(
 
     agent = ReportingAgent(generator)
 
-    with pytest.raises(RuntimeError, match="report generation failed"):
+    with pytest.raises(
+        RuntimeError,
+        match="report generation failed",
+    ):
         agent.run(analysis)
 
     generator.generate.assert_called_once_with(analysis)
@@ -258,9 +261,7 @@ def test_reporting_agent_passes_same_analysis_to_fallback(
 
     agent.run(analysis)
 
-    passed_analysis = (
-        fallback.generate.call_args.args[0]
-    )
+    passed_analysis = fallback.generate.call_args.args[0]
 
     assert passed_analysis is analysis
 
@@ -431,7 +432,7 @@ def test_reporting_agent_records_fallback_usage(
     agent.run(analysis)
 
     assert agent.last_generator_used == "FALLBACK"
-    assert agent.last_error is not None
+    assert agent.last_error == "LLM report generation failed."
 
 
 def test_reporting_agent_resets_diagnostics_after_success(
@@ -460,3 +461,36 @@ def test_reporting_agent_resets_diagnostics_after_success(
 
     assert agent.last_generator_used == "PRIMARY"
     assert agent.last_error is None
+
+
+# ============================================================
+# Report generator implementation independence
+# ============================================================
+
+
+def test_reporting_agent_depends_only_on_report_generator_contract(
+    analysis,
+):
+    primary = MagicMock(spec=ReportGenerator)
+    fallback = MagicMock(spec=ReportGenerator)
+
+    expected_report = build_report(
+        analysis,
+        executive_summary="LLM-generated summary",
+    )
+
+    primary.generate.return_value = expected_report
+
+    agent = ReportingAgent(
+        report_generator=primary,
+        fallback_generator=fallback,
+    )
+
+    report = agent.run(analysis)
+
+    assert report.executive_summary == (
+        "LLM-generated summary"
+    )
+
+    primary.generate.assert_called_once_with(analysis)
+    fallback.generate.assert_not_called()

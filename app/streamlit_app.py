@@ -1,3 +1,4 @@
+import os
 import sys
 from dataclasses import MISSING, fields
 from pathlib import Path
@@ -37,6 +38,7 @@ from src.agents.reporting.llm_report_generator import (
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.agents.workflow.assessment_workflow import AssessmentWorkflow
 from src.llm.gemini_client import GeminiClient
+from src.llm.ollama_client import OllamaClient
 from src.models.position import CreditPosition
 from src.services.service_factory import create_default_assessment_service
 
@@ -51,6 +53,186 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+
+# ============================================================
+# Environment Detection
+# ============================================================
+
+def is_streamlit_cloud() -> bool:
+    """
+    Detect whether the application is running on
+    Streamlit Community Cloud.
+
+    Streamlit Community Cloud exposes the
+    STREAMLIT_RUNTIME_ENV environment variable.
+
+    The additional STREAMLIT_SHARING_MODE check provides
+    backward compatibility with older Streamlit setups.
+    """
+
+    runtime_env = os.getenv(
+        "STREAMLIT_RUNTIME_ENV",
+        "",
+    ).lower()
+
+    sharing_mode = os.getenv(
+        "STREAMLIT_SHARING_MODE",
+        "",
+    ).lower()
+
+    return (
+        runtime_env in {
+            "cloud",
+            "community",
+        }
+        or sharing_mode == "streamlit"
+    )
+
+
+IS_STREAMLIT_CLOUD = is_streamlit_cloud()
+
+
+# ============================================================
+# Secrets Helpers
+# ============================================================
+
+def get_secret(
+    key: str,
+    default: Any = None,
+) -> Any:
+    """
+    Safely retrieve a Streamlit secret.
+
+    Important:
+    st.secrets itself can raise StreamlitSecretNotFoundError
+    when no secrets.toml exists.
+
+    Therefore the access is wrapped in a broad exception
+    handler.
+
+    This allows the application to work correctly even when
+    running locally without a secrets.toml file.
+    """
+
+    try:
+
+        return st.secrets.get(
+            key,
+            default,
+        )
+
+    except Exception:
+
+        return default
+
+
+def get_gemini_api_key() -> str | None:
+    """
+    Retrieve the Gemini API key.
+
+    Priority:
+    1. Streamlit secrets
+    2. Environment variable
+
+    Returns None if no key is configured.
+    """
+
+    secret_value = get_secret(
+        "GEMINI_API_KEY",
+        None,
+    )
+
+    if secret_value:
+        return str(secret_value)
+
+    environment_value = os.getenv(
+        "GEMINI_API_KEY"
+    )
+
+    if environment_value:
+        return environment_value
+
+    return None
+
+
+def get_ollama_configuration() -> tuple[str, str]:
+    """
+    Retrieve Ollama host and model configuration.
+
+    Priority:
+    1. Streamlit secrets
+    2. Environment variables
+    3. Local defaults
+
+    Ollama is only expected to be used locally.
+    """
+
+    ollama_host = get_secret(
+        "OLLAMA_HOST",
+        None,
+    )
+
+    if not ollama_host:
+
+        ollama_host = os.getenv(
+            "OLLAMA_HOST",
+            "http://localhost:11434",
+        )
+
+    ollama_model = get_secret(
+        "OLLAMA_MODEL",
+        None,
+    )
+
+    if not ollama_model:
+
+        ollama_model = os.getenv(
+            "OLLAMA_MODEL",
+            "qwen3:4b",
+        )
+
+    return (
+        str(ollama_host),
+        str(ollama_model),
+    )
+
+
+# ============================================================
+# Available Reporting Modes
+# ============================================================
+
+def get_reporting_modes() -> list[str]:
+    """
+    Return the reporting modes available in the
+    current execution environment.
+
+    Local:
+        Deterministic
+        Gemini + Fallback
+        Ollama + Fallback
+
+    Streamlit Cloud:
+        Deterministic
+        Gemini + Fallback
+
+    Ollama is deliberately unavailable on Streamlit Cloud
+    because localhost inside the cloud container does not
+    refer to the user's local machine.
+    """
+
+    if IS_STREAMLIT_CLOUD:
+
+        return [
+            "Deterministic",
+            "Gemini + Fallback",
+        ]
+
+    return [
+        "Deterministic",
+        "Gemini + Fallback",
+        "Ollama + Fallback",
+    ]
 
 
 # ============================================================
@@ -197,7 +379,9 @@ def get_field_default(field) -> Any:
 # Type Introspection Helpers
 # ============================================================
 
-def unwrap_optional(field_type: Any) -> tuple[Any, bool]:
+def unwrap_optional(
+    field_type: Any,
+) -> tuple[Any, bool]:
     """
     Resolve Optional / Union-with-None annotations.
     """
@@ -234,10 +418,9 @@ def unwrap_optional(field_type: Any) -> tuple[Any, bool]:
 # Field Presentation
 # ============================================================
 
-def format_field_label(field_name: str) -> str:
-    """
-    Convert a Python field name into a readable UI label.
-    """
+def format_field_label(
+    field_name: str,
+) -> str:
 
     special_terms = {
         "ebitda": "EBITDA",
@@ -269,23 +452,12 @@ def format_field_label(field_name: str) -> str:
 def format_field_description(
     field_name: str,
 ) -> str:
-    """
-    Return a business-oriented description for a CreditPosition field.
-    """
 
     descriptions = {
-
-        # ----------------------------------------------------
-        # Identification
-        # ----------------------------------------------------
 
         "position_id": (
             "Unique identifier of the credit position."
         ),
-
-        # ----------------------------------------------------
-        # Income statement - inputs
-        # ----------------------------------------------------
 
         "revenue": (
             "Total company revenue."
@@ -331,10 +503,6 @@ def format_field_description(
             "Net balance of other operating income and expenses."
         ),
 
-        # ----------------------------------------------------
-        # Income statement - derived
-        # ----------------------------------------------------
-
         "operating_value_added": (
             "Derived operating value added."
         ),
@@ -346,10 +514,6 @@ def format_field_description(
         "net_operating_margin": (
             "Net operating margin after operating costs."
         ),
-
-        # ----------------------------------------------------
-        # Profitability
-        # ----------------------------------------------------
 
         "ebitda": (
             "Earnings before interest, taxes, "
@@ -368,10 +532,6 @@ def format_field_description(
             "Contribution of inventory changes to EBITDA."
         ),
 
-        # ----------------------------------------------------
-        # Leverage / financial structure
-        # ----------------------------------------------------
-
         "pfn_to_ebitda": (
             "Net financial position relative to EBITDA; "
             "a leverage indicator."
@@ -380,10 +540,6 @@ def format_field_description(
         "interest_expense": (
             "Financial expense related to interest."
         ),
-
-        # ----------------------------------------------------
-        # Historical / variation data
-        # ----------------------------------------------------
 
         "revenue_growth": (
             "Year-over-year change in company revenue."
@@ -400,19 +556,12 @@ def format_field_value(
     field_name: str,
     value: Any,
 ) -> str:
-    """
-    Format a CreditPosition value for presentation.
-    """
 
     if value is None:
         return "Not available"
 
     if field_name == "position_id":
         return str(value)
-
-    # --------------------------------------------------------
-    # Percentage-based indicators
-    # --------------------------------------------------------
 
     if field_name in {
         "revenue_growth",
@@ -421,11 +570,8 @@ def format_field_value(
 
         return f"{float(value):.1%}"
 
-    # --------------------------------------------------------
-    # Financial amounts
-    # --------------------------------------------------------
-
     if field_name in {
+
         "revenue",
         "change_in_finished_goods_inventory",
         "operating_grants",
@@ -448,17 +594,9 @@ def format_field_value(
 
         return f"€{float(value):,.0f}"
 
-    # --------------------------------------------------------
-    # Leverage ratio
-    # --------------------------------------------------------
-
     if field_name == "pfn_to_ebitda":
 
         return f"{float(value):.2f}x"
-
-    # --------------------------------------------------------
-    # Generic floating point value
-    # --------------------------------------------------------
 
     if isinstance(value, float):
 
@@ -470,19 +608,14 @@ def format_field_value(
 def get_field_unit(
     field_name: str,
 ) -> str:
-    """
-    Return the unit displayed for a financial indicator.
-    """
 
     units = {
 
         "position_id": "Identifier",
 
-        # Percentage
         "revenue_growth": "%",
         "ebitda_margin": "%",
 
-        # Currency
         "revenue": "EUR",
         "change_in_finished_goods_inventory": "EUR",
         "operating_grants": "EUR",
@@ -502,7 +635,6 @@ def get_field_unit(
         "ebitda_inventory_contribution": "EUR",
         "interest_expense": "EUR",
 
-        # Ratio
         "pfn_to_ebitda": "x",
     }
 
@@ -519,12 +651,6 @@ def get_field_unit(
 def build_scenario_data_table(
     position: CreditPosition,
 ) -> list[dict[str, str]]:
-    """
-    Build a presentation-oriented table from CreditPosition.
-
-    This table describes the input data and does not contain
-    assessment results.
-    """
 
     rows = []
 
@@ -561,12 +687,6 @@ def build_scenario_data_table(
 def display_position_table(
     position: CreditPosition,
 ) -> None:
-    """
-    Display a CreditPosition using business-oriented formatting.
-
-    The underlying CreditPosition remains unchanged.
-    This function is presentation-only.
-    """
 
     position_data = build_scenario_data_table(
         position
@@ -681,10 +801,6 @@ def create_streamlit_field(
         field_name
     )
 
-    # --------------------------------------------------------
-    # Required string
-    # --------------------------------------------------------
-
     if resolved_type is str and not is_optional:
 
         st.caption(description)
@@ -698,10 +814,6 @@ def create_streamlit_field(
             ),
             key=f"credit_position_{field_name}",
         )
-
-    # --------------------------------------------------------
-    # Optional string
-    # --------------------------------------------------------
 
     if resolved_type is str and is_optional:
 
@@ -730,10 +842,6 @@ def create_streamlit_field(
             ),
         )
 
-    # --------------------------------------------------------
-    # Required integer
-    # --------------------------------------------------------
-
     if resolved_type is int and not is_optional:
 
         st.caption(description)
@@ -748,10 +856,6 @@ def create_streamlit_field(
             step=1,
             key=f"credit_position_{field_name}",
         )
-
-    # --------------------------------------------------------
-    # Required float
-    # --------------------------------------------------------
 
     if resolved_type is float and not is_optional:
 
@@ -768,10 +872,6 @@ def create_streamlit_field(
             format="%.4f",
             key=f"credit_position_{field_name}",
         )
-
-    # --------------------------------------------------------
-    # Optional numeric
-    # --------------------------------------------------------
 
     if (
         is_optional
@@ -840,16 +940,51 @@ with st.sidebar:
         "the assessment workflow."
     )
 
+    reporting_modes = get_reporting_modes()
+
     reporting_mode = st.radio(
         "Reporting Mode",
-        options=[
-            "Deterministic",
-            "LLM + Fallback",
-        ],
+        options=reporting_modes,
         index=0,
     )
 
     st.divider()
+
+    # --------------------------------------------------------
+    # Environment Information
+    # --------------------------------------------------------
+
+    st.subheader(
+        "Execution Environment"
+    )
+
+    if IS_STREAMLIT_CLOUD:
+
+        st.info(
+            "☁️ Streamlit Community Cloud"
+        )
+
+        st.caption(
+            "Ollama is disabled in the cloud. "
+            "The application uses deterministic reporting "
+            "unless Gemini is explicitly selected."
+        )
+
+    else:
+
+        st.success(
+            "💻 Local Environment"
+        )
+
+        st.caption(
+            "Ollama is available as a local reporting option."
+        )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # Architecture Guarantees
+    # --------------------------------------------------------
 
     st.subheader(
         "Architecture Guarantees"
@@ -879,14 +1014,45 @@ with st.sidebar:
 
     st.divider()
 
-    if reporting_mode == "LLM + Fallback":
+    # --------------------------------------------------------
+    # Reporting Mode Description
+    # --------------------------------------------------------
+
+    if reporting_mode == "Gemini + Fallback":
+
+        gemini_key = get_gemini_api_key()
+
+        if gemini_key:
+
+            st.success(
+                "Gemini reporting enabled"
+            )
+
+            st.caption(
+                "Gemini is used exclusively for executive "
+                "report generation."
+            )
+
+        else:
+
+            st.warning(
+                "Gemini selected, but GEMINI_API_KEY "
+                "is not configured."
+            )
+
+            st.caption(
+                "The application will stop before execution "
+                "until the API key is configured."
+            )
+
+    elif reporting_mode == "Ollama + Fallback":
 
         st.success(
-            "AI reporting enabled"
+            "Ollama reporting enabled"
         )
 
         st.caption(
-            "Gemini is used exclusively for executive "
+            "Ollama/Qwen is used exclusively for executive "
             "report generation."
         )
 
@@ -919,19 +1085,36 @@ def create_workflow(
         DeterministicReportGenerator()
     )
 
-    if reporting_mode == "LLM + Fallback":
+    # --------------------------------------------------------
+    # Deterministic
+    # --------------------------------------------------------
 
-        try:
+    if reporting_mode == "Deterministic":
 
-            api_key = st.secrets[
-                "GEMINI_API_KEY"
-            ]
+        reporting_agent = ReportingAgent(
+            report_generator=(
+                deterministic_report_generator
+            ),
+        )
 
-        except KeyError:
+    # --------------------------------------------------------
+    # Gemini
+    # --------------------------------------------------------
+
+    elif reporting_mode == "Gemini + Fallback":
+
+        api_key = get_gemini_api_key()
+
+        if not api_key:
 
             st.error(
-                "GEMINI_API_KEY is not configured "
-                "in Streamlit secrets."
+                "GEMINI_API_KEY is not configured."
+            )
+
+            st.info(
+                "Configure GEMINI_API_KEY in "
+                ".streamlit/secrets.toml when running locally "
+                "or in Streamlit Cloud Secrets when deployed."
             )
 
             st.stop()
@@ -953,12 +1136,59 @@ def create_workflow(
             ),
         )
 
-    else:
+    # --------------------------------------------------------
+    # Ollama
+    # --------------------------------------------------------
+
+    elif reporting_mode == "Ollama + Fallback":
+
+        # ----------------------------------------------------
+        # Safety check
+        # ----------------------------------------------------
+
+        if IS_STREAMLIT_CLOUD:
+
+            st.error(
+                "Ollama is not available on Streamlit Cloud."
+            )
+
+            st.info(
+                "Select Deterministic or Gemini + Fallback."
+            )
+
+            st.stop()
+
+        # ----------------------------------------------------
+        # Local Ollama configuration
+        # ----------------------------------------------------
+
+        ollama_host, ollama_model = (
+            get_ollama_configuration()
+        )
+
+        llm_client = OllamaClient(
+            model=ollama_model,
+            host=ollama_host,
+        )
+
+        llm_report_generator = (
+            LLMReportGenerator(
+                llm_client=llm_client,
+            )
+        )
 
         reporting_agent = ReportingAgent(
-            report_generator=(
+            report_generator=llm_report_generator,
+            fallback_generator=(
                 deterministic_report_generator
             ),
+        )
+
+    else:
+
+        raise ValueError(
+            f"Unsupported reporting mode: "
+            f"{reporting_mode}"
         )
 
     return AssessmentWorkflow(
@@ -1130,10 +1360,6 @@ if input_mode == "Demo Scenario":
         st.exception(error)
 
         st.stop()
-
-    # --------------------------------------------------------
-    # Scenario Data
-    # --------------------------------------------------------
 
     st.markdown(
         "#### Scenario Data"
@@ -1324,11 +1550,18 @@ if run_button:
         reporting_mode=reporting_mode,
     )
 
-    if reporting_mode == "LLM + Fallback":
+    if reporting_mode == "Gemini + Fallback":
 
         spinner_message = (
             "Executing deterministic assessment "
-            "and generating AI-assisted report..."
+            "and generating Gemini-assisted report..."
+        )
+
+    elif reporting_mode == "Ollama + Fallback":
+
+        spinner_message = (
+            "Executing deterministic assessment "
+            "and generating Ollama/Qwen-assisted report..."
         )
 
     else:
@@ -1370,6 +1603,10 @@ if run_button:
         "assessment_input_mode"
     ] = input_mode
 
+    st.session_state[
+        "assessment_reporting_mode"
+    ] = reporting_mode
+
     if input_mode == "Demo Scenario":
 
         st.session_state[
@@ -1390,7 +1627,6 @@ assessment_position = (
         "assessment_position"
     )
 )
-
 
 if result is not None:
 
@@ -1444,7 +1680,6 @@ if result is not None:
             ),
         )
 
-
     # ========================================================
     # Assessed Credit Position
     # ========================================================
@@ -1464,7 +1699,6 @@ if result is not None:
         display_position_table(
             assessment_position
         )
-
 
     # ========================================================
     # Execution Trace
@@ -1530,14 +1764,29 @@ if result is not None:
 
         elif generator_used == "PRIMARY":
 
-            if reporting_mode == "LLM + Fallback":
+            selected_mode = st.session_state.get(
+                "assessment_reporting_mode",
+                reporting_mode,
+            )
+
+            if selected_mode == "Gemini + Fallback":
 
                 st.success(
-                    "✓ LLM Reporting"
+                    "✓ Gemini Reporting"
                 )
 
                 st.caption(
                     "AI-assisted report generated"
+                )
+
+            elif selected_mode == "Ollama + Fallback":
+
+                st.success(
+                    "✓ Ollama/Qwen Reporting"
+                )
+
+                st.caption(
+                    "Local AI-assisted report generated"
                 )
 
             else:
@@ -1560,7 +1809,6 @@ if result is not None:
                 "Generator information unavailable"
             )
 
-
     # ========================================================
     # Result Tabs
     # ========================================================
@@ -1578,7 +1826,6 @@ if result is not None:
             "Executive Report",
         ]
     )
-
 
     # ========================================================
     # Overview Tab
@@ -1663,6 +1910,21 @@ if result is not None:
             )
 
         st.markdown(
+            "### Reporting Configuration"
+        )
+
+        selected_reporting_mode = (
+            st.session_state.get(
+                "assessment_reporting_mode",
+                reporting_mode,
+            )
+        )
+
+        st.info(
+            f"Reporting layer: **{selected_reporting_mode}**"
+        )
+
+        st.markdown(
             "### System Architecture"
         )
 
@@ -1691,13 +1953,12 @@ if result is not None:
                 **Reporting Layer**
 
                 - Structured analysis
-                - Optional Gemini generation
+                - Optional LLM generation
+                - Gemini or local Ollama/Qwen
                 - No decision authority
-                - Response validation
                 - Deterministic fallback
                 """
             )
-
 
     # ========================================================
     # Rule Findings Tab
@@ -1754,7 +2015,6 @@ if result is not None:
                 "No rule violations or key findings "
                 "were identified."
             )
-
 
     # ========================================================
     # Analysis Tab
@@ -1839,7 +2099,6 @@ if result is not None:
                     "No limitations."
                 )
 
-
     # ========================================================
     # Executive Report Tab
     # ========================================================
@@ -1862,6 +2121,13 @@ if result is not None:
             None,
         )
 
+        selected_reporting_mode = (
+            st.session_state.get(
+                "assessment_reporting_mode",
+                reporting_mode,
+            )
+        )
+
         if generator_used == "FALLBACK":
 
             st.warning(
@@ -1877,7 +2143,7 @@ if result is not None:
 
         elif generator_used == "PRIMARY":
 
-            if reporting_mode == "LLM + Fallback":
+            if selected_reporting_mode == "Gemini + Fallback":
 
                 st.success(
                     "Gemini generated the executive report "
@@ -1886,6 +2152,19 @@ if result is not None:
 
                 st.caption(
                     "The LLM was used exclusively for report "
+                    "generation. The assessment outcome remains "
+                    "deterministic."
+                )
+
+            elif selected_reporting_mode == "Ollama + Fallback":
+
+                st.success(
+                    "Ollama/Qwen generated the executive report "
+                    "successfully."
+                )
+
+                st.caption(
+                    "Ollama/Qwen was used exclusively for report "
                     "generation. The assessment outcome remains "
                     "deterministic."
                 )

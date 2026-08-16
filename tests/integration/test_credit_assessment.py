@@ -1,7 +1,8 @@
-
 import pytest
 
-from src.agents.reporting.llm_report_generator import LLMReportGenerator
+from src.agents.reporting.llm_report_generator import (
+    LLMReportGenerator,
+)
 from src.agents.workflow.workflow_factory import (
     create_default_assessment_workflow,
 )
@@ -160,6 +161,7 @@ def make_valid_llm_response(status):
 # End-to-end deterministic workflow
 # ============================================================
 
+
 def test_credit_assessment_end_to_end(risk_position):
     workflow = create_default_assessment_workflow(
         use_llm=False,
@@ -200,6 +202,7 @@ def test_credit_assessment_end_to_end(risk_position):
 
     assert result.report.executive_summary
     assert isinstance(result.report.limitations, list)
+
 
 def test_credit_assessment_propagates_findings_through_pipeline(
     risk_position,
@@ -277,6 +280,8 @@ def test_llm_workflow_uses_primary_generator(
     """
     Verify that a valid LLM response is handled by the primary
     generator rather than the deterministic fallback.
+
+    The LLM is mocked, so this test does not require Ollama.
     """
     deterministic_workflow = create_default_assessment_workflow(
         use_llm=False,
@@ -353,6 +358,12 @@ def test_llm_workflow_uses_primary_generator(
 def test_credit_assessment_llm_workflow(
     risk_position,
 ):
+    """
+    Verify that the complete assessment workflow can use an
+    LLM report generator while preserving deterministic data.
+
+    The LLM is mocked, so this test does not require Ollama.
+    """
     deterministic_workflow = create_default_assessment_workflow(
         use_llm=False,
     )
@@ -397,6 +408,45 @@ def test_credit_assessment_llm_workflow(
     assert workflow.reporting_agent.last_error is None
 
 
+def test_llm_workflow_sends_prompt_to_llm_client(
+    risk_position,
+):
+    """
+    Verify that the LLM workflow actually sends a prompt to
+    the configured LLM client.
+
+    The client is mocked, so Ollama is not executed.
+    """
+    deterministic_workflow = create_default_assessment_workflow(
+        use_llm=False,
+    )
+
+    deterministic_result = deterministic_workflow.run(
+        risk_position,
+    )
+
+    llm_client = MockLLMClient(
+        response=make_valid_llm_response(
+            deterministic_result.assessment.status,
+        ),
+    )
+
+    workflow = create_default_assessment_workflow(
+        use_llm=True,
+        llm_client=llm_client,
+    )
+
+    workflow.run(risk_position)
+
+    assert llm_client.last_prompt is not None
+    assert llm_client.last_prompt.strip()
+
+    assert (
+        "Assessment status:"
+        in llm_client.last_prompt
+    )
+
+
 # ============================================================
 # LLM prompt
 # ============================================================
@@ -432,6 +482,7 @@ def test_llm_prompt_contains_assessment_and_safety_constraints(
     prompt = llm_client.last_prompt
 
     assert "Assessment status:" in prompt
+
     assert (
         deterministic_result.assessment.status.value
         in prompt
@@ -747,15 +798,21 @@ def test_llm_response_is_accepted_when_status_is_present(
 def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails(
     risk_position,
 ):
-    class FailingLLMClient:
-        def generate(self, prompt: str) -> str:
-            raise RuntimeError(
-                "LLM service unavailable",
-            )
+    """
+    Verify that an LLM failure causes the workflow to use the
+    deterministic fallback report generator.
+
+    The failing client is mocked; Ollama is not executed.
+    """
+    llm_client = MockLLMClient(
+        error=RuntimeError(
+            "LLM service unavailable",
+        ),
+    )
 
     workflow = create_default_assessment_workflow(
         use_llm=True,
-        llm_client=FailingLLMClient(),
+        llm_client=llm_client,
     )
 
     result = workflow.run(risk_position)
@@ -788,7 +845,7 @@ def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails(
 
     assert (
         workflow.reporting_agent.last_error
-        == "Gemini service is temporarily unavailable."
+        == "LLM service is temporarily unavailable."
     )
 
     assert_deterministic_information_is_preserved(

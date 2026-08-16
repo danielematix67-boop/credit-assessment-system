@@ -86,14 +86,22 @@ class LLMReportGenerator(ReportGenerator):
         return (
             "You are a credit assessment reporting assistant.\n\n"
 
-            "Your task is to write a concise executive summary based "
-            "EXCLUSIVELY on the structured assessment analysis provided below.\n\n"
+            "The credit assessment has already been performed by a "
+            "deterministic rule-based assessment engine. "
+            "Your role is ONLY to transform the structured assessment "
+            "results into a concise, professional executive summary.\n\n"
+
+            "You must NOT reassess the credit position, reinterpret the "
+            "rules, or make independent decisions.\n\n"
 
             "STRICT RULES:\n"
+            "- Use EXCLUSIVELY the information provided in the assessment.\n"
             "- Do not introduce facts that are not present in the assessment.\n"
             "- Do not invent financial data, causes, explanations, or trends.\n"
             "- Do not modify the assessment status.\n"
+            "- Do not change the severity or meaning of any finding.\n"
             "- Do not make a credit decision.\n"
+            "- Do not override or reinterpret the deterministic assessment.\n"
             "- Do not provide recommendations unless they are explicitly "
             "contained in the assessment.\n"
             "- Clearly distinguish between findings and limitations.\n"
@@ -104,7 +112,8 @@ class LLMReportGenerator(ReportGenerator):
             "- You may describe a metric as above, below, or outside an "
             "acceptable level when this is supported by the findings.\n"
             "- Preserve the factual values of financial metrics when they "
-            "are explicitly provided in the findings.\n\n"
+            "are explicitly provided in the findings.\n"
+            "- The assessment status must remain exactly as provided.\n\n"
 
             "ASSESSMENT:\n"
             f"Assessment status: "
@@ -113,5 +122,5 @@ class LLMReportGenerator(ReportGenerator):
             f"Risk factors: {analysis.risk_factors}\n"
             f"Limitations: {analysis.limitations}\n\n"
 
-            "Generate only the executive summary."
+            "Generate ONLY the executive summary."
         )

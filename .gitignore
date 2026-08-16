@@ -1,3 +1,6 @@
+# Secrets
+.streamlit/secrets.toml
+
 # Mypy
 .mypy_cache/
 

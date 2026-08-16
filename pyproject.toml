@@ -1,0 +1,5 @@
+[tool.pytest.ini_options]
+markers = [
+    "ollama: tests requiring a running Ollama instance",
+]
+addopts = "-m 'not ollama'"
