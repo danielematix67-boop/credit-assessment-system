@@ -42,6 +42,179 @@ st.set_page_config(
     page_title="Credit Assessment System",
     page_icon="📊",
     layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+
+# ============================================================
+# Styling
+# ============================================================
+
+st.markdown(
+    """
+    <style>
+
+        /* --------------------------------------------------
+           Global
+        -------------------------------------------------- */
+
+        .block-container {
+            padding-top: 2rem;
+            padding-bottom: 3rem;
+            max-width: 1400px;
+        }
+
+        /* --------------------------------------------------
+           Header
+        -------------------------------------------------- */
+
+        .app-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.2rem;
+        }
+
+        .app-title {
+            font-size: 2.35rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin-bottom: 0;
+        }
+
+        .app-subtitle {
+            color: #6b7280;
+            font-size: 1.02rem;
+            margin-top: 0.25rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .system-badge {
+            display: inline-block;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid rgba(128, 128, 128, 0.25);
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        /* --------------------------------------------------
+           Sections
+        -------------------------------------------------- */
+
+        .section-title {
+            font-size: 1.35rem;
+            font-weight: 650;
+            margin-top: 1.2rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .section-description {
+            color: #6b7280;
+            font-size: 0.92rem;
+            margin-bottom: 1rem;
+        }
+
+        /* --------------------------------------------------
+           Workflow
+        -------------------------------------------------- */
+
+        .workflow-step {
+            padding: 0.95rem 1rem;
+            border-radius: 0.65rem;
+            border: 1px solid rgba(128, 128, 128, 0.22);
+            min-height: 78px;
+            background: rgba(128, 128, 128, 0.025);
+        }
+
+        .workflow-number {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #6b7280;
+            letter-spacing: 0.05em;
+        }
+
+        .workflow-title {
+            font-weight: 650;
+            margin-top: 0.2rem;
+        }
+
+        .workflow-description {
+            color: #6b7280;
+            font-size: 0.78rem;
+        }
+
+        /* --------------------------------------------------
+           Cards
+        -------------------------------------------------- */
+
+        .info-card {
+            padding: 1rem 1.1rem;
+            border-radius: 0.7rem;
+            border: 1px solid rgba(128, 128, 128, 0.22);
+            background: rgba(128, 128, 128, 0.025);
+        }
+
+        .card-label {
+            color: #6b7280;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .card-value {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-top: 0.2rem;
+        }
+
+        /* --------------------------------------------------
+           Findings
+        -------------------------------------------------- */
+
+        .finding-card {
+            padding: 0.85rem 1rem;
+            border-radius: 0.6rem;
+            border: 1px solid rgba(128, 128, 128, 0.20);
+            margin-bottom: 0.55rem;
+        }
+
+        .finding-meta {
+            color: #6b7280;
+            font-size: 0.82rem;
+        }
+
+        /* --------------------------------------------------
+           Sidebar
+        -------------------------------------------------- */
+
+        .sidebar-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+
+        .sidebar-description {
+            color: #6b7280;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+
+        /* --------------------------------------------------
+           Footer
+        -------------------------------------------------- */
+
+        .footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(128, 128, 128, 0.20);
+            color: #6b7280;
+            font-size: 0.78rem;
+        }
+
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 
@@ -51,7 +224,17 @@ st.set_page_config(
 
 with st.sidebar:
 
-    st.markdown("## System Configuration")
+    st.markdown(
+        '<div class="sidebar-title">System Configuration</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        '<div class="sidebar-description">'
+        "Configure the reporting layer used by the assessment workflow."
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
     reporting_mode = st.radio(
         "Reporting Mode",
@@ -64,17 +247,52 @@ with st.sidebar:
 
     st.divider()
 
-    st.markdown("### System Guarantees")
+    st.markdown("### Architecture Guarantees")
 
     st.markdown(
         """
-        ✓ Deterministic rule engine  
-        ✓ Traceable findings  
-        ✓ Fixed assessment status  
-        ✓ LLM cannot modify rules  
-        ✓ Automatic fallback
+        **Deterministic decision layer**
+        
+        The rule engine is the authoritative source
+        of the assessment outcome.
+
+        **Controlled AI usage**
+        
+        The LLM is restricted to report generation.
+
+        **Traceability**
+        
+        Findings remain linked to deterministic rules.
+
+        **Fallback**
+        
+        A deterministic report generator is retained
+        if the LLM fails.
         """
     )
+
+    st.divider()
+
+    if reporting_mode == "LLM + Fallback":
+
+        st.success(
+            "AI reporting enabled"
+        )
+
+        st.caption(
+            "Gemini is used exclusively for executive "
+            "report generation."
+        )
+
+    else:
+
+        st.info(
+            "Deterministic reporting enabled"
+        )
+
+        st.caption(
+            "No external LLM call is required."
+        )
 
 
 # ============================================================
@@ -142,71 +360,24 @@ def run_assessment(
 
 
 # ============================================================
-# Styling
-# ============================================================
-
-st.markdown(
-    """
-    <style>
-
-        .main-title {
-            font-size: 2.4rem;
-            font-weight: 700;
-            margin-bottom: 0.2rem;
-        }
-
-        .subtitle {
-            color: #6b7280;
-            font-size: 1.05rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .section-title {
-            font-size: 1.35rem;
-            font-weight: 650;
-            margin-top: 1.5rem;
-            margin-bottom: 0.8rem;
-        }
-
-        .workflow-step {
-            padding: 0.9rem 1rem;
-            border-radius: 0.6rem;
-            border: 1px solid rgba(128, 128, 128, 0.25);
-            margin-bottom: 0.5rem;
-            min-height: 75px;
-        }
-
-        .muted {
-            color: #6b7280;
-        }
-
-        .trace-item {
-            padding: 0.7rem 1rem;
-            border-radius: 0.5rem;
-            border: 1px solid rgba(128, 128, 128, 0.20);
-            margin-bottom: 0.4rem;
-        }
-
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-
-# ============================================================
 # Header
 # ============================================================
 
 st.markdown(
-    '<div class="main-title">Credit Assessment System</div>',
-    unsafe_allow_html=True,
-)
-
-st.markdown(
     """
-    <div class="subtitle">
-        Deterministic credit-quality assessment with
-        structured analysis and controlled report generation.
+    <div class="app-header">
+        <div>
+            <div class="app-title">
+                Credit Assessment System
+            </div>
+            <div class="app-subtitle">
+                Deterministic credit-quality assessment with
+                controlled AI-assisted reporting.
+            </div>
+        </div>
+        <div class="system-badge">
+            SYSTEM ONLINE
+        </div>
     </div>
     """,
     unsafe_allow_html=True,
@@ -224,13 +395,20 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+st.markdown(
+    '<div class="section-description">'
+    "End-to-end processing architecture."
+    "</div>",
+    unsafe_allow_html=True,
+)
+
 workflow_cols = st.columns(5)
 
 workflow_steps = [
     ("01", "Credit Data", "Input"),
     ("02", "Rule Engine", "Deterministic"),
     ("03", "Analysis Agent", "Interpretation"),
-    ("04", "Reporting Agent", "Report generation"),
+    ("04", "Reporting Agent", "Controlled generation"),
     ("05", "Assessment Report", "Output"),
 ]
 
@@ -238,22 +416,28 @@ for column, (number, title, description) in zip(
     workflow_cols,
     workflow_steps,
 ):
+
     with column:
+
         st.markdown(
             f"""
             <div class="workflow-step">
-                <strong>{number} · {title}</strong><br>
-                <span class="muted">{description}</span>
+                <div class="workflow-number">{number}</div>
+                <div class="workflow-title">{title}</div>
+                <div class="workflow-description">
+                    {description}
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
+
 st.divider()
 
 
 # ============================================================
-# Input
+# Credit Position Input
 # ============================================================
 
 st.markdown(
@@ -261,10 +445,25 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+st.markdown(
+    '<div class="section-description">'
+    "Enter the financial indicators used by the deterministic "
+    "assessment engine."
+    "</div>",
+    unsafe_allow_html=True,
+)
+
+
 col1, col2, col3 = st.columns(3)
 
 
+# ------------------------------------------------------------
+# Identification & Performance
+# ------------------------------------------------------------
+
 with col1:
+
+    st.markdown("#### Company Information")
 
     position_id = st.text_input(
         "Position ID",
@@ -276,21 +475,30 @@ with col1:
         value=-0.15,
         step=0.01,
         format="%.2f",
+        help="Revenue growth rate.",
     )
-
-    ebitda = st.number_input(
-        "EBITDA",
-        value=-50000.0,
-        step=5000.0,
-    )
-
-
-with col2:
 
     profit_loss = st.number_input(
         "Profit / Loss",
         value=-50000.0,
         step=5000.0,
+        help="Profit or loss for the assessed period.",
+    )
+
+
+# ------------------------------------------------------------
+# Profitability
+# ------------------------------------------------------------
+
+with col2:
+
+    st.markdown("#### Profitability")
+
+    ebitda = st.number_input(
+        "EBITDA",
+        value=-50000.0,
+        step=5000.0,
+        help="Earnings before interest, taxes, depreciation and amortization.",
     )
 
     ebitda_margin = st.number_input(
@@ -298,25 +506,41 @@ with col2:
         value=-0.05,
         step=0.01,
         format="%.2f",
+        help="EBITDA as a proportion of revenue.",
     )
-
-    pfn_to_ebitda = st.number_input(
-        "PFN / EBITDA",
-        value=6.0,
-        step=0.5,
-    )
-
-
-with col3:
 
     interest_expense = st.number_input(
         "Interest Expense",
         value=40000.0,
         step=5000.0,
+        help="Interest expense used by profitability rules.",
+    )
+
+
+# ------------------------------------------------------------
+# Leverage & Execution
+# ------------------------------------------------------------
+
+with col3:
+
+    st.markdown("#### Leverage & Execution")
+
+    pfn_to_ebitda = st.number_input(
+        "PFN / EBITDA",
+        value=6.0,
+        step=0.5,
+        help="Net financial position to EBITDA ratio.",
     )
 
     st.write("")
-    st.write("")
+
+    st.markdown(
+        "**Assessment configuration**"
+    )
+
+    st.caption(
+        f"Reporting mode: **{reporting_mode}**"
+    )
 
     run_button = st.button(
         "Run Assessment",
@@ -346,11 +570,14 @@ if run_button:
     )
 
     if reporting_mode == "LLM + Fallback":
+
         spinner_message = (
-            "Executing assessment and generating "
-            "AI-assisted report..."
+            "Executing deterministic assessment "
+            "and generating AI-assisted report..."
         )
+
     else:
+
         spinner_message = (
             "Executing deterministic assessment workflow..."
         )
@@ -383,31 +610,46 @@ if result is not None:
     # ========================================================
 
     st.markdown(
-        '<div class="section-title">Assessment Result</div>',
+        '<div class="section-title">Assessment Overview</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        '<div class="section-description">'
+        "High-level outcome of the deterministic assessment."
+        "</div>",
         unsafe_allow_html=True,
     )
 
     col1, col2, col3, col4 = st.columns(4)
 
+
     with col1:
+
         st.metric(
             "Assessment Status",
             result.assessment.status.value,
         )
 
+
     with col2:
+
         st.metric(
             "Key Findings",
             len(result.analysis.key_findings),
         )
 
+
     with col3:
+
         st.metric(
             "Risk Factors",
             len(result.analysis.risk_factors),
         )
 
+
     with col4:
+
         st.metric(
             "Limitations",
             len(result.analysis.limitations),
@@ -418,30 +660,47 @@ if result is not None:
     # Execution Trace
     # ========================================================
 
-    st.divider()
-
     st.markdown(
         '<div class="section-title">Execution Trace</div>',
         unsafe_allow_html=True,
     )
 
-    st.caption(
-        "Trace of the main processing stages executed by the system."
+    st.markdown(
+        '<div class="section-description">'
+        "Traceability of the main processing stages."
+        "</div>",
+        unsafe_allow_html=True,
     )
 
     trace_cols = st.columns(4)
 
+
     with trace_cols[0]:
+
         st.success("✓ Credit Data")
-        st.caption("Position received")
+
+        st.caption(
+            "Position received"
+        )
+
 
     with trace_cols[1]:
+
         st.success("✓ Rule Engine")
-        st.caption("Deterministic assessment")
+
+        st.caption(
+            "Deterministic assessment"
+        )
+
 
     with trace_cols[2]:
+
         st.success("✓ Analysis Agent")
-        st.caption("Assessment interpreted")
+
+        st.caption(
+            "Assessment interpreted"
+        )
+
 
     with trace_cols[3]:
 
@@ -453,7 +712,9 @@ if result is not None:
 
         if generator_used == "FALLBACK":
 
-            st.warning("⚠ Reporting Fallback")
+            st.warning(
+                "⚠ Reporting Fallback"
+            )
 
             st.caption(
                 "Deterministic fallback generator used"
@@ -463,15 +724,19 @@ if result is not None:
 
             if reporting_mode == "LLM + Fallback":
 
-                st.success("✓ LLM Reporting")
+                st.success(
+                    "✓ LLM Reporting"
+                )
 
                 st.caption(
-                    "LLM report generated successfully"
+                    "AI-assisted report generated"
                 )
 
             else:
 
-                st.success("✓ Reporting")
+                st.success(
+                    "✓ Reporting"
+                )
 
                 st.caption(
                     "Deterministic report generated"
@@ -479,7 +744,9 @@ if result is not None:
 
         else:
 
-            st.info("Reporting")
+            st.info(
+                "Reporting"
+            )
 
             st.caption(
                 "Generator information unavailable"
@@ -487,253 +754,363 @@ if result is not None:
 
 
     # ========================================================
-    # Rule Engine
+    # Result Tabs
     # ========================================================
 
-    st.divider()
-
-    st.markdown(
-        '<div class="section-title">Rule Engine Findings</div>',
-        unsafe_allow_html=True,
+    overview_tab, findings_tab, analysis_tab, report_tab = st.tabs(
+        [
+            "Overview",
+            "Rule Findings",
+            "Analysis",
+            "Executive Report",
+        ]
     )
 
-    st.caption(
-        "These findings originate from the deterministic "
-        "assessment logic and represent the factual basis "
-        "of the subsequent analysis."
-    )
 
-    if result.analysis.key_findings:
+    # ========================================================
+    # Overview Tab
+    # ========================================================
 
-        for finding in result.analysis.key_findings:
+    with overview_tab:
 
-            with st.container(border=True):
-
-                col1, col2, col3 = st.columns(
-                    [1.2, 1.5, 5]
-                )
-
-                with col1:
-                    st.write(
-                        f"**{finding.rule_id}**"
-                    )
-
-                with col2:
-                    st.write(
-                        f"**{finding.severity.value}**"
-                    )
-
-                with col3:
-
-                    st.write(
-                        f"**{finding.category.upper()}**"
-                    )
-
-                    st.write(
-                        finding.text
-                    )
-
-    else:
-
-        st.info(
-            "The rule engine did not identify any key findings."
+        st.markdown(
+            "### Assessment Summary"
         )
 
+        status = result.assessment.status.value
+
+        if status.upper() in {
+            "CRITICAL",
+            "HIGH_RISK",
+            "HIGH RISK",
+        }:
+
+            st.error(
+                f"Assessment Status: **{status}**"
+            )
+
+        elif status.upper() in {
+            "WARNING",
+            "MEDIUM_RISK",
+            "MEDIUM RISK",
+        }:
+
+            st.warning(
+                f"Assessment Status: **{status}**"
+            )
+
+        else:
+
+            st.success(
+                f"Assessment Status: **{status}**"
+            )
+
+        st.markdown(
+            "The assessment status is produced by the "
+            "deterministic assessment service and is not "
+            "generated by the LLM."
+        )
+
+        st.markdown("### System Architecture")
+
+        architecture_col1, architecture_col2 = st.columns(2)
+
+        with architecture_col1:
+
+            st.markdown(
+                """
+                **Decision Layer**
+
+                - Deterministic rule engine
+                - Fixed thresholds
+                - Rule-based severity
+                - Traceable findings
+                - Fixed assessment status
+                """
+            )
+
+        with architecture_col2:
+
+            st.markdown(
+                """
+                **Reporting Layer**
+
+                - Structured analysis
+                - Optional Gemini generation
+                - No decision authority
+                - Response validation
+                - Deterministic fallback
+                """
+            )
+
 
     # ========================================================
-    # Analysis Agent
+    # Rule Findings Tab
     # ========================================================
 
-    st.divider()
+    with findings_tab:
 
-    st.markdown(
-        '<div class="section-title">Analysis Agent</div>',
-        unsafe_allow_html=True,
-    )
+        st.markdown(
+            "### Deterministic Rule Engine Findings"
+        )
 
-    st.caption(
-        "The Analysis Agent interprets the structured output "
-        "of the deterministic assessment engine."
-    )
-
-    analysis_col1, analysis_col2 = st.columns(2)
-
-    with analysis_col1:
-
-        st.markdown("#### Key Findings")
+        st.caption(
+            "These findings constitute the factual basis "
+            "of the assessment."
+        )
 
         if result.analysis.key_findings:
 
             for finding in result.analysis.key_findings:
 
-                st.write(
-                    f"• {finding.text}"
-                )
+                with st.container(border=True):
 
-        else:
+                    col1, col2 = st.columns(
+                        [1.5, 5]
+                    )
 
-            st.caption(
-                "No key findings."
-            )
+                    with col1:
 
-        st.markdown("#### Risk Factors")
+                        st.markdown(
+                            f"**{finding.rule_id}**"
+                        )
 
-        if result.analysis.risk_factors:
+                        st.caption(
+                            finding.severity.value
+                        )
 
-            for risk in result.analysis.risk_factors:
+                    with col2:
 
-                st.write(
-                    f"• {risk.text}"
-                )
+                        st.markdown(
+                            f"**{finding.category.upper()}**"
+                        )
 
-        else:
-
-            st.caption(
-                "No risk factors."
-            )
-
-
-    with analysis_col2:
-
-        st.markdown("#### Limitations")
-
-        if result.analysis.limitations:
-
-            for limitation in result.analysis.limitations:
-
-                st.write(
-                    f"• {limitation.text}"
-                )
-
-        else:
-
-            st.caption(
-                "No limitations."
-            )
-
-
-    # ========================================================
-    # Reporting Agent
-    # ========================================================
-
-    st.divider()
-
-    st.markdown(
-        '<div class="section-title">Reporting Agent</div>',
-        unsafe_allow_html=True,
-    )
-
-    generator_used = getattr(
-        result,
-        "report_generator_used",
-        None,
-    )
-
-    generation_error = getattr(
-        result,
-        "report_generation_error",
-        None,
-    )
-
-    if generator_used == "FALLBACK":
-
-        st.warning(
-            "The primary report generator failed. "
-            "The deterministic fallback generator was used."
-        )
-
-        if generation_error:
-
-            st.caption(
-                f"Reason: {generation_error}"
-            )
-
-    elif generator_used == "PRIMARY":
-
-        if reporting_mode == "LLM + Fallback":
-
-            st.success(
-                "LLM report generator completed successfully."
-            )
+                        st.write(
+                            finding.text
+                        )
 
         else:
 
             st.success(
-                "Deterministic report generator completed successfully."
+                "No rule violations or key findings were identified."
             )
 
-    else:
-
-        st.info(
-            "Report generator information is unavailable."
-        )
-
 
     # ========================================================
-    # Executive Report
+    # Analysis Tab
     # ========================================================
 
-    st.divider()
-
-    st.markdown(
-        '<div class="section-title">Executive Report</div>',
-        unsafe_allow_html=True,
-    )
-
-    with st.container(border=True):
+    with analysis_tab:
 
         st.markdown(
-            result.report.executive_summary
+            "### Analysis Agent"
         )
 
-
-    # ========================================================
-    # Report Findings
-    # ========================================================
-
-    if result.report.findings_by_category:
-
-        st.divider()
-
-        st.markdown(
-            '<div class="section-title">Report Findings</div>',
-            unsafe_allow_html=True,
+        st.caption(
+            "Structured interpretation of the deterministic "
+            "assessment output."
         )
 
-        for group in result.report.findings_by_category:
+        analysis_col1, analysis_col2 = st.columns(2)
 
-            with st.expander(
-                group.category.title(),
-                expanded=True,
-            ):
 
-                for finding in group.findings:
+        with analysis_col1:
+
+            st.markdown(
+                "#### Key Findings"
+            )
+
+            if result.analysis.key_findings:
+
+                for finding in result.analysis.key_findings:
 
                     st.write(
-                        f"**{finding.rule_id}** · "
-                        f"{finding.severity.value}"
+                        f"• {finding.text}"
                     )
+
+            else:
+
+                st.caption(
+                    "No key findings."
+                )
+
+
+            st.markdown(
+                "#### Risk Factors"
+            )
+
+            if result.analysis.risk_factors:
+
+                for risk in result.analysis.risk_factors:
 
                     st.write(
-                        finding.text
+                        f"• {risk.text}"
                     )
 
+            else:
+
+                st.caption(
+                    "No risk factors."
+                )
+
+
+        with analysis_col2:
+
+            st.markdown(
+                "#### Limitations"
+            )
+
+            if result.analysis.limitations:
+
+                for limitation in result.analysis.limitations:
+
+                    st.write(
+                        f"• {limitation.text}"
+                    )
+
+            else:
+
+                st.caption(
+                    "No limitations."
+                )
+
 
     # ========================================================
-    # Report Limitations
+    # Executive Report Tab
     # ========================================================
 
-    if result.report.limitations:
-
-        st.divider()
+    with report_tab:
 
         st.markdown(
-            '<div class="section-title">Report Limitations</div>',
-            unsafe_allow_html=True,
+            "### Reporting Agent"
         )
 
-        for limitation in result.report.limitations:
+        generator_used = getattr(
+            result,
+            "report_generator_used",
+            None,
+        )
+
+        generation_error = getattr(
+            result,
+            "report_generation_error",
+            None,
+        )
+
+
+        if generator_used == "FALLBACK":
 
             st.warning(
-                limitation.text
+                "The primary report generator failed. "
+                "The deterministic fallback generator was used."
             )
+
+            if generation_error:
+
+                st.caption(
+                    f"Technical reason: {generation_error}"
+                )
+
+
+        elif generator_used == "PRIMARY":
+
+            if reporting_mode == "LLM + Fallback":
+
+                st.success(
+                    "Gemini generated the executive report "
+                    "successfully."
+                )
+
+                st.caption(
+                    "The LLM was used exclusively for report "
+                    "generation. The assessment outcome remains "
+                    "deterministic."
+                )
+
+            else:
+
+                st.success(
+                    "Deterministic report generator completed successfully."
+                )
+
+
+        else:
+
+            st.info(
+                "Report generator information is unavailable."
+            )
+
+
+        st.markdown(
+            "### Executive Report"
+        )
+
+        with st.container(border=True):
+
+            st.markdown(
+                result.report.executive_summary
+            )
+
+
+        # ----------------------------------------------------
+        # Report Findings
+        # ----------------------------------------------------
+
+        if result.report.findings_by_category:
+
+            st.markdown(
+                "### Report Findings"
+            )
+
+            for group in result.report.findings_by_category:
+
+                with st.expander(
+                    group.category.title(),
+                    expanded=True,
+                ):
+
+                    for finding in group.findings:
+
+                        st.markdown(
+                            f"**{finding.rule_id}** · "
+                            f"{finding.severity.value}"
+                        )
+
+                        st.write(
+                            finding.text
+                        )
+
+
+        # ----------------------------------------------------
+        # Report Limitations
+        # ----------------------------------------------------
+
+        if result.report.limitations:
+
+            st.markdown(
+                "### Report Limitations"
+            )
+
+            for limitation in result.report.limitations:
+
+                st.warning(
+                    limitation.text
+                )
+
+
+# ============================================================
+# Footer
+# ============================================================
+
+st.markdown(
+    """
+    <div class="footer">
+        Credit Assessment System · Deterministic decision engine
+        with controlled AI-assisted reporting.
+        <br>
+        The LLM does not determine assessment status,
+        rule severity, thresholds, or credit decisions.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
