@@ -46,7 +46,6 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
         self.report_generator = report_generator
         self.fallback_generator = fallback_generator
 
-        # Runtime diagnostics for observability.
         self.last_generator_used: str | None = None
         self.last_error: str | None = None
 
@@ -55,7 +54,6 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
         analysis: AssessmentAnalysis,
     ) -> Report:
 
-        # Reset runtime diagnostics for every execution.
         self.last_generator_used = None
         self.last_error = None
 
@@ -75,18 +73,19 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
 
         except Exception as exc:
 
-            if self.fallback_generator is None:
-                raise
-
             error_message = _get_llm_error_message(exc)
 
             self.last_error = error_message
-            self.last_generator_used = "FALLBACK"
 
             logger.warning(
                 "Primary report generator failed: %s",
                 error_message,
             )
+
+            if self.fallback_generator is None:
+                raise
+
+            self.last_generator_used = "FALLBACK"
 
             print("\n  [WARN] LLM REPORT GENERATION")
             print("  " + "-" * 50)
@@ -95,7 +94,17 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
                 "  Using deterministic fallback report generator."
             )
 
-            report = self.fallback_generator.generate(analysis)
+            try:
+                report = self.fallback_generator.generate(analysis)
+
+            except Exception:
+                logger.exception(
+                    "Deterministic fallback report generation failed."
+                )
+
+                self.last_generator_used = None
+
+                raise
 
             print(
                 "  [FALLBACK] Report generated successfully."
