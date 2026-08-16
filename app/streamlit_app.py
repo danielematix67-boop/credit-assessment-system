@@ -101,6 +101,34 @@ st.markdown(
         font-size: 0.78rem;
     }
 
+    .scenario-card {
+        padding: 1rem 1.2rem;
+        border-radius: 0.65rem;
+        border: 1px solid rgba(128, 128, 128, 0.22);
+        background: rgba(128, 128, 128, 0.025);
+        margin-bottom: 1rem;
+    }
+
+    .scenario-title {
+        font-size: 1.05rem;
+        font-weight: 650;
+        margin-bottom: 0.3rem;
+    }
+
+    .scenario-description {
+        color: #6b7280;
+        font-size: 0.88rem;
+    }
+
+    .input-source-badge {
+        display: inline-block;
+        padding: 0.25rem 0.55rem;
+        border-radius: 0.4rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: 1px solid rgba(128, 128, 128, 0.25);
+    }
+
     .footer {
         margin-top: 2rem;
         padding-top: 1rem;
@@ -123,8 +151,8 @@ def get_credit_position_fields():
     """
     Return the fields defined by the CreditPosition dataclass.
 
-    CreditPosition is the source of truth for the input schema.
-    No financial field names are hard-coded in the Streamlit app.
+    CreditPosition remains the source of truth for the input
+    schema.
     """
 
     return fields(CreditPosition)
@@ -133,13 +161,6 @@ def get_credit_position_fields():
 def get_credit_position_type_hints() -> dict[str, Any]:
     """
     Return resolved type annotations for CreditPosition.
-
-    get_type_hints() is used instead of field.type because
-    it resolves annotations such as:
-
-        float | None
-
-    correctly.
     """
 
     return get_type_hints(CreditPosition)
@@ -168,30 +189,11 @@ def get_field_default(field) -> Any:
 def unwrap_optional(field_type: Any) -> tuple[Any, bool]:
     """
     Resolve Optional / Union-with-None annotations.
-
-    Examples:
-
-        float
-            -> (float, False)
-
-        float | None
-            -> (float, True)
-
-        str | None
-            -> (str, True)
-
-    This makes the Streamlit layer compatible with the
-    CreditPosition model.
     """
 
     origin = get_origin(field_type)
     args = get_args(field_type)
 
-    # Python 3.10+ syntax:
-    #
-    # float | None
-    #
-    # produces types.UnionType.
     if origin is UnionType:
 
         non_none_types = [
@@ -203,9 +205,6 @@ def unwrap_optional(field_type: Any) -> tuple[Any, bool]:
         if len(non_none_types) == 1:
             return non_none_types[0], True
 
-    # typing.Optional / typing.Union
-    #
-    # This is kept for compatibility with other annotations.
     if args and type(None) in args:
 
         non_none_types = [
@@ -220,33 +219,6 @@ def unwrap_optional(field_type: Any) -> tuple[Any, bool]:
     return field_type, False
 
 
-def is_numeric_type(field_type: Any) -> bool:
-    """
-    Return True when the resolved type is int or float.
-    """
-
-    resolved_type, _ = unwrap_optional(field_type)
-
-    return resolved_type in {
-        int,
-        float,
-    }
-
-
-def get_resolved_field_type(field_type: Any) -> Any:
-    """
-    Return the actual underlying type.
-
-    Example:
-
-        float | None -> float
-    """
-
-    resolved_type, _ = unwrap_optional(field_type)
-
-    return resolved_type
-
-
 # ============================================================
 # Field Presentation
 # ============================================================
@@ -254,17 +226,6 @@ def get_resolved_field_type(field_type: Any) -> Any:
 def format_field_label(field_name: str) -> str:
     """
     Convert a Python field name into a readable UI label.
-
-    Examples:
-
-        ebitda_margin
-            -> EBITDA Margin
-
-        pfn_to_ebitda
-            -> PFN To EBITDA
-
-        change_in_finished_goods_inventory
-            -> Change In Finished Goods Inventory
     """
 
     special_terms = {
@@ -296,10 +257,7 @@ def format_field_description(
     field_name: str,
 ) -> str:
     """
-    Generate a generic description for a field.
-
-    The function does not determine business logic.
-    It only improves UI readability.
+    Generate a generic UI description.
     """
 
     label = format_field_label(field_name)
@@ -308,7 +266,205 @@ def format_field_description(
 
 
 # ============================================================
-# Streamlit Field Creation
+# Demo Scenarios
+# ============================================================
+
+DEMO_SCENARIOS = {
+
+    "Healthy Company": {
+        "description": (
+            "A financially solid company with positive growth, "
+            "positive profitability, healthy margins and moderate leverage."
+        ),
+        "values": {
+            "position_id": "DEMO-HEALTHY-001",
+            "revenue_growth": 0.08,
+            "ebitda": 500_000.0,
+            "profit_loss": 220_000.0,
+            "ebitda_margin": 0.18,
+            "pfn_to_ebitda": 1.5,
+        },
+    },
+
+    "Revenue Deterioration": {
+        "description": (
+            "A company experiencing a significant contraction in revenues "
+            "while maintaining otherwise relatively stable fundamentals."
+        ),
+        "values": {
+            "position_id": "DEMO-REVENUE-001",
+            "revenue_growth": -0.15,
+            "ebitda": 350_000.0,
+            "profit_loss": 120_000.0,
+            "ebitda_margin": 0.12,
+            "pfn_to_ebitda": 2.0,
+        },
+    },
+
+    "Profitability Stress": {
+        "description": (
+            "A company showing deterioration in profitability and margins "
+            "despite still generating positive EBITDA."
+        ),
+        "values": {
+            "position_id": "DEMO-PROFITABILITY-001",
+            "revenue_growth": 0.02,
+            "ebitda": 150_000.0,
+            "profit_loss": -50_000.0,
+            "ebitda_margin": 0.025,
+            "pfn_to_ebitda": 3.0,
+        },
+    },
+
+    "Leverage Stress": {
+        "description": (
+            "A company with significant financial leverage. "
+            "Operating performance remains positive, but debt capacity "
+            "represents the main risk factor."
+        ),
+        "values": {
+            "position_id": "DEMO-LEVERAGE-001",
+            "revenue_growth": 0.03,
+            "ebitda": 400_000.0,
+            "profit_loss": 100_000.0,
+            "ebitda_margin": 0.14,
+            "pfn_to_ebitda": 6.0,
+        },
+    },
+
+    "Multiple Risk Factors": {
+        "description": (
+            "A distressed company combining revenue contraction, "
+            "negative EBITDA, negative profitability and high leverage."
+        ),
+        "values": {
+            "position_id": "DEMO-MULTIPLE-RISK-001",
+            "revenue_growth": -0.20,
+            "ebitda": -120_000.0,
+            "profit_loss": -180_000.0,
+            "ebitda_margin": -0.08,
+            "pfn_to_ebitda": 7.0,
+        },
+    },
+
+    "Missing Information": {
+        "description": (
+            "A company for which several financial indicators are "
+            "unavailable. This scenario demonstrates NOT_EVALUABLE "
+            "handling and data-quality limitations."
+        ),
+        "values": {
+            "position_id": "DEMO-MISSING-001",
+            "revenue_growth": None,
+            "ebitda": None,
+            "profit_loss": None,
+            "ebitda_margin": None,
+            "pfn_to_ebitda": None,
+        },
+    },
+}
+
+
+def build_demo_position(
+    scenario_name: str,
+) -> CreditPosition:
+    """
+    Build a CreditPosition from a predefined demo scenario.
+
+    Demo scenarios only provide input data.
+
+    They do NOT contain assessment logic, rule outcomes,
+    severity decisions or assessment status.
+
+    The resulting CreditPosition is processed by the exact
+    same AssessmentWorkflow used for manual input.
+    """
+
+    if scenario_name not in DEMO_SCENARIOS:
+        raise ValueError(
+            f"Unknown demo scenario: {scenario_name}"
+        )
+
+    scenario_values = DEMO_SCENARIOS[
+        scenario_name
+    ]["values"]
+
+    type_hints = (
+        get_credit_position_type_hints()
+    )
+
+    position_data: dict[str, Any] = {}
+
+    for field in get_credit_position_fields():
+
+        field_name = field.name
+
+        # ----------------------------------------------------
+        # Explicit scenario value
+        # ----------------------------------------------------
+
+        if field_name in scenario_values:
+
+            position_data[field_name] = (
+                scenario_values[field_name]
+            )
+
+            continue
+
+        # ----------------------------------------------------
+        # Dataclass default
+        # ----------------------------------------------------
+
+        default = get_field_default(field)
+
+        if default is not None:
+
+            position_data[field_name] = default
+
+            continue
+
+        # ----------------------------------------------------
+        # No default: infer a safe demo value from the type.
+        # ----------------------------------------------------
+
+        field_type = type_hints[field_name]
+
+        resolved_type, is_optional = (
+            unwrap_optional(field_type)
+        )
+
+        if is_optional:
+
+            position_data[field_name] = None
+
+        elif resolved_type is str:
+
+            position_data[field_name] = (
+                f"DEMO-{field_name.upper()}"
+            )
+
+        elif resolved_type is int:
+
+            position_data[field_name] = 0
+
+        elif resolved_type is float:
+
+            position_data[field_name] = 0.0
+
+        else:
+
+            raise TypeError(
+                "Unable to create demo value for "
+                f"{field_name}: {field_type}"
+            )
+
+    return CreditPosition(
+        **position_data
+    )
+
+
+# ============================================================
+# Manual Input
 # ============================================================
 
 def create_optional_numeric_field(
@@ -317,17 +473,6 @@ def create_optional_numeric_field(
     resolved_type: Any,
     default: Any,
 ) -> Any:
-    """
-    Create a numeric widget for fields declared as:
-
-        int | None
-        float | None
-
-    The user can explicitly leave the value missing.
-
-    Returning None is important because None has semantic
-    meaning in the CreditPosition model: missing information.
-    """
 
     provided_key = (
         f"credit_position_{field_name}_provided"
@@ -337,16 +482,10 @@ def create_optional_numeric_field(
         f"credit_position_{field_name}_value"
     )
 
-    default_is_provided = default is not None
-
     provided = st.checkbox(
         f"Provide {label}",
-        value=default_is_provided,
+        value=default is not None,
         key=provided_key,
-        help=(
-            f"Enable this field to provide a value for "
-            f"{label}. Disable it to represent missing data."
-        ),
     )
 
     if not provided:
@@ -354,39 +493,29 @@ def create_optional_numeric_field(
 
     if resolved_type is int:
 
-        numeric_default = (
-            int(default)
-            if default is not None
-            else 0
-        )
-
         return st.number_input(
             label,
-            value=numeric_default,
+            value=(
+                int(default)
+                if default is not None
+                else 0
+            ),
             step=1,
             key=value_key,
-            help=format_field_description(
-                field_name
-            ),
         )
 
     if resolved_type is float:
 
-        numeric_default = (
-            float(default)
-            if default is not None
-            else 0.0
-        )
-
         return st.number_input(
             label,
-            value=numeric_default,
+            value=(
+                float(default)
+                if default is not None
+                else 0.0
+            ),
             step=0.01,
             format="%.4f",
             key=value_key,
-            help=format_field_description(
-                field_name
-            ),
         )
 
     raise TypeError(
@@ -399,21 +528,6 @@ def create_streamlit_field(
     field,
     field_type: Any,
 ) -> Any:
-    """
-    Dynamically create a Streamlit widget from a
-    CreditPosition dataclass field.
-
-    Supported types:
-
-        str
-        int
-        float
-        str | None
-        int | None
-        float | None
-
-    No CreditPosition attribute name is hard-coded here.
-    """
 
     field_name = field.name
 
@@ -429,30 +543,17 @@ def create_streamlit_field(
         unwrap_optional(field_type)
     )
 
-    # --------------------------------------------------------
-    # Required string
-    # --------------------------------------------------------
-
     if resolved_type is str and not is_optional:
-
-        string_default = (
-            ""
-            if default is None
-            else str(default)
-        )
 
         return st.text_input(
             label,
-            value=string_default,
-            key=f"credit_position_{field_name}",
-            help=format_field_description(
-                field_name
+            value=(
+                ""
+                if default is None
+                else str(default)
             ),
+            key=f"credit_position_{field_name}",
         )
-
-    # --------------------------------------------------------
-    # Optional string
-    # --------------------------------------------------------
 
     if resolved_type is str and is_optional:
 
@@ -460,10 +561,6 @@ def create_streamlit_field(
             f"Provide {label}",
             value=default is not None,
             key=f"credit_position_{field_name}_provided",
-            help=(
-                f"Enable this field to provide a value "
-                f"for {label}."
-            ),
         )
 
         if not provided:
@@ -471,68 +568,44 @@ def create_streamlit_field(
 
         return st.text_input(
             label,
-            value="" if default is None else str(default),
-            key=f"credit_position_{field_name}_value",
-            help=format_field_description(
-                field_name
+            value=(
+                ""
+                if default is None
+                else str(default)
             ),
+            key=f"credit_position_{field_name}_value",
         )
-
-    # --------------------------------------------------------
-    # Required integer
-    # --------------------------------------------------------
 
     if resolved_type is int and not is_optional:
 
-        numeric_default = (
-            0
-            if default is None
-            else int(default)
-        )
-
         return st.number_input(
             label,
-            value=numeric_default,
+            value=(
+                0
+                if default is None
+                else int(default)
+            ),
             step=1,
             key=f"credit_position_{field_name}",
-            help=format_field_description(
-                field_name
-            ),
         )
-
-    # --------------------------------------------------------
-    # Required float
-    # --------------------------------------------------------
 
     if resolved_type is float and not is_optional:
 
-        numeric_default = (
-            0.0
-            if default is None
-            else float(default)
-        )
-
         return st.number_input(
             label,
-            value=numeric_default,
+            value=(
+                0.0
+                if default is None
+                else float(default)
+            ),
             step=0.01,
             format="%.4f",
             key=f"credit_position_{field_name}",
-            help=format_field_description(
-                field_name
-            ),
         )
-
-    # --------------------------------------------------------
-    # Optional numeric
-    # --------------------------------------------------------
 
     if (
         is_optional
-        and resolved_type in {
-            int,
-            float,
-        }
+        and resolved_type in {int, float}
     ):
 
         return create_optional_numeric_field(
@@ -542,34 +615,13 @@ def create_streamlit_field(
             default=default,
         )
 
-    # --------------------------------------------------------
-    # Unsupported
-    # --------------------------------------------------------
-
     raise TypeError(
         f"Unsupported CreditPosition field type: "
         f"{field_name} -> {field_type}"
     )
 
 
-# ============================================================
-# Build CreditPosition from UI
-# ============================================================
-
 def build_credit_position_from_ui() -> dict[str, Any]:
-    """
-    Dynamically build the data required to instantiate
-    CreditPosition.
-
-    The dataclass itself defines the UI schema.
-
-    Therefore, adding a field such as:
-
-        new_indicator: float | None = None
-
-    to CreditPosition automatically adds the corresponding
-    Streamlit input.
-    """
 
     model_fields = (
         get_credit_position_fields()
@@ -587,20 +639,16 @@ def build_credit_position_from_ui() -> dict[str, Any]:
         model_fields
     ):
 
-        column = columns[
+        with columns[
             index % len(columns)
-        ]
-
-        field_type = type_hints[
-            field.name
-        ]
-
-        with column:
+        ]:
 
             position_data[field.name] = (
                 create_streamlit_field(
                     field=field,
-                    field_type=field_type,
+                    field_type=type_hints[
+                        field.name
+                    ],
                 )
             )
 
@@ -690,11 +738,6 @@ with st.sidebar:
 def create_workflow(
     reporting_mode: str,
 ) -> AssessmentWorkflow:
-    """
-    Build the assessment workflow.
-
-    The deterministic rule engine remains the source of truth.
-    """
 
     assessment_service = (
         create_default_assessment_service()
@@ -748,9 +791,6 @@ def run_assessment(
     workflow: AssessmentWorkflow,
     position: CreditPosition,
 ):
-    """
-    Execute the assessment workflow.
-    """
 
     return workflow.run(position)
 
@@ -791,31 +831,11 @@ st.caption(
 workflow_cols = st.columns(5)
 
 workflow_steps = [
-    (
-        "01",
-        "Credit Data",
-        "Input",
-    ),
-    (
-        "02",
-        "Rule Engine",
-        "Deterministic",
-    ),
-    (
-        "03",
-        "Analysis Agent",
-        "Interpretation",
-    ),
-    (
-        "04",
-        "Reporting Agent",
-        "Controlled generation",
-    ),
-    (
-        "05",
-        "Assessment Report",
-        "Output",
-    ),
+    ("01", "Credit Data", "Input"),
+    ("02", "Rule Engine", "Deterministic"),
+    ("03", "Analysis Agent", "Interpretation"),
+    ("04", "Reporting Agent", "Controlled generation"),
+    ("05", "Assessment Report", "Output"),
 ]
 
 for column, (
@@ -851,73 +871,161 @@ st.divider()
 
 
 # ============================================================
-# Credit Position Input
+# Credit Data Source
 # ============================================================
 
 st.subheader(
-    "Credit Position"
+    "Credit Data"
 )
 
 st.caption(
-    "The input form is generated dynamically from "
-    "the CreditPosition dataclass."
+    "Select a predefined scenario for the demonstration "
+    "or switch to manual input for custom testing."
 )
 
-st.info(
-    "CreditPosition is the source of truth for the "
-    "assessment input schema. Optional fields can be "
-    "left unavailable by disabling their input."
-)
-
-position_data = (
-    build_credit_position_from_ui()
+input_mode = st.radio(
+    "Input Mode",
+    options=[
+        "Demo Scenario",
+        "Manual Input",
+    ],
+    horizontal=True,
+    label_visibility="collapsed",
 )
 
 
 # ============================================================
-# Input Summary
+# Demo Scenario Input
 # ============================================================
 
-st.divider()
+position: CreditPosition | None = None
+position_data: dict[str, Any] | None = None
 
-st.subheader(
-    "Input Summary"
-)
+if input_mode == "Demo Scenario":
 
-summary_col1, summary_col2, summary_col3 = (
-    st.columns(3)
-)
-
-provided_fields = sum(
-    value is not None
-    for value in position_data.values()
-)
-
-missing_fields = (
-    len(position_data)
-    - provided_fields
-)
-
-with summary_col1:
-
-    st.metric(
-        "Model Fields",
-        len(position_data),
+    scenario_name = st.selectbox(
+        "Demo Scenario",
+        options=list(
+            DEMO_SCENARIOS.keys()
+        ),
+        index=0,
     )
 
-with summary_col2:
+    scenario = DEMO_SCENARIOS[
+        scenario_name
+    ]
 
-    st.metric(
-        "Provided",
-        provided_fields,
+    st.markdown(
+        f"""
+        <div class="scenario-card">
+            <div class="scenario-title">
+                {scenario_name}
+            </div>
+            <div class="scenario-description">
+                {scenario["description"]}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-with summary_col3:
+    try:
 
-    st.metric(
-        "Missing",
-        missing_fields,
+        position = build_demo_position(
+            scenario_name
+        )
+
+    except Exception as error:
+
+        st.error(
+            "Unable to construct the selected demo scenario."
+        )
+
+        st.exception(error)
+
+        st.stop()
+
+    st.markdown(
+        "#### Scenario Data"
     )
+
+    st.caption(
+        "These values are input data only. "
+        "The assessment is still performed entirely "
+        "by the deterministic workflow."
+    )
+
+    scenario_dict = {
+        field.name: getattr(
+            position,
+            field.name,
+        )
+        for field in fields(position)
+    }
+
+    display_data = {
+        format_field_label(
+            key
+        ): value
+        for key, value in scenario_dict.items()
+    }
+
+    st.dataframe(
+        display_data,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
+# ============================================================
+# Manual Input
+# ============================================================
+
+else:
+
+    st.info(
+        "Manual mode is intended for custom testing. "
+        "For demonstrations, use Demo Scenario mode."
+    )
+
+    position_data = (
+        build_credit_position_from_ui()
+    )
+
+    provided_fields = sum(
+        value is not None
+        for value in position_data.values()
+    )
+
+    missing_fields = (
+        len(position_data)
+        - provided_fields
+    )
+
+    summary_col1, summary_col2, summary_col3 = (
+        st.columns(3)
+    )
+
+    with summary_col1:
+
+        st.metric(
+            "Model Fields",
+            len(position_data),
+        )
+
+    with summary_col2:
+
+        st.metric(
+            "Provided",
+            provided_fields,
+        )
+
+    with summary_col3:
+
+        st.metric(
+            "Missing",
+            missing_fields,
+        )
 
 
 # ============================================================
@@ -942,10 +1050,17 @@ with configuration_col1:
 
 with configuration_col2:
 
-    st.caption(
-        f"CreditPosition fields detected: "
-        f"**{len(position_data)}**"
-    )
+    if input_mode == "Demo Scenario":
+
+        st.caption(
+            f"Input source: **Demo Scenario**"
+        )
+
+    else:
+
+        st.caption(
+            "Input source: **Manual Input**"
+        )
 
 
 run_button = st.button(
@@ -961,19 +1076,37 @@ run_button = st.button(
 
 if run_button:
 
-    try:
+    # --------------------------------------------------------
+    # Build position when manual mode is selected
+    # --------------------------------------------------------
 
-        position = CreditPosition(
-            **position_data
-        )
+    if input_mode == "Manual Input":
 
-    except TypeError as error:
+        try:
+
+            position = CreditPosition(
+                **position_data
+            )
+
+        except TypeError as error:
+
+            st.error(
+                "Unable to construct CreditPosition."
+            )
+
+            st.exception(error)
+
+            st.stop()
+
+    # --------------------------------------------------------
+    # Defensive validation
+    # --------------------------------------------------------
+
+    if position is None:
 
         st.error(
-            "Unable to construct CreditPosition."
+            "No credit position is available."
         )
-
-        st.exception(error)
 
         st.stop()
 
@@ -1022,6 +1155,16 @@ if run_button:
     st.session_state[
         "assessment_position"
     ] = position
+
+    st.session_state[
+        "assessment_input_mode"
+    ] = input_mode
+
+    if input_mode == "Demo Scenario":
+
+        st.session_state[
+            "assessment_scenario"
+        ] = scenario_name
 
 
 # ============================================================
@@ -1103,7 +1246,7 @@ if result is not None:
     if assessment_position is not None:
 
         position_dict = {
-            field.name: getattr(
+            format_field_label(field.name): getattr(
                 assessment_position,
                 field.name,
             )
@@ -1115,6 +1258,7 @@ if result is not None:
         st.dataframe(
             position_dict,
             use_container_width=True,
+            hide_index=True,
         )
 
 
@@ -1284,6 +1428,35 @@ if result is not None:
             generated by the LLM.
             """
         )
+
+        st.markdown(
+            "### Input Source"
+        )
+
+        input_source = st.session_state.get(
+            "assessment_input_mode",
+            "Unknown",
+        )
+
+        if input_source == "Demo Scenario":
+
+            selected_scenario = (
+                st.session_state.get(
+                    "assessment_scenario"
+                )
+            )
+
+            st.info(
+                f"Assessment executed using demo scenario: "
+                f"**{selected_scenario}**"
+            )
+
+        else:
+
+            st.info(
+                "Assessment executed using manually "
+                "provided credit data."
+            )
 
         st.markdown(
             "### System Architecture"
@@ -1538,10 +1711,6 @@ if result is not None:
                 result.report.executive_summary
             )
 
-        # ----------------------------------------------------
-        # Report Findings
-        # ----------------------------------------------------
-
         if result.report.findings_by_category:
 
             st.markdown(
@@ -1570,10 +1739,6 @@ if result is not None:
                             finding.text
                         )
 
-        # ----------------------------------------------------
-        # Report Limitations
-        # ----------------------------------------------------
-
         if result.report.limitations:
 
             st.markdown(
@@ -1599,6 +1764,7 @@ st.markdown(
         Credit Assessment System · Deterministic decision engine
         with controlled AI-assisted reporting.
         <br>
+        Demo scenarios provide input data only.
         The LLM does not determine assessment status,
         rule severity, thresholds, or credit decisions.
     </div>
