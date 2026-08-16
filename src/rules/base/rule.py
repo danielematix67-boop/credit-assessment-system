@@ -50,14 +50,39 @@ class Rule(ABC):
         default severity is returned.
         """
 
-        resolved_severity = self._severity_policy.evaluate(
-            value
-        )
+        resolved_severity = self._severity_policy.evaluate(value)
 
         if resolved_severity is None:
             return self.config.severity
 
         return resolved_severity
+
+    def _format_reason(
+        self,
+        reason: str | None,
+    ) -> str:
+        """
+        Add the rule identifier and name to the reason.
+
+        Every RuleResult contains an explicit reference to the
+        deterministic business rule that generated it.
+
+        If no specific reason is provided, a generic evaluation
+        message is generated while preserving the rule reference.
+        """
+
+        rule_reference = (
+            f"[{self.config.rule_id} - "
+            f"{self.config.rule_name}]"
+        )
+
+        if reason is None:
+            return (
+                f"{rule_reference} "
+                "Rule evaluation completed."
+            )
+
+        return f"{rule_reference} {reason}"
 
     def _result(
         self,
@@ -77,6 +102,9 @@ class Rule(ABC):
 
         For results without a value, the rule-level default severity
         is used.
+
+        The reason is automatically enriched with the rule ID
+        and rule name for traceability.
         """
 
         if severity is not None:
@@ -96,7 +124,7 @@ class Rule(ABC):
             value=value,
             threshold=self.config.threshold,
             severity=resolved_severity,
-            reason=reason,
+            reason=self._format_reason(reason),
         )
 
     def _not_evaluable(
@@ -108,6 +136,9 @@ class Rule(ABC):
 
         Since no numeric value was available for evaluation,
         the rule-level default severity is retained.
+
+        The reason is automatically enriched with the rule ID
+        and rule name.
         """
 
         return self._result(
