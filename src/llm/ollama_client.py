@@ -7,20 +7,17 @@ class OllamaClient(LLMClient):
     """
     LLM client implementation for Ollama.
 
-    Ollama is used as an alternative LLM provider to cloud-based
-    clients such as Gemini.
-
-    The client implements the common LLMClient interface, so the
-    reporting layer remains independent from the underlying LLM
-    provider.
+    The client is model-agnostic: the specific Ollama model
+    is provided through configuration.
     """
 
     def __init__(
         self,
-        model: str = "qwen3:4b",
+        model: str,
         host: str = "http://localhost:11434",
-    ):
+    ) -> None:
         self.model = model
+        self.host = host
         self.client = Client(host=host)
 
     def generate(
@@ -31,9 +28,34 @@ class OllamaClient(LLMClient):
         Generate a response using the configured Ollama model.
         """
 
-        response = self.client.generate(
-            model=self.model,
-            prompt=prompt,
-        )
+        print("=" * 60)
+        print("OLLAMA DEBUG")
+        print(f"Host: {self.host}")
+        print(f"Model: {self.model}")
+        print("=" * 60)
 
-        return response["response"]
+        try:
+            response = self.client.generate(
+                model=self.model,
+                prompt=prompt,
+            )
+
+            print("Ollama response received.")
+            print(f"Response type: {type(response)}")
+
+            generated_text = response["response"]
+
+            print("Generated text:")
+            print(generated_text)
+            print("=" * 60)
+
+            return generated_text
+
+        except Exception as error:
+            print("=" * 60)
+            print("OLLAMA ERROR")
+            print(f"Error type: {type(error).__name__}")
+            print(f"Error message: {error}")
+            print("=" * 60)
+
+            raise

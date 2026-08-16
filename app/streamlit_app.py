@@ -63,12 +63,6 @@ def is_streamlit_cloud() -> bool:
     """
     Detect whether the application is running on
     Streamlit Community Cloud.
-
-    Streamlit Community Cloud exposes the
-    STREAMLIT_RUNTIME_ENV environment variable.
-
-    The additional STREAMLIT_SHARING_MODE check provides
-    backward compatibility with older Streamlit setups.
     """
 
     runtime_env = os.getenv(
@@ -104,26 +98,17 @@ def get_secret(
     """
     Safely retrieve a Streamlit secret.
 
-    Important:
-    st.secrets itself can raise StreamlitSecretNotFoundError
-    when no secrets.toml exists.
-
-    Therefore the access is wrapped in a broad exception
-    handler.
-
-    This allows the application to work correctly even when
-    running locally without a secrets.toml file.
+    Priority is handled by the caller when environment
+    variables are also supported.
     """
 
     try:
-
         return st.secrets.get(
             key,
             default,
         )
 
     except Exception:
-
         return default
 
 
@@ -134,8 +119,6 @@ def get_gemini_api_key() -> str | None:
     Priority:
     1. Streamlit secrets
     2. Environment variable
-
-    Returns None if no key is configured.
     """
 
     secret_value = get_secret(
@@ -165,7 +148,9 @@ def get_ollama_configuration() -> tuple[str, str]:
     2. Environment variables
     3. Local defaults
 
-    Ollama is only expected to be used locally.
+    The model is deliberately configurable so that different
+    Ollama models can be tested without modifying application
+    code.
     """
 
     ollama_host = get_secret(
@@ -174,7 +159,6 @@ def get_ollama_configuration() -> tuple[str, str]:
     )
 
     if not ollama_host:
-
         ollama_host = os.getenv(
             "OLLAMA_HOST",
             "http://localhost:11434",
@@ -186,10 +170,9 @@ def get_ollama_configuration() -> tuple[str, str]:
     )
 
     if not ollama_model:
-
         ollama_model = os.getenv(
             "OLLAMA_MODEL",
-            "qwen3:4b",
+            "qwen3:0.6b",
         )
 
     return (
@@ -217,12 +200,11 @@ def get_reporting_modes() -> list[str]:
         Gemini + Fallback
 
     Ollama is deliberately unavailable on Streamlit Cloud
-    because localhost inside the cloud container does not
-    refer to the user's local machine.
+    because localhost inside the cloud container refers to
+    the Streamlit Cloud container, not the user's computer.
     """
 
     if IS_STREAMLIT_CLOUD:
-
         return [
             "Deterministic",
             "Gemini + Fallback",
@@ -390,7 +372,6 @@ def unwrap_optional(
     args = get_args(field_type)
 
     if origin is UnionType:
-
         non_none_types = [
             argument
             for argument in args
@@ -401,7 +382,6 @@ def unwrap_optional(
             return non_none_types[0], True
 
     if args and type(None) in args:
-
         non_none_types = [
             argument
             for argument in args
@@ -433,15 +413,11 @@ def format_field_label(
     formatted_words = []
 
     for word in words:
-
         if word.lower() in special_terms:
-
             formatted_words.append(
                 special_terms[word.lower()]
             )
-
         else:
-
             formatted_words.append(
                 word.capitalize()
             )
@@ -454,7 +430,6 @@ def format_field_description(
 ) -> str:
 
     descriptions = {
-
         "position_id": (
             "Unique identifier of the credit position."
         ),
@@ -567,11 +542,9 @@ def format_field_value(
         "revenue_growth",
         "ebitda_margin",
     }:
-
         return f"{float(value):.1%}"
 
     if field_name in {
-
         "revenue",
         "change_in_finished_goods_inventory",
         "operating_grants",
@@ -591,15 +564,12 @@ def format_field_value(
         "ebitda_inventory_contribution",
         "interest_expense",
     }:
-
         return f"€{float(value):,.0f}"
 
     if field_name == "pfn_to_ebitda":
-
         return f"{float(value):.2f}x"
 
     if isinstance(value, float):
-
         return f"{value:,.4f}"
 
     return str(value)
@@ -610,7 +580,6 @@ def get_field_unit(
 ) -> str:
 
     units = {
-
         "position_id": "Identifier",
 
         "revenue_growth": "%",
@@ -966,8 +935,8 @@ with st.sidebar:
 
         st.caption(
             "Ollama is disabled in the cloud. "
-            "The application uses deterministic reporting "
-            "unless Gemini is explicitly selected."
+            "The application can use deterministic reporting "
+            "or Gemini when configured."
         )
 
     else:
@@ -1041,19 +1010,31 @@ with st.sidebar:
             )
 
             st.caption(
-                "The application will stop before execution "
-                "until the API key is configured."
+                "Configure the API key before running "
+                "the assessment."
             )
 
     elif reporting_mode == "Ollama + Fallback":
 
+        ollama_host, ollama_model = (
+            get_ollama_configuration()
+        )
+
         st.success(
-            "Ollama reporting enabled"
+            "Local LLM reporting enabled"
         )
 
         st.caption(
-            "Ollama/Qwen is used exclusively for executive "
-            "report generation."
+            f"Model: `{ollama_model}`"
+        )
+
+        st.caption(
+            f"Host: `{ollama_host}`"
+        )
+
+        st.caption(
+            "The configured local Ollama model is used "
+            "exclusively for executive report generation."
         )
 
     else:
@@ -1142,10 +1123,6 @@ def create_workflow(
 
     elif reporting_mode == "Ollama + Fallback":
 
-        # ----------------------------------------------------
-        # Safety check
-        # ----------------------------------------------------
-
         if IS_STREAMLIT_CLOUD:
 
             st.error(
@@ -1157,10 +1134,6 @@ def create_workflow(
             )
 
             st.stop()
-
-        # ----------------------------------------------------
-        # Local Ollama configuration
-        # ----------------------------------------------------
 
         ollama_host, ollama_model = (
             get_ollama_configuration()
@@ -1202,7 +1175,6 @@ def run_assessment(
     workflow: AssessmentWorkflow,
     position: CreditPosition,
 ):
-
     return workflow.run(position)
 
 
@@ -1559,9 +1531,14 @@ if run_button:
 
     elif reporting_mode == "Ollama + Fallback":
 
+        _, ollama_model = (
+            get_ollama_configuration()
+        )
+
         spinner_message = (
             "Executing deterministic assessment "
-            "and generating Ollama/Qwen-assisted report..."
+            f"and generating local LLM report "
+            f"using {ollama_model}..."
         )
 
     else:
@@ -1627,6 +1604,7 @@ assessment_position = (
         "assessment_position"
     )
 )
+
 
 if result is not None:
 
@@ -1781,12 +1759,16 @@ if result is not None:
 
             elif selected_mode == "Ollama + Fallback":
 
+                _, ollama_model = (
+                    get_ollama_configuration()
+                )
+
                 st.success(
-                    "✓ Ollama/Qwen Reporting"
+                    "✓ Local LLM Reporting"
                 )
 
                 st.caption(
-                    "Local AI-assisted report generated"
+                    f"Model: {ollama_model}"
                 )
 
             else:
@@ -1924,6 +1906,14 @@ if result is not None:
             f"Reporting layer: **{selected_reporting_mode}**"
         )
 
+        if selected_reporting_mode == "Ollama + Fallback":
+
+            _, model = get_ollama_configuration()
+
+            st.caption(
+                f"Configured local model: `{model}`"
+            )
+
         st.markdown(
             "### System Architecture"
         )
@@ -1954,7 +1944,7 @@ if result is not None:
 
                 - Structured analysis
                 - Optional LLM generation
-                - Gemini or local Ollama/Qwen
+                - Cloud or local LLM provider
                 - No decision authority
                 - Deterministic fallback
                 """
@@ -2158,15 +2148,23 @@ if result is not None:
 
             elif selected_reporting_mode == "Ollama + Fallback":
 
+                _, ollama_model = (
+                    get_ollama_configuration()
+                )
+
                 st.success(
-                    "Ollama/Qwen generated the executive report "
+                    "Local LLM generated the executive report "
                     "successfully."
                 )
 
                 st.caption(
-                    "Ollama/Qwen was used exclusively for report "
-                    "generation. The assessment outcome remains "
-                    "deterministic."
+                    f"Configured model: `{ollama_model}`"
+                )
+
+                st.caption(
+                    "The local LLM was used exclusively for "
+                    "report generation. The assessment outcome "
+                    "remains deterministic."
                 )
 
             else:
