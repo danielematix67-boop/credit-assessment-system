@@ -1,168 +1,94 @@
+from dataclasses import fields
+from typing import Any, get_type_hints
+
+from src.models.position import CreditPosition
+
+
 # ============================================================
 # Demo Scenarios
 # ============================================================
 
 DEMO_SCENARIOS = {
-
-    # --------------------------------------------------------
-    # 1. Healthy
-    # --------------------------------------------------------
-
     "Healthy Company": {
         "description": (
-            "A financially healthy company with positive revenue growth, "
-            "positive EBITDA and net income, strong EBITDA margin and "
-            "moderate leverage. No material warning rules should be triggered."
+            "A financially solid company with positive revenue growth, "
+            "positive profitability, healthy margins and moderate leverage."
         ),
         "values": {
             "position_id": "DEMO-HEALTHY-001",
-
-            "revenue_growth": 0.10,
-            "ebitda": 1_000_000.0,
-            "profit_loss": 400_000.0,
-            "ebitda_margin": 0.20,
+            "revenue_growth": 0.08,
+            "ebitda": 500_000.0,
+            "profit_loss": 220_000.0,
+            "ebitda_margin": 0.18,
             "pfn_to_ebitda": 1.5,
         },
     },
-
-    # --------------------------------------------------------
-    # 2. Moderate deterioration
-    # --------------------------------------------------------
-
-    "Moderate Deterioration": {
+    "Revenue Deterioration": {
         "description": (
-            "A company showing simultaneous deterioration in revenue "
-            "growth and EBITDA margin, while profitability and leverage "
-            "remain relatively controlled. This scenario demonstrates "
-            "how multiple warning rules can be triggered at the same time."
+            "A company experiencing a significant contraction in revenues "
+            "while maintaining otherwise relatively stable fundamentals."
         ),
         "values": {
-            "position_id": "DEMO-MODERATE-001",
-
-            # Revenue deterioration
-            "revenue_growth": -0.12,
-
-            # Still positive
-            "ebitda": 500_000.0,
-            "profit_loss": 100_000.0,
-
-            # Weak margin
-            "ebitda_margin": 0.04,
-
-            # Elevated but not extreme leverage
-            "pfn_to_ebitda": 3.5,
+            "position_id": "DEMO-REVENUE-001",
+            "revenue_growth": -0.15,
+            "ebitda": 350_000.0,
+            "profit_loss": 120_000.0,
+            "ebitda_margin": 0.12,
+            "pfn_to_ebitda": 2.0,
         },
     },
-
-    # --------------------------------------------------------
-    # 3. Profitability + leverage stress
-    # --------------------------------------------------------
-
-    "Profitability and Leverage Stress": {
+    "Profitability Stress": {
         "description": (
-            "A company affected by simultaneous profitability deterioration "
-            "and excessive financial leverage. Revenue remains broadly stable, "
-            "allowing the demonstration to isolate multiple financial risk "
-            "dimensions."
+            "A company showing deterioration in profitability and margins "
+            "despite still generating positive EBITDA."
         ),
         "values": {
-            "position_id": "DEMO-STRESS-001",
-
-            # Revenue still acceptable
-            "revenue_growth": 0.01,
-
-            # Positive but weak EBITDA
-            "ebitda": 200_000.0,
-
-            # Negative net income
-            "profit_loss": -80_000.0,
-
-            # Very weak margin
-            "ebitda_margin": 0.03,
-
-            # High leverage
-            "pfn_to_ebitda": 5.5,
-        },
-    },
-
-    # --------------------------------------------------------
-    # 4. Severe multi-risk
-    # --------------------------------------------------------
-
-    "Severe Multi-Risk": {
-        "description": (
-            "A severely distressed company combining revenue contraction, "
-            "negative EBITDA, negative profitability, very weak EBITDA margin "
-            "and excessive leverage. This scenario is designed to activate "
-            "several deterministic rules simultaneously."
-        ),
-        "values": {
-            "position_id": "DEMO-MULTI-RISK-001",
-
-            # Severe revenue contraction
-            "revenue_growth": -0.25,
-
-            # Negative EBITDA
-            "ebitda": -200_000.0,
-
-            # Negative profitability
-            "profit_loss": -300_000.0,
-
-            # Negative EBITDA margin
-            "ebitda_margin": -0.10,
-
-            # Very high leverage
-            "pfn_to_ebitda": 8.0,
-        },
-    },
-
-    # --------------------------------------------------------
-    # 5. Mixed risk profile
-    # --------------------------------------------------------
-
-    "Mixed Risk Profile": {
-        "description": (
-            "A company with strong revenue growth but simultaneously weak "
-            "profitability and excessive leverage. This scenario demonstrates "
-            "that a positive indicator does not offset independent rule "
-            "violations in other financial dimensions."
-        ),
-        "values": {
-            "position_id": "DEMO-MIXED-001",
-
-            # Strong revenue growth
-            "revenue_growth": 0.15,
-
-            # Positive EBITDA
-            "ebitda": 300_000.0,
-
-            # Negative net income
+            "position_id": "DEMO-PROFITABILITY-001",
+            "revenue_growth": 0.02,
+            "ebitda": 150_000.0,
             "profit_loss": -50_000.0,
-
-            # Weak margin
-            "ebitda_margin": 0.035,
-
-            # Excessive leverage
-            "pfn_to_ebitda": 6.5,
+            "ebitda_margin": 0.025,
+            "pfn_to_ebitda": 3.0,
         },
     },
-
-    # --------------------------------------------------------
-    # 6. Missing information
-    # --------------------------------------------------------
-
+    "Leverage Stress": {
+        "description": (
+            "A company with significant financial leverage. "
+            "Operating performance remains positive, but debt capacity "
+            "represents the main risk factor."
+        ),
+        "values": {
+            "position_id": "DEMO-LEVERAGE-001",
+            "revenue_growth": 0.03,
+            "ebitda": 400_000.0,
+            "profit_loss": 100_000.0,
+            "ebitda_margin": 0.14,
+            "pfn_to_ebitda": 6.0,
+        },
+    },
+    "Multiple Risk Factors": {
+        "description": (
+            "A distressed company combining revenue contraction, "
+            "negative EBITDA, negative profitability and high leverage."
+        ),
+        "values": {
+            "position_id": "DEMO-MULTIPLE-RISK-001",
+            "revenue_growth": -0.20,
+            "ebitda": -120_000.0,
+            "profit_loss": -180_000.0,
+            "ebitda_margin": -0.08,
+            "pfn_to_ebitda": 7.0,
+        },
+    },
     "Missing Information": {
         "description": (
-            "A company with incomplete financial information. Several "
-            "indicators are unavailable, demonstrating NOT_EVALUABLE "
-            "handling and the distinction between financial deterioration "
-            "and insufficient information."
+            "A company for which several financial indicators are "
+            "unavailable. This scenario demonstrates NOT_EVALUABLE "
+            "handling and data-quality limitations."
         ),
         "values": {
             "position_id": "DEMO-MISSING-001",
-
-            "revenue_growth": -0.05,
-
+            "revenue_growth": None,
             "ebitda": None,
             "profit_loss": None,
             "ebitda_margin": None,
@@ -170,3 +96,66 @@ DEMO_SCENARIOS = {
         },
     },
 }
+
+
+# ============================================================
+# Demo Position Builder
+# ============================================================
+
+def build_demo_position(
+    scenario_name: str,
+) -> CreditPosition:
+    """
+    Build a CreditPosition from a predefined demo scenario.
+
+    Demo scenarios contain input data only.
+
+    They do not contain:
+    - rule outcomes
+    - thresholds
+    - severity decisions
+    - assessment status
+    - risk classifications
+
+    All assessment logic remains inside the deterministic
+    assessment workflow.
+    """
+
+    if scenario_name not in DEMO_SCENARIOS:
+        raise ValueError(
+            f"Unknown demo scenario: {scenario_name}"
+        )
+
+    scenario_values = DEMO_SCENARIOS[
+        scenario_name
+    ]["values"]
+
+    type_hints = get_type_hints(
+        CreditPosition
+    )
+
+    position_data: dict[str, Any] = {}
+
+    for field in fields(CreditPosition):
+
+        field_name = field.name
+
+        if field_name in scenario_values:
+            position_data[field_name] = (
+                scenario_values[field_name]
+            )
+            continue
+
+        field_type = type_hints[field_name]
+
+        # If a field is added to CreditPosition in the future,
+        # fail explicitly rather than silently inventing financial data.
+        raise ValueError(
+            f"Demo scenario '{scenario_name}' does not define "
+            f"the required CreditPosition field '{field_name}'. "
+            "Update demo_scenarios.py."
+        )
+
+    return CreditPosition(
+        **position_data
+    )

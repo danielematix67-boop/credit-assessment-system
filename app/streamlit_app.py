@@ -8,17 +8,13 @@ import streamlit as st
 
 
 # ============================================================
-# Project Paths
+# Project Path
 # ============================================================
 
-APP_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = APP_DIR.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
-
-if str(APP_DIR) not in sys.path:
-    sys.path.insert(0, str(APP_DIR))
 
 
 # ============================================================
@@ -27,8 +23,10 @@ if str(APP_DIR) not in sys.path:
 
 # ruff: noqa: E402
 
-from demo_scenarios import DEMO_SCENARIOS
-
+from app.demo_scenarios import (
+    DEMO_SCENARIOS,
+    build_demo_position,
+)
 from src.agents.analysis.analysis_agent import AnalysisAgent
 from src.agents.reporting.deterministic_report_generator import (
     DeterministicReportGenerator,
@@ -76,12 +74,6 @@ st.markdown(
         margin-bottom: 1.5rem;
     }
 
-    .section-description {
-        color: #6b7280;
-        font-size: 0.9rem;
-        margin-bottom: 1rem;
-    }
-
     .workflow-step {
         padding: 1rem;
         border-radius: 0.65rem;
@@ -108,7 +100,7 @@ st.markdown(
     }
 
     .scenario-card {
-        padding: 1rem 1.2rem;
+        padding: 1.2rem 1.4rem;
         border-radius: 0.65rem;
         border: 1px solid rgba(128, 128, 128, 0.22);
         background: rgba(128, 128, 128, 0.025);
@@ -116,23 +108,37 @@ st.markdown(
     }
 
     .scenario-title {
-        font-size: 1.05rem;
+        font-size: 1.1rem;
         font-weight: 650;
-        margin-bottom: 0.3rem;
+        margin-bottom: 0.4rem;
     }
 
     .scenario-description {
         color: #6b7280;
         font-size: 0.88rem;
+        line-height: 1.5;
     }
 
-    .input-source-badge {
-        display: inline-block;
-        padding: 0.25rem 0.55rem;
-        border-radius: 0.4rem;
-        font-size: 0.75rem;
-        font-weight: 600;
-        border: 1px solid rgba(128, 128, 128, 0.25);
+    .data-introduction {
+        color: #6b7280;
+        font-size: 0.88rem;
+        line-height: 1.5;
+        margin-bottom: 1rem;
+    }
+
+    .data-note {
+        padding: 0.9rem 1rem;
+        border-radius: 0.55rem;
+        border: 1px solid rgba(128, 128, 128, 0.20);
+        background: rgba(128, 128, 128, 0.025);
+        margin-bottom: 1rem;
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+
+    .metric-description {
+        color: #6b7280;
+        font-size: 0.78rem;
     }
 
     .footer {
@@ -157,8 +163,7 @@ def get_credit_position_fields():
     """
     Return the fields defined by the CreditPosition dataclass.
 
-    CreditPosition remains the source of truth for the input
-    schema.
+    CreditPosition remains the source of truth for the input schema.
     """
 
     return fields(CreditPosition)
@@ -247,11 +252,13 @@ def format_field_label(field_name: str) -> str:
     for word in words:
 
         if word.lower() in special_terms:
+
             formatted_words.append(
                 special_terms[word.lower()]
             )
 
         else:
+
             formatted_words.append(
                 word.capitalize()
             )
@@ -263,114 +270,142 @@ def format_field_description(
     field_name: str,
 ) -> str:
     """
-    Generate a generic UI description.
+    Return a business-oriented description for a CreditPosition field.
     """
 
-    label = format_field_label(field_name)
+    descriptions = {
+        "position_id": (
+            "Unique identifier of the credit position."
+        ),
+        "revenue_growth": (
+            "Year-over-year change in company revenue."
+        ),
+        "ebitda": (
+            "Earnings before interest, taxes, "
+            "depreciation and amortization."
+        ),
+        "profit_loss": (
+            "Reported profit or loss for the company."
+        ),
+        "ebitda_margin": (
+            "EBITDA expressed as a percentage of revenue."
+        ),
+        "pfn_to_ebitda": (
+            "Net financial position relative to EBITDA; "
+            "a leverage indicator."
+        ),
+    }
 
-    return f"Input value for {label}."
-
-
-# ============================================================
-# Demo Scenario Builder
-# ============================================================
-
-def build_demo_position(
-    scenario_name: str,
-) -> CreditPosition:
-    """
-    Build a CreditPosition from a predefined demo scenario.
-
-    Demo scenarios only provide input data.
-
-    They do NOT contain assessment logic, rule outcomes,
-    severity decisions or assessment status.
-
-    The resulting CreditPosition is processed by the exact
-    same AssessmentWorkflow used for manual input.
-    """
-
-    if scenario_name not in DEMO_SCENARIOS:
-        raise ValueError(
-            f"Unknown demo scenario: {scenario_name}"
-        )
-
-    scenario_values = DEMO_SCENARIOS[
-        scenario_name
-    ]["values"]
-
-    type_hints = (
-        get_credit_position_type_hints()
+    return descriptions.get(
+        field_name,
+        f"Input value for {format_field_label(field_name)}.",
     )
 
-    position_data: dict[str, Any] = {}
 
-    for field in get_credit_position_fields():
+def format_field_value(
+    field_name: str,
+    value: Any,
+) -> str:
+    """
+    Format a CreditPosition value for presentation.
+    """
+
+    if value is None:
+        return "Not available"
+
+    if field_name == "position_id":
+        return str(value)
+
+    if field_name in {
+        "revenue_growth",
+        "ebitda_margin",
+    }:
+
+        return f"{float(value):.1%}"
+
+    if field_name in {
+        "ebitda",
+        "profit_loss",
+    }:
+
+        return f"€{float(value):,.0f}"
+
+    if field_name == "pfn_to_ebitda":
+
+        return f"{float(value):.2f}x"
+
+    if isinstance(value, float):
+
+        return f"{value:,.4f}"
+
+    return str(value)
+
+
+def get_field_unit(
+    field_name: str,
+) -> str:
+    """
+    Return the unit displayed for a financial indicator.
+    """
+
+    units = {
+        "position_id": "Identifier",
+        "revenue_growth": "%",
+        "ebitda": "EUR",
+        "profit_loss": "EUR",
+        "ebitda_margin": "%",
+        "pfn_to_ebitda": "x",
+    }
+
+    return units.get(
+        field_name,
+        "",
+    )
+
+
+# ============================================================
+# Scenario Data Presentation
+# ============================================================
+
+def build_scenario_data_table(
+    position: CreditPosition,
+) -> list[dict[str, str]]:
+    """
+    Build a presentation-oriented table from CreditPosition.
+
+    This table describes the input data and does not contain
+    assessment results.
+    """
+
+    rows = []
+
+    for field in fields(position):
 
         field_name = field.name
-
-        # ----------------------------------------------------
-        # Explicit scenario value
-        # ----------------------------------------------------
-
-        if field_name in scenario_values:
-
-            position_data[field_name] = (
-                scenario_values[field_name]
-            )
-
-            continue
-
-        # ----------------------------------------------------
-        # Dataclass default
-        # ----------------------------------------------------
-
-        default = get_field_default(field)
-
-        if default is not None:
-
-            position_data[field_name] = default
-
-            continue
-
-        # ----------------------------------------------------
-        # No default: infer a safe demo value from the type.
-        # ----------------------------------------------------
-
-        field_type = type_hints[field_name]
-
-        resolved_type, is_optional = (
-            unwrap_optional(field_type)
+        value = getattr(
+            position,
+            field_name,
         )
 
-        if is_optional:
+        rows.append(
+            {
+                "Financial Indicator": format_field_label(
+                    field_name
+                ),
+                "Value": format_field_value(
+                    field_name,
+                    value,
+                ),
+                "Unit": get_field_unit(
+                    field_name
+                ),
+                "Description": format_field_description(
+                    field_name
+                ),
+            }
+        )
 
-            position_data[field_name] = None
-
-        elif resolved_type is str:
-
-            position_data[field_name] = (
-                f"DEMO-{field_name.upper()}"
-            )
-
-        elif resolved_type is int:
-
-            position_data[field_name] = 0
-
-        elif resolved_type is float:
-
-            position_data[field_name] = 0.0
-
-        else:
-
-            raise TypeError(
-                "Unable to create demo value for "
-                f"{field_name}: {field_type}"
-            )
-
-    return CreditPosition(
-        **position_data
-    )
+    return rows
 
 
 # ============================================================
@@ -453,7 +488,13 @@ def create_streamlit_field(
         unwrap_optional(field_type)
     )
 
+    description = format_field_description(
+        field_name
+    )
+
     if resolved_type is str and not is_optional:
+
+        st.caption(description)
 
         return st.text_input(
             label,
@@ -470,11 +511,15 @@ def create_streamlit_field(
         provided = st.checkbox(
             f"Provide {label}",
             value=default is not None,
-            key=f"credit_position_{field_name}_provided",
+            key=(
+                f"credit_position_{field_name}_provided"
+            ),
         )
 
         if not provided:
             return None
+
+        st.caption(description)
 
         return st.text_input(
             label,
@@ -483,10 +528,14 @@ def create_streamlit_field(
                 if default is None
                 else str(default)
             ),
-            key=f"credit_position_{field_name}_value",
+            key=(
+                f"credit_position_{field_name}_value"
+            ),
         )
 
     if resolved_type is int and not is_optional:
+
+        st.caption(description)
 
         return st.number_input(
             label,
@@ -500,6 +549,8 @@ def create_streamlit_field(
         )
 
     if resolved_type is float and not is_optional:
+
+        st.caption(description)
 
         return st.number_input(
             label,
@@ -661,9 +712,20 @@ def create_workflow(
 
     if reporting_mode == "LLM + Fallback":
 
-        api_key = st.secrets[
-            "GEMINI_API_KEY"
-        ]
+        try:
+
+            api_key = st.secrets[
+                "GEMINI_API_KEY"
+            ]
+
+        except KeyError:
+
+            st.error(
+                "GEMINI_API_KEY is not configured "
+                "in Streamlit secrets."
+            )
+
+            st.stop()
 
         llm_client = GeminiClient(
             api_key=api_key,
@@ -805,11 +867,16 @@ input_mode = st.radio(
 
 
 # ============================================================
-# Demo Scenario Input
+# Position Variables
 # ============================================================
 
 position: CreditPosition | None = None
 position_data: dict[str, Any] | None = None
+
+
+# ============================================================
+# Demo Scenario Input
+# ============================================================
 
 if input_mode == "Demo Scenario":
 
@@ -855,35 +922,68 @@ if input_mode == "Demo Scenario":
 
         st.stop()
 
+    # --------------------------------------------------------
+    # Scenario Data
+    # --------------------------------------------------------
+
     st.markdown(
         "#### Scenario Data"
     )
 
-    st.caption(
-        "These values are input data only. "
-        "The assessment is still performed entirely "
-        "by the deterministic workflow."
+    st.markdown(
+        """
+        <div class="data-introduction">
+            The following values represent the financial data
+            provided as input to the credit assessment system.
+            They are <strong>not assessment results</strong>.
+            The deterministic rule engine evaluates these inputs
+            against the configured rules and thresholds during
+            the assessment workflow.
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    scenario_dict = {
-        field.name: getattr(
-            position,
-            field.name,
-        )
-        for field in fields(position)
-    }
+    st.markdown(
+        """
+        <div class="data-note">
+            <strong>Input data vs. assessment result</strong><br>
+            Revenue growth, EBITDA, profitability, margin and
+            leverage are financial indicators supplied to the
+            system. Rule findings, severity and the final
+            assessment status are calculated separately by the
+            deterministic decision layer.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    display_data = {
-        format_field_label(
-            key
-        ): value
-        for key, value in scenario_dict.items()
-    }
+    scenario_data = build_scenario_data_table(
+        position
+    )
 
     st.dataframe(
-        display_data,
+        scenario_data,
         use_container_width=True,
         hide_index=True,
+        column_config={
+            "Financial Indicator": st.column_config.TextColumn(
+                "Financial Indicator",
+                width="medium",
+            ),
+            "Value": st.column_config.TextColumn(
+                "Value",
+                width="small",
+            ),
+            "Unit": st.column_config.TextColumn(
+                "Unit",
+                width="small",
+            ),
+            "Description": st.column_config.TextColumn(
+                "What it represents",
+                width="large",
+            ),
+        },
     )
 
 
@@ -986,10 +1086,6 @@ run_button = st.button(
 
 if run_button:
 
-    # --------------------------------------------------------
-    # Build position when manual mode is selected
-    # --------------------------------------------------------
-
     if input_mode == "Manual Input":
 
         try:
@@ -1007,10 +1103,6 @@ if run_button:
             st.exception(error)
 
             st.stop()
-
-    # --------------------------------------------------------
-    # Defensive validation
-    # --------------------------------------------------------
 
     if position is None:
 
@@ -1070,10 +1162,6 @@ if run_button:
         "assessment_input_mode"
     ] = input_mode
 
-    st.session_state[
-        "assessment_reporting_mode"
-    ] = reporting_mode
-
     if input_mode == "Demo Scenario":
 
         st.session_state[
@@ -1092,13 +1180,6 @@ result = st.session_state.get(
 assessment_position = (
     st.session_state.get(
         "assessment_position"
-    )
-)
-
-assessment_reporting_mode = (
-    st.session_state.get(
-        "assessment_reporting_mode",
-        reporting_mode,
     )
 )
 
@@ -1247,7 +1328,7 @@ if result is not None:
 
         elif generator_used == "PRIMARY":
 
-            if assessment_reporting_mode == "LLM + Fallback":
+            if reporting_mode == "LLM + Fallback":
 
                 st.success(
                     "✓ LLM Reporting"
@@ -1594,7 +1675,7 @@ if result is not None:
 
         elif generator_used == "PRIMARY":
 
-            if assessment_reporting_mode == "LLM + Fallback":
+            if reporting_mode == "LLM + Fallback":
 
                 st.success(
                     "Gemini generated the executive report "
