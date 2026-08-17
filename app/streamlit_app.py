@@ -220,53 +220,187 @@ def get_reporting_modes() -> list[str]:
 # ============================================================
 # Styling
 # ============================================================
+#
+# Design language:
+#   - "Deterministic" surfaces use the BLUE accent (--det-color).
+#     These are surfaces produced exclusively by the rule engine
+#     / analysis agent and are fully reproducible & traceable.
+#   - "AI-assisted" surfaces use the VIOLET accent (--ai-color).
+#     These are surfaces where an LLM (Gemini or Ollama) produced
+#     natural-language text on top of the deterministic findings.
+#   - "Fallback" surfaces use the AMBER accent (--fallback-color).
+#     These indicate the LLM was requested but unavailable, so the
+#     deterministic generator produced the report instead.
+#
+# Every card/badge in the app consistently reuses these three
+# colors so the provenance of any piece of content is recognizable
+# at a glance, without reading the fine print.
 
 st.markdown(
     """
     <style>
 
+    :root {
+        --det-color: #2563eb;
+        --det-bg: rgba(37, 99, 235, 0.08);
+        --ai-color: #7c3aed;
+        --ai-bg: rgba(124, 58, 237, 0.08);
+        --fallback-color: #b45309;
+        --fallback-bg: rgba(180, 83, 9, 0.10);
+        --muted: #6b7280;
+        --border: rgba(128, 128, 128, 0.20);
+    }
+
     .block-container {
-        padding-top: 2rem;
+        padding-top: 1.6rem;
         padding-bottom: 3rem;
         max-width: 1400px;
     }
 
+    h1, h2, h3 {
+        letter-spacing: -0.01em;
+    }
+
     .app-subtitle {
-        color: #6b7280;
+        color: var(--muted);
         font-size: 1rem;
-        margin-top: -0.5rem;
-        margin-bottom: 1.5rem;
+        margin-top: -0.4rem;
+        margin-bottom: 1.2rem;
     }
 
-    .workflow-step {
-        padding: 1rem;
-        border-radius: 0.65rem;
-        border: 1px solid rgba(128, 128, 128, 0.22);
-        min-height: 85px;
-        background: rgba(128, 128, 128, 0.025);
-    }
+    /* ---------------------------------------------------- */
+    /* Provenance badges                                     */
+    /* ---------------------------------------------------- */
 
-    .workflow-number {
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.22rem 0.65rem;
+        border-radius: 999px;
         font-size: 0.75rem;
-        font-weight: 700;
-        color: #6b7280;
-        letter-spacing: 0.05em;
-    }
-
-    .workflow-title {
         font-weight: 650;
-        margin-top: 0.2rem;
+        letter-spacing: 0.01em;
+        border: 1px solid transparent;
+        white-space: nowrap;
     }
 
-    .workflow-description {
-        color: #6b7280;
-        font-size: 0.78rem;
+    .badge-det {
+        color: var(--det-color);
+        background: var(--det-bg);
+        border-color: rgba(37, 99, 235, 0.25);
     }
+
+    .badge-ai {
+        color: var(--ai-color);
+        background: var(--ai-bg);
+        border-color: rgba(124, 58, 237, 0.25);
+    }
+
+    .badge-fallback {
+        color: var(--fallback-color);
+        background: var(--fallback-bg);
+        border-color: rgba(180, 83, 9, 0.28);
+    }
+
+    .badge-row {
+        margin-bottom: 0.6rem;
+    }
+
+    /* ---------------------------------------------------- */
+    /* Pipeline / workflow diagram                           */
+    /* ---------------------------------------------------- */
+
+    .pipeline-wrap {
+        display: flex;
+        align-items: stretch;
+        gap: 0.4rem;
+        margin: 0.4rem 0 0.8rem 0;
+    }
+
+    .pipeline-step {
+        flex: 1;
+        padding: 1rem 0.9rem;
+        border-radius: 0.7rem;
+        border: 1.5px solid var(--border);
+        background: rgba(128, 128, 128, 0.025);
+        min-height: 108px;
+        position: relative;
+    }
+
+    .pipeline-step.det {
+        border-color: rgba(37, 99, 235, 0.35);
+        background: var(--det-bg);
+    }
+
+    .pipeline-step.ai {
+        border-color: rgba(124, 58, 237, 0.35);
+        background: var(--ai-bg);
+    }
+
+    .pipeline-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        font-size: 1.1rem;
+        padding: 0 0.1rem;
+    }
+
+    .pipeline-number {
+        font-size: 0.72rem;
+        font-weight: 750;
+        color: var(--muted);
+        letter-spacing: 0.06em;
+    }
+
+    .pipeline-title {
+        font-weight: 650;
+        margin-top: 0.25rem;
+        font-size: 0.92rem;
+    }
+
+    .pipeline-description {
+        color: var(--muted);
+        font-size: 0.76rem;
+        margin-top: 0.1rem;
+        line-height: 1.35;
+    }
+
+    .pipeline-legend {
+        display: flex;
+        gap: 1.4rem;
+        margin-top: 0.4rem;
+        margin-bottom: 0.2rem;
+        flex-wrap: wrap;
+    }
+
+    .pipeline-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.78rem;
+        color: var(--muted);
+    }
+
+    .legend-dot {
+        width: 0.65rem;
+        height: 0.65rem;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .legend-dot.det { background: var(--det-color); }
+    .legend-dot.ai { background: var(--ai-color); }
+
+    /* ---------------------------------------------------- */
+    /* Generic cards                                          */
+    /* ---------------------------------------------------- */
 
     .scenario-card {
         padding: 1.2rem 1.4rem;
-        border-radius: 0.65rem;
-        border: 1px solid rgba(128, 128, 128, 0.22);
+        border-radius: 0.7rem;
+        border: 1px solid var(--border);
         background: rgba(128, 128, 128, 0.025);
         margin-bottom: 1rem;
     }
@@ -278,13 +412,13 @@ st.markdown(
     }
 
     .scenario-description {
-        color: #6b7280;
+        color: var(--muted);
         font-size: 0.88rem;
         line-height: 1.5;
     }
 
     .data-introduction {
-        color: #6b7280;
+        color: var(--muted);
         font-size: 0.88rem;
         line-height: 1.5;
         margin-bottom: 1rem;
@@ -292,24 +426,69 @@ st.markdown(
 
     .data-note {
         padding: 0.9rem 1rem;
-        border-radius: 0.55rem;
-        border: 1px solid rgba(128, 128, 128, 0.20);
+        border-radius: 0.6rem;
+        border: 1px solid var(--border);
         background: rgba(128, 128, 128, 0.025);
         margin-bottom: 1rem;
         font-size: 0.85rem;
-        color: #6b7280;
+        color: var(--muted);
+    }
+
+    .provenance-panel {
+        border-radius: 0.75rem;
+        border: 1px solid var(--border);
+        padding: 1.1rem 1.3rem;
+        margin-bottom: 1.2rem;
+        background: rgba(128, 128, 128, 0.02);
+    }
+
+    .provenance-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.45rem 0;
+        border-bottom: 1px dashed var(--border);
+        font-size: 0.87rem;
+    }
+
+    .provenance-row:last-child {
+        border-bottom: none;
+    }
+
+    .provenance-label {
+        color: inherit;
+        font-weight: 550;
     }
 
     .metric-description {
-        color: #6b7280;
+        color: var(--muted);
         font-size: 0.78rem;
+    }
+
+    .section-card {
+        border-radius: 0.7rem;
+        border: 1.5px solid var(--border);
+        padding: 1rem 1.2rem;
+        margin-bottom: 1rem;
+    }
+
+    .section-card.det {
+        border-left: 4px solid var(--det-color);
+    }
+
+    .section-card.ai {
+        border-left: 4px solid var(--ai-color);
+    }
+
+    .section-card.fallback {
+        border-left: 4px solid var(--fallback-color);
     }
 
     .footer {
         margin-top: 2rem;
         padding-top: 1rem;
-        border-top: 1px solid rgba(128, 128, 128, 0.20);
-        color: #6b7280;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
         font-size: 0.78rem;
     }
 
@@ -317,6 +496,65 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+
+# ============================================================
+# Badge / Provenance Helpers
+# ============================================================
+
+def render_badge(
+    label: str,
+    kind: str = "det",
+) -> str:
+    """
+    Return the HTML markup for a small provenance badge.
+
+    kind: "det" | "ai" | "fallback"
+    """
+
+    icons = {
+        "det": "🔒",
+        "ai": "🤖",
+        "fallback": "⚠️",
+    }
+
+    css_class = {
+        "det": "badge-det",
+        "ai": "badge-ai",
+        "fallback": "badge-fallback",
+    }[kind]
+
+    icon = icons[kind]
+
+    return (
+        f'<span class="badge {css_class}">'
+        f'{icon} {label}</span>'
+    )
+
+
+def show_badge(
+    label: str,
+    kind: str = "det",
+) -> None:
+
+    st.markdown(
+        f'<div class="badge-row">{render_badge(label, kind)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def reporting_mode_badge_kind(
+    reporting_mode: str,
+) -> str:
+    """
+    Map a reporting mode selection to its *intended* badge kind,
+    before knowing whether a fallback actually occurred.
+    """
+
+    if reporting_mode == "Deterministic":
+        return "det"
+
+    return "ai"
 
 
 # ============================================================
@@ -920,6 +1158,36 @@ with st.sidebar:
     st.divider()
 
     # --------------------------------------------------------
+    # Provenance Legend
+    # --------------------------------------------------------
+
+    st.subheader("How to read this app")
+
+    st.markdown(
+        f"""
+        <div class="pipeline-legend">
+            <div class="pipeline-legend-item">
+                <span class="legend-dot det"></span>
+                Deterministic — rule engine, fully traceable
+            </div>
+            <div class="pipeline-legend-item">
+                <span class="legend-dot ai"></span>
+                AI-assisted — language generated by an LLM
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.caption(
+        "Every section of the app carries one of these badges "
+        "so you always know whether content is guaranteed "
+        "reproducible or was phrased by a language model."
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
     # Environment Information
     # --------------------------------------------------------
 
@@ -959,27 +1227,29 @@ with st.sidebar:
         "Architecture Guarantees"
     )
 
-    st.markdown(
-        """
-        **Deterministic decision layer**
+    guarantee_items = [
+        ("⚖️", "Deterministic decision layer",
+         "The rule engine is the sole authority for status, "
+         "severity and findings."),
+        ("🧭", "Controlled AI usage",
+         "The LLM only rewrites findings into prose — it never "
+         "decides the outcome."),
+        ("🔗", "Traceability",
+         "Every report finding links back to a specific "
+         "deterministic rule."),
+        ("🛟", "Automatic fallback",
+         "If the LLM is unavailable, the deterministic report "
+         "generator takes over transparently."),
+    ]
 
-        The rule engine is the authoritative source
-        of the assessment outcome.
+    for icon, title, description in guarantee_items:
 
-        **Controlled AI usage**
-
-        The LLM is restricted to report generation.
-
-        **Traceability**
-
-        Findings remain linked to deterministic rules.
-
-        **Fallback**
-
-        A deterministic report generator is retained
-        if the LLM fails.
-        """
-    )
+        st.markdown(
+            f"**{icon} {title}**  \n"
+            f"<span style='color:var(--muted); font-size:0.82rem;'>"
+            f"{description}</span>",
+            unsafe_allow_html=True,
+        )
 
     st.divider()
 
@@ -987,9 +1257,13 @@ with st.sidebar:
     # Reporting Mode Description
     # --------------------------------------------------------
 
+    st.subheader("Selected Reporting Mode")
+
     if reporting_mode == "Gemini + Fallback":
 
         gemini_key = get_gemini_api_key()
+
+        show_badge("AI-assisted (Gemini)", "ai")
 
         if gemini_key:
 
@@ -1010,8 +1284,8 @@ with st.sidebar:
             )
 
             st.caption(
-                "Configure the API key before running "
-                "the assessment."
+                "The deterministic fallback will be used "
+                "automatically until the key is configured."
             )
 
     elif reporting_mode == "Ollama + Fallback":
@@ -1019,6 +1293,8 @@ with st.sidebar:
         ollama_host, ollama_model = (
             get_ollama_configuration()
         )
+
+        show_badge("AI-assisted (Local LLM)", "ai")
 
         st.success(
             "Local LLM reporting enabled"
@@ -1039,12 +1315,16 @@ with st.sidebar:
 
     else:
 
+        show_badge("Fully deterministic", "det")
+
         st.info(
             "Deterministic reporting enabled"
         )
 
         st.caption(
-            "No external LLM call is required."
+            "No external LLM call is required — the executive "
+            "report is generated by the same rule engine as "
+            "the findings."
         )
 
 
@@ -1190,7 +1470,7 @@ st.markdown(
     """
     <div class="app-subtitle">
         Deterministic credit-quality assessment with
-        controlled AI-assisted reporting.
+        controlled, clearly-labelled AI-assisted reporting.
     </div>
     """,
     unsafe_allow_html=True,
@@ -1208,47 +1488,53 @@ st.subheader(
 )
 
 st.caption(
-    "End-to-end processing architecture."
+    "End-to-end processing architecture. Blue steps are fully "
+    "deterministic; the violet step is where an LLM may "
+    "generate prose, always constrained by the deterministic "
+    "output next to it."
 )
 
-workflow_cols = st.columns(5)
-
 workflow_steps = [
-    ("01", "Credit Data", "Input"),
-    ("02", "Rule Engine", "Deterministic"),
-    ("03", "Analysis Agent", "Interpretation"),
-    ("04", "Reporting Agent", "Controlled generation"),
-    ("05", "Assessment Report", "Output"),
+    ("01", "Credit Data", "Structured financial input", "det"),
+    ("02", "Rule Engine", "Deterministic thresholds & severity", "det"),
+    ("03", "Analysis Agent", "Rule-based interpretation", "det"),
+    ("04", "Reporting Agent", "LLM prose, or deterministic fallback", "ai"),
+    ("05", "Assessment Report", "Findings + executive summary", "det"),
 ]
 
-for column, (
-    number,
-    title,
-    description,
-) in zip(
-    workflow_cols,
-    workflow_steps,
-):
+pipeline_html = '<div class="pipeline-wrap">'
 
-    with column:
+for i, (number, title, description, kind) in enumerate(workflow_steps):
 
-        st.markdown(
-            f"""
-            <div class="workflow-step">
-                <div class="workflow-number">
-                    {number}
-                </div>
-                <div class="workflow-title">
-                    {title}
-                </div>
-                <div class="workflow-description">
-                    {description}
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    pipeline_html += (
+        f'<div class="pipeline-step {kind}">'
+        f'<div class="pipeline-number">{number}</div>'
+        f'<div class="pipeline-title">{title}</div>'
+        f'<div class="pipeline-description">{description}</div>'
+        f'</div>'
+    )
 
+    if i < len(workflow_steps) - 1:
+        pipeline_html += '<div class="pipeline-arrow">→</div>'
+
+pipeline_html += "</div>"
+
+st.markdown(pipeline_html, unsafe_allow_html=True)
+
+st.markdown(
+    f"""
+    <div class="pipeline-legend">
+        <div class="pipeline-legend-item">
+            <span class="legend-dot det"></span> Deterministic
+        </div>
+        <div class="pipeline-legend-item">
+            <span class="legend-dot ai"></span> AI-assisted
+            (with deterministic fallback)
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 st.divider()
 
@@ -1460,8 +1746,11 @@ configuration_col1, configuration_col2 = (
 
 with configuration_col1:
 
-    st.caption(
-        f"Reporting mode: **{reporting_mode}**"
+    st.caption("Reporting mode")
+
+    show_badge(
+        reporting_mode,
+        reporting_mode_badge_kind(reporting_mode),
     )
 
 with configuration_col2:
@@ -1610,6 +1899,97 @@ if result is not None:
 
     st.divider()
 
+    generator_used = getattr(
+        result,
+        "report_generator_used",
+        None,
+    )
+
+    generation_error = getattr(
+        result,
+        "report_generation_error",
+        None,
+    )
+
+    selected_reporting_mode = (
+        st.session_state.get(
+            "assessment_reporting_mode",
+            reporting_mode,
+        )
+    )
+
+    # Resolve the actual badge for the executive report,
+    # accounting for a possible fallback.
+    if selected_reporting_mode == "Deterministic":
+        report_badge_kind = "det"
+        report_badge_label = "Deterministic"
+    elif generator_used == "FALLBACK":
+        report_badge_kind = "fallback"
+        report_badge_label = "Deterministic fallback (LLM unavailable)"
+    elif generator_used == "PRIMARY":
+        if selected_reporting_mode == "Gemini + Fallback":
+            report_badge_kind = "ai"
+            report_badge_label = "AI-generated (Gemini)"
+        elif selected_reporting_mode == "Ollama + Fallback":
+            _, _ollama_model_badge = get_ollama_configuration()
+            report_badge_kind = "ai"
+            report_badge_label = f"AI-generated (Local LLM · {_ollama_model_badge})"
+        else:
+            report_badge_kind = "det"
+            report_badge_label = "Deterministic"
+    else:
+        report_badge_kind = "fallback"
+        report_badge_label = "Unknown"
+
+    # ========================================================
+    # Provenance Panel — the "who produced what" summary
+    # ========================================================
+
+    st.subheader("Provenance of This Assessment")
+
+    st.caption(
+        "A quick summary of which layer produced each part "
+        "of the output below."
+    )
+
+    provenance_col1, provenance_col2 = st.columns(2)
+
+    with provenance_col1:
+
+        st.markdown(
+            f"""
+            <div class="section-card det">
+                <div style="font-weight:650; margin-bottom:0.3rem;">
+                    Assessment Status &amp; Rule Findings
+                </div>
+                {render_badge("Deterministic — Rule Engine", "det")}
+                <div class="metric-description" style="margin-top:0.5rem;">
+                    Fixed thresholds, rule-based severity. Identical
+                    input always produces identical output.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with provenance_col2:
+
+        st.markdown(
+            f"""
+            <div class="section-card {report_badge_kind}">
+                <div style="font-weight:650; margin-bottom:0.3rem;">
+                    Executive Report
+                </div>
+                {render_badge(report_badge_label, report_badge_kind)}
+                <div class="metric-description" style="margin-top:0.5rem;">
+                    Natural-language phrasing only — it cannot alter
+                    the assessment status or findings above.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
     # ========================================================
     # Assessment Overview
     # ========================================================
@@ -1724,12 +2104,6 @@ if result is not None:
 
     with trace_cols[3]:
 
-        generator_used = getattr(
-            result,
-            "report_generator_used",
-            None,
-        )
-
         if generator_used == "FALLBACK":
 
             st.warning(
@@ -1742,12 +2116,7 @@ if result is not None:
 
         elif generator_used == "PRIMARY":
 
-            selected_mode = st.session_state.get(
-                "assessment_reporting_mode",
-                reporting_mode,
-            )
-
-            if selected_mode == "Gemini + Fallback":
+            if selected_reporting_mode == "Gemini + Fallback":
 
                 st.success(
                     "✓ Gemini Reporting"
@@ -1757,7 +2126,7 @@ if result is not None:
                     "AI-assisted report generated"
                 )
 
-            elif selected_mode == "Ollama + Fallback":
+            elif selected_reporting_mode == "Ollama + Fallback":
 
                 _, ollama_model = (
                     get_ollama_configuration()
@@ -1803,9 +2172,9 @@ if result is not None:
     ) = st.tabs(
         [
             "Overview",
-            "Rule Findings",
-            "Analysis",
-            "Executive Report",
+            "🔒 Rule Findings",
+            "🔒 Analysis",
+            f"{'🤖' if report_badge_kind == 'ai' else ('⚠️' if report_badge_kind == 'fallback' else '🔒')} Executive Report",
         ]
     )
 
@@ -1854,6 +2223,8 @@ if result is not None:
                 f"Assessment Status: **{status}**"
             )
 
+        show_badge("Determined by rule engine only", "det")
+
         st.markdown(
             """
             The assessment status is produced by the
@@ -1895,16 +2266,11 @@ if result is not None:
             "### Reporting Configuration"
         )
 
-        selected_reporting_mode = (
-            st.session_state.get(
-                "assessment_reporting_mode",
-                reporting_mode,
-            )
-        )
-
         st.info(
             f"Reporting layer: **{selected_reporting_mode}**"
         )
+
+        show_badge(report_badge_label, report_badge_kind)
 
         if selected_reporting_mode == "Ollama + Fallback":
 
@@ -1925,29 +2291,45 @@ if result is not None:
         with architecture_col1:
 
             st.markdown(
-                """
-                **Decision Layer**
-
-                - Deterministic rule engine
-                - Fixed thresholds
-                - Rule-based severity
-                - Traceable findings
-                - Fixed assessment status
-                """
+                f"""
+                <div class="section-card det">
+                    <div style="font-weight:650;">
+                        Decision Layer
+                    </div>
+                    {render_badge("Deterministic", "det")}
+                    <ul style="margin-top:0.6rem; padding-left:1.1rem;
+                        font-size:0.86rem;">
+                        <li>Deterministic rule engine</li>
+                        <li>Fixed thresholds</li>
+                        <li>Rule-based severity</li>
+                        <li>Traceable findings</li>
+                        <li>Fixed assessment status</li>
+                    </ul>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
 
         with architecture_col2:
 
             st.markdown(
-                """
-                **Reporting Layer**
-
-                - Structured analysis
-                - Optional LLM generation
-                - Cloud or local LLM provider
-                - No decision authority
-                - Deterministic fallback
-                """
+                f"""
+                <div class="section-card ai">
+                    <div style="font-weight:650;">
+                        Reporting Layer
+                    </div>
+                    {render_badge("AI-assisted, with fallback", "ai")}
+                    <ul style="margin-top:0.6rem; padding-left:1.1rem;
+                        font-size:0.86rem;">
+                        <li>Structured analysis as input</li>
+                        <li>Optional LLM generation</li>
+                        <li>Cloud or local LLM provider</li>
+                        <li>No decision authority</li>
+                        <li>Deterministic fallback</li>
+                    </ul>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
 
     # ========================================================
@@ -1960,9 +2342,11 @@ if result is not None:
             "### Deterministic Rule Engine Findings"
         )
 
+        show_badge("Deterministic — fully traceable", "det")
+
         st.caption(
             "These findings constitute the factual basis "
-            "of the assessment."
+            "of the assessment. No LLM is involved in this tab."
         )
 
         if result.analysis.key_findings:
@@ -2016,9 +2400,11 @@ if result is not None:
             "### Analysis Agent"
         )
 
+        show_badge("Deterministic — rule-based interpretation", "det")
+
         st.caption(
             "Structured interpretation of the deterministic "
-            "assessment output."
+            "assessment output. No LLM is involved in this tab."
         )
 
         analysis_col1, analysis_col2 = (
@@ -2099,24 +2485,7 @@ if result is not None:
             "### Reporting Agent"
         )
 
-        generator_used = getattr(
-            result,
-            "report_generator_used",
-            None,
-        )
-
-        generation_error = getattr(
-            result,
-            "report_generation_error",
-            None,
-        )
-
-        selected_reporting_mode = (
-            st.session_state.get(
-                "assessment_reporting_mode",
-                reporting_mode,
-            )
-        )
+        show_badge(report_badge_label, report_badge_kind)
 
         if generator_used == "FALLBACK":
 
@@ -2198,6 +2567,8 @@ if result is not None:
                 "### Report Findings"
             )
 
+            show_badge("Deterministic — sourced from rule engine", "det")
+
             for group in (
                 result.report.findings_by_category
             ):
@@ -2243,11 +2614,13 @@ st.markdown(
     """
     <div class="footer">
         Credit Assessment System · Deterministic decision engine
-        with controlled AI-assisted reporting.
+        with controlled, clearly-labelled AI-assisted reporting.
         <br>
         Demo scenarios provide input data only.
         The LLM does not determine assessment status,
-        rule severity, thresholds, or credit decisions.
+        rule severity, thresholds, or credit decisions —
+        it only phrases the executive summary, and every
+        such section is marked with an 🤖 AI badge.
     </div>
     """,
     unsafe_allow_html=True,
