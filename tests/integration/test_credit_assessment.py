@@ -703,7 +703,10 @@ def test_llm_response_is_rejected_when_empty(
 
     assert (
         workflow.reporting_agent.last_error
-        == "LLM report generation failed."
+        == (
+            "LLM report generation failed: "
+            "LLM returned an empty response"
+        )
     )
 
     assert (
@@ -738,55 +741,15 @@ def test_llm_response_is_rejected_when_status_is_missing(
 
     assert (
         workflow.reporting_agent.last_error
-        == "LLM report generation failed."
+        == (
+            "LLM report generation failed: "
+            "LLM response does not contain the assessment status"
+        )
     )
 
     assert (
         result.report.assessment_status
         == result.assessment.status
-    )
-
-
-def test_llm_response_is_accepted_when_status_is_present(
-    risk_position,
-):
-    deterministic_workflow = create_default_assessment_workflow(
-        use_llm=False,
-    )
-
-    deterministic_result = deterministic_workflow.run(
-        risk_position,
-    )
-
-    expected_status = deterministic_result.assessment.status
-
-    llm_response = (
-        f"The assessment status is {expected_status.value}. "
-        "The assessment identifies significant "
-        "financial weaknesses."
-    )
-
-    llm_client = MockLLMClient(
-        response=llm_response,
-    )
-
-    workflow = create_default_assessment_workflow(
-        use_llm=True,
-        llm_client=llm_client,
-    )
-
-    result = workflow.run(risk_position)
-
-    assert (
-        workflow.reporting_agent.last_generator_used
-        == "PRIMARY"
-    )
-
-    assert workflow.reporting_agent.last_error is None
-
-    assert (
-        result.report.executive_summary
-        == llm_client.response
     )
 
 

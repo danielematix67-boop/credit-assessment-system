@@ -108,8 +108,9 @@ def generator():
     return LLMReportGenerator(
         MockLLMClient(
             response=(
-                f"{AssessmentStatus.ATTENTION.value} "
-                "assessment identified."
+                f"The assessment status is "
+                f"{AssessmentStatus.ATTENTION.value}. "
+                "The assessment identified relevant findings."
             ),
         ),
     )
@@ -147,8 +148,9 @@ def valid_response(
     analysis: AssessmentAnalysis,
 ) -> str:
     return (
-        f"{analysis.assessment_status.value} "
-        "assessment identified."
+        f"The assessment status is "
+        f"{analysis.assessment_status.value}. "
+        "The assessment identified relevant findings."
     )
 
 
@@ -167,8 +169,9 @@ def test_llm_report_generator_accepts_llm_client_contract(
     analysis,
 ):
     client = MagicMock(spec=LLMClient)
+
     client.generate.return_value = valid_response(
-        analysis
+        analysis,
     )
 
     generator = LLMReportGenerator(client)
@@ -195,10 +198,13 @@ def test_llm_report_generator_generates_report(
     report = generator.generate(analysis)
 
     assert isinstance(report, Report)
+
     assert report.position_id == analysis.position_id
+
     assert report.assessment_status == (
         analysis.assessment_status
     )
+
     assert report.executive_summary == client.response
 
 
@@ -206,8 +212,9 @@ def test_llm_report_generator_invokes_llm_client(
     analysis,
 ):
     client = MagicMock(spec=LLMClient)
+
     client.generate.return_value = valid_response(
-        analysis
+        analysis,
     )
 
     generator = LLMReportGenerator(client)
@@ -258,7 +265,9 @@ def test_llm_report_generator_builds_prompt_from_analysis(
 def test_llm_report_generator_includes_status_in_prompt(
     status,
 ):
-    analysis = make_analysis(status=status)
+    analysis = make_analysis(
+        status=status,
+    )
 
     client = MockLLMClient(
         response=valid_response(analysis),
@@ -341,18 +350,18 @@ def test_llm_report_generator_prompt_contains_reporting_constraints(
         "Do not modify the assessment status",
         "Do not change the severity",
         "Do not make a credit decision",
-        "Do not override or reinterpret",
+        "Do not override the deterministic assessment",
         "Do not provide recommendations",
         "Clearly distinguish between findings and limitations",
         "Do not disclose internal rule thresholds",
         "Do not reproduce threshold values",
-        "Preserve the factual values",
+        "Preserve the factual values when they are explicitly "
+        "provided in the findings.",
         "Generate ONLY the executive summary",
     ]
 
     for constraint in expected_constraints:
         assert constraint in prompt
-
 
 def test_llm_report_generator_prompt_explicitly_separates_assessment_and_generation(
     analysis,
@@ -399,7 +408,7 @@ def test_llm_report_generator_prompt_protects_deterministic_assessment(
     expected_protections = [
         "Do not modify the assessment status.",
         "Do not change the severity or meaning of any finding.",
-        "Do not override or reinterpret the deterministic assessment.",
+        "Do not override the deterministic assessment.",
         "Do not make a credit decision.",
     ]
 
@@ -419,17 +428,22 @@ def test_llm_report_generator_prompt_protects_deterministic_assessment(
 def test_llm_report_generator_accepts_all_valid_statuses(
     status,
 ):
-    analysis = make_analysis(status=status)
+    analysis = make_analysis(
+        status=status,
+    )
 
     response = valid_response(analysis)
 
-    client = MockLLMClient(response=response)
+    client = MockLLMClient(
+        response=response,
+    )
 
     generator = LLMReportGenerator(client)
 
     report = generator.generate(analysis)
 
     assert report.assessment_status == status
+
     assert report.executive_summary == response
 
 
@@ -440,7 +454,9 @@ def test_llm_report_generator_accepts_all_valid_statuses(
 def test_llm_report_generator_rejects_inconsistent_status(
     status,
 ):
-    analysis = make_analysis(status=status)
+    analysis = make_analysis(
+        status=status,
+    )
 
     inconsistent_statuses = [
         candidate
@@ -457,7 +473,7 @@ def test_llm_report_generator_rejects_inconsistent_status(
 
     client = MockLLMClient(
         response=(
-            f"The assessment is "
+            "The assessment status is "
             f"{inconsistent_status.value}."
         ),
     )
@@ -468,7 +484,7 @@ def test_llm_report_generator_rejects_inconsistent_status(
         ValueError,
         match=(
             "LLM response does not contain "
-            "the assessment status"
+            "the expected assessment status"
         ),
     ):
         generator.generate(analysis)
@@ -483,13 +499,16 @@ def test_llm_report_generator_accepts_paraphrased_response(
         "The assessment contains relevant observations."
     )
 
-    client = MockLLMClient(response=response)
+    client = MockLLMClient(
+        response=response,
+    )
 
     generator = LLMReportGenerator(client)
 
     report = generator.generate(analysis)
 
     assert report.executive_summary == response
+
     assert report.assessment_status == (
         analysis.assessment_status
     )
@@ -503,7 +522,9 @@ def test_llm_report_generator_accepts_paraphrased_response(
 def test_llm_report_generator_rejects_empty_response(
     analysis,
 ):
-    client = MockLLMClient(response="")
+    client = MockLLMClient(
+        response="",
+    )
 
     generator = LLMReportGenerator(client)
 
@@ -527,13 +548,71 @@ def test_llm_report_generator_rejects_whitespace_response(
     analysis,
     response,
 ):
-    client = MockLLMClient(response=response)
+    client = MockLLMClient(
+        response=response,
+    )
 
     generator = LLMReportGenerator(client)
 
     with pytest.raises(
         ValueError,
         match="LLM returned an empty response",
+    ):
+        generator.generate(analysis)
+
+
+def test_llm_report_generator_rejects_response_without_status(
+    analysis,
+):
+    client = MockLLMClient(
+        response=(
+            "The company shows relevant financial "
+            "observations."
+        ),
+    )
+
+    generator = LLMReportGenerator(client)
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "LLM response does not contain "
+            "the assessment status"
+        ),
+    ):
+        generator.generate(analysis)
+
+
+def test_llm_report_generator_rejects_response_with_multiple_statuses(
+    analysis,
+):
+    client = MockLLMClient(
+        response=(
+            f"The assessment is "
+            f"{analysis.assessment_status.value}, "
+            "but another classification is "
+            f"{AssessmentStatus.CRITICAL.value}."
+        ),
+    )
+
+    generator = LLMReportGenerator(client)
+
+    # This test only applies when the two statuses are
+    # actually different.
+    if AssessmentStatus.CRITICAL == (
+        analysis.assessment_status
+    ):
+        pytest.skip(
+            "Cannot test multiple different statuses "
+            "when the expected status is CRITICAL."
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "LLM response contains multiple "
+            "assessment statuses"
+        ),
     ):
         generator.generate(analysis)
 
@@ -574,14 +653,18 @@ def test_llm_report_generator_preserves_structured_data(
 
     report = generator.generate(analysis)
 
-    assert report.position_id == analysis.position_id
+    assert report.position_id == (
+        analysis.position_id
+    )
 
     assert report.assessment_status == (
         analysis.assessment_status
     )
 
     assert report.findings_by_category == (
-        findings_by_category_from_analysis(analysis)
+        findings_by_category_from_analysis(
+            analysis
+        )
     )
 
     assert report.limitations == (
@@ -595,9 +678,11 @@ def test_llm_report_generator_does_not_modify_analysis(
     original_key_findings = list(
         analysis.key_findings
     )
+
     original_risk_factors = list(
         analysis.risk_factors
     )
+
     original_limitations = list(
         analysis.limitations
     )
@@ -636,7 +721,9 @@ def test_llm_report_generator_does_not_use_generated_text_as_structured_data(
         f"{injected_text}"
     )
 
-    client = MockLLMClient(response=response)
+    client = MockLLMClient(
+        response=response,
+    )
 
     generator = LLMReportGenerator(client)
 
@@ -724,4 +811,5 @@ def test_llm_report_generator_supports_empty_analysis(
     )
 
     assert report.findings_by_category == []
+
     assert report.limitations == []

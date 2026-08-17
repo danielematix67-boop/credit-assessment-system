@@ -24,29 +24,20 @@ class OllamaClient(LLMClient):
         self,
         prompt: str,
     ) -> str:
-        """
-        Generate a response using the configured Ollama model.
-        """
-
-        print("=" * 60)
-        print("OLLAMA DEBUG")
-        print(f"Host: {self.host}")
-        print(f"Model: {self.model}")
-        print("=" * 60)
-
         try:
             response = self.client.generate(
                 model=self.model,
                 prompt=prompt,
             )
 
-            print("Ollama response received.")
-            print(f"Response type: {type(response)}")
-
             generated_text = response["response"]
 
+            print("=" * 60)
+            print("OLLAMA RESPONSE")
+            print(f"Model: {self.model}")
+            print(f"Response type: {type(response)}")
             print("Generated text:")
-            print(generated_text)
+            print(repr(generated_text))
             print("=" * 60)
 
             return generated_text

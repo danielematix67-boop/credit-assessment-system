@@ -14,69 +14,79 @@ def _get_llm_error_message(exc: Exception) -> str:
     Convert technical LLM errors into a concise,
     human-readable message.
 
-    The reporting agent is provider-agnostic:
-    the actual LLM implementation is hidden behind
-    the ReportGenerator / LLMClient abstractions.
+    The original exception message is preserved when
+    no specific error category can be identified.
     """
 
     status_code = getattr(exc, "status_code", None)
-    message = str(exc).lower()
+    message = str(exc).strip()
+    normalized_message = message.lower()
 
-    # --------------------------------------------------------
+    # ========================================================
     # Rate limiting
-    # --------------------------------------------------------
+    # ========================================================
 
-    if status_code == 429 or "resource_exhausted" in message:
+    if status_code == 429 or "resource_exhausted" in normalized_message:
         return "LLM resource limit exceeded."
 
-    # --------------------------------------------------------
+    # ========================================================
     # Service unavailable
-    # --------------------------------------------------------
+    # ========================================================
 
-    if status_code == 503 or "service unavailable" in message:
+    if status_code == 503 or "service unavailable" in normalized_message:
         return "LLM service is temporarily unavailable."
 
-    # Ollama commonly produces connection-related errors
-    # when the local server is not running.
+    # ========================================================
+    # Connection errors
+    # ========================================================
+
     if (
-        "connection refused" in message
-        or "failed to connect" in message
-        or "connection error" in message
-        or "connecterror" in message
+        "connection refused" in normalized_message
+        or "failed to connect" in normalized_message
+        or "connection error" in normalized_message
+        or "connecterror" in normalized_message
+        or "connectionreseterror" in normalized_message
+        or "connection aborted" in normalized_message
     ):
         return "Local LLM service is unavailable."
 
-    # --------------------------------------------------------
+    # ========================================================
     # Authentication / permissions
-    # --------------------------------------------------------
+    # ========================================================
 
-    if status_code == 401 or "unauthorized" in message:
+    if status_code == 401 or "unauthorized" in normalized_message:
         return "LLM authentication failed."
 
-    if status_code == 403 or "permission denied" in message:
+    if status_code == 403 or "permission denied" in normalized_message:
         return "LLM access was denied."
 
-    # --------------------------------------------------------
+    # ========================================================
     # Model not found
-    # --------------------------------------------------------
+    # ========================================================
 
     if (
-        "model not found" in message
-        or "model is not found" in message
-        or "pull model" in message
+        "model not found" in normalized_message
+        or "model is not found" in normalized_message
+        or "pull model" in normalized_message
     ):
         return "LLM model is not available."
 
-    # --------------------------------------------------------
+    # ========================================================
     # Timeout
-    # --------------------------------------------------------
+    # ========================================================
 
-    if "timeout" in message or "timed out" in message:
+    if (
+        "timeout" in normalized_message
+        or "timed out" in normalized_message
+    ):
         return "LLM request timed out."
 
-    # --------------------------------------------------------
+    # ========================================================
     # Generic error
-    # --------------------------------------------------------
+    # ========================================================
+
+    if message:
+        return f"LLM report generation failed: {message}"
 
     return "LLM report generation failed."
 
@@ -87,7 +97,7 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
         self,
         report_generator: ReportGenerator,
         fallback_generator: ReportGenerator | None = None,
-    ):
+    ) -> None:
         self.report_generator = report_generator
         self.fallback_generator = fallback_generator
 
@@ -133,8 +143,14 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
 
             self.last_error = error_message
 
+            generator_name = type(
+                self.report_generator
+            ).__name__
+
             logger.warning(
-                "Primary report generator failed: %s",
+                "Primary report generator failed "
+                "(%s): %s",
+                generator_name,
                 error_message,
             )
 
@@ -151,11 +167,13 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
 
             self.last_generator_used = "FALLBACK"
 
-            print("\n  [WARN] LLM REPORT GENERATION")
+            print("\n  [WARN] PRIMARY REPORT GENERATION")
             print("  " + "-" * 50)
-            print(f"  {error_message}")
+            print(f"  Generator: {generator_name}")
+            print(f"  Reason: {error_message}")
             print(
-                "  Using deterministic fallback report generator."
+                "  Action: Using deterministic fallback "
+                "report generator."
             )
 
             try:
