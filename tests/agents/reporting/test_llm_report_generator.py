@@ -6,6 +6,7 @@ from src.agents.reporting.llm_report_generator import LLMReportGenerator
 from src.agents.reporting.report_generator import ReportGenerator
 from src.llm.client import LLMClient
 from src.llm.mock_client import MockLLMClient
+from src.llm.prompt_builder import ReportPromptBuilder
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
@@ -110,9 +111,7 @@ def analysis() -> AssessmentAnalysis:
 def valid_response(
     analysis: AssessmentAnalysis,
 ) -> str:
-    return (
-        "The assessment identified relevant findings."
-    )
+    return "The assessment identified relevant findings."
 
 
 def different_status(
@@ -182,16 +181,6 @@ def findings_by_category_from_analysis(
     ]
 
 
-def prompt_contains_all(
-    prompt: str,
-    values: list[str],
-) -> bool:
-    return all(
-        value in prompt
-        for value in values
-    )
-
-
 # ============================================================
 # Contract
 # ============================================================
@@ -230,6 +219,49 @@ def test_llm_report_generator_accepts_llm_client_contract(
     assert isinstance(
         report,
         Report,
+    )
+
+
+def test_llm_report_generator_accepts_prompt_builder_dependency(
+    analysis,
+):
+    client = MagicMock(
+        spec=LLMClient,
+    )
+
+    prompt_builder = MagicMock(
+        spec=ReportPromptBuilder,
+    )
+
+    prompt_builder.build.return_value = "Test prompt"
+    client.generate.return_value = valid_response(
+        analysis,
+    )
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+        prompt_builder=prompt_builder,
+    )
+
+    assert generator.prompt_builder is prompt_builder
+
+
+def test_llm_report_generator_creates_default_prompt_builder(
+    analysis,
+):
+    client = MagicMock(
+        spec=LLMClient,
+    )
+
+    client.generate.return_value = valid_response(
+        analysis,
+    )
+
+    generator = LLMReportGenerator(client)
+
+    assert isinstance(
+        generator.prompt_builder,
+        ReportPromptBuilder,
     )
 
 
@@ -281,6 +313,121 @@ def test_llm_report_generator_invokes_llm_client(
 
 
 # ============================================================
+# Prompt builder interaction
+# ============================================================
+
+
+def test_llm_report_generator_builds_prompt_from_analysis(
+    analysis,
+):
+    client = MagicMock(
+        spec=LLMClient,
+    )
+
+    prompt_builder = MagicMock(
+        spec=ReportPromptBuilder,
+    )
+
+    prompt_builder.build.return_value = "Generated test prompt"
+    client.generate.return_value = valid_response(
+        analysis,
+    )
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+        prompt_builder=prompt_builder,
+    )
+
+    generator.generate(analysis)
+
+    prompt_builder.build.assert_called_once_with(
+        analysis,
+    )
+
+
+def test_llm_report_generator_passes_built_prompt_to_client(
+    analysis,
+):
+    client = MagicMock(
+        spec=LLMClient,
+    )
+
+    prompt_builder = MagicMock(
+        spec=ReportPromptBuilder,
+    )
+
+    expected_prompt = "Generated test prompt"
+
+    prompt_builder.build.return_value = expected_prompt
+    client.generate.return_value = valid_response(
+        analysis,
+    )
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+        prompt_builder=prompt_builder,
+    )
+
+    generator.generate(analysis)
+
+    client.generate.assert_called_once_with(
+        expected_prompt,
+    )
+
+
+def test_llm_report_generator_uses_single_prompt_build(
+    analysis,
+):
+    client = MagicMock(
+        spec=LLMClient,
+    )
+
+    prompt_builder = MagicMock(
+        spec=ReportPromptBuilder,
+    )
+
+    prompt_builder.build.return_value = "Test prompt"
+    client.generate.return_value = valid_response(
+        analysis,
+    )
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+        prompt_builder=prompt_builder,
+    )
+
+    generator.generate(analysis)
+
+    assert prompt_builder.build.call_count == 1
+
+
+def test_llm_report_generator_uses_single_client_request(
+    analysis,
+):
+    client = MagicMock(
+        spec=LLMClient,
+    )
+
+    prompt_builder = MagicMock(
+        spec=ReportPromptBuilder,
+    )
+
+    prompt_builder.build.return_value = "Test prompt"
+    client.generate.return_value = valid_response(
+        analysis,
+    )
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+        prompt_builder=prompt_builder,
+    )
+
+    generator.generate(analysis)
+
+    assert client.generate.call_count == 1
+
+
+# ============================================================
 # Deterministic status ownership
 # ============================================================
 
@@ -308,7 +455,7 @@ def test_llm_report_generator_uses_deterministic_status(
     assert report.assessment_status == status
 
     assert report.executive_summary.startswith(
-        f"Assessment status: {status.value}."
+        f"Assessment status: {status.value}.",
     )
 
 
@@ -352,308 +499,6 @@ def test_llm_report_generator_adds_status_to_llm_narrative(
         f"{analysis.assessment_status.value}.\n"
         f"{narrative}"
     )
-
-
-# ============================================================
-# Prompt construction
-# ============================================================
-
-
-def test_llm_report_generator_includes_assessment_status(
-    analysis,
-):
-    _, _, client = generate_report(
-        analysis,
-    )
-
-    assert (
-        analysis.assessment_status.value
-        in client.last_prompt
-    )
-
-
-def test_llm_report_generator_includes_all_analysis_content(
-    analysis,
-):
-    _, _, client = generate_report(
-        analysis,
-    )
-
-    prompt = client.last_prompt
-
-    findings = (
-        analysis.key_findings
-        + analysis.risk_factors
-        + analysis.limitations
-    )
-
-    for finding in findings:
-        assert finding.category in prompt
-        assert finding.text in prompt
-
-
-def test_llm_report_generator_includes_finding_metadata(
-    analysis,
-):
-    _, _, client = generate_report(
-        analysis,
-    )
-
-    prompt = client.last_prompt
-
-    findings = (
-        analysis.key_findings
-        + analysis.risk_factors
-        + analysis.limitations
-    )
-
-    for finding in findings:
-        assert finding.rule_id in prompt
-        assert finding.category in prompt
-        assert finding.severity.value in prompt
-        assert finding.text in prompt
-
-
-def test_llm_report_generator_includes_structured_sections(
-    analysis,
-):
-    _, _, client = generate_report(
-        analysis,
-    )
-
-    prompt = client.last_prompt.lower()
-
-    expected_sections = [
-        "assessment status",
-        "key findings",
-        "risk factors",
-        "limitations",
-    ]
-
-    assert prompt_contains_all(
-        prompt,
-        expected_sections,
-    )
-
-
-@pytest.mark.parametrize(
-    "status",
-    list(AssessmentStatus),
-)
-def test_llm_report_generator_includes_configured_status_in_prompt(
-    status,
-):
-    analysis = make_analysis(
-        status=status,
-    )
-
-    _, _, client = generate_report(
-        analysis,
-    )
-
-    assert (
-        analysis.assessment_status.value
-        in client.last_prompt
-    )
-
-
-# ============================================================
-# Prompt semantic contract
-# ============================================================
-
-
-def test_llm_report_generator_prompt_separates_deterministic_assessment_from_generation(
-    analysis,
-):
-    _, _, client = generate_report(
-        analysis,
-    )
-
-    prompt = client.last_prompt.lower()
-
-    assert "deterministic" in prompt
-    assert "assessment" in prompt
-    assert "your role" in prompt
-
-    generation_terms = [
-        "generate",
-        "summary",
-        "language",
-        "summaris",
-    ]
-
-    assert any(
-        term in prompt
-        for term in generation_terms
-    )
-
-
-def test_llm_report_generator_prompt_contains_core_safety_constraints(
-    analysis,
-):
-    _, _, client = generate_report(
-        analysis,
-    )
-
-    prompt = client.last_prompt.lower()
-
-    safety_concepts = [
-        "source of truth",
-        "do not reassess",
-        "do not modify",
-        "do not invent",
-        "credit decision",
-        "do not override",
-        "threshold",
-    ]
-
-    for keyword in safety_concepts:
-        assert keyword in prompt
-
-
-def test_llm_report_generator_prompt_protects_deterministic_assessment(
-    analysis,
-):
-    _, _, client = generate_report(
-        analysis,
-    )
-
-    prompt = client.last_prompt.lower()
-
-    required_concepts = [
-        "deterministic",
-        "source of truth",
-        "assessment status",
-        "severity",
-        "do not modify",
-        "do not override",
-        "credit decision",
-    ]
-
-    assert prompt_contains_all(
-        prompt,
-        required_concepts,
-    )
-
-
-def test_llm_report_generator_prompt_requires_factual_grounding(
-    analysis,
-):
-    _, _, client = generate_report(
-        analysis,
-    )
-
-    prompt = client.last_prompt.lower()
-
-    grounding_concepts = [
-        "information provided",
-        "do not invent",
-        "do not introduce",
-        "assessment",
-    ]
-
-    assert prompt_contains_all(
-        prompt,
-        grounding_concepts,
-    )
-
-
-def test_llm_report_generator_prompt_restricts_threshold_disclosure(
-    analysis,
-):
-    _, _, client = generate_report(
-        analysis,
-    )
-
-    prompt = client.last_prompt.lower()
-
-    assert "threshold" in prompt
-
-    assert (
-        "do not disclose" in prompt
-        or "do not mention" in prompt
-        or "do not reproduce" in prompt
-    )
-
-
-def test_llm_report_generator_prompt_excludes_status_generation(
-    analysis,
-):
-    _, _, client = generate_report(
-        analysis,
-    )
-
-    prompt = client.last_prompt.lower()
-
-    assert "do not generate an assessment status" in prompt
-    assert "do not classify the assessment" in prompt
-    assert "application will add" in prompt
-
-
-# ============================================================
-# Dynamic / non-hard-coded prompt content
-# ============================================================
-
-
-def test_llm_report_generator_prompt_supports_arbitrary_categories():
-    findings = [
-        make_analysis_finding(
-            rule_id="CUSTOM_001",
-            category="Custom Category A",
-            severity=RuleSeverity.HIGH,
-            text="Custom finding A.",
-        ),
-        make_analysis_finding(
-            rule_id="CUSTOM_002",
-            category="Custom Category B",
-            severity=RuleSeverity.MEDIUM,
-            text="Custom finding B.",
-        ),
-    ]
-
-    analysis = make_analysis(
-        key_findings=findings,
-        risk_factors=[
-            findings[0],
-        ],
-    )
-
-    _, _, client = generate_report(
-        analysis,
-    )
-
-    prompt = client.last_prompt
-
-    for finding in findings:
-        assert finding.category in prompt
-        assert finding.text in prompt
-
-
-def test_llm_report_generator_prompt_supports_additional_findings_without_code_changes():
-    findings = [
-        make_analysis_finding(
-            rule_id=f"DYNAMIC_{index}",
-            category=f"Dynamic Category {index}",
-            severity=RuleSeverity.MEDIUM,
-            text=f"Dynamic finding {index}.",
-        )
-        for index in range(1, 6)
-    ]
-
-    analysis = make_analysis(
-        key_findings=findings,
-    )
-
-    _, _, client = generate_report(
-        analysis,
-    )
-
-    prompt = client.last_prompt
-
-    for finding in findings:
-        assert finding.rule_id in prompt
-        assert finding.category in prompt
-        assert finding.text in prompt
 
 
 # ============================================================
@@ -721,6 +566,32 @@ def test_llm_report_generator_does_not_require_status_in_llm_response(
     assert response in report.executive_summary
 
 
+def test_llm_report_generator_accepts_multiple_status_words_in_narrative(
+    analysis,
+):
+    """
+    Status words appearing in the LLM narrative do not control
+    the deterministic assessment status.
+    """
+
+    response = (
+        "The company is not classified as critical and the "
+        "current findings should be monitored rather than "
+        "treated as a normal financial position."
+    )
+
+    _, report, _ = generate_report(
+        analysis,
+        response=response,
+    )
+
+    assert report.assessment_status == (
+        analysis.assessment_status
+    )
+
+    assert response in report.executive_summary
+
+
 # ============================================================
 # Response validation
 # ============================================================
@@ -768,20 +639,11 @@ def test_llm_report_generator_rejects_whitespace_response(
         generator.generate(analysis)
 
 
-def test_llm_report_generator_accepts_multiple_status_words_in_narrative(
+def test_llm_report_generator_strips_response_whitespace(
     analysis,
 ):
-    """
-    Status words appearing in the LLM narrative do not control
-    the deterministic assessment status.
-
-    The deterministic status remains authoritative.
-    """
-
     response = (
-        "The company is not classified as critical and the "
-        "current findings should be monitored rather than "
-        "treated as a normal financial position."
+        "  Revenue and profitability show weaknesses.  "
     )
 
     _, report, _ = generate_report(
@@ -789,11 +651,20 @@ def test_llm_report_generator_accepts_multiple_status_words_in_narrative(
         response=response,
     )
 
-    assert report.assessment_status == (
-        analysis.assessment_status
+    expected_narrative = (
+        "Revenue and profitability show weaknesses."
     )
 
-    assert response in report.executive_summary
+    assert report.executive_summary == (
+        f"Assessment status: "
+        f"{analysis.assessment_status.value}.\n"
+        f"{expected_narrative}"
+    )
+
+
+# ============================================================
+# Error handling
+# ============================================================
 
 
 def test_llm_report_generator_propagates_client_errors(
@@ -807,7 +678,16 @@ def test_llm_report_generator_propagates_client_errors(
         "LLM service unavailable",
     )
 
-    generator = LLMReportGenerator(client)
+    prompt_builder = MagicMock(
+        spec=ReportPromptBuilder,
+    )
+
+    prompt_builder.build.return_value = "Test prompt"
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+        prompt_builder=prompt_builder,
+    )
 
     with pytest.raises(
         RuntimeError,
@@ -815,7 +695,9 @@ def test_llm_report_generator_propagates_client_errors(
     ):
         generator.generate(analysis)
 
-    client.generate.assert_called_once()
+    client.generate.assert_called_once_with(
+        "Test prompt",
+    )
 
 
 # ============================================================
@@ -887,11 +769,9 @@ def test_llm_report_generator_does_not_use_generated_text_as_structured_data(
         "in the deterministic analysis."
     )
 
-    response = injected_text
-
     _, report, _ = generate_report(
         analysis,
-        response=response,
+        response=injected_text,
     )
 
     structured_findings = report_findings(
@@ -1041,53 +921,136 @@ def test_llm_report_generator_supports_empty_analysis(
 
 
 # ============================================================
-# Client interaction
+# Executive summary construction
 # ============================================================
 
 
-def test_llm_report_generator_passes_prompt_to_client(
+def test_llm_report_generator_builds_executive_summary(
     analysis,
 ):
     client = MagicMock(
         spec=LLMClient,
     )
 
-    client.generate.return_value = valid_response(
+    prompt_builder = MagicMock(
+        spec=ReportPromptBuilder,
+    )
+
+    prompt_builder.build.return_value = "Test prompt"
+
+    narrative = (
+        "Revenue and profitability indicators show "
+        "material weaknesses."
+    )
+
+    client.generate.return_value = narrative
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+        prompt_builder=prompt_builder,
+    )
+
+    report = generator.generate(analysis)
+
+    assert report.executive_summary == (
+        f"Assessment status: "
+        f"{analysis.assessment_status.value}.\n"
+        f"{narrative}"
+    )
+
+
+# ============================================================
+# End-to-end interaction
+# ============================================================
+
+
+def test_llm_report_generator_executes_expected_pipeline(
+    analysis,
+):
+    """
+    Verify the high-level orchestration:
+
+        AssessmentAnalysis
+            -> PromptBuilder
+            -> LLMClient
+            -> Report
+    """
+
+    client = MagicMock(
+        spec=LLMClient,
+    )
+
+    prompt_builder = MagicMock(
+        spec=ReportPromptBuilder,
+    )
+
+    prompt = "Generated prompt"
+    narrative = "Generated narrative."
+
+    prompt_builder.build.return_value = prompt
+    client.generate.return_value = narrative
+
+    generator = LLMReportGenerator(
+        llm_client=client,
+        prompt_builder=prompt_builder,
+    )
+
+    report = generator.generate(analysis)
+
+    prompt_builder.build.assert_called_once_with(
         analysis,
     )
 
-    generator = LLMReportGenerator(client)
-
-    generator.generate(analysis)
-
-    client.generate.assert_called_once()
-
-    prompt = client.generate.call_args.args[0]
-
-    assert isinstance(
+    client.generate.assert_called_once_with(
         prompt,
-        str,
     )
 
-    assert (
-        analysis.assessment_status.value
-        in prompt
+    assert report.executive_summary == (
+        f"Assessment status: "
+        f"{analysis.assessment_status.value}.\n"
+        f"{narrative}"
     )
 
+    assert report.assessment_status == (
+        analysis.assessment_status
+    )
 
-def test_llm_report_generator_uses_single_client_request(
+    assert report.findings_by_category == (
+        findings_by_category_from_analysis(
+            analysis,
+        )
+    )
+
+    assert report.limitations == (
+        analysis.limitations
+    )
+
+def test_llm_report_generator_uses_injected_prompt_builder(
     analysis,
 ):
+    prompt_builder = MagicMock(
+        spec=ReportPromptBuilder,
+    )
+
+    prompt_builder.build.return_value = "CUSTOM PROMPT"
+
     client = MagicMock(
         spec=LLMClient,
     )
 
-    client.generate.return_value = valid_response(
-        analysis,
-    )
+    client.generate.return_value = "Generated narrative"
 
-    generator = LLMReportGenerator(client)
+    generator = LLMReportGenerator(
+        llm_client=client,
+        prompt_builder=prompt_builder,
+    )
 
     generator.generate(analysis)
 
-    assert client.generate.call_count == 1
+    prompt_builder.build.assert_called_once_with(
+        analysis,
+    )
+
+    client.generate.assert_called_once_with(
+        "CUSTOM PROMPT",
+    )

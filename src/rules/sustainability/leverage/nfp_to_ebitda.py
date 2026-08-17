@@ -7,7 +7,7 @@ from src.rules.result import RuleResult
 @Rule.register("R004")
 class NfpToEbitdaRule(Rule):
     """
-    Triggers when nfp / EBITDA exceeds the defined leverage threshold.
+    Triggers when NFP / EBITDA exceeds the defined leverage threshold.
     """
 
     def evaluate(

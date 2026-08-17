@@ -1,3 +1,4 @@
+import inspect
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -15,8 +16,28 @@ CUSTOM_HOST = "http://custom-host:11434"
 
 TEST_MODEL = "test-model"
 
-DEFAULT_TEMPERATURE = 0.0
-DEFAULT_NUM_PREDICT = 512
+CUSTOM_TEMPERATURE = 0.1
+CUSTOM_NUM_PREDICT = 4096
+
+
+# ============================================================
+# Helpers
+# ============================================================
+
+
+def get_default_generation_parameters() -> tuple[float, int]:
+    """
+    Retrieve OllamaClient generation defaults directly from
+    the constructor signature.
+
+    This avoids duplicating implementation defaults in tests.
+    """
+    signature = inspect.signature(OllamaClient.__init__)
+
+    temperature = signature.parameters["temperature"].default
+    num_predict = signature.parameters["num_predict"].default
+
+    return temperature, num_predict
 
 
 # ============================================================
@@ -32,11 +53,15 @@ def test_ollama_client_initializes_with_default_configuration(
         model=TEST_MODEL,
     )
 
+    default_temperature, default_num_predict = (
+        get_default_generation_parameters()
+    )
+
     assert client.model == TEST_MODEL
     assert client.host == DEFAULT_HOST
 
-    assert client.temperature == DEFAULT_TEMPERATURE
-    assert client.num_predict == DEFAULT_NUM_PREDICT
+    assert client.temperature == default_temperature
+    assert client.num_predict == default_num_predict
 
     assert client.client is mock_client.return_value
 
@@ -54,6 +79,7 @@ def test_ollama_client_initializes_with_custom_host(
         host=CUSTOM_HOST,
     )
 
+    assert client.model == TEST_MODEL
     assert client.host == CUSTOM_HOST
 
     mock_client.assert_called_once_with(
@@ -67,21 +93,20 @@ def test_ollama_client_initializes_with_custom_generation_parameters(
 ):
     client = OllamaClient(
         model=TEST_MODEL,
-        temperature=0.1,
-        num_predict=4096,
+        temperature=CUSTOM_TEMPERATURE,
+        num_predict=CUSTOM_NUM_PREDICT,
     )
 
-    assert client.temperature == 0.1
-    assert client.num_predict == 4096
+    assert client.temperature == CUSTOM_TEMPERATURE
+    assert client.num_predict == CUSTOM_NUM_PREDICT
 
 
 @pytest.mark.parametrize(
     "model",
     [
-        "qwen3:4b",
-        "qwen2.5:3b",
-        "llama3.2:3b",
         "test-model",
+        "local-model",
+        "custom-model",
     ],
 )
 @patch("src.llm.ollama_client.Client")
@@ -119,7 +144,7 @@ def test_ollama_client_preserves_configured_model(
     ],
 )
 @patch("src.llm.ollama_client.Client")
-def test_ollama_client_generates_response_with_parameters(
+def test_ollama_client_generates_response_with_default_parameters(
     mock_client_class,
     prompt,
     response,
@@ -138,6 +163,10 @@ def test_ollama_client_generates_response_with_parameters(
 
     result = client.generate(prompt)
 
+    default_temperature, default_num_predict = (
+        get_default_generation_parameters()
+    )
+
     assert result == response
 
     mock_client.generate.assert_called_once_with(
@@ -145,8 +174,8 @@ def test_ollama_client_generates_response_with_parameters(
         prompt=prompt,
         stream=False,
         options={
-            "temperature": DEFAULT_TEMPERATURE,
-            "num_predict": DEFAULT_NUM_PREDICT,
+            "temperature": default_temperature,
+            "num_predict": default_num_predict,
         },
         think=False,
     )
@@ -200,8 +229,8 @@ def test_ollama_client_passes_custom_generation_configuration(
 
     client = OllamaClient(
         model=TEST_MODEL,
-        temperature=0.0,
-        num_predict=8192,
+        temperature=CUSTOM_TEMPERATURE,
+        num_predict=CUSTOM_NUM_PREDICT,
     )
 
     client.generate(
@@ -213,11 +242,16 @@ def test_ollama_client_passes_custom_generation_configuration(
         prompt="Prompt",
         stream=False,
         options={
-            "temperature": 0.0,
-            "num_predict": 8192,
+            "temperature": CUSTOM_TEMPERATURE,
+            "num_predict": CUSTOM_NUM_PREDICT,
         },
         think=False,
     )
+
+
+# ============================================================
+# Generation behaviour
+# ============================================================
 
 
 @patch("src.llm.ollama_client.Client")
@@ -243,6 +277,61 @@ def test_ollama_client_disables_reasoning_mode(
     _, kwargs = mock_client.generate.call_args
 
     assert kwargs["think"] is False
+
+
+@patch("src.llm.ollama_client.Client")
+def test_ollama_client_disables_streaming(
+    mock_client_class,
+):
+    mock_client = MagicMock()
+
+    mock_client.generate.return_value = {
+        "response": "Response",
+    }
+
+    mock_client_class.return_value = mock_client
+
+    client = OllamaClient(
+        model=TEST_MODEL,
+    )
+
+    client.generate(
+        "Generate text",
+    )
+
+    _, kwargs = mock_client.generate.call_args
+
+    assert kwargs["stream"] is False
+
+
+@patch("src.llm.ollama_client.Client")
+def test_ollama_client_passes_generation_options(
+    mock_client_class,
+):
+    mock_client = MagicMock()
+
+    mock_client.generate.return_value = {
+        "response": "Response",
+    }
+
+    mock_client_class.return_value = mock_client
+
+    client = OllamaClient(
+        model=TEST_MODEL,
+        temperature=CUSTOM_TEMPERATURE,
+        num_predict=CUSTOM_NUM_PREDICT,
+    )
+
+    client.generate(
+        "Generate text",
+    )
+
+    _, kwargs = mock_client.generate.call_args
+
+    assert kwargs["options"] == {
+        "temperature": CUSTOM_TEMPERATURE,
+        "num_predict": CUSTOM_NUM_PREDICT,
+    }
 
 
 # ============================================================
