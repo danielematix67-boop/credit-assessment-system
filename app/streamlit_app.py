@@ -1504,8 +1504,18 @@ workflow_steps = [
     ("01", "Credit Data", "Structured financial input", "det"),
     ("02", "Rule Engine", "Deterministic thresholds & severity", "det"),
     ("03", "Analysis Agent", "Rule-based interpretation", "det"),
-    ("04", "Reporting Agent", "LLM prose, or deterministic fallback", "ai"),
-    ("05", "Assessment Report", "Findings + executive summary", "det"),
+    (
+        "04",
+        "Reporting Agent",
+        "LLM-assisted prose with deterministic fallback",
+        "ai",
+    ),
+    (
+        "05",
+        "Assessment Report",
+        "Deterministic findings + executive summary",
+        "det",
+    ),
 ]
 
 pipeline_html = '<div class="pipeline-wrap">'
@@ -1596,7 +1606,7 @@ if input_mode == "Demo Scenario":
     ]
 
     st.markdown(
-        """
+        f"""
         <div class="scenario-card">
             <div class="scenario-title">
                 {scenario_name}
@@ -1842,9 +1852,11 @@ if run_button:
             "Executing deterministic assessment workflow..."
         )
 
-    with st.spinner(
-        spinner_message
-    ):
+    # --------------------------------------------------------
+    # Execute the complete workflow for every reporting mode
+    # --------------------------------------------------------
+
+    with st.spinner(spinner_message):
 
         try:
 
@@ -1963,15 +1975,15 @@ if result is not None:
     with provenance_col1:
 
         st.markdown(
-            """
+            f"""
             <div class="section-card det">
                 <div style="font-weight:650; margin-bottom:0.3rem;">
                     Assessment Status &amp; Rule Findings
                 </div>
                 {render_badge("Deterministic — Rule Engine", "det")}
                 <div class="metric-description" style="margin-top:0.5rem;">
-                    Fixed thresholds, rule-based severity. Identical
-                    input always produces identical output.
+                    Assessment status, severity and findings are determined
+                    exclusively by the rule engine.
                 </div>
             </div>
             """,
@@ -1981,7 +1993,7 @@ if result is not None:
     with provenance_col2:
 
         st.markdown(
-            """
+            f"""
             <div class="section-card {report_badge_kind}">
                 <div style="font-weight:650; margin-bottom:0.3rem;">
                     Executive Report
@@ -1989,7 +2001,7 @@ if result is not None:
                 {render_badge(report_badge_label, report_badge_kind)}
                 <div class="metric-description" style="margin-top:0.5rem;">
                     Natural-language phrasing only — it cannot alter
-                    the assessment status or findings above.
+                    the assessment status or deterministic findings.
                 </div>
             </div>
             """,
@@ -2005,10 +2017,11 @@ if result is not None:
     )
 
     st.caption(
-        "High-level outcome of the deterministic assessment."
+        "High-level outcome of the deterministic assessment "
+        "and execution of the reporting workflow."
     )
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
 
     with col1:
 
@@ -2021,28 +2034,37 @@ if result is not None:
 
         st.metric(
             "Key Findings",
-            len(
-                result.analysis.key_findings
-            ),
+            len(result.analysis.key_findings),
         )
 
     with col3:
 
         st.metric(
             "Risk Factors",
-            len(
-                result.analysis.risk_factors
-            ),
+            len(result.analysis.risk_factors),
         )
 
     with col4:
 
         st.metric(
             "Limitations",
-            len(
-                result.analysis.limitations
-            ),
+            len(result.analysis.limitations),
         )
+
+    with col5:
+
+        st.metric(
+            "Total Execution",
+            f"{result.total_elapsed_time:.2f} s",
+        )
+
+    with col6:
+
+        st.metric(
+            "Reporting",
+            f"{result.reporting_elapsed_time:.2f} s",
+        )
+
 
     # ========================================================
     # Assessed Credit Position
@@ -2297,7 +2319,7 @@ if result is not None:
         with architecture_col1:
 
             st.markdown(
-                """
+                f"""
                 <div class="section-card det">
                     <div style="font-weight:650;">
                         Decision Layer
@@ -2306,10 +2328,10 @@ if result is not None:
                     <ul style="margin-top:0.6rem; padding-left:1.1rem;
                         font-size:0.86rem;">
                         <li>Deterministic rule engine</li>
-                        <li>Fixed thresholds</li>
+                        <li>Configured thresholds</li>
                         <li>Rule-based severity</li>
                         <li>Traceable findings</li>
-                        <li>Fixed assessment status</li>
+                        <li>Deterministic assessment status</li>
                     </ul>
                 </div>
                 """,
@@ -2319,7 +2341,7 @@ if result is not None:
         with architecture_col2:
 
             st.markdown(
-                """
+                f"""
                 <div class="section-card ai">
                     <div style="font-weight:650;">
                         Reporting Layer

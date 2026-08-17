@@ -13,3 +13,8 @@ class AssessmentWorkflowResult:
 
     report_generator_used: str | None = None
     report_generation_error: str | None = None
+
+    assessment_elapsed_time: float = 0.0
+    analysis_elapsed_time: float = 0.0
+    reporting_elapsed_time: float = 0.0
+    total_elapsed_time: float = 0.0
