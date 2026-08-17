@@ -11,25 +11,9 @@ class DeterministicReportGenerator(ReportGenerator):
         analysis: AssessmentAnalysis,
     ) -> Report:
 
-        if analysis.assessment_status == AssessmentStatus.NORMAL:
-            summary = (
-                "The credit assessment is classified as normal."
-            )
-
-        elif analysis.assessment_status == AssessmentStatus.ATTENTION:
-            summary = (
-                "The credit assessment requires attention."
-            )
-
-        elif analysis.assessment_status == AssessmentStatus.CRITICAL:
-            summary = (
-                "The credit assessment is classified as critical."
-            )
-
-        else:
-            summary = (
-                "The credit assessment has an undefined status."
-            )
+        summary = self._generate_summary(
+            analysis
+        )
 
         findings_by_category = self._group_findings_by_category(
             analysis.key_findings
@@ -44,6 +28,56 @@ class DeterministicReportGenerator(ReportGenerator):
         )
 
     @staticmethod
+    def _generate_summary(
+        analysis: AssessmentAnalysis,
+    ) -> str:
+
+        if analysis.assessment_status == AssessmentStatus.NORMAL:
+            summary = (
+                "Assessment status: NORMAL.\n\n"
+                "The credit assessment does not identify "
+                "significant risk factors."
+            )
+
+        elif analysis.assessment_status == AssessmentStatus.ATTENTION:
+            summary = (
+                "Assessment status: ATTENTION.\n\n"
+                "The credit assessment identifies some "
+                "elements requiring monitoring."
+            )
+
+        elif analysis.assessment_status == AssessmentStatus.CRITICAL:
+            summary = (
+                "Assessment status: CRITICAL.\n\n"
+                "The credit assessment identifies significant "
+                "risk factors affecting the credit profile."
+            )
+
+        else:
+            summary = (
+                "Assessment status: UNDEFINED.\n\n"
+                "The credit assessment status could not be determined."
+            )
+
+        if analysis.risk_factors:
+            summary += "\n\nKey risk factors:\n"
+
+            for risk_factor in analysis.risk_factors:
+                summary += (
+                    f"- {risk_factor.text}\n"
+                )
+
+        elif analysis.key_findings:
+            summary += "\n\nKey findings:\n"
+
+            for finding in analysis.key_findings:
+                summary += (
+                    f"- {finding.text}\n"
+                )
+
+        return summary
+
+    @staticmethod
     def _group_findings_by_category(
         findings,
     ) -> list[ReportFindingGroup]:
@@ -51,7 +85,10 @@ class DeterministicReportGenerator(ReportGenerator):
         grouped: dict[str, list] = {}
 
         for finding in findings:
-            grouped.setdefault(finding.category, []).append(finding)
+            grouped.setdefault(
+                finding.category,
+                [],
+            ).append(finding)
 
         return [
             ReportFindingGroup(
