@@ -1596,7 +1596,7 @@ if input_mode == "Demo Scenario":
     ]
 
     st.markdown(
-        f"""
+        """
         <div class="scenario-card">
             <div class="scenario-title">
                 {scenario_name}
@@ -1963,7 +1963,7 @@ if result is not None:
     with provenance_col1:
 
         st.markdown(
-            f"""
+            """
             <div class="section-card det">
                 <div style="font-weight:650; margin-bottom:0.3rem;">
                     Assessment Status &amp; Rule Findings
@@ -1981,7 +1981,7 @@ if result is not None:
     with provenance_col2:
 
         st.markdown(
-            f"""
+            """
             <div class="section-card {report_badge_kind}">
                 <div style="font-weight:650; margin-bottom:0.3rem;">
                     Executive Report
@@ -2297,7 +2297,7 @@ if result is not None:
         with architecture_col1:
 
             st.markdown(
-                f"""
+                """
                 <div class="section-card det">
                     <div style="font-weight:650;">
                         Decision Layer
@@ -2319,7 +2319,7 @@ if result is not None:
         with architecture_col2:
 
             st.markdown(
-                f"""
+                """
                 <div class="section-card ai">
                     <div style="font-weight:650;">
                         Reporting Layer
