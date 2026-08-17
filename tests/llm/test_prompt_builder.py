@@ -114,20 +114,17 @@ def all_template_sections(
     template: ReportPromptTemplate,
 ) -> list[str]:
     """
-    Return all static sections composing the default prompt
-    template.
+    Return all static sections composing the default prompt template.
 
-    Keeping the list in one place avoids duplicating template
-    knowledge throughout the tests.
+    The prompt contains only instructions relevant to the
+    LLM-generated executive narrative.
     """
 
     return [
         template.ROLE,
-        template.STATUS_BOUNDARY,
         template.ARCHITECTURAL_BOUNDARY,
         template.SAFETY_CONSTRAINTS,
         template.SEMANTIC_DISTINCTION,
-        template.LIMITATION_HANDLING,
         template.NARRATIVE_GUIDANCE,
         template.OUTPUT_CONTRACT,
     ]
@@ -139,7 +136,6 @@ def all_findings(
     return (
         analysis.key_findings
         + analysis.risk_factors
-        + analysis.limitations
     )
 
 
@@ -217,12 +213,9 @@ def test_prompt_builder_preserves_template_section_order(
 
     sections = [
         builder.template.ROLE,
-        builder.template.STATUS_BOUNDARY,
         builder.template.ARCHITECTURAL_BOUNDARY,
         builder.template.SAFETY_CONSTRAINTS,
         builder.template.SEMANTIC_DISTINCTION,
-        "DETERMINISTIC ASSESSMENT INPUT:",
-        builder.template.LIMITATION_HANDLING,
         builder.template.NARRATIVE_GUIDANCE,
         builder.template.OUTPUT_CONTRACT,
     ]
@@ -234,36 +227,9 @@ def test_prompt_builder_preserves_template_section_order(
 
     assert positions == sorted(positions)
 
-
 # ============================================================
 # Deterministic assessment input
 # ============================================================
-
-
-def test_prompt_builder_includes_assessment_status(
-    builder,
-    analysis,
-):
-    prompt = builder.build(analysis)
-
-    assert analysis.assessment_status.value in prompt
-
-
-@pytest.mark.parametrize(
-    "status",
-    list(AssessmentStatus),
-)
-def test_prompt_builder_supports_all_assessment_statuses(
-    builder,
-    status,
-):
-    analysis = make_analysis(
-        status=status,
-    )
-
-    prompt = builder.build(analysis)
-
-    assert status.value in prompt
 
 
 def test_prompt_builder_contains_dynamic_assessment_sections(
@@ -273,17 +239,54 @@ def test_prompt_builder_contains_dynamic_assessment_sections(
     prompt = builder.build(analysis).lower()
 
     expected_sections = [
-        "deterministic assessment input",
-        "assessment status",
         "key findings",
         "risk factors",
-        "limitations",
     ]
 
     assert all(
         section in prompt
         for section in expected_sections
     )
+
+def test_prompt_builder_excludes_non_narrative_assessment_data(
+    builder,
+    analysis,
+):
+    prompt = builder.build(analysis)
+
+    assert analysis.assessment_status.value not in prompt
+
+    for limitation in analysis.limitations:
+        assert limitation.rule_id not in prompt
+        assert limitation.text not in prompt
+
+
+def test_prompt_builder_does_not_include_assessment_status_as_input(
+    builder,
+    analysis,
+):
+    prompt = builder.build(analysis)
+
+    assert "Assessment status:" not in prompt
+    assert analysis.assessment_status.value not in prompt
+
+
+@pytest.mark.parametrize(
+    "status",
+    list(AssessmentStatus),
+)
+def test_prompt_builder_does_not_serialize_assessment_status(
+    builder,
+    status,
+):
+    analysis = make_analysis(
+        status=status,
+    )
+
+    prompt = builder.build(analysis)
+
+    assert "Assessment status:" not in prompt
+    assert status.value not in prompt
 
 
 # ============================================================
@@ -324,6 +327,18 @@ def test_prompt_builder_serializes_all_analysis_findings(
             prompt,
             finding,
         )
+
+
+def test_prompt_builder_does_not_serialize_limitations(
+    builder,
+    analysis,
+):
+    prompt = builder.build(analysis)
+
+    for limitation in analysis.limitations:
+        assert limitation.rule_id not in prompt
+        assert limitation.category not in prompt
+        assert limitation.text not in prompt
 
 
 def test_prompt_builder_serializes_arbitrary_number_of_findings(
@@ -387,7 +402,6 @@ def test_prompt_builder_preserves_finding_order(
     [
         "key_findings",
         "risk_factors",
-        "limitations",
     ],
 )
 def test_prompt_builder_serializes_each_finding_collection(
@@ -441,14 +455,14 @@ def test_prompt_builder_keeps_collections_semantically_separated(
 
     prompt = builder.build(analysis)
 
-    sections = {
-        "key": prompt.index("Key findings:"),
-        "risk": prompt.index("Risk factors:"),
-        "limitations": prompt.index("Limitations:"),
-    }
+    key_position = prompt.index("Key findings:")
+    risk_position = prompt.index("Risk factors:")
 
-    assert sections["key"] < sections["risk"]
-    assert sections["risk"] < sections["limitations"]
+    assert key_position < risk_position
+
+    # Limitations must remain outside the LLM prompt.
+    assert "Limitations:" not in prompt
+    assert limitation.rule_id not in prompt
 
 
 # ============================================================
@@ -461,7 +475,6 @@ def test_prompt_builder_keeps_collections_semantically_separated(
     [
         "key_findings",
         "risk_factors",
-        "limitations",
     ],
 )
 def test_prompt_builder_represents_empty_collection_as_none(
@@ -479,7 +492,6 @@ def test_prompt_builder_represents_empty_collection_as_none(
     section_label = {
         "key_findings": "Key findings:",
         "risk_factors": "Risk factors:",
-        "limitations": "Limitations:",
     }[field_name]
 
     section_position = prompt.index(
@@ -502,9 +514,13 @@ def test_prompt_builder_supports_empty_analysis(
     prompt = builder.build(analysis)
 
     assert prompt.strip()
-    assert analysis.assessment_status.value in prompt
 
-    assert prompt.count("None.") >= 3
+    # Only the two collections sent to the LLM are represented.
+    assert prompt.count("None.") >= 2
+
+    # Status and limitations are not part of the prompt.
+    assert "Assessment status:" not in prompt
+    assert "Limitations:" not in prompt
 
 
 # ============================================================
@@ -682,18 +698,14 @@ class CustomReportPromptTemplate:
     def render(
         self,
         *,
-        assessment_status: str,
         key_findings: str,
         risk_factors: str,
-        limitations: str,
     ) -> str:
         return "\n".join(
             [
                 "CUSTOM TEMPLATE",
-                f"STATUS={assessment_status}",
                 f"KEY_FINDINGS={key_findings}",
                 f"RISK_FACTORS={risk_factors}",
-                f"LIMITATIONS={limitations}",
             ],
         )
 
@@ -719,7 +731,6 @@ def test_prompt_builder_uses_custom_template():
     prompt = builder.build(analysis)
 
     assert "CUSTOM TEMPLATE" in prompt
-    assert analysis.assessment_status.value in prompt
 
     assert finding.rule_id in prompt
     assert finding.category in prompt
@@ -742,10 +753,8 @@ def test_prompt_builder_delegates_rendering_to_custom_template():
         "CUSTOM TEMPLATE",
     )
 
-    assert "STATUS=ATTENTION" in prompt
     assert "KEY_FINDINGS=None." in prompt
     assert "RISK_FACTORS=None." in prompt
-    assert "LIMITATIONS=None." in prompt
 
 
 # ============================================================
@@ -827,47 +836,48 @@ def test_prompt_builder_restricts_threshold_disclosure(
         for restriction in disclosure_restrictions
     )
 
-
-def test_prompt_builder_excludes_status_generation(
+def test_prompt_builder_excludes_assessment_status(
     builder,
     analysis,
 ):
-    prompt = builder.build(analysis).lower()
+    prompt = builder.build(analysis)
 
-    assert "assessment status" in prompt
+    assert analysis.assessment_status.value not in prompt
 
-    status_generation_restrictions = (
-        "do not generate an assessment status",
-        "do not classify or reclassify the assessment",
-    )
 
-    assert all(
-        restriction in prompt
-        for restriction in status_generation_restrictions
-    )
-
-    assert (
-        "application" in prompt
-        and "add" in prompt
-        and "assessment status" in prompt
-    )
-
-def test_prompt_builder_prevents_status_repetition(
+def test_prompt_builder_does_not_pass_status_value_to_llm(
     builder,
-    analysis,
 ):
-    prompt = builder.build(analysis).lower()
+    for status in AssessmentStatus:
+        analysis = make_analysis(
+            status=status,
+        )
 
-    concepts = [
-        "do not generate an assessment status",
-        "do not repeat",
-        "assessment status",
-    ]
+        prompt = builder.build(analysis)
 
-    assert all(
-        concept in prompt
-        for concept in concepts
+        assert status.value not in prompt
+
+
+def test_prompt_builder_does_not_pass_limitations_to_llm(
+    builder,
+):
+    limitation = make_analysis_finding(
+        rule_id="SECRET_LIMITATION",
+        category="Missing Data",
+        severity=RuleSeverity.HIGH,
+        text="This information is unavailable.",
     )
+
+    analysis = make_analysis(
+        limitations=[limitation],
+    )
+
+    prompt = builder.build(analysis)
+
+    assert limitation.rule_id not in prompt
+    assert limitation.category not in prompt
+    assert limitation.severity.value not in prompt
+    assert limitation.text not in prompt
 
 
 def test_prompt_builder_restricts_unsupported_interpretation(
@@ -942,3 +952,17 @@ def test_prompt_builder_requires_narrative_only_output(
         concept in prompt
         for concept in concepts
     )
+
+def test_prompt_builder_excludes_status_and_limitations(
+    builder,
+    analysis,
+):
+    prompt = builder.build(analysis)
+
+    # Assessment status must remain outside the LLM prompt.
+    assert analysis.assessment_status.value not in prompt
+
+    # Limitations must remain outside the LLM prompt.
+    for limitation in analysis.limitations:
+        assert limitation.rule_id not in prompt
+        assert limitation.text not in prompt
