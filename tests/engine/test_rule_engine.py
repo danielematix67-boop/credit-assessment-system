@@ -23,7 +23,7 @@ def position():
         ebitda=250000,
         profit_loss=50000,
         ebitda_margin=0.10,
-        pfn_to_ebitda=3.5,
+        nfp_to_ebitda=3.5,
         interest_expense=40000,
     )
 
@@ -36,7 +36,7 @@ def rules_position():
         ebitda=-50000,
         profit_loss=-50000,
         ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
+        nfp_to_ebitda=6.0,
         interest_expense=40000,
     )
 

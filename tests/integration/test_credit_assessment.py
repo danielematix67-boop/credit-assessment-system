@@ -28,7 +28,7 @@ def risk_position() -> CreditPosition:
         ebitda=-50000,
         profit_loss=-50000,
         ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
+        nfp_to_ebitda=6.0,
         interest_expense=40000,
     )
 
@@ -44,7 +44,7 @@ def normal_position() -> CreditPosition:
         ebitda=250000,
         profit_loss=100000,
         ebitda_margin=0.15,
-        pfn_to_ebitda=2.0,
+        nfp_to_ebitda=2.0,
         interest_expense=10000,
     )
 

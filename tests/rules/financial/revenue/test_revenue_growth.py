@@ -95,7 +95,7 @@ def test_revenue_growth_rule_evaluates_dynamic_severity(
         ebitda=250_000,
         profit_loss=50_000,
         ebitda_margin=0.10,
-        pfn_to_ebitda=3.5,
+        nfp_to_ebitda=3.5,
         interest_expense=40_000,
     )
 
@@ -114,7 +114,7 @@ def test_revenue_growth_rule_is_not_evaluable_when_none():
         ebitda=250_000,
         profit_loss=50_000,
         ebitda_margin=0.10,
-        pfn_to_ebitda=3.5,
+        nfp_to_ebitda=3.5,
         interest_expense=40_000,
     )
 
@@ -154,7 +154,7 @@ def test_revenue_growth_rule_uses_configured_threshold():
         ebitda=250_000,
         profit_loss=50_000,
         ebitda_margin=0.10,
-        pfn_to_ebitda=3.5,
+        nfp_to_ebitda=3.5,
         interest_expense=40_000,
     )
 

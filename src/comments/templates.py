@@ -12,7 +12,7 @@ COMMENTS = {
         "indicating weak operating profitability relative to revenue."
     ),
     "R004": (
-        "PFN to EBITDA stands at {value:.1f}x, above the acceptable level, "
+        "NFP to EBITDA stands at {value:.1f}x, above the acceptable level, "
         "indicating elevated leverage relative to operating earnings."
     ),
     "R005": (

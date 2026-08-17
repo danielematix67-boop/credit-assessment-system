@@ -42,7 +42,7 @@ def test_ebitda_margin_rule_triggered():
         ebitda=-50_000,
         profit_loss=-50_000,
         ebitda_margin=ebitda_margin,
-        pfn_to_ebitda=6.5,
+        nfp_to_ebitda=6.5,
         interest_expense=40_000,
     )
 
@@ -62,7 +62,7 @@ def test_ebitda_margin_rule_not_triggered():
         ebitda=250_000,
         profit_loss=50_000,
         ebitda_margin=ebitda_margin,
-        pfn_to_ebitda=2.5,
+        nfp_to_ebitda=2.5,
         interest_expense=40_000,
     )
 
@@ -80,7 +80,7 @@ def test_ebitda_margin_rule_not_evaluable_when_none():
         ebitda=250_000,
         profit_loss=50_000,
         ebitda_margin=None,
-        pfn_to_ebitda=3.5,
+        nfp_to_ebitda=3.5,
         interest_expense=40_000,
     )
 
@@ -109,7 +109,7 @@ def test_ebitda_margin_rule_uses_configured_threshold():
         ebitda=-25_000,
         profit_loss=-5_000,
         ebitda_margin=ebitda_margin,
-        pfn_to_ebitda=3.5,
+        nfp_to_ebitda=3.5,
         interest_expense=40_000,
     )
 

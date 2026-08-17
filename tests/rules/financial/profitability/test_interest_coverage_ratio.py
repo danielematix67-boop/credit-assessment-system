@@ -56,7 +56,7 @@ def make_position(
         ebitda=ebitda,
         profit_loss=0.0,
         ebitda_margin=0.0,
-        pfn_to_ebitda=0.0,
+        nfp_to_ebitda=0.0,
         interest_expense=interest_expense,
     )
 

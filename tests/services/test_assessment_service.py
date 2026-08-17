@@ -21,7 +21,7 @@ from src.services.assessment_service import AssessmentService
                 "ebitda": -50000,
                 "profit_loss": -50000,
                 "ebitda_margin": -0.05,
-                "pfn_to_ebitda": 6.0,
+                "nfp_to_ebitda": 6.0,
                 "interest_expense": 40000,
                 "expected_status": AssessmentStatus.CRITICAL,
             },
@@ -34,7 +34,7 @@ from src.services.assessment_service import AssessmentService
                 "ebitda": 250000,
                 "profit_loss": 50000,
                 "ebitda_margin": 0.10,
-                "pfn_to_ebitda": 3.5,
+                "nfp_to_ebitda": 3.5,
                 "interest_expense": 40000,
                 "expected_status": AssessmentStatus.NORMAL,
             },
@@ -47,7 +47,7 @@ from src.services.assessment_service import AssessmentService
                 "ebitda": 250000,
                 "profit_loss": 50000,
                 "ebitda_margin": 0.10,
-                "pfn_to_ebitda": 6.0,
+                "nfp_to_ebitda": 6.0,
                 "interest_expense": 40000,
                 "expected_status": AssessmentStatus.ATTENTION,
             },
@@ -122,7 +122,7 @@ def test_assessment_service_does_not_create_findings_for_non_triggered_rules(
         ebitda=250000,
         profit_loss=50000,
         ebitda_margin=0.10,
-        pfn_to_ebitda=3.5,
+        nfp_to_ebitda=3.5,
         interest_expense=40000,
     )
 
@@ -143,7 +143,7 @@ def test_assessment_service_builds_assessment_from_dependencies():
         ebitda=250000,
         profit_loss=50000,
         ebitda_margin=0.10,
-        pfn_to_ebitda=3.5,
+        nfp_to_ebitda=3.5,
         interest_expense=40000,
     )
 
@@ -200,7 +200,7 @@ def test_assessment_service_skips_results_without_comments():
         ebitda=250000,
         profit_loss=50000,
         ebitda_margin=0.10,
-        pfn_to_ebitda=3.5,
+        nfp_to_ebitda=3.5,
         interest_expense=40000,
     )
 

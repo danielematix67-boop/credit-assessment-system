@@ -648,7 +648,7 @@ def format_field_label(
 
     special_terms = {
         "ebitda": "EBITDA",
-        "pfn": "PFN",
+        "nfp": "nfp",
         "id": "ID",
     }
 
@@ -751,7 +751,7 @@ def format_field_description(
             "Contribution of inventory changes to EBITDA."
         ),
 
-        "pfn_to_ebitda": (
+        "nfp_to_ebitda": (
             "Net financial position relative to EBITDA; "
             "a leverage indicator."
         ),
@@ -810,7 +810,7 @@ def format_field_value(
     }:
         return f"€{float(value):,.0f}"
 
-    if field_name == "pfn_to_ebitda":
+    if field_name == "nfp_to_ebitda":
         return f"{float(value):.2f}x"
 
     if isinstance(value, float):
@@ -848,7 +848,7 @@ def get_field_unit(
         "ebitda_inventory_contribution": "EUR",
         "interest_expense": "EUR",
 
-        "pfn_to_ebitda": "x",
+        "nfp_to_ebitda": "x",
     }
 
     return units.get(

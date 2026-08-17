@@ -43,7 +43,7 @@ DEMO_SCENARIOS = {
             "ebitda_inventory_contribution": 0.01,
 
             # Leverage / financial structure
-            "pfn_to_ebitda": 1.5,
+            "nfp_to_ebitda": 1.5,
             "interest_expense": 150_000.0,
 
             # Historical / variation data
@@ -85,7 +85,7 @@ DEMO_SCENARIOS = {
             "ebitda_inventory_contribution": 0.01,
 
             # Leverage / financial structure
-            "pfn_to_ebitda": 2.0,
+            "nfp_to_ebitda": 2.0,
             "interest_expense": 180_000.0,
 
             # Historical / variation data
@@ -126,7 +126,7 @@ DEMO_SCENARIOS = {
             "ebitda_inventory_contribution": 0.005,
 
             # Leverage / financial structure
-            "pfn_to_ebitda": 3.0,
+            "nfp_to_ebitda": 3.0,
             "interest_expense": 220_000.0,
 
             # Historical / variation data
@@ -168,7 +168,7 @@ DEMO_SCENARIOS = {
             "ebitda_inventory_contribution": 0.01,
 
             # Leverage / financial structure
-            "pfn_to_ebitda": 6.0,
+            "nfp_to_ebitda": 6.0,
             "interest_expense": 500_000.0,
 
             # Historical / variation data
@@ -209,7 +209,7 @@ DEMO_SCENARIOS = {
             "ebitda_inventory_contribution": -0.02,
 
             # Leverage / financial structure
-            "pfn_to_ebitda": 7.0,
+            "nfp_to_ebitda": 7.0,
             "interest_expense": 700_000.0,
 
             # Historical / variation data
@@ -251,7 +251,7 @@ DEMO_SCENARIOS = {
             "ebitda_inventory_contribution": None,
 
             # Leverage / financial structure
-            "pfn_to_ebitda": None,
+            "nfp_to_ebitda": None,
             "interest_expense": None,
 
             # Historical / variation data

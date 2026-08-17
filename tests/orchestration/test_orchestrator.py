@@ -26,7 +26,7 @@ def normal_position():
         ebitda=100000,
         profit_loss=50000,
         ebitda_margin=0.10,
-        pfn_to_ebitda=2.0,
+        nfp_to_ebitda=2.0,
         interest_expense=20000,
     )
 
@@ -39,7 +39,7 @@ def critical_position():
         ebitda=-50000,
         profit_loss=-50000,
         ebitda_margin=-0.05,
-        pfn_to_ebitda=6.0,
+        nfp_to_ebitda=6.0,
         interest_expense=40000,
     )
 

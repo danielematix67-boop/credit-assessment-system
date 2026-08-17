@@ -307,7 +307,7 @@ CreditPosition
 ├── ebitda
 ├── profit_loss
 ├── ebitda_margin
-├── pfn_to_ebitda
+├── nfp_to_ebitda
 └── interest_expense
 ```
 

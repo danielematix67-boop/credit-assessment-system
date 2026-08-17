@@ -346,7 +346,7 @@ The current domain model includes indicators such as:
 * EBITDA;
 * profit/loss;
 * EBITDA margin;
-* PFN-to-EBITDA;
+* nfp-to-EBITDA;
 * interest expense.
 
 The model supports optional fields where an indicator may be unavailable.
@@ -359,7 +359,7 @@ CreditPosition(
     revenue_growth=-0.15,
     ebitda=-50000,
     ebitda_margin=-0.05,
-    pfn_to_ebitda=6.0,
+    nfp_to_ebitda=6.0,
 )
 ```
 
@@ -662,7 +662,7 @@ The current prototype includes seven registered rules.
 | R001 | Revenue       | Revenue growth deterioration |
 | R002 | Profitability | Negative EBITDA              |
 | R003 | Profitability | EBITDA margin                |
-| R004 | Leverage      | PFN / EBITDA                 |
+| R004 | Leverage      | nfp / EBITDA                 |
 | R005 | Profitability | Interest expense / EBITDA    |
 | R006 | Profitability | Inventory-supported EBITDA   |
 | R007 | Leverage      | Interest coverage            |

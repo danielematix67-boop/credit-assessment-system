@@ -5,9 +5,9 @@ from src.rules.result import RuleResult
 
 
 @Rule.register("R004")
-class PfnToEbitdaRule(Rule):
+class NfpToEbitdaRule(Rule):
     """
-    Triggers when PFN / EBITDA exceeds the defined leverage threshold.
+    Triggers when nfp / EBITDA exceeds the defined leverage threshold.
     """
 
     def evaluate(
@@ -15,11 +15,11 @@ class PfnToEbitdaRule(Rule):
         position: CreditPosition,
     ) -> RuleResult:
 
-        value = position.pfn_to_ebitda
+        value = position.nfp_to_ebitda
 
         if value is None:
             return self._not_evaluable(
-                reason="PFN / EBITDA is not available.",
+                reason="NFP / EBITDA is not available.",
             )
 
         status = (

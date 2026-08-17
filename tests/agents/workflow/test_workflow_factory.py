@@ -38,7 +38,7 @@ def representative_position():
         ebitda=1.0,
         profit_loss=1.0,
         ebitda_margin=0.0,
-        pfn_to_ebitda=0.0,
+        nfp_to_ebitda=0.0,
         interest_expense=0.0,
     )
 

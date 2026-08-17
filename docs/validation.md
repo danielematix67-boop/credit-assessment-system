@@ -215,7 +215,7 @@ Revenue Growth
 EBITDA
 Profitability
 EBITDA Margin
-PFN-to-EBITDA
+nfp-to-EBITDA
 Financial Expenses
 Interest Coverage
 Other Financial Indicators

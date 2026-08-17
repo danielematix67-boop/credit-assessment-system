@@ -15,8 +15,8 @@ CUSTOM_HOST = "http://custom-host:11434"
 
 TEST_MODEL = "test-model"
 
-DEFAULT_TEMPERATURE = 0.2
-DEFAULT_NUM_PREDICT = 2048
+DEFAULT_TEMPERATURE = 0.0
+DEFAULT_NUM_PREDICT = 512
 
 
 # ============================================================

@@ -48,7 +48,7 @@ class CreditPosition:
     # Leverage / financial structure
     # =========================
 
-    pfn_to_ebitda: float | None = None
+    nfp_to_ebitda: float | None = None
     interest_expense: float | None = None
 
     # =========================

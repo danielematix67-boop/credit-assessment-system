@@ -31,7 +31,7 @@ rules:
         severity: HIGH
 
   - rule_id: R004
-    rule_name: PFN / EBITDA leverage
+    rule_name: nfp / EBITDA leverage
     category: leverage
     threshold: 5.0
     severity: MEDIUM

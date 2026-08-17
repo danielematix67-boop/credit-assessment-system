@@ -25,7 +25,7 @@ def position_data():
         "ebitda": 250_000,
         "profit_loss": -50_000,
         "ebitda_margin": -0.05,
-        "pfn_to_ebitda": 3.5,
+        "nfp_to_ebitda": 3.5,
         "interest_expense": 10_000,
     }
 
@@ -77,7 +77,7 @@ def test_credit_position_optional_fields_default_to_none():
         "ebitda",
         "profit_loss",
         "ebitda_margin",
-        "pfn_to_ebitda",
+        "nfp_to_ebitda",
         "interest_expense",
     )
 
