@@ -189,7 +189,7 @@ def test_rule_config_loader_supports_valid_severity_directions(
     config_path = tmp_path / "rules.yaml"
 
     config_path.write_text(
-        f"""
+        """
         rules:
           - rule_id: test_rule
             rule_name: Test rule

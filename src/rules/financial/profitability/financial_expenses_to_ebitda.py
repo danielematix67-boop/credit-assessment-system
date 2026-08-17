@@ -1,7 +1,6 @@
 from src.models.position import CreditPosition
 from src.rules.base.rule import Rule
 from src.rules.base.status import RuleStatus
-from src.rules.base.severity import RuleSeverity
 from src.rules.result import RuleResult
 
 

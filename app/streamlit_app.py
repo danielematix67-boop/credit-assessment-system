@@ -1170,7 +1170,7 @@ with st.sidebar:
     st.subheader("How to read this app")
 
     st.markdown(
-        f"""
+        """
         <div class="pipeline-legend">
             <div class="pipeline-legend-item">
                 <span class="legend-dot det"></span>
@@ -1528,7 +1528,7 @@ pipeline_html += "</div>"
 st.markdown(pipeline_html, unsafe_allow_html=True)
 
 st.markdown(
-    f"""
+    """
     <div class="pipeline-legend">
         <div class="pipeline-legend-item">
             <span class="legend-dot det"></span> Deterministic
