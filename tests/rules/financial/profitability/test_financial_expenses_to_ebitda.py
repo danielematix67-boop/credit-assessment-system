@@ -5,6 +5,7 @@ from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_threshold import SeverityThreshold
 from src.rules.base.status import RuleStatus
+from src.rules.base.severity_direction import SeverityDirection
 from src.rules.financial.profitability.financial_expenses_to_ebitda import (
     FinancialExpensesToEbitdaRule,
 )
@@ -25,6 +26,7 @@ def rule_config():
         category=CATEGORY,
         threshold=THRESHOLD,
         severity=DEFAULT_SEVERITY,
+        severity_direction=SeverityDirection.HIGHER_IS_WORSE,
         severity_thresholds=(
             SeverityThreshold(
                 threshold=0.40,
@@ -122,6 +124,7 @@ def test_interest_expense_to_ebitda_rule_evaluates_ratio(
     result = rule.evaluate(position)
 
     assert_result_metadata(result, rule_config)
+
     assert result.value == expected_value
     assert result.status == expected_status
     assert result.severity == expected_severity
@@ -130,13 +133,11 @@ def test_interest_expense_to_ebitda_rule_evaluates_ratio(
 @pytest.mark.parametrize(
     ("ebitda", "interest_expense"),
     [
-        (-50_000, 40_000),
         (None, 100_000),
-        (0, 40_000),
         (250_000, None),
     ],
 )
-def test_interest_expense_to_ebitda_rule_is_not_evaluable(
+def test_interest_expense_to_ebitda_rule_is_not_evaluable_missing_data(
     rule,
     rule_config,
     ebitda,
@@ -150,9 +151,43 @@ def test_interest_expense_to_ebitda_rule_is_not_evaluable(
     result = rule.evaluate(position)
 
     assert_result_metadata(result, rule_config)
+
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
     assert result.severity == rule_config.severity
+
+
+@pytest.mark.parametrize(
+    ("ebitda", "interest_expense"),
+    [
+        (-50_000, 40_000),
+        (0, 40_000),
+    ],
+)
+def test_interest_expense_to_ebitda_rule_negative_ebitda_is_not_evaluable(
+    rule,
+    rule_config,
+    ebitda,
+    interest_expense,
+):
+    position = make_position(
+        ebitda=ebitda,
+        interest_expense=interest_expense,
+    )
+
+    result = rule.evaluate(position)
+
+    assert_result_metadata(result, rule_config)
+
+    assert result.status == RuleStatus.NOT_EVALUABLE
+    assert result.value is None
+    assert result.severity == rule_config.severity
+
+    assert result.reason is not None
+    assert (
+        "EBITDA is negative or zero"
+        in result.reason
+    )
 
 
 def test_interest_expense_to_ebitda_rule_uses_configured_threshold():
@@ -162,6 +197,7 @@ def test_interest_expense_to_ebitda_rule_uses_configured_threshold():
         category=CATEGORY,
         threshold=1.00,
         severity=RuleSeverity.MEDIUM,
+        severity_direction=SeverityDirection.HIGHER_IS_WORSE,
     )
 
     position = make_position(
@@ -172,6 +208,7 @@ def test_interest_expense_to_ebitda_rule_uses_configured_threshold():
     result = FinancialExpensesToEbitdaRule(config).evaluate(position)
 
     assert_result_metadata(result, config)
+
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == 0.80
     assert result.severity == RuleSeverity.MEDIUM

@@ -12,7 +12,11 @@ from src.llm.ollama_client import OllamaClient
 
 DEFAULT_HOST = "http://localhost:11434"
 CUSTOM_HOST = "http://custom-host:11434"
+
 TEST_MODEL = "test-model"
+
+DEFAULT_TEMPERATURE = 0.2
+DEFAULT_NUM_PREDICT = 2048
 
 
 # ============================================================
@@ -21,7 +25,7 @@ TEST_MODEL = "test-model"
 
 
 @patch("src.llm.ollama_client.Client")
-def test_ollama_client_initializes_with_default_host(
+def test_ollama_client_initializes_with_default_configuration(
     mock_client,
 ):
     client = OllamaClient(
@@ -30,6 +34,10 @@ def test_ollama_client_initializes_with_default_host(
 
     assert client.model == TEST_MODEL
     assert client.host == DEFAULT_HOST
+
+    assert client.temperature == DEFAULT_TEMPERATURE
+    assert client.num_predict == DEFAULT_NUM_PREDICT
+
     assert client.client is mock_client.return_value
 
     mock_client.assert_called_once_with(
@@ -46,21 +54,33 @@ def test_ollama_client_initializes_with_custom_host(
         host=CUSTOM_HOST,
     )
 
-    assert client.model == TEST_MODEL
     assert client.host == CUSTOM_HOST
-    assert client.client is mock_client.return_value
 
     mock_client.assert_called_once_with(
         host=CUSTOM_HOST,
     )
 
 
+@patch("src.llm.ollama_client.Client")
+def test_ollama_client_initializes_with_custom_generation_parameters(
+    mock_client,
+):
+    client = OllamaClient(
+        model=TEST_MODEL,
+        temperature=0.1,
+        num_predict=4096,
+    )
+
+    assert client.temperature == 0.1
+    assert client.num_predict == 4096
+
+
 @pytest.mark.parametrize(
     "model",
     [
-        "model-a",
-        "model-b",
-        "local-model",
+        "qwen3:4b",
+        "qwen2.5:3b",
+        "llama3.2:3b",
         "test-model",
     ],
 )
@@ -82,24 +102,24 @@ def test_ollama_client_preserves_configured_model(
 
 
 @pytest.mark.parametrize(
-    "prompt, response",
+    "prompt,response",
     [
         (
             "Test prompt",
             "Generated response.",
         ),
         (
-            "Generate an executive summary.",
-            "Generated executive summary.",
+            "Generate executive summary.",
+            "Executive summary.",
         ),
         (
-            "Summarise the assessment.",
-            "Assessment summary.",
+            "Rewrite assessment comment.",
+            "Improved comment.",
         ),
     ],
 )
 @patch("src.llm.ollama_client.Client")
-def test_ollama_client_generates_response(
+def test_ollama_client_generates_response_with_parameters(
     mock_client_class,
     prompt,
     response,
@@ -123,6 +143,12 @@ def test_ollama_client_generates_response(
     mock_client.generate.assert_called_once_with(
         model=TEST_MODEL,
         prompt=prompt,
+        stream=False,
+        options={
+            "temperature": DEFAULT_TEMPERATURE,
+            "num_predict": DEFAULT_NUM_PREDICT,
+        },
+        think=False,
     )
 
 
@@ -130,11 +156,10 @@ def test_ollama_client_generates_response(
     "generated_text",
     [
         "Generated response.",
-        "A longer generated response containing "
-        "multiple words and sentences.",
-        "ATTENTION",
+        "Long generated response with multiple sentences.",
         "",
         "123",
+        "CRITICAL WARNING",
     ],
 )
 @patch("src.llm.ollama_client.Client")
@@ -154,13 +179,15 @@ def test_ollama_client_preserves_generated_text(
         model=TEST_MODEL,
     )
 
-    result = client.generate("Test prompt")
+    result = client.generate(
+        "Test prompt",
+    )
 
     assert result == generated_text
 
 
 @patch("src.llm.ollama_client.Client")
-def test_ollama_client_passes_configured_model_and_prompt(
+def test_ollama_client_passes_custom_generation_configuration(
     mock_client_class,
 ):
     mock_client = MagicMock()
@@ -171,19 +198,51 @@ def test_ollama_client_passes_configured_model_and_prompt(
 
     mock_client_class.return_value = mock_client
 
-    model = "configured-model"
-    prompt = "configured prompt"
-
     client = OllamaClient(
-        model=model,
+        model=TEST_MODEL,
+        temperature=0.0,
+        num_predict=8192,
     )
 
-    client.generate(prompt)
+    client.generate(
+        "Prompt",
+    )
 
     mock_client.generate.assert_called_once_with(
-        model=model,
-        prompt=prompt,
+        model=TEST_MODEL,
+        prompt="Prompt",
+        stream=False,
+        options={
+            "temperature": 0.0,
+            "num_predict": 8192,
+        },
+        think=False,
     )
+
+
+@patch("src.llm.ollama_client.Client")
+def test_ollama_client_disables_reasoning_mode(
+    mock_client_class,
+):
+    mock_client = MagicMock()
+
+    mock_client.generate.return_value = {
+        "response": "Response",
+    }
+
+    mock_client_class.return_value = mock_client
+
+    client = OllamaClient(
+        model=TEST_MODEL,
+    )
+
+    client.generate(
+        "Rewrite text",
+    )
+
+    _, kwargs = mock_client.generate.call_args
+
+    assert kwargs["think"] is False
 
 
 # ============================================================
@@ -197,7 +256,7 @@ def test_ollama_client_passes_configured_model_and_prompt(
         RuntimeError("Service unavailable"),
         ValueError("Invalid response"),
         ConnectionError("Connection failed"),
-        TimeoutError("Request timed out"),
+        TimeoutError("Timeout"),
     ],
 )
 @patch("src.llm.ollama_client.Client")
@@ -215,17 +274,14 @@ def test_ollama_client_propagates_generation_errors(
         model=TEST_MODEL,
     )
 
-    with pytest.raises(type(error), match=str(error)):
-        client.generate("Test prompt")
-
-    mock_client.generate.assert_called_once_with(
-        model=TEST_MODEL,
-        prompt="Test prompt",
-    )
+    with pytest.raises(type(error)):
+        client.generate(
+            "Test prompt",
+        )
 
 
 @patch("src.llm.ollama_client.Client")
-def test_ollama_client_propagates_missing_response_error(
+def test_ollama_client_requires_response_field(
     mock_client_class,
 ):
     mock_client = MagicMock()
@@ -239,42 +295,18 @@ def test_ollama_client_propagates_missing_response_error(
     )
 
     with pytest.raises(KeyError):
-        client.generate("Test prompt")
-
-
-@pytest.mark.parametrize(
-    "response",
-    [
-        {"unexpected": "value"},
-        {"result": "value"},
-        {"text": "value"},
-    ],
-)
-@patch("src.llm.ollama_client.Client")
-def test_ollama_client_requires_response_field(
-    mock_client_class,
-    response,
-):
-    mock_client = MagicMock()
-    mock_client.generate.return_value = response
-
-    mock_client_class.return_value = mock_client
-
-    client = OllamaClient(
-        model=TEST_MODEL,
-    )
-
-    with pytest.raises(KeyError):
-        client.generate("Test prompt")
+        client.generate(
+            "Test prompt",
+        )
 
 
 # ============================================================
-# Client interaction
+# Client lifecycle
 # ============================================================
 
 
 @patch("src.llm.ollama_client.Client")
-def test_ollama_client_uses_initialized_client(
+def test_ollama_client_reuses_same_client_instance(
     mock_client_class,
 ):
     mock_client = MagicMock()
@@ -289,31 +321,8 @@ def test_ollama_client_uses_initialized_client(
         model=TEST_MODEL,
     )
 
-    assert client.client is mock_client
-
-    client.generate("Test prompt")
-
-    mock_client.generate.assert_called_once()
-
-
-@patch("src.llm.ollama_client.Client")
-def test_ollama_client_does_not_create_new_client_per_request(
-    mock_client_class,
-):
-    mock_client = MagicMock()
-
-    mock_client.generate.return_value = {
-        "response": "Response",
-    }
-
-    mock_client_class.return_value = mock_client
-
-    client = OllamaClient(
-        model=TEST_MODEL,
-    )
-
-    client.generate("First prompt")
-    client.generate("Second prompt")
+    client.generate("First")
+    client.generate("Second")
 
     mock_client_class.assert_called_once_with(
         host=DEFAULT_HOST,

@@ -144,42 +144,48 @@ def get_ollama_configuration() -> tuple[str, str]:
     Retrieve Ollama host and model configuration.
 
     Priority:
-    1. Streamlit secrets
+    1. Streamlit secrets [ollama] section
     2. Environment variables
     3. Local defaults
-
-    The model is deliberately configurable so that different
-    Ollama models can be tested without modifying application
-    code.
     """
 
-    ollama_host = get_secret(
-        "OLLAMA_HOST",
-        None,
-    )
+    # Streamlit secrets TOML:
+    #
+    # [ollama]
+    # model = "qwen3:4b"
+    # host = "http://localhost:11434"
 
-    if not ollama_host:
-        ollama_host = os.getenv(
+    ollama_section = {}
+
+    try:
+        ollama_section = st.secrets.get(
+            "ollama",
+            {},
+        )
+
+    except Exception:
+        ollama_section = {}
+
+    ollama_host = (
+        ollama_section.get("host")
+        or os.getenv(
             "OLLAMA_HOST",
-            "http://localhost:11434",
         )
-
-    ollama_model = get_secret(
-        "OLLAMA_MODEL",
-        None,
+        or "http://localhost:11434"
     )
 
-    if not ollama_model:
-        ollama_model = os.getenv(
+    ollama_model = (
+        ollama_section.get("model")
+        or os.getenv(
             "OLLAMA_MODEL",
-            "qwen3:0.6b",
         )
+        or "qwen3:0.6B"
+    )
 
     return (
         str(ollama_host),
         str(ollama_model),
     )
-
 
 # ============================================================
 # Available Reporting Modes

@@ -1,6 +1,7 @@
 from src.models.position import CreditPosition
 from src.rules.base.rule import Rule
 from src.rules.base.status import RuleStatus
+from src.rules.base.severity import RuleSeverity
 from src.rules.result import RuleResult
 
 
@@ -20,24 +21,20 @@ class FinancialExpensesToEbitdaRule(Rule):
         ebitda = position.ebitda
 
         if interest_expense is None:
-
             return self._not_evaluable(
                 reason="Interest expense is not available.",
             )
 
         if ebitda is None:
-
             return self._not_evaluable(
                 reason="EBITDA is not available.",
             )
 
         if ebitda <= 0:
-
             return self._not_evaluable(
                 reason=(
-                    "EBITDA must be greater than zero "
-                    "to calculate the financial expenses "
-                    "to EBITDA ratio."
+                    "Interest expense to EBITDA ratio is not meaningful because EBITDA is negative or zero."
+                    " Interest expenses cannot be covered by operating profitability."
                 ),
             )
 

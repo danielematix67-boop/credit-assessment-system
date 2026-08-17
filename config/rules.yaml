@@ -48,6 +48,7 @@ rules:
     threshold: 0.60
     severity: MEDIUM
     severity_direction: HIGHER_IS_WORSE
+
     severity_thresholds:
       - threshold: 0.60
         severity: MEDIUM

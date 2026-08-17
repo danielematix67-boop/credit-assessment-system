@@ -1,6 +1,7 @@
 import os
 
 from google import genai
+from google.genai import types
 
 from src.llm.client import LLMClient
 
@@ -11,7 +12,10 @@ class GeminiClient(LLMClient):
         self,
         api_key: str | None = None,
         model: str = "gemini-3.5-flash",
-    ):
+        temperature: float = 0.2,
+        max_output_tokens: int = 2048,
+    ) -> None:
+
         resolved_api_key = (
             api_key
             or os.getenv("GEMINI_API_KEY")
@@ -29,6 +33,9 @@ class GeminiClient(LLMClient):
         )
 
         self.model = model
+        self.temperature = temperature
+        self.max_output_tokens = max_output_tokens
+
 
     def generate(
         self,
@@ -38,6 +45,10 @@ class GeminiClient(LLMClient):
         response = self.client.models.generate_content(
             model=self.model,
             contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=self.temperature,
+                max_output_tokens=self.max_output_tokens,
+            ),
         )
 
         text = response.text

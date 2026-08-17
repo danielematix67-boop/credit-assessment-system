@@ -15,38 +15,33 @@ class OllamaClient(LLMClient):
         self,
         model: str,
         host: str = "http://localhost:11434",
+        temperature: float = 0.2,
+        num_predict: int = 2048,
     ) -> None:
+
         self.model = model
         self.host = host
-        self.client = Client(host=host)
+        self.temperature = temperature
+        self.num_predict = num_predict
+
+        self.client = Client(
+            host=host,
+        )
 
     def generate(
         self,
         prompt: str,
     ) -> str:
-        try:
-            response = self.client.generate(
-                model=self.model,
-                prompt=prompt,
-            )
 
-            generated_text = response["response"]
+        response = self.client.generate(
+            model=self.model,
+            prompt=prompt,
+            stream=False,
+            options={
+                "temperature": self.temperature,
+                "num_predict": self.num_predict,
+            },
+            think=False,
+        )
 
-            print("=" * 60)
-            print("OLLAMA RESPONSE")
-            print(f"Model: {self.model}")
-            print(f"Response type: {type(response)}")
-            print("Generated text:")
-            print(repr(generated_text))
-            print("=" * 60)
-
-            return generated_text
-
-        except Exception as error:
-            print("=" * 60)
-            print("OLLAMA ERROR")
-            print(f"Error type: {type(error).__name__}")
-            print(f"Error message: {error}")
-            print("=" * 60)
-
-            raise
+        return response["response"]
