@@ -179,7 +179,7 @@ def get_ollama_configuration() -> tuple[str, str]:
         or os.getenv(
             "OLLAMA_MODEL",
         )
-        or "qwen3:0.6B"
+        or "qwen3:0.6b"
     )
 
     return (
