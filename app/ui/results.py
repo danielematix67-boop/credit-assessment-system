@@ -67,14 +67,6 @@ def resolve_report_badge(
             "Ollama + Fallback"
         ):
 
-            if configured_model:
-
-                return (
-                    "ai",
-                    "AI-generated "
-                    f"(Local LLM · {configured_model})",
-                )
-
             return (
                 "ai",
                 "AI-generated (Local LLM)",
@@ -269,9 +261,13 @@ def render_execution_trace(
         "Traceability of the main processing stages."
     )
 
-    trace_cols = st.columns(4)
+    # ========================================================
+    # Row 1
+    # ========================================================
 
-    with trace_cols[0]:
+    trace_row_1 = st.columns(2)
+
+    with trace_row_1[0]:
 
         st.success(
             "✓ Credit Data"
@@ -281,7 +277,7 @@ def render_execution_trace(
             "Position received"
         )
 
-    with trace_cols[1]:
+    with trace_row_1[1]:
 
         st.success(
             "✓ Rule Engine"
@@ -291,7 +287,13 @@ def render_execution_trace(
             "Deterministic assessment"
         )
 
-    with trace_cols[2]:
+    # ========================================================
+    # Row 2
+    # ========================================================
+
+    trace_row_2 = st.columns(2)
+
+    with trace_row_2[0]:
 
         st.success(
             "✓ Analysis Agent"
@@ -301,7 +303,7 @@ def render_execution_trace(
             "Assessment interpreted"
         )
 
-    with trace_cols[3]:
+    with trace_row_2[1]:
 
         if generator_used == "FALLBACK":
 
@@ -335,17 +337,9 @@ def render_execution_trace(
                     "✓ Local LLM Reporting"
                 )
 
-                if configured_model:
-
-                    st.caption(
-                        f"Model: {configured_model}"
-                    )
-
-                else:
-
-                    st.caption(
-                        "Local model"
-                    )
+                st.caption(
+                    "AI-assisted report generated"
+                )
 
             else:
 
@@ -474,16 +468,8 @@ def render_overview_tab(
         report_badge_kind,
     )
 
-    if (
-        selected_reporting_mode
-        == "Ollama + Fallback"
-        and configured_model
-    ):
-
-        st.caption(
-            f"Configured local model: "
-            f"`{configured_model}`"
-        )
+    # Intentionally do not display the configured
+    # LLM model or host in the user interface.
 
     st.markdown(
         "### System Architecture"
@@ -562,46 +548,46 @@ def render_findings_tab(
         "of the assessment. No LLM is involved in this tab."
     )
 
-    if result.analysis.key_findings:
-
-        for finding in (
-            result.analysis.key_findings
-        ):
-
-            with st.container(
-                border=True
-            ):
-
-                col1, col2 = st.columns(
-                    [1.5, 5]
-                )
-
-                with col1:
-
-                    st.markdown(
-                        f"**{finding.rule_id}**"
-                    )
-
-                    st.caption(
-                        finding.severity.value
-                    )
-
-                with col2:
-
-                    st.markdown(
-                        f"**{finding.category.upper()}**"
-                    )
-
-                    st.write(
-                        finding.text
-                    )
-
-    else:
+    if not result.analysis.key_findings:
 
         st.success(
             "No rule violations or key findings "
             "were identified."
         )
+
+        return
+
+    for finding in result.analysis.key_findings:
+
+        with st.container(
+            border=True
+        ):
+
+            finding_col1, finding_col2 = (
+                st.columns(
+                    [1.2, 4.8]
+                )
+            )
+
+            with finding_col1:
+
+                st.markdown(
+                    f"**{finding.rule_id}**"
+                )
+
+                st.caption(
+                    finding.severity.value
+                )
+
+            with finding_col2:
+
+                st.markdown(
+                    f"**{finding.category.upper()}**"
+                )
+
+                st.write(
+                    finding.text
+                )
 
 
 def render_analysis_tab(
@@ -765,13 +751,6 @@ def render_report_tab(
                 "successfully."
             )
 
-            if configured_model:
-
-                st.caption(
-                    f"Configured model: "
-                    f"`{configured_model}`"
-                )
-
             st.caption(
                 "The local LLM was used exclusively for "
                 "report generation. The assessment outcome "
@@ -864,6 +843,7 @@ def render_results(
     """
 
     if result is None:
+
         return
 
     st.divider()
