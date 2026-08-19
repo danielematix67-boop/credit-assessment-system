@@ -18,12 +18,19 @@ import streamlit as st
 #       Amber accent. Used when an LLM was requested but the
 #       deterministic fallback generator was used.
 #
-# The CSS is intentionally responsive so that the application
-# remains usable on desktop, tablet and mobile screens.
+# Responsive behaviour:
+#
+#   Desktop / Tablet
+#       Data is displayed using the standard Streamlit dataframe.
+#
+#   Mobile
+#       Financial indicators are displayed as vertical cards.
+#
 # ============================================================
 
 
 def apply_styles() -> None:
+
     st.markdown(
         """
         <style>
@@ -33,6 +40,7 @@ def apply_styles() -> None:
         /* ==================================================== */
 
         :root {
+
             --det-color: #2563eb;
             --det-bg: rgba(37, 99, 235, 0.08);
 
@@ -46,13 +54,32 @@ def apply_styles() -> None:
             --border: rgba(128, 128, 128, 0.20);
 
             --card-bg: rgba(128, 128, 128, 0.025);
+
             --radius: 0.75rem;
+            --input-radius: 0.55rem;
         }
 
 
         /* ==================================================== */
-        /* Main Application Container                           */
+        /* Global Layout / Overflow                             */
         /* ==================================================== */
+
+        html,
+        body {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        #root {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
 
         .block-container {
             width: 100%;
@@ -63,6 +90,8 @@ def apply_styles() -> None:
 
             padding-left: clamp(1rem, 3vw, 3rem);
             padding-right: clamp(1rem, 3vw, 3rem);
+
+            box-sizing: border-box;
         }
 
 
@@ -112,29 +141,24 @@ def apply_styles() -> None:
 
             white-space: normal;
             overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .badge-det {
             color: var(--det-color);
-
             background: var(--det-bg);
-
             border-color: rgba(37, 99, 235, 0.25);
         }
 
         .badge-ai {
             color: var(--ai-color);
-
             background: var(--ai-bg);
-
             border-color: rgba(124, 58, 237, 0.25);
         }
 
         .badge-fallback {
             color: var(--fallback-color);
-
             background: var(--fallback-bg);
-
             border-color: rgba(180, 83, 9, 0.28);
         }
 
@@ -156,6 +180,7 @@ def apply_styles() -> None:
             margin: 0.4rem 0 0.8rem 0;
 
             width: 100%;
+            max-width: 100%;
         }
 
         .pipeline-step {
@@ -175,17 +200,16 @@ def apply_styles() -> None:
             position: relative;
 
             overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .pipeline-step.det {
             border-color: rgba(37, 99, 235, 0.35);
-
             background: var(--det-bg);
         }
 
         .pipeline-step.ai {
             border-color: rgba(124, 58, 237, 0.35);
-
             background: var(--ai-bg);
         }
 
@@ -260,6 +284,7 @@ def apply_styles() -> None:
             min-width: 0;
 
             overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .legend-dot {
@@ -288,7 +313,7 @@ def apply_styles() -> None:
 
         .scenario-card {
             width: 100%;
-            box-sizing: border-box;
+            max-width: 100%;
 
             padding: 1.2rem 1.4rem;
 
@@ -301,6 +326,7 @@ def apply_styles() -> None:
             margin-bottom: 1rem;
 
             overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .scenario-title {
@@ -331,7 +357,7 @@ def apply_styles() -> None:
 
         .data-note {
             width: 100%;
-            box-sizing: border-box;
+            max-width: 100%;
 
             padding: 0.9rem 1rem;
 
@@ -348,6 +374,193 @@ def apply_styles() -> None:
             color: var(--muted);
 
             overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+
+        /* ==================================================== */
+        /* Manual Input Introduction                            */
+        /* ==================================================== */
+
+        .input-introduction {
+            width: 100%;
+            max-width: 100%;
+
+            padding: 1rem 1.15rem;
+
+            margin: 0.5rem 0 1.2rem 0;
+
+            border-radius: var(--radius);
+
+            border: 1px solid var(--border);
+
+            background: var(--card-bg);
+
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .input-introduction-title {
+            font-size: 1rem;
+
+            font-weight: 700;
+
+            line-height: 1.35;
+
+            margin-bottom: 0.35rem;
+        }
+
+        .input-introduction-description {
+            color: var(--muted);
+
+            font-size: 0.86rem;
+
+            line-height: 1.5;
+        }
+
+        .input-introduction-description strong {
+            color: inherit;
+
+            font-weight: 650;
+        }
+
+        .input-introduction-note {
+            margin-top: 0.75rem;
+
+            padding-top: 0.7rem;
+
+            border-top: 1px dashed var(--border);
+
+            color: var(--muted);
+
+            font-size: 0.78rem;
+
+            line-height: 1.45;
+        }
+
+
+        /* ==================================================== */
+        /* Manual Input Groups                                  */
+        /* ==================================================== */
+
+        .input-group-header {
+            width: 100%;
+            max-width: 100%;
+
+            margin-top: 1.4rem;
+            margin-bottom: 0.7rem;
+
+            padding-bottom: 0.45rem;
+
+            border-bottom: 1px solid var(--border);
+        }
+
+        .input-group-title {
+            font-size: 0.95rem;
+
+            font-weight: 700;
+
+            line-height: 1.35;
+
+            color: inherit;
+        }
+
+        .input-group-header::before {
+            content: "";
+
+            display: inline-block;
+
+            width: 0.3rem;
+            height: 0.95rem;
+
+            margin-right: 0.5rem;
+
+            vertical-align: -0.12rem;
+
+            border-radius: 999px;
+
+            background: var(--det-color);
+        }
+
+
+        /* ==================================================== */
+        /* Streamlit Input Fields                               */
+        /* ==================================================== */
+
+        [data-testid="stTextInput"],
+        [data-testid="stNumberInput"] {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        [data-testid="stTextInput"] input,
+        [data-testid="stNumberInput"] input {
+            width: 100%;
+            max-width: 100%;
+
+            box-sizing: border-box;
+
+            border-radius: var(--input-radius);
+        }
+
+        [data-testid="stTextInput"] label,
+        [data-testid="stNumberInput"] label {
+            font-weight: 600;
+        }
+
+        [data-testid="stTextInput"] small,
+        [data-testid="stNumberInput"] small {
+            color: var(--muted);
+        }
+
+        [data-testid="stTextInput"] *,
+        [data-testid="stNumberInput"] * {
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+
+        /* ==================================================== */
+        /* Checkbox / Optional Fields                           */
+        /* ==================================================== */
+
+        [data-testid="stCheckbox"] {
+            margin-top: 0.15rem;
+            margin-bottom: 0.15rem;
+        }
+
+        [data-testid="stCheckbox"] label {
+            font-size: 0.84rem;
+
+            font-weight: 550;
+        }
+
+
+        /* ==================================================== */
+        /* Selectbox / Radio                                    */
+        /* ==================================================== */
+
+        [data-testid="stSelectbox"],
+        [data-testid="stRadio"] {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        [data-testid="stRadio"] label {
+            min-width: 0;
+
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+
+        /* ==================================================== */
+        /* Field Metadata                                       */
+        /* ==================================================== */
+
+        [data-testid="stTextInput"] + *,
+        [data-testid="stNumberInput"] + * {
+            max-width: 100%;
         }
 
 
@@ -357,7 +570,7 @@ def apply_styles() -> None:
 
         .provenance-panel {
             width: 100%;
-            box-sizing: border-box;
+            max-width: 100%;
 
             border-radius: var(--radius);
 
@@ -370,6 +583,7 @@ def apply_styles() -> None:
             background: rgba(128, 128, 128, 0.02);
 
             overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .provenance-row {
@@ -386,6 +600,7 @@ def apply_styles() -> None:
             font-size: 0.87rem;
 
             overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .provenance-row:last-child {
@@ -413,7 +628,7 @@ def apply_styles() -> None:
 
         .section-card {
             width: 100%;
-            box-sizing: border-box;
+            max-width: 100%;
 
             border-radius: var(--radius);
 
@@ -424,6 +639,7 @@ def apply_styles() -> None:
             margin-bottom: 1rem;
 
             overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .section-card.det {
@@ -446,8 +662,6 @@ def apply_styles() -> None:
         .finding-card {
             width: 100%;
             max-width: 100%;
-
-            box-sizing: border-box;
 
             padding: 1rem 1.15rem;
 
@@ -483,6 +697,7 @@ def apply_styles() -> None:
             margin-bottom: 0.55rem;
 
             width: 100%;
+            max-width: 100%;
         }
 
         .finding-rule {
@@ -495,8 +710,10 @@ def apply_styles() -> None:
             color: var(--det-color);
 
             min-width: 0;
+            max-width: 100%;
 
             overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .finding-severity {
@@ -542,6 +759,7 @@ def apply_styles() -> None:
             color: inherit;
 
             overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .finding-description {
@@ -552,7 +770,6 @@ def apply_styles() -> None:
             line-height: 1.5;
 
             overflow-wrap: anywhere;
-
             word-break: break-word;
         }
 
@@ -563,12 +780,14 @@ def apply_styles() -> None:
 
         .guarantee-item {
             width: 100%;
-
-            box-sizing: border-box;
+            max-width: 100%;
 
             padding: 0.55rem 0;
 
             border-bottom: 1px dashed var(--border);
+
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .guarantee-item:last-child {
@@ -583,6 +802,7 @@ def apply_styles() -> None:
             line-height: 1.35;
 
             overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .guarantee-description {
@@ -593,6 +813,175 @@ def apply_styles() -> None:
             line-height: 1.4;
 
             overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+
+        /* ==================================================== */
+        /* Position Data Table - Desktop / Tablet              */
+        /* ==================================================== */
+
+        /*
+         * Desktop and tablet use the standard Streamlit
+         * dataframe.
+         *
+         * The wrapper provides horizontal overflow protection.
+         */
+
+        .responsive-table-desktop {
+            display: block;
+
+            width: 100%;
+            max-width: 100%;
+
+            overflow-x: auto;
+            overflow-y: hidden;
+
+            -webkit-overflow-scrolling: touch;
+
+            border-radius: var(--radius);
+
+            margin-bottom: 1rem;
+        }
+
+
+        /* ==================================================== */
+        /* Position Data Cards - Mobile                        */
+        /* ==================================================== */
+
+        /*
+         * Hidden by default.
+         *
+         * The responsive_table.py renderer always creates both
+         * representations. CSS determines which one is visible.
+         */
+
+        .responsive-table-mobile {
+            display: none;
+
+            width: 100%;
+            max-width: 100%;
+
+            margin-top: 0.25rem;
+        }
+
+
+        /* ---------------------------------------------------- */
+        /* Individual financial indicator card                 */
+        /* ---------------------------------------------------- */
+
+        .position-data-card {
+            width: 100%;
+            max-width: 100%;
+
+            padding: 0.95rem 1rem;
+
+            margin-bottom: 0.7rem;
+
+            border-radius: var(--radius);
+
+            border: 1px solid var(--border);
+
+            background: var(--card-bg);
+
+            overflow: hidden;
+
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+
+        /* ---------------------------------------------------- */
+        /* Indicator name                                       */
+        /* ---------------------------------------------------- */
+
+        .position-data-card-header {
+            width: 100%;
+            max-width: 100%;
+
+            font-size: 0.80rem;
+
+            font-weight: 700;
+
+            line-height: 1.35;
+
+            color: var(--muted);
+
+            margin-bottom: 0.45rem;
+
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+
+        /* ---------------------------------------------------- */
+        /* Indicator value                                      */
+        /* ---------------------------------------------------- */
+
+        .position-data-card-value {
+            width: 100%;
+            max-width: 100%;
+
+            font-size: 1.15rem;
+
+            font-weight: 750;
+
+            line-height: 1.25;
+
+            color: inherit;
+
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+
+        /* ---------------------------------------------------- */
+        /* Indicator unit                                       */
+        /* ---------------------------------------------------- */
+
+        .position-data-card-unit {
+            width: 100%;
+            max-width: 100%;
+
+            margin-top: 0.15rem;
+
+            font-size: 0.70rem;
+
+            font-weight: 600;
+
+            color: var(--det-color);
+
+            letter-spacing: 0.03em;
+
+            text-transform: uppercase;
+
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+
+        /* ---------------------------------------------------- */
+        /* Indicator description                               */
+        /* ---------------------------------------------------- */
+
+        .position-data-card-description {
+            width: 100%;
+            max-width: 100%;
+
+            margin-top: 0.65rem;
+
+            padding-top: 0.6rem;
+
+            border-top: 1px dashed var(--border);
+
+            color: var(--muted);
+
+            font-size: 0.76rem;
+
+            line-height: 1.45;
+
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
 
@@ -614,6 +1003,7 @@ def apply_styles() -> None:
             line-height: 1.5;
 
             overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
 
@@ -625,7 +1015,6 @@ def apply_styles() -> None:
 
             .block-container {
                 padding-top: 1.2rem;
-
                 padding-bottom: 2rem;
 
                 padding-left: 1rem;
@@ -653,6 +1042,14 @@ def apply_styles() -> None:
             .scenario-card {
                 padding: 1rem;
             }
+
+            .input-introduction {
+                padding: 0.95rem 1rem;
+            }
+
+            .responsive-table-desktop {
+                overflow-x: auto;
+            }
         }
 
 
@@ -668,7 +1065,6 @@ def apply_styles() -> None:
 
             .block-container {
                 padding-top: 0.8rem;
-
                 padding-bottom: 1.5rem;
 
                 padding-left: 0.75rem;
@@ -698,11 +1094,12 @@ def apply_styles() -> None:
 
                 padding: 0.20rem 0.55rem;
 
-                white-space: normal;
-
                 line-height: 1.35;
 
+                white-space: normal;
+
                 overflow-wrap: anywhere;
+                word-break: break-word;
             }
 
 
@@ -724,7 +1121,6 @@ def apply_styles() -> None:
                 width: 100%;
 
                 min-width: 0;
-
                 min-height: auto;
 
                 padding: 0.85rem;
@@ -785,6 +1181,107 @@ def apply_styles() -> None:
 
 
             /* ----------------------------------------------- */
+            /* Manual Input Introduction                       */
+            /* ----------------------------------------------- */
+
+            .input-introduction {
+                padding: 0.85rem;
+
+                margin-top: 0.35rem;
+                margin-bottom: 1rem;
+
+                border-radius: 0.65rem;
+            }
+
+            .input-introduction-title {
+                font-size: 0.92rem;
+            }
+
+            .input-introduction-description {
+                font-size: 0.80rem;
+
+                line-height: 1.45;
+            }
+
+            .input-introduction-note {
+                margin-top: 0.65rem;
+
+                padding-top: 0.6rem;
+
+                font-size: 0.74rem;
+
+                line-height: 1.4;
+            }
+
+
+            /* ----------------------------------------------- */
+            /* Input Groups                                    */
+            /* ----------------------------------------------- */
+
+            .input-group-header {
+                margin-top: 1.15rem;
+
+                margin-bottom: 0.6rem;
+
+                padding-bottom: 0.4rem;
+            }
+
+            .input-group-title {
+                font-size: 0.86rem;
+
+                line-height: 1.3;
+            }
+
+            .input-group-header::before {
+                width: 0.25rem;
+                height: 0.85rem;
+
+                margin-right: 0.4rem;
+            }
+
+
+            /* ----------------------------------------------- */
+            /* Streamlit Inputs                                */
+            /* ----------------------------------------------- */
+
+            [data-testid="stTextInput"],
+            [data-testid="stNumberInput"],
+            [data-testid="stSelectbox"] {
+                width: 100%;
+                max-width: 100%;
+            }
+
+            [data-testid="stTextInput"] input,
+            [data-testid="stNumberInput"] input {
+                min-height: 2.55rem;
+
+                font-size: 0.92rem;
+            }
+
+            [data-testid="stTextInput"] label,
+            [data-testid="stNumberInput"] label {
+                font-size: 0.82rem;
+            }
+
+            [data-testid="stCheckbox"] {
+                margin-top: 0.1rem;
+            }
+
+            [data-testid="stCheckbox"] label {
+                font-size: 0.78rem;
+            }
+
+
+            /* ----------------------------------------------- */
+            /* Columns                                         */
+            /* ----------------------------------------------- */
+
+            [data-testid="stHorizontalBlock"] {
+                gap: 0.65rem;
+            }
+
+
+            /* ----------------------------------------------- */
             /* Provenance                                      */
             /* ----------------------------------------------- */
 
@@ -802,7 +1299,7 @@ def apply_styles() -> None:
 
 
             /* ----------------------------------------------- */
-            /* Section cards                                   */
+            /* Section Cards                                   */
             /* ----------------------------------------------- */
 
             .section-card {
@@ -813,7 +1310,7 @@ def apply_styles() -> None:
 
 
             /* ----------------------------------------------- */
-            /* Finding cards                                   */
+            /* Finding Cards                                   */
             /* ----------------------------------------------- */
 
             .finding-card {
@@ -854,6 +1351,68 @@ def apply_styles() -> None:
 
 
             /* ----------------------------------------------- */
+            /* Position Data Table                             */
+            /* ----------------------------------------------- */
+
+            /*
+             * On mobile the dataframe is hidden.
+             *
+             * The responsive card representation is shown
+             * instead.
+             */
+
+            .responsive-table-desktop {
+                display: none !important;
+            }
+
+            .responsive-table-mobile {
+                display: block !important;
+
+                width: 100%;
+                max-width: 100%;
+
+                margin-top: 0.25rem;
+            }
+
+
+            /* ----------------------------------------------- */
+            /* Position Data Cards                             */
+            /* ----------------------------------------------- */
+
+            .position-data-card {
+                padding: 0.85rem 0.9rem;
+
+                margin-bottom: 0.65rem;
+
+                border-radius: 0.65rem;
+            }
+
+            .position-data-card-header {
+                font-size: 0.76rem;
+
+                margin-bottom: 0.4rem;
+            }
+
+            .position-data-card-value {
+                font-size: 1.05rem;
+            }
+
+            .position-data-card-unit {
+                font-size: 0.66rem;
+            }
+
+            .position-data-card-description {
+                margin-top: 0.55rem;
+
+                padding-top: 0.55rem;
+
+                font-size: 0.73rem;
+
+                line-height: 1.4;
+            }
+
+
+            /* ----------------------------------------------- */
             /* Footer                                          */
             /* ----------------------------------------------- */
 
@@ -873,8 +1432,23 @@ def apply_styles() -> None:
 
             .block-container {
                 padding-left: 0.55rem;
-
                 padding-right: 0.55rem;
+            }
+
+            .input-introduction {
+                padding: 0.75rem;
+            }
+
+            .input-introduction-title {
+                font-size: 0.88rem;
+            }
+
+            .input-introduction-description {
+                font-size: 0.76rem;
+            }
+
+            .input-introduction-note {
+                font-size: 0.70rem;
             }
 
             .finding-card {
@@ -893,6 +1467,20 @@ def apply_styles() -> None:
 
             .section-card {
                 padding: 0.75rem;
+            }
+
+            .position-data-card {
+                padding: 0.75rem;
+
+                margin-bottom: 0.55rem;
+            }
+
+            .position-data-card-value {
+                font-size: 1rem;
+            }
+
+            .position-data-card-description {
+                font-size: 0.70rem;
             }
         }
 
@@ -917,10 +1505,6 @@ def apply_styles() -> None:
 
         @media (max-width: 768px) {
 
-            /* ----------------------------------------------- */
-            /* Sidebar container                               */
-            /* ----------------------------------------------- */
-
             [data-testid="stSidebar"] .block-container {
                 padding-top: 1rem;
 
@@ -929,11 +1513,6 @@ def apply_styles() -> None:
 
                 padding-bottom: 1.5rem;
             }
-
-
-            /* ----------------------------------------------- */
-            /* Sidebar headings                                 */
-            /* ----------------------------------------------- */
 
             [data-testid="stSidebar"] h1 {
                 font-size: 1.35rem;
@@ -953,19 +1532,9 @@ def apply_styles() -> None:
                 line-height: 1.3;
             }
 
-
-            /* ----------------------------------------------- */
-            /* Sidebar text                                     */
-            /* ----------------------------------------------- */
-
             [data-testid="stSidebar"] p {
                 line-height: 1.45;
             }
-
-
-            /* ----------------------------------------------- */
-            /* Radio options                                    */
-            /* ----------------------------------------------- */
 
             [data-testid="stSidebar"] [role="radiogroup"] {
                 width: 100%;
@@ -975,12 +1544,10 @@ def apply_styles() -> None:
                 width: 100%;
 
                 min-width: 0;
+
+                overflow-wrap: anywhere;
+                word-break: break-word;
             }
-
-
-            /* ----------------------------------------------- */
-            /* Prevent horizontal overflow                      */
-            /* ----------------------------------------------- */
 
             [data-testid="stSidebar"] {
                 overflow-x: hidden;
@@ -992,21 +1559,11 @@ def apply_styles() -> None:
                 box-sizing: border-box;
             }
 
-
-            /* ----------------------------------------------- */
-            /* Badges                                           */
-            /* ----------------------------------------------- */
-
             [data-testid="stSidebar"] .badge {
                 white-space: normal;
 
                 word-break: break-word;
             }
-
-
-            /* ----------------------------------------------- */
-            /* Legend                                           */
-            /* ----------------------------------------------- */
 
             [data-testid="stSidebar"] .pipeline-legend {
                 flex-direction: column;
@@ -1019,11 +1576,6 @@ def apply_styles() -> None:
 
                 line-height: 1.35;
             }
-
-
-            /* ----------------------------------------------- */
-            /* Architecture guarantees                          */
-            /* ----------------------------------------------- */
 
             [data-testid="stSidebar"] .guarantee-item {
                 width: 100%;
@@ -1043,6 +1595,7 @@ def apply_styles() -> None:
                 line-height: 1.4;
 
                 overflow-wrap: anywhere;
+                word-break: break-word;
             }
         }
 

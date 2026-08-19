@@ -6,6 +6,10 @@ import streamlit as st
 
 from src.models.position import CreditPosition
 
+from app.ui.responsive_table import (
+    render_responsive_position_table,
+)
+
 
 # ============================================================
 # CreditPosition Introspection
@@ -356,33 +360,17 @@ def build_scenario_data_table(
 def display_position_table(
     position: CreditPosition,
 ) -> None:
+    """
+    Display CreditPosition data using the responsive
+    position-table renderer.
+    """
 
     position_data = build_scenario_data_table(
         position
     )
 
-    st.dataframe(
-        position_data,
-        width="stretch",
-        hide_index=True,
-        column_config={
-            "Financial Indicator": st.column_config.TextColumn(
-                "Financial Indicator",
-                width="medium",
-            ),
-            "Value": st.column_config.TextColumn(
-                "Value",
-                width="medium",
-            ),
-            "Unit": st.column_config.TextColumn(
-                "Unit",
-                width="small",
-            ),
-            "Description": st.column_config.TextColumn(
-                "What it represents",
-                width="large",
-            ),
-        },
+    render_responsive_position_table(
+        position_data
     )
 
 
@@ -429,12 +417,7 @@ def create_optional_numeric_field(
         )
 
         _render_field_metadata(
-            description=format_field_description(
-                field_name
-            ),
-            unit=get_field_unit(
-                field_name
-            ),
+            field_name=field_name,
         )
 
         return value
@@ -454,12 +437,7 @@ def create_optional_numeric_field(
         )
 
         _render_field_metadata(
-            description=format_field_description(
-                field_name
-            ),
-            unit=get_field_unit(
-                field_name
-            ),
+            field_name=field_name,
         )
 
         return value
@@ -489,14 +467,6 @@ def create_streamlit_field(
         unwrap_optional(field_type)
     )
 
-    description = format_field_description(
-        field_name
-    )
-
-    unit = get_field_unit(
-        field_name
-    )
-
     # --------------------------------------------------------
     # String
     # --------------------------------------------------------
@@ -514,8 +484,7 @@ def create_streamlit_field(
         )
 
         _render_field_metadata(
-            description=description,
-            unit=unit,
+            field_name=field_name,
         )
 
         return value
@@ -550,8 +519,7 @@ def create_streamlit_field(
         )
 
         _render_field_metadata(
-            description=description,
-            unit=unit,
+            field_name=field_name,
         )
 
         return value
@@ -574,8 +542,7 @@ def create_streamlit_field(
         )
 
         _render_field_metadata(
-            description=description,
-            unit=unit,
+            field_name=field_name,
         )
 
         return value
@@ -599,8 +566,7 @@ def create_streamlit_field(
         )
 
         _render_field_metadata(
-            description=description,
-            unit=unit,
+            field_name=field_name,
         )
 
         return value
@@ -634,12 +600,22 @@ def create_streamlit_field(
 
 def _render_field_metadata(
     *,
-    description: str,
-    unit: str,
+    field_name: str,
 ) -> None:
     """
-    Render compact metadata below an input field.
+    Render compact field metadata.
+
+    The description is intentionally kept concise so that
+    manual input remains usable on mobile devices.
     """
+
+    description = format_field_description(
+        field_name
+    )
+
+    unit = get_field_unit(
+        field_name
+    )
 
     if unit:
 
@@ -710,6 +686,34 @@ def _build_field_lookup() -> dict[str, Any]:
     }
 
 
+# ============================================================
+# Group Header
+# ============================================================
+
+
+def _render_field_group_header(
+    group_title: str,
+) -> None:
+    """
+    Render a compact visual header for an input group.
+    """
+
+    st.html(
+        f"""
+        <div class="input-group-header">
+            <div class="input-group-title">
+                {group_title}
+            </div>
+        </div>
+        """
+    )
+
+
+# ============================================================
+# Field Group
+# ============================================================
+
+
 def _render_field_group(
     *,
     group_title: str,
@@ -731,18 +735,8 @@ def _render_field_group(
     if not available_fields:
         return
 
-    # --------------------------------------------------------
-    # Group Header
-    # --------------------------------------------------------
-
-    st.html(
-        f"""
-        <div class="input-group-header">
-            <div class="input-group-title">
-                {group_title}
-            </div>
-        </div>
-        """
+    _render_field_group_header(
+        group_title
     )
 
     # --------------------------------------------------------
@@ -763,10 +757,23 @@ def _render_field_group(
         return
 
     # --------------------------------------------------------
-    # Two-column layout
+    # Responsive two-column layout
+    # --------------------------------------------------------
+    #
+    # Desktop:
+    #     two columns
+    #
+    # Mobile:
+    #     Streamlit automatically adapts the columns
+    #     to the available viewport.
+    #
+    # The CSS controls the visual spacing.
     # --------------------------------------------------------
 
-    columns = st.columns(2)
+    columns = st.columns(
+        2,
+        gap="medium",
+    )
 
     for index, field_name in enumerate(
         available_fields
@@ -790,9 +797,6 @@ def _render_field_group(
 def _render_input_introduction() -> None:
     """
     Render the introduction card for manual CreditPosition input.
-
-    Uses st.html() instead of st.markdown() so the HTML structure
-    is rendered consistently across Streamlit environments.
     """
 
     st.html(
