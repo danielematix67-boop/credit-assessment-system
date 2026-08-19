@@ -173,46 +173,54 @@ def render_assessment_overview(
         "and execution of the reporting workflow."
     )
 
-    col1, col2, col3, col4, col5, col6 = (
-        st.columns(6)
-    )
+    # --------------------------------------------------------
+    # Primary Metrics
+    # --------------------------------------------------------
 
-    with col1:
+    primary_cols = st.columns(3)
+
+    with primary_cols[0]:
 
         st.metric(
             "Assessment Status",
             result.assessment.status.value,
         )
 
-    with col2:
+    with primary_cols[1]:
 
         st.metric(
             "Key Findings",
             len(result.analysis.key_findings),
         )
 
-    with col3:
+    with primary_cols[2]:
 
         st.metric(
             "Risk Factors",
             len(result.analysis.risk_factors),
         )
 
-    with col4:
+    # --------------------------------------------------------
+    # Execution Metrics
+    # --------------------------------------------------------
+
+    execution_cols = st.columns(3)
+
+    with execution_cols[0]:
 
         st.metric(
             "Limitations",
             len(result.analysis.limitations),
         )
 
-    with col5:
+    with execution_cols[1]:
 
         st.metric(
             "Total Execution",
             f"{result.total_elapsed_time:.2f} s",
         )
 
-    with col6:
+    with execution_cols[2]:
 
         st.metric(
             "Reporting",

@@ -2,7 +2,6 @@ import streamlit as st
 
 from app.config import (
     get_gemini_api_key,
-    get_ollama_configuration,
     get_reporting_modes,
     is_streamlit_cloud,
 )
@@ -200,10 +199,6 @@ def render_sidebar() -> str:
 
         elif reporting_mode == "Ollama + Fallback":
 
-            ollama_host, ollama_model = (
-                get_ollama_configuration()
-            )
-
             show_badge(
                 "AI-assisted (Local LLM)",
                 "ai",
@@ -214,16 +209,8 @@ def render_sidebar() -> str:
             )
 
             st.caption(
-                f"Model: `{ollama_model}`"
-            )
-
-            st.caption(
-                f"Host: `{ollama_host}`"
-            )
-
-            st.caption(
-                "The configured local Ollama model is used "
-                "exclusively for executive report generation."
+                "A local language model is used exclusively "
+                "for executive report generation."
             )
 
         else:
