@@ -594,7 +594,12 @@ def render_analysis_tab(
     result: Any,
 ) -> None:
     """
-    Render the deterministic analysis tab.
+    Render the Analysis Agent tab.
+
+    The Analysis Agent provides a structured interpretation
+    of the deterministic assessment output.
+
+    No LLM is involved in this layer.
     """
 
     st.markdown(
@@ -611,73 +616,113 @@ def render_analysis_tab(
         "assessment output. No LLM is involved in this tab."
     )
 
-    analysis_col1, analysis_col2 = (
-        st.columns(2)
+    # ========================================================
+    # Key Findings
+    # ========================================================
+
+    st.markdown(
+        "#### Key Findings"
     )
 
-    with analysis_col1:
+    if result.analysis.key_findings:
 
-        st.markdown(
-            "#### Key Findings"
-        )
+        for finding in result.analysis.key_findings:
 
-        if result.analysis.key_findings:
-
-            for finding in (
-                result.analysis.key_findings
+            with st.container(
+                border=True
             ):
 
-                st.write(
-                    f"• {finding.text}"
+                finding_col1, finding_col2 = (
+                    st.columns(
+                        [1.2, 4.8]
+                    )
                 )
 
-        else:
+                with finding_col1:
 
-            st.caption(
-                "No key findings."
-            )
+                    st.markdown(
+                        f"**{finding.rule_id}**"
+                    )
 
-        st.markdown(
-            "#### Risk Factors"
+                    st.caption(
+                        finding.severity.value
+                    )
+
+                with finding_col2:
+
+                    st.markdown(
+                        f"**{finding.category.upper()}**"
+                    )
+
+                    st.write(
+                        finding.text
+                    )
+
+    else:
+
+        st.success(
+            "No key findings were identified."
         )
 
-        if result.analysis.risk_factors:
+    # ========================================================
+    # Risk Factors
+    # ========================================================
 
-            for risk in (
-                result.analysis.risk_factors
+    st.markdown(
+        "#### Risk Factors"
+    )
+
+    if result.analysis.risk_factors:
+
+        for risk in result.analysis.risk_factors:
+
+            with st.container(
+                border=True
             ):
 
-                st.write(
-                    f"• {risk.text}"
+                st.markdown(
+                    "**RISK FACTOR**"
                 )
 
-        else:
+                st.write(
+                    risk.text
+                )
 
-            st.caption(
-                "No risk factors."
-            )
+    else:
 
-    with analysis_col2:
-
-        st.markdown(
-            "#### Limitations"
+        st.success(
+            "No risk factors were identified."
         )
 
-        if result.analysis.limitations:
+    # ========================================================
+    # Limitations
+    # ========================================================
 
-            for limitation in (
-                result.analysis.limitations
+    st.markdown(
+        "#### Limitations"
+    )
+
+    if result.analysis.limitations:
+
+        for limitation in result.analysis.limitations:
+
+            with st.container(
+                border=True
             ):
 
-                st.write(
-                    f"• {limitation.text}"
+                st.markdown(
+                    "**LIMITATION**"
                 )
 
-        else:
+                st.write(
+                    limitation.text
+                )
 
-            st.caption(
-                "No limitations."
-            )
+    else:
+
+        st.success(
+            "No limitations were identified."
+        )
 
 
 def render_report_tab(
