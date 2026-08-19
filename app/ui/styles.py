@@ -843,6 +843,81 @@ def apply_styles() -> None:
             }
         }
 
+        /* ============================================================ */
+        /* Responsive Sidebar                                           */
+        /* ============================================================ */
+
+        @media (max-width: 768px) {
+
+            /* Reduce sidebar content spacing */
+            [data-testid="stSidebar"] .block-container {
+                padding-top: 1rem;
+                padding-left: 0.85rem;
+                padding-right: 0.85rem;
+                padding-bottom: 1.5rem;
+            }
+
+            /* Sidebar headings */
+            [data-testid="stSidebar"] h1 {
+                font-size: 1.35rem;
+                line-height: 1.2;
+            }
+
+            [data-testid="stSidebar"] h2 {
+                font-size: 1.05rem;
+                line-height: 1.25;
+            }
+
+            [data-testid="stSidebar"] h3 {
+                font-size: 0.95rem;
+                line-height: 1.3;
+            }
+
+            /* Sidebar text */
+            [data-testid="stSidebar"] p {
+                line-height: 1.45;
+            }
+
+            /* Radio options */
+            [data-testid="stSidebar"] [role="radiogroup"] {
+                width: 100%;
+            }
+
+            [data-testid="stSidebar"] [role="radiogroup"] label {
+                width: 100%;
+                min-width: 0;
+            }
+
+            /* Prevent long text from overflowing */
+            [data-testid="stSidebar"] {
+                overflow-x: hidden;
+            }
+
+            [data-testid="stSidebar"] * {
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            /* Badges */
+            [data-testid="stSidebar"] .badge {
+                white-space: normal;
+                word-break: break-word;
+            }
+
+            /* Legend */
+            [data-testid="stSidebar"] .pipeline-legend {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            [data-testid="stSidebar"] .pipeline-legend-item {
+                min-width: 0;
+                line-height: 1.35;
+            }
+
+        }
+
+
         </style>
         """,
         unsafe_allow_html=True,
