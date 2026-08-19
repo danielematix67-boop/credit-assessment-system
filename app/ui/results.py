@@ -168,7 +168,7 @@ def render_provenance(
     ):
 
         st.markdown(
-            f"""
+            """
             <div style="
                 font-weight:650;
                 margin-bottom:0.55rem;
