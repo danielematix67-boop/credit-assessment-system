@@ -26,6 +26,7 @@ import streamlit as st
 # ============================================================
 
 from app.ui.assessment import (
+    build_credit_position,
     execute_assessment,
     store_assessment_result,
 )
@@ -58,8 +59,6 @@ from app.ui.layout import (
     render_footer,
     render_header,
 )
-
-from src.models.position import CreditPosition
 
 
 # ============================================================
@@ -124,59 +123,31 @@ run_button = render_assessment_configuration(
     input_mode=input_mode,
 )
 
-
 # ============================================================
 # Execute Assessment
 # ============================================================
-
 if run_button:
 
-    # --------------------------------------------------------
-    # Build CreditPosition from Manual Input
-    # --------------------------------------------------------
+    try:
 
-    if input_mode == "Manual Input":
+        position = build_credit_position(
+            position=position,
+            position_data=position_data,
+            input_mode=input_mode,
+        )
 
-        try:
-
-            position = CreditPosition(
-                **position_data
-            )
-
-        except TypeError as error:
-
-            st.error(
-                "Unable to construct CreditPosition."
-            )
-
-            st.exception(error)
-
-            st.stop()
-
-    # --------------------------------------------------------
-    # Validate Position
-    # --------------------------------------------------------
-
-    if position is None:
+    except (TypeError, ValueError) as error:
 
         st.error(
-            "No credit position is available."
+            str(error)
         )
 
         st.stop()
-
-    # --------------------------------------------------------
-    # Execute Assessment
-    # --------------------------------------------------------
 
     result = execute_assessment(
         position=position,
         reporting_mode=reporting_mode,
     )
-
-    # --------------------------------------------------------
-    # Store Assessment Result
-    # --------------------------------------------------------
 
     store_assessment_result(
         result=result,
@@ -189,8 +160,6 @@ if run_button:
             else None
         ),
     )
-
-
 # ============================================================
 # Results
 # ============================================================

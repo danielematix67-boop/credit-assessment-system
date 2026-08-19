@@ -24,6 +24,44 @@ def get_spinner_message(reporting_mode: str) -> str:
     return "Executing deterministic assessment workflow..."
 
 
+def build_credit_position(
+    position: CreditPosition | None,
+    position_data: dict,
+    input_mode: str,
+) -> CreditPosition:
+    """
+    Build and validate the CreditPosition used by the assessment.
+
+    For manual input, the position is constructed from the
+    collected input data. For demo scenarios, the already
+    constructed position is returned.
+
+    Raises:
+        TypeError: If the manual input cannot be used to
+            construct a CreditPosition.
+        ValueError: If no credit position is available.
+    """
+
+    if input_mode == "Manual Input":
+
+        try:
+            return CreditPosition(
+                **position_data
+            )
+
+        except TypeError as error:
+            raise TypeError(
+                "Unable to construct CreditPosition."
+            ) from error
+
+    if position is None:
+        raise ValueError(
+            "No credit position is available."
+        )
+
+    return position
+
+
 def execute_assessment(
     position: CreditPosition,
     reporting_mode: str,

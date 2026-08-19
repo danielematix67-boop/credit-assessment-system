@@ -78,6 +78,7 @@ def apply_styles() -> None:
 
         .app-subtitle {
             color: var(--muted);
+
             font-size: 1rem;
             line-height: 1.5;
 
@@ -109,29 +110,31 @@ def apply_styles() -> None:
 
             border: 1px solid transparent;
 
-            /*
-             * Important for mobile:
-             * badges may wrap instead of overflowing.
-             */
             white-space: normal;
             overflow-wrap: anywhere;
         }
 
         .badge-det {
             color: var(--det-color);
+
             background: var(--det-bg);
+
             border-color: rgba(37, 99, 235, 0.25);
         }
 
         .badge-ai {
             color: var(--ai-color);
+
             background: var(--ai-bg);
+
             border-color: rgba(124, 58, 237, 0.25);
         }
 
         .badge-fallback {
             color: var(--fallback-color);
+
             background: var(--fallback-bg);
+
             border-color: rgba(180, 83, 9, 0.28);
         }
 
@@ -176,11 +179,13 @@ def apply_styles() -> None:
 
         .pipeline-step.det {
             border-color: rgba(37, 99, 235, 0.35);
+
             background: var(--det-bg);
         }
 
         .pipeline-step.ai {
             border-color: rgba(124, 58, 237, 0.35);
+
             background: var(--ai-bg);
         }
 
@@ -200,6 +205,7 @@ def apply_styles() -> None:
 
         .pipeline-number {
             font-size: 0.72rem;
+
             font-weight: 750;
 
             color: var(--muted);
@@ -299,6 +305,7 @@ def apply_styles() -> None:
 
         .scenario-title {
             font-size: 1.1rem;
+
             font-weight: 650;
 
             margin-bottom: 0.4rem;
@@ -387,12 +394,15 @@ def apply_styles() -> None:
 
         .provenance-label {
             color: inherit;
+
             font-weight: 550;
         }
 
         .metric-description {
             color: var(--muted);
+
             font-size: 0.78rem;
+
             line-height: 1.45;
         }
 
@@ -449,12 +459,17 @@ def apply_styles() -> None:
 
             background: var(--card-bg);
 
-            /*
-             * Prevent long rule descriptions, categories or
-             * generated content from overflowing the viewport.
-             */
-            overflow-wrap: anywhere;
-            word-break: break-word;
+            overflow: hidden;
+
+            transition:
+                border-color 0.15s ease,
+                transform 0.15s ease;
+        }
+
+        .finding-card:hover {
+            border-color: rgba(37, 99, 235, 0.35);
+
+            transform: translateY(-1px);
         }
 
         .finding-header {
@@ -467,7 +482,7 @@ def apply_styles() -> None:
 
             margin-bottom: 0.55rem;
 
-            min-width: 0;
+            width: 100%;
         }
 
         .finding-rule {
@@ -506,6 +521,15 @@ def apply_styles() -> None:
             border: 1px solid rgba(37, 99, 235, 0.25);
         }
 
+        .finding-severity.high,
+        .finding-severity.critical {
+            color: var(--fallback-color);
+
+            background: var(--fallback-bg);
+
+            border-color: rgba(180, 83, 9, 0.28);
+        }
+
         .finding-category {
             font-size: 0.78rem;
 
@@ -514,6 +538,8 @@ def apply_styles() -> None:
             letter-spacing: 0.04em;
 
             margin-bottom: 0.4rem;
+
+            color: inherit;
 
             overflow-wrap: anywhere;
         }
@@ -526,7 +552,47 @@ def apply_styles() -> None:
             line-height: 1.5;
 
             overflow-wrap: anywhere;
+
             word-break: break-word;
+        }
+
+
+        /* ==================================================== */
+        /* Guarantee Items                                      */
+        /* ==================================================== */
+
+        .guarantee-item {
+            width: 100%;
+
+            box-sizing: border-box;
+
+            padding: 0.55rem 0;
+
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .guarantee-item:last-child {
+            border-bottom: none;
+        }
+
+        .guarantee-title {
+            font-weight: 600;
+
+            font-size: 0.86rem;
+
+            line-height: 1.35;
+
+            overflow-wrap: anywhere;
+        }
+
+        .guarantee-description {
+            display: block;
+
+            margin-top: 0.2rem;
+
+            line-height: 1.4;
+
+            overflow-wrap: anywhere;
         }
 
 
@@ -559,6 +625,7 @@ def apply_styles() -> None:
 
             .block-container {
                 padding-top: 1.2rem;
+
                 padding-bottom: 2rem;
 
                 padding-left: 1rem;
@@ -601,6 +668,7 @@ def apply_styles() -> None:
 
             .block-container {
                 padding-top: 0.8rem;
+
                 padding-bottom: 1.5rem;
 
                 padding-left: 0.75rem;
@@ -616,6 +684,7 @@ def apply_styles() -> None:
                 font-size: 0.88rem;
 
                 margin-top: -0.2rem;
+
                 margin-bottom: 1rem;
             }
 
@@ -629,10 +698,6 @@ def apply_styles() -> None:
 
                 padding: 0.20rem 0.55rem;
 
-                /*
-                 * Important: allow long badges to occupy
-                 * multiple lines on narrow screens.
-                 */
                 white-space: normal;
 
                 line-height: 1.35;
@@ -808,6 +873,7 @@ def apply_styles() -> None:
 
             .block-container {
                 padding-left: 0.55rem;
+
                 padding-right: 0.55rem;
             }
 
@@ -817,6 +883,7 @@ def apply_styles() -> None:
 
             .finding-header {
                 flex-direction: column;
+
                 align-items: flex-start;
             }
 
@@ -843,78 +910,140 @@ def apply_styles() -> None:
             }
         }
 
-        /* ============================================================ */
-        /* Responsive Sidebar                                           */
-        /* ============================================================ */
+
+        /* ==================================================== */
+        /* Responsive Sidebar                                   */
+        /* ==================================================== */
 
         @media (max-width: 768px) {
 
-            /* Reduce sidebar content spacing */
+            /* ----------------------------------------------- */
+            /* Sidebar container                               */
+            /* ----------------------------------------------- */
+
             [data-testid="stSidebar"] .block-container {
                 padding-top: 1rem;
+
                 padding-left: 0.85rem;
                 padding-right: 0.85rem;
+
                 padding-bottom: 1.5rem;
             }
 
-            /* Sidebar headings */
+
+            /* ----------------------------------------------- */
+            /* Sidebar headings                                 */
+            /* ----------------------------------------------- */
+
             [data-testid="stSidebar"] h1 {
                 font-size: 1.35rem;
+
                 line-height: 1.2;
             }
 
             [data-testid="stSidebar"] h2 {
                 font-size: 1.05rem;
+
                 line-height: 1.25;
             }
 
             [data-testid="stSidebar"] h3 {
                 font-size: 0.95rem;
+
                 line-height: 1.3;
             }
 
-            /* Sidebar text */
+
+            /* ----------------------------------------------- */
+            /* Sidebar text                                     */
+            /* ----------------------------------------------- */
+
             [data-testid="stSidebar"] p {
                 line-height: 1.45;
             }
 
-            /* Radio options */
+
+            /* ----------------------------------------------- */
+            /* Radio options                                    */
+            /* ----------------------------------------------- */
+
             [data-testid="stSidebar"] [role="radiogroup"] {
                 width: 100%;
             }
 
             [data-testid="stSidebar"] [role="radiogroup"] label {
                 width: 100%;
+
                 min-width: 0;
             }
 
-            /* Prevent long text from overflowing */
+
+            /* ----------------------------------------------- */
+            /* Prevent horizontal overflow                      */
+            /* ----------------------------------------------- */
+
             [data-testid="stSidebar"] {
                 overflow-x: hidden;
             }
 
             [data-testid="stSidebar"] * {
                 max-width: 100%;
+
                 box-sizing: border-box;
             }
 
-            /* Badges */
+
+            /* ----------------------------------------------- */
+            /* Badges                                           */
+            /* ----------------------------------------------- */
+
             [data-testid="stSidebar"] .badge {
                 white-space: normal;
+
                 word-break: break-word;
             }
 
-            /* Legend */
+
+            /* ----------------------------------------------- */
+            /* Legend                                           */
+            /* ----------------------------------------------- */
+
             [data-testid="stSidebar"] .pipeline-legend {
                 flex-direction: column;
+
                 gap: 0.5rem;
             }
 
             [data-testid="stSidebar"] .pipeline-legend-item {
                 min-width: 0;
+
                 line-height: 1.35;
             }
 
+
+            /* ----------------------------------------------- */
+            /* Architecture guarantees                          */
+            /* ----------------------------------------------- */
+
+            [data-testid="stSidebar"] .guarantee-item {
+                width: 100%;
+
+                min-width: 0;
+            }
+
+            [data-testid="stSidebar"] .guarantee-title {
+                line-height: 1.35;
+            }
+
+            [data-testid="stSidebar"] .guarantee-description {
+                display: block;
+
+                margin-top: 0.2rem;
+
+                line-height: 1.4;
+
+                overflow-wrap: anywhere;
+            }
         }
 
 
