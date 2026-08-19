@@ -31,7 +31,7 @@ def resolve_report_badge(
     configured_model: str | None,
 ) -> tuple[str, str]:
     """
-    Resolve the badge kind and label for the executive report.
+    Resolve the badge kind and label for the Executive Report.
 
     The badge reflects the actual generator used for the report,
     including deterministic fallback.
@@ -51,7 +51,7 @@ def resolve_report_badge(
 
         return (
             "fallback",
-            "Deterministic fallback (LLM unavailable)",
+            "Deterministic fallback",
         )
 
     if generator_used == "PRIMARY":
@@ -62,7 +62,7 @@ def resolve_report_badge(
 
             return (
                 "ai",
-                "AI-generated (Gemini)",
+                "AI-generated — Gemini",
             )
 
         if selected_reporting_mode == (
@@ -71,7 +71,7 @@ def resolve_report_badge(
 
             return (
                 "ai",
-                "AI-generated (Local LLM)",
+                "AI-generated — Local LLM",
             )
 
         return (
@@ -91,6 +91,11 @@ def render_provenance(
 ) -> None:
     """
     Render the provenance panel.
+
+    The two provenance cards are intentionally rendered vertically
+    rather than side-by-side. This improves readability on narrow
+    screens and mobile devices, preventing the explanatory text
+    from appearing too close to the Executive Report card.
     """
 
     st.subheader(
@@ -102,18 +107,23 @@ def render_provenance(
         "of the output below."
     )
 
-    provenance_col1, provenance_col2 = (
-        st.columns(2)
-    )
+    # ========================================================
+    # Assessment Status & Rule Findings
+    # ========================================================
 
-    with provenance_col1:
+    with st.container(
+        border=True
+    ):
 
         st.markdown(
             """
-            <div class="section-card det">
-                <div style="font-weight:650; margin-bottom:0.3rem;">
-                    Assessment Status &amp; Rule Findings
-                </div>
+            <div style="
+                font-weight:650;
+                margin-bottom:0.55rem;
+                font-size:1rem;
+            ">
+                Assessment Status &amp; Rule Findings
+            </div>
             """,
             unsafe_allow_html=True,
         )
@@ -125,24 +135,47 @@ def render_provenance(
 
         st.markdown(
             """
-                <div class="metric-description"
-                     style="margin-top:0.5rem;">
-                    Assessment status, severity and findings are
-                    determined exclusively by the rule engine.
-                </div>
+            <div class="metric-description"
+                 style="
+                    margin-top:0.65rem;
+                    margin-bottom:0.25rem;
+                    line-height:1.55;
+                 ">
+                Assessment status, severity and findings are
+                determined exclusively by the rule engine.
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-    with provenance_col2:
+    # ========================================================
+    # Visual Separation
+    # ========================================================
+
+    st.markdown(
+        """
+        <div style="height:0.9rem;"></div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # ========================================================
+    # Executive Report
+    # ========================================================
+
+    with st.container(
+        border=True
+    ):
 
         st.markdown(
             f"""
-            <div class="section-card {report_badge_kind}">
-                <div style="font-weight:650; margin-bottom:0.3rem;">
-                    Executive Report
-                </div>
+            <div style="
+                font-weight:650;
+                margin-bottom:0.55rem;
+                font-size:1rem;
+            ">
+                Executive Report
+            </div>
             """,
             unsafe_allow_html=True,
         )
@@ -154,11 +187,15 @@ def render_provenance(
 
         st.markdown(
             """
-                <div class="metric-description"
-                     style="margin-top:0.5rem;">
-                    Natural-language phrasing only — it cannot alter
-                    the assessment status or deterministic findings.
-                </div>
+            <div class="metric-description"
+                 style="
+                    margin-top:0.65rem;
+                    margin-bottom:0.25rem;
+                    line-height:1.55;
+                 ">
+                The Executive Report provides natural-language
+                communication of the deterministic assessment.
+                When an LLM is used, it has no decision authority.
             </div>
             """,
             unsafe_allow_html=True,
@@ -328,8 +365,8 @@ def render_execution_trace(
             )
 
             st.caption(
-                "Deterministic report generator used "
-                "after primary generator failure"
+                "Executive Report generated by the "
+                "deterministic fallback generator"
             )
 
         elif generator_used == "PRIMARY":
@@ -343,7 +380,7 @@ def render_execution_trace(
                 )
 
                 st.caption(
-                    "Executive summary generated by Gemini"
+                    "Executive Report generated by Gemini"
                 )
 
             elif selected_reporting_mode == (
@@ -355,7 +392,7 @@ def render_execution_trace(
                 )
 
                 st.caption(
-                    "Executive summary generated by local LLM"
+                    "Executive Report generated by local LLM"
                 )
 
             else:
@@ -365,7 +402,7 @@ def render_execution_trace(
                 )
 
                 st.caption(
-                    "Executive report generated deterministically"
+                    "Executive Report generated deterministically"
                 )
 
         else:
@@ -375,7 +412,8 @@ def render_execution_trace(
             )
 
             st.caption(
-                "Generator information unavailable"
+                "Executive Report generator information "
+                "is unavailable"
             )
 
 
@@ -546,7 +584,7 @@ def render_overview_tab(
             """
                 <ul style="margin-top:0.6rem; padding-left:1.1rem;
                     font-size:0.86rem;">
-                    <li>Structured analysis as input</li>
+                    <li>Structured assessment as input</li>
                     <li>Optional LLM generation</li>
                     <li>Cloud or local LLM provider</li>
                     <li>No decision authority</li>
@@ -761,14 +799,20 @@ def render_report_source(
     selected_reporting_mode: str,
 ) -> None:
     """
-    Render an explicit explanation of the source of the
-    executive report.
+    Render the provenance of the Executive Report.
 
-    Only the executive summary may be generated by an LLM.
-    Findings and limitations remain deterministic.
+    The Executive Report can be generated either by an LLM
+    or by the deterministic report generator.
+
+    Rule findings, assessment status, severity and limitations
+    remain deterministic in all cases.
 
     Icons are rendered exclusively by show_badge().
     """
+
+    # ========================================================
+    # LLM-generated Executive Report
+    # ========================================================
 
     if generator_used == "PRIMARY":
 
@@ -777,15 +821,14 @@ def render_report_source(
         ):
 
             show_badge(
-                "Executive summary generated by Gemini",
+                "AI-generated — Gemini",
                 "ai",
             )
 
             st.caption(
-                "The executive summary was generated by the "
-                "configured LLM. Rule findings, severity, "
-                "assessment status and limitations remain "
-                "deterministic."
+                "The Executive Report was generated by Gemini "
+                "using the structured deterministic assessment "
+                "as input. The LLM has no decision authority."
             )
 
             return
@@ -795,43 +838,52 @@ def render_report_source(
         ):
 
             show_badge(
-                "Executive summary generated by Local LLM",
+                "AI-generated — Local LLM",
                 "ai",
             )
 
             st.caption(
-                "The executive summary was generated by the "
-                "local LLM. Rule findings, severity, "
-                "assessment status and limitations remain "
-                "deterministic."
+                "The Executive Report was generated by the "
+                "local LLM using the structured deterministic "
+                "assessment as input. The LLM has no decision "
+                "authority."
             )
 
             return
 
+    # ========================================================
+    # Deterministic fallback
+    # ========================================================
+
     if generator_used == "FALLBACK":
 
         show_badge(
-            "Executive summary generated by Deterministic Fallback",
+            "Deterministic fallback",
             "fallback",
         )
 
         st.caption(
-            "The primary LLM report generator was unavailable "
-            "or failed. The predefined deterministic report "
-            "generator was therefore used."
+            "The primary LLM generator was unavailable or "
+            "failed. The Executive Report was therefore "
+            "generated by the predefined deterministic "
+            "fallback generator."
         )
 
         return
 
+    # ========================================================
+    # Deterministic Executive Report
+    # ========================================================
+
     show_badge(
-        "Executive summary generated by Deterministic Engine",
+        "Deterministic — Rule Engine",
         "det",
     )
 
     st.caption(
-        "The executive summary was generated using the "
-        "predefined deterministic report generator and its "
-        "configured report templates."
+        "The Executive Report was generated by the predefined "
+        "deterministic report generator using configured "
+        "report templates and deterministic assessment results."
     )
 
 
@@ -845,7 +897,7 @@ def render_report_tab(
     """
     Render the Executive Report tab.
 
-    The executive summary can be generated either by an LLM
+    The Executive Report is generated either by an LLM
     or by the deterministic report generator.
 
     Rule findings and limitations are always deterministic.
@@ -871,6 +923,11 @@ def render_report_tab(
         "### Reporting Agent"
     )
 
+    st.caption(
+        "The Reporting Agent produces the Executive Report "
+        "from the deterministic assessment results."
+    )
+
     render_report_source(
         generator_used=generator_used,
         selected_reporting_mode=selected_reporting_mode,
@@ -880,7 +937,10 @@ def render_report_tab(
     # Fallback diagnostic
     # --------------------------------------------------------
 
-    if generator_used == "FALLBACK" and generation_error:
+    if (
+        generator_used == "FALLBACK"
+        and generation_error
+    ):
 
         with st.expander(
             "Technical information",
@@ -888,7 +948,8 @@ def render_report_tab(
         ):
 
             st.caption(
-                f"Primary generator error: {generation_error}"
+                f"Primary generator error: "
+                f"{generation_error}"
             )
 
     # ========================================================
@@ -918,13 +979,14 @@ def render_report_tab(
         )
 
         show_badge(
-            "Deterministic — sourced from Rule Engine",
+            "Deterministic — Rule Engine",
             "det",
         )
 
         st.caption(
-            "These findings are reproduced from the deterministic "
-            "rule engine. They are not generated by the LLM."
+            "These findings are sourced directly from the "
+            "deterministic rule engine. They are not generated "
+            "or modified by the LLM."
         )
 
         for group in (
@@ -960,7 +1022,7 @@ def render_report_tab(
         )
 
         show_badge(
-            "Deterministic — sourced from Rule Engine",
+            "Deterministic — Rule Engine",
             "det",
         )
 
