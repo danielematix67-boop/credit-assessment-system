@@ -6,9 +6,11 @@ import streamlit as st
 
 from src.models.position import CreditPosition
 
+
 # ============================================================
 # CreditPosition Introspection
 # ============================================================
+
 
 def get_credit_position_fields():
     """
@@ -48,6 +50,7 @@ def get_field_default(field) -> Any:
 # Type Introspection Helpers
 # ============================================================
 
+
 def unwrap_optional(
     field_type: Any,
 ) -> tuple[Any, bool]:
@@ -59,6 +62,7 @@ def unwrap_optional(
     args = get_args(field_type)
 
     if origin is UnionType:
+
         non_none_types = [
             argument
             for argument in args
@@ -69,6 +73,7 @@ def unwrap_optional(
             return non_none_types[0], True
 
     if args and type(None) in args:
+
         non_none_types = [
             argument
             for argument in args
@@ -85,13 +90,14 @@ def unwrap_optional(
 # Field Presentation
 # ============================================================
 
+
 def format_field_label(
     field_name: str,
 ) -> str:
 
     special_terms = {
         "ebitda": "EBITDA",
-        "nfp": "nfp",
+        "nfp": "NFP",
         "id": "ID",
     }
 
@@ -100,11 +106,15 @@ def format_field_label(
     formatted_words = []
 
     for word in words:
+
         if word.lower() in special_terms:
+
             formatted_words.append(
                 special_terms[word.lower()]
             )
+
         else:
+
             formatted_words.append(
                 word.capitalize()
             )
@@ -117,6 +127,7 @@ def format_field_description(
 ) -> str:
 
     descriptions = {
+
         "position_id": (
             "Unique identifier of the credit position."
         ),
@@ -267,6 +278,7 @@ def get_field_unit(
 ) -> str:
 
     units = {
+
         "position_id": "Identifier",
 
         "revenue_growth": "%",
@@ -303,6 +315,7 @@ def get_field_unit(
 # ============================================================
 # Scenario / Position Data Presentation
 # ============================================================
+
 
 def build_scenario_data_table(
     position: CreditPosition,
@@ -350,7 +363,7 @@ def display_position_table(
 
     st.dataframe(
         position_data,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "Financial Indicator": st.column_config.TextColumn(
@@ -376,6 +389,7 @@ def display_position_table(
 # ============================================================
 # Manual Input
 # ============================================================
+
 
 def create_optional_numeric_field(
     field_name: str,
@@ -403,7 +417,7 @@ def create_optional_numeric_field(
 
     if resolved_type is int:
 
-        return st.number_input(
+        value = st.number_input(
             label,
             value=(
                 int(default)
@@ -414,9 +428,20 @@ def create_optional_numeric_field(
             key=value_key,
         )
 
+        _render_field_metadata(
+            description=format_field_description(
+                field_name
+            ),
+            unit=get_field_unit(
+                field_name
+            ),
+        )
+
+        return value
+
     if resolved_type is float:
 
-        return st.number_input(
+        value = st.number_input(
             label,
             value=(
                 float(default)
@@ -427,6 +452,17 @@ def create_optional_numeric_field(
             format="%.4f",
             key=value_key,
         )
+
+        _render_field_metadata(
+            description=format_field_description(
+                field_name
+            ),
+            unit=get_field_unit(
+                field_name
+            ),
+        )
+
+        return value
 
     raise TypeError(
         f"Unsupported optional numeric type: "
@@ -457,11 +493,17 @@ def create_streamlit_field(
         field_name
     )
 
+    unit = get_field_unit(
+        field_name
+    )
+
+    # --------------------------------------------------------
+    # String
+    # --------------------------------------------------------
+
     if resolved_type is str and not is_optional:
 
-        st.caption(description)
-
-        return st.text_input(
+        value = st.text_input(
             label,
             value=(
                 ""
@@ -470,6 +512,17 @@ def create_streamlit_field(
             ),
             key=f"credit_position_{field_name}",
         )
+
+        _render_field_metadata(
+            description=description,
+            unit=unit,
+        )
+
+        return value
+
+    # --------------------------------------------------------
+    # Optional String
+    # --------------------------------------------------------
 
     if resolved_type is str and is_optional:
 
@@ -484,9 +537,7 @@ def create_streamlit_field(
         if not provided:
             return None
 
-        st.caption(description)
-
-        return st.text_input(
+        value = st.text_input(
             label,
             value=(
                 ""
@@ -498,11 +549,20 @@ def create_streamlit_field(
             ),
         )
 
+        _render_field_metadata(
+            description=description,
+            unit=unit,
+        )
+
+        return value
+
+    # --------------------------------------------------------
+    # Required Integer
+    # --------------------------------------------------------
+
     if resolved_type is int and not is_optional:
 
-        st.caption(description)
-
-        return st.number_input(
+        value = st.number_input(
             label,
             value=(
                 0
@@ -513,11 +573,20 @@ def create_streamlit_field(
             key=f"credit_position_{field_name}",
         )
 
+        _render_field_metadata(
+            description=description,
+            unit=unit,
+        )
+
+        return value
+
+    # --------------------------------------------------------
+    # Required Float
+    # --------------------------------------------------------
+
     if resolved_type is float and not is_optional:
 
-        st.caption(description)
-
-        return st.number_input(
+        value = st.number_input(
             label,
             value=(
                 0.0
@@ -528,6 +597,17 @@ def create_streamlit_field(
             format="%.4f",
             key=f"credit_position_{field_name}",
         )
+
+        _render_field_metadata(
+            description=description,
+            unit=unit,
+        )
+
+        return value
+
+    # --------------------------------------------------------
+    # Optional Numeric
+    # --------------------------------------------------------
 
     if (
         is_optional
@@ -547,7 +627,214 @@ def create_streamlit_field(
     )
 
 
+# ============================================================
+# Field Metadata
+# ============================================================
+
+
+def _render_field_metadata(
+    *,
+    description: str,
+    unit: str,
+) -> None:
+    """
+    Render compact metadata below an input field.
+    """
+
+    if unit:
+
+        st.caption(
+            f"{description} · Unit: {unit}"
+        )
+
+    else:
+
+        st.caption(
+            description
+        )
+
+
+# ============================================================
+# Input Layout
+# ============================================================
+
+
+FIELD_GROUPS: dict[str, list[str]] = {
+
+    "Identification": [
+        "position_id",
+    ],
+
+    "Financial Performance": [
+        "revenue",
+        "revenue_growth",
+        "ebitda",
+        "ebitda_margin",
+        "profit_loss",
+    ],
+
+    "Operating Data": [
+        "change_in_finished_goods_inventory",
+        "operating_grants",
+        "net_purchases",
+        "change_in_raw_materials_inventory",
+        "costs_for_services_and_third_party_assets",
+        "personnel_costs",
+        "depreciation_tangible_assets",
+        "working_capital_impairments",
+        "operating_provisions",
+        "other_income_expenses_balance",
+        "operating_value_added",
+        "gross_operating_margin",
+        "net_operating_margin",
+        "ebitda_inventory_contribution",
+    ],
+
+    "Leverage & Financial Structure": [
+        "nfp_to_ebitda",
+        "interest_expense",
+    ],
+}
+
+
+def _build_field_lookup() -> dict[str, Any]:
+    """
+    Build a lookup from field name to dataclass field.
+
+    The dataclass remains the source of truth.
+    """
+
+    return {
+        field.name: field
+        for field in get_credit_position_fields()
+    }
+
+
+def _render_field_group(
+    *,
+    group_title: str,
+    field_names: list[str],
+    field_lookup: dict[str, Any],
+    type_hints: dict[str, Any],
+    position_data: dict[str, Any],
+) -> None:
+    """
+    Render one logical group of CreditPosition fields.
+    """
+
+    available_fields = [
+        field_name
+        for field_name in field_names
+        if field_name in field_lookup
+    ]
+
+    if not available_fields:
+        return
+
+    # --------------------------------------------------------
+    # Group Header
+    # --------------------------------------------------------
+
+    st.html(
+        f"""
+        <div class="input-group-header">
+            <div class="input-group-title">
+                {group_title}
+            </div>
+        </div>
+        """
+    )
+
+    # --------------------------------------------------------
+    # Identification
+    # --------------------------------------------------------
+
+    if group_title == "Identification":
+
+        field_name = available_fields[0]
+
+        position_data[field_name] = (
+            create_streamlit_field(
+                field=field_lookup[field_name],
+                field_type=type_hints[field_name],
+            )
+        )
+
+        return
+
+    # --------------------------------------------------------
+    # Two-column layout
+    # --------------------------------------------------------
+
+    columns = st.columns(2)
+
+    for index, field_name in enumerate(
+        available_fields
+    ):
+
+        with columns[index % 2]:
+
+            position_data[field_name] = (
+                create_streamlit_field(
+                    field=field_lookup[field_name],
+                    field_type=type_hints[field_name],
+                )
+            )
+
+
+# ============================================================
+# Input Introduction
+# ============================================================
+
+
+def _render_input_introduction() -> None:
+    """
+    Render the introduction card for manual CreditPosition input.
+
+    Uses st.html() instead of st.markdown() so the HTML structure
+    is rendered consistently across Streamlit environments.
+    """
+
+    st.html(
+        """
+        <div class="input-introduction">
+
+            <div class="input-introduction-title">
+                Credit Position Data
+            </div>
+
+            <div class="input-introduction-description">
+                Enter the financial information used by the
+                deterministic assessment engine. The fields below
+                correspond directly to the
+                <strong>CreditPosition</strong> data model.
+            </div>
+
+            <div class="input-introduction-note">
+                Assessment results are calculated separately by the
+                deterministic rule engine and are not entered
+                manually here.
+            </div>
+
+        </div>
+        """
+    )
+
+
+# ============================================================
+# Build CreditPosition Data
+# ============================================================
+
+
 def build_credit_position_from_ui() -> dict[str, Any]:
+    """
+    Build CreditPosition data from the Streamlit UI.
+
+    The CreditPosition dataclass remains the source of truth
+    for the actual available fields.
+
+    FIELD_GROUPS controls presentation only.
+    """
 
     model_fields = (
         get_credit_position_fields()
@@ -557,26 +844,59 @@ def build_credit_position_from_ui() -> dict[str, Any]:
         get_credit_position_type_hints()
     )
 
+    field_lookup = _build_field_lookup()
+
     position_data: dict[str, Any] = {}
 
-    columns = st.columns(3)
+    # --------------------------------------------------------
+    # Introduction
+    # --------------------------------------------------------
 
-    for index, field in enumerate(
-        model_fields
-    ):
+    _render_input_introduction()
 
-        with columns[
-            index % len(columns)
-        ]:
+    # --------------------------------------------------------
+    # Render known logical groups
+    # --------------------------------------------------------
 
-            position_data[field.name] = (
-                create_streamlit_field(
-                    field=field,
-                    field_type=type_hints[
-                        field.name
-                    ],
-                )
-            )
+    rendered_fields: set[str] = set()
+
+    for group_title, field_names in FIELD_GROUPS.items():
+
+        _render_field_group(
+            group_title=group_title,
+            field_names=field_names,
+            field_lookup=field_lookup,
+            type_hints=type_hints,
+            position_data=position_data,
+        )
+
+        rendered_fields.update(
+            field_name
+            for field_name in field_names
+            if field_name in field_lookup
+        )
+
+    # --------------------------------------------------------
+    # Safety net
+    # --------------------------------------------------------
+
+    ungrouped_fields = [
+        field
+        for field in model_fields
+        if field.name not in rendered_fields
+    ]
+
+    if ungrouped_fields:
+
+        _render_field_group(
+            group_title="Additional Data",
+            field_names=[
+                field.name
+                for field in ungrouped_fields
+            ],
+            field_lookup=field_lookup,
+            type_hints=type_hints,
+            position_data=position_data,
+        )
 
     return position_data
-
