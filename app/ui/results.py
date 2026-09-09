@@ -8,17 +8,12 @@ from app.ui.credit_position import display_position_table
 from app.ui.report import render_report_tab
 
 
-def get_llm_model_from_result(result: Any) -> str | None:
-    """Return the configured LLM model when it is available in the workflow result."""
-    return getattr(result, "llm_model", None)
-
-
 def resolve_report_badge(
     selected_reporting_mode: str,
     generator_used: str | None,
-    configured_model: str | None,
+    configured_model: str | None = None,
 ) -> tuple[str, str]:
-    """Resolve the badge from the generator that actually produced the report."""
+    """Resolve report provenance from the generator that actually produced it."""
     if generator_used == "FALLBACK":
         return "fallback", "Deterministic fallback"
 
@@ -55,62 +50,45 @@ def _format_value(value: Any) -> str:
     return str(value)
 
 
-def render_result_hero(result: Any) -> None:
-    """Render a compact entry point focused on the final assessment."""
+def render_monitoring_outcome(result: Any) -> None:
+    """Present the assessment as the operator's first decision point."""
     assessment = getattr(result, "assessment", None)
     status_obj = getattr(assessment, "status", None)
     status = str(getattr(status_obj, "value", status_obj or "Unknown"))
     rules = _rule_results(result)
-    triggered = sum(_status(rule) == "TRIGGERED" for rule in rules)
-    not_evaluable = sum(_status(rule) == "NOT_EVALUABLE" for rule in rules)
 
-    st.markdown("## Credit Assessment")
-    st.caption("Final assessment and Executive Report generated from the current credit position.")
+    triggered = [rule for rule in rules if _status(rule) == "TRIGGERED"]
+    not_evaluable = [rule for rule in rules if _status(rule) == "NOT_EVALUABLE"]
+    critical = [rule for rule in triggered if _severity(rule).upper() == "CRITICAL"]
+
+    st.markdown("## Monitoring Outcome")
+    st.caption("Start with the credit judgement, then review the evidence supporting it.")
 
     with st.container(border=True):
-        columns = st.columns([1.4, 1, 1, 1])
+        columns = st.columns([1.5, 1, 1, 1, 1])
         with columns[0]:
-            st.caption("Assessment")
-            st.markdown(f"## {status.replace('_', ' ').title()}")
+            st.caption("Credit assessment")
+            st.markdown(f"### {status.replace('_', ' ').title()}")
         with columns[1]:
-            st.metric("Rules triggered", triggered)
+            st.metric("Risk drivers", len(triggered))
         with columns[2]:
-            st.metric("Rules evaluated", len(rules) - not_evaluable)
+            st.metric("Critical", len(critical))
         with columns[3]:
-            st.metric("Not evaluable", not_evaluable)
+            st.metric("Rules evaluated", len(rules) - len(not_evaluable))
+        with columns[4]:
+            st.metric("Data gaps", len(not_evaluable))
 
 
-def render_compact_risk_summary(result: Any) -> None:
-    """Show only the evidence needed to understand why the assessment was reached."""
+def render_decision_evidence(result: Any) -> None:
+    """Show the deterministic evidence an operator needs to validate the judgement."""
     rules = _rule_results(result)
     triggered = [rule for rule in rules if _status(rule) == "TRIGGERED"]
 
-    st.markdown("## Why this assessment?")
-    st.caption("The following deterministic rules are the evidence behind the final assessment.")
-
-    status_counts = {
-        "Triggered": sum(_status(rule) == "TRIGGERED" for rule in rules),
-        "Not triggered": sum(_status(rule) == "NOT_TRIGGERED" for rule in rules),
-        "Not evaluable": sum(_status(rule) == "NOT_EVALUABLE" for rule in rules),
-    }
-
-    left, right = st.columns([1, 2])
-    with left:
-        st.metric("Active risk drivers", len(triggered))
-        if not triggered:
-            st.success("No rules were triggered.")
-        elif len(triggered) == 1:
-            st.warning("1 rule is driving the assessment.")
-        else:
-            st.warning(f"{len(triggered)} rules are driving the assessment.")
-
-    with right:
-        chart_data = pd.DataFrame(
-            {"Status": list(status_counts), "Rules": list(status_counts.values())}
-        )
-        st.bar_chart(chart_data, x="Status", y="Rules", horizontal=True, height=190)
+    st.markdown("## Decision Evidence")
+    st.caption("Triggered rules explain the credit judgement. The full rule set is available in the audit trail.")
 
     if not triggered:
+        st.success("No risk rules were triggered by the available financial information.")
         return
 
     severity_rank = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
@@ -120,7 +98,7 @@ def render_compact_risk_summary(result: Any) -> None:
     )
 
     rows = []
-    for rule in triggered[:5]:
+    for rule in triggered:
         category = getattr(rule, "category", "—")
         category = getattr(category, "value", str(category))
         rows.append(
@@ -134,21 +112,20 @@ def render_compact_risk_summary(result: Any) -> None:
             }
         )
 
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-    if len(triggered) > 5:
-        st.caption(f"Showing the 5 highest-priority drivers out of {len(triggered)} triggered rules.")
+    st.dataframe(
+        pd.DataFrame(rows),
+        use_container_width=True,
+        hide_index=True,
+    )
 
 
-def render_supporting_details(
-    result: Any,
-    assessment_position: Any,
-) -> None:
-    """Keep audit and technical detail available without competing with the report."""
-    with st.expander("Evidence & technical details", expanded=False):
-        st.markdown("### Decision path")
+def render_audit_trail(result: Any, assessment_position: Any) -> None:
+    """Keep technical and audit information available without competing with the operator flow."""
+    with st.expander("Audit trail & methodology", expanded=False):
+        st.markdown("### Assessment flow")
         render_decision_path(result)
 
-        st.markdown("### Rule evidence")
+        st.markdown("### Complete rule evidence")
         render_rule_assessment_summary(result)
 
         st.markdown("### Credit data used")
@@ -159,9 +136,9 @@ def render_supporting_details(
 
         st.markdown("### Methodology")
         st.write(
-            "The Rule Engine determines the assessment status, rule outcomes, severity and thresholds. "
-            "The Reporting layer converts that structured result into the Executive Report. "
-            "Gemini and Ollama can generate the narrative, but they do not determine the credit assessment."
+            "The Rule Engine is the sole authority for assessment status, rule outcomes, severity and thresholds. "
+            "The Analysis layer organises the resulting findings. The Reporting layer converts the structured result "
+            "into the Executive Report. Gemini and Ollama can generate narrative text, but cannot change the credit judgement."
         )
 
         metadata = getattr(result, "execution_metadata", None)
@@ -185,24 +162,24 @@ def render_results(
     assessment_position: Any,
     selected_reporting_mode: str,
 ) -> None:
-    """Render a concise result journey with the Executive Report as the focal output."""
+    """Render results in the same order used by a credit-monitoring operator."""
     if result is None:
         return
 
     st.divider()
 
     generator_used = getattr(result, "report_generator_used", None)
-    configured_model = get_llm_model_from_result(result)
+    configured_model = None
     report_badge_kind, report_badge_label = resolve_report_badge(
         selected_reporting_mode=selected_reporting_mode,
         generator_used=generator_used,
         configured_model=configured_model,
     )
 
-    # 1. Final assessment
-    render_result_hero(result)
+    # 1. First decision point: what is the monitoring outcome?
+    render_monitoring_outcome(result)
 
-    # 2. Final business output
+    # 2. Primary deliverable: the Executive Report.
     with st.container(border=True):
         render_report_tab(
             result=result,
@@ -212,8 +189,8 @@ def render_results(
             configured_model=configured_model,
         )
 
-    # 3. Minimal explanation of the result
-    render_compact_risk_summary(result)
+    # 3. Evidence: why did the Rule Engine reach this outcome?
+    render_decision_evidence(result)
 
-    # 4. Everything technical is secondary
-    render_supporting_details(result, assessment_position)
+    # 4. Technical information is secondary and collapsible.
+    render_audit_trail(result, assessment_position)
