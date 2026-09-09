@@ -41,7 +41,7 @@ def create_workflow(
 
     if reporting_mode == "Deterministic":
         reporting_agent = ReportingAgent(
-            report_generator=(deterministic_report_generator),
+            report_generator=deterministic_report_generator,
         )
 
     # ========================================================
@@ -113,4 +113,5 @@ def create_workflow(
         assessment_service=assessment_service,
         analysis_agent=analysis_agent,
         reporting_agent=reporting_agent,
+        reporting_mode=reporting_mode,
     )
