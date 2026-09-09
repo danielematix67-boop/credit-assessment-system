@@ -34,13 +34,14 @@ def test_prompt_requires_values_order_and_no_repetition() -> None:
 
     prompt = ReportPromptBuilder().build(analysis)
 
-    assert "Every numerical indicator value" in prompt
-    assert "must be explicitly reported in the narrative" in prompt
+    assert "Every material numerical indicator" in prompt
+    assert "must appear in the narrative" in prompt
     assert "Do not round, recalculate, convert or replace" in prompt
     assert "1. revenue" in prompt
     assert "2. profitability" in prompt
-    assert "Discuss each category at most once." in prompt
-    assert "Do not repeat an indicator" in prompt
+    assert "one narrative paragraph for each category" in prompt
+    assert "Never return to a category after moving to the next category" in prompt
+    assert "Mention each material indicator value once" in prompt
 
 
 def test_local_llm_adds_only_missing_indicator_value_concisely() -> None:
