@@ -62,6 +62,24 @@ def _severity_counts(rule_results: list[Any]) -> dict[str, int]:
     return counts
 
 
+def _format_indicator_value(value: Any) -> str:
+    """Format an already-computed indicator for display only."""
+    if value is None:
+        return "—"
+    try:
+        return f"{float(value):g}"
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def _status_label(status: str) -> str:
+    return {
+        "TRIGGERED": "TRIGGERED",
+        "NOT_TRIGGERED": "NOT TRIGGERED",
+        "NOT_EVALUABLE": "NOT EVALUABLE",
+    }.get(status, status.replace("_", " "))
+
+
 # ============================================================
 # Decision Path
 # ============================================================
@@ -143,7 +161,6 @@ def render_risk_indicator_dashboard(result: Any) -> None:
     status_counts = _rule_status_counts(result)
     severity_counts = _severity_counts(rule_results)
 
-    # Executive dashboard strip: factual counts only.
     metric_cols = st.columns(4)
     metrics = [
         ("Indicators", len(rule_results)),
@@ -294,15 +311,15 @@ def render_risk_indicator_dashboard(result: Any) -> None:
 
 
 def render_rule_indicator_detail(result: Any) -> None:
-    """Render the quantitative detail behind an individual rule result."""
+    """Render a professional, display-only risk indicator card."""
     rule_results = _get_rule_results(result)
     if not rule_results:
         return
 
-    st.markdown("##### Rule → Indicator → Value → Threshold")
+    st.markdown("##### Risk Indicator Detail")
     st.caption(
-        "Select a rule to inspect the quantitative indicator, configured threshold "
-        "and rationale used by the deterministic Rule Engine."
+        "Inspect the deterministic Rule Engine output for one indicator, including "
+        "the observed value, configured threshold and resulting status."
     )
 
     rule_labels = []
@@ -320,7 +337,7 @@ def render_rule_indicator_detail(result: Any) -> None:
     default_index = triggered_indices[0] if triggered_indices else 0
 
     selected_label = st.selectbox(
-        "Rule",
+        "Indicator",
         rule_labels,
         index=default_index,
         key="rule_indicator_detail",
@@ -328,8 +345,10 @@ def render_rule_indicator_detail(result: Any) -> None:
     selected_index = rule_labels.index(selected_label)
     selected_rule = rule_results[selected_index]
 
-    rule_id = getattr(selected_rule, "rule_id", "—")
-    category = getattr(selected_rule, "category", "—")
+    rule_id = str(getattr(selected_rule, "rule_id", "—"))
+    rule_name = str(getattr(selected_rule, "rule_name", "—"))
+    indicator = _rule_indicator(selected_rule)
+    category = str(getattr(selected_rule, "category", "—"))
     status = _rule_status(selected_rule)
     severity = _rule_severity(selected_rule)
     direction = _rule_direction(selected_rule)
@@ -337,52 +356,53 @@ def render_rule_indicator_detail(result: Any) -> None:
     threshold = getattr(selected_rule, "threshold", None)
     reason = getattr(selected_rule, "reason", None)
 
-    info_cols = st.columns(5)
-    values = [
-        ("Rule", rule_id),
-        ("Status", status),
-        ("Severity", severity),
-        ("Category", category),
-        ("Direction", direction),
-    ]
-    for column, (label, display_value) in zip(info_cols, values):
-        with column:
-            st.caption(label)
-            st.write(display_value)
+    status_text = _status_label(status)
+    severity_text = severity.upper()
 
-    if value is not None and threshold is not None:
-        chart_data = pd.DataFrame(
-            {
-                "Measure": ["Actual", "Threshold"],
-                "Value": [float(value), float(threshold)],
-            }
-        )
-        st.markdown("##### Actual vs Threshold")
-        st.bar_chart(chart_data, x="Measure", y="Value", height=260)
-        st.caption(
-            "The chart shows the observed indicator against the deterministic decision boundary."
-        )
+    # Presentation-only card. All displayed values come directly from RuleResult.
+    with st.container(border=True):
+        header_cols = st.columns([4.5, 1.5])
+        with header_cols[0]:
+            st.caption(f"{rule_id}  ·  {category}")
+            st.markdown(f"### {indicator}")
+            if rule_name and rule_name != indicator:
+                st.caption(rule_name)
+        with header_cols[1]:
+            st.metric("Risk level", severity_text)
 
-        metric_cols = st.columns(3)
-        with metric_cols[0]:
-            st.metric("Actual", f"{float(value):g}")
-        with metric_cols[1]:
-            st.metric("Threshold", f"{float(threshold):g}")
-        with metric_cols[2]:
-            st.metric("Gap", f"{float(value) - float(threshold):g}")
+        value_cols = st.columns(2)
+        with value_cols[0]:
+            st.caption("Observed value")
+            st.markdown(f"## {_format_indicator_value(value)}")
+        with value_cols[1]:
+            st.caption("Configured threshold")
+            st.markdown(f"## {_format_indicator_value(threshold)}")
 
-        if status == "TRIGGERED":
-            st.warning(
-                "The indicator is classified as triggered under the configured "
-                f"direction: {direction}."
+        if value is not None and threshold is not None:
+            chart_data = pd.DataFrame(
+                {
+                    "Measure": ["Actual", "Threshold"],
+                    "Value": [float(value), float(threshold)],
+                }
             )
-        elif status == "NOT_TRIGGERED":
-            st.success(
-                "The indicator remains within the non-triggered range under the "
-                f"configured direction: {direction}."
-            )
-    else:
-        st.info("Actual or threshold value is not available for this rule.")
+            st.bar_chart(chart_data, x="Measure", y="Value", height=170)
 
-    if reason:
-        st.caption(f"Rationale: {reason}")
+        meta_cols = st.columns(3)
+        with meta_cols[0]:
+            st.caption("Status")
+            st.markdown(f"**{status_text}**")
+        with meta_cols[1]:
+            st.caption("Direction")
+            st.markdown(f"**{direction}**")
+        with meta_cols[2]:
+            st.caption("Category")
+            st.markdown(f"**{category}**")
+
+        if reason:
+            st.markdown("**Rationale**")
+            st.write(reason)
+
+    st.caption(
+        "The card presents the Rule Engine output as-is; it does not recalculate "
+        "thresholds, severity or assessment status."
+    )
