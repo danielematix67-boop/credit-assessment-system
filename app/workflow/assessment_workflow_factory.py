@@ -61,6 +61,7 @@ def create_workflow(
 
         llm_report_generator = LLMReportGenerator(
             llm_client=llm_client,
+            require_indicator_values=True,
         )
 
         reporting_agent = ReportingAgent(
