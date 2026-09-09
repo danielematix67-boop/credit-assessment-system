@@ -363,15 +363,18 @@ def test_propagates_client_errors() -> None:
 def test_discursive_narrative_preserves_all_findings_and_indicators() -> None:
     findings = [
         make_finding(
-            "Revenue growth declined to -20.0%, indicating a deterioration in the company's top-line performance.",
+            "Revenue growth declined to -20.0%, indicating a deterioration "
+            "in the company's top-line performance.",
             category="Revenue",
         ),
         make_finding(
-            "EBITDA is negative, with a reported value of €-120,000, indicating negative operating profitability.",
+            "EBITDA is negative, with a reported value of €-120,000, "
+            "indicating negative operating profitability.",
             category="Profitability",
         ),
         make_finding(
-            "The interest coverage ratio is -0.2x, indicating that EBITDA provides insufficient coverage of interest expense.",
+            "The interest coverage ratio is -0.2x, indicating that EBITDA "
+            "provides insufficient coverage of interest expense.",
             category="Profitability",
         ),
         make_finding(
@@ -379,7 +382,8 @@ def test_discursive_narrative_preserves_all_findings_and_indicators() -> None:
             category="Profitability",
         ),
         make_finding(
-            "NFP to EBITDA stands at 7.0x, above the acceptable level, indicating elevated leverage relative to operating earnings.",
+            "NFP to EBITDA stands at 7.0x, above the acceptable level, "
+            "indicating elevated leverage relative to operating earnings.",
             category="Leverage",
         ),
     ]
