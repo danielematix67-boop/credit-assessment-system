@@ -4,6 +4,7 @@ pytest-cov==7.1.0
 mypy==2.3.0
 ruff==0.12.8
 streamlit==1.61.1
+pandas
 PyYAML==6.0.2
 types-PyYAML==6.0.12.20250915
 ollama==0.6.2
