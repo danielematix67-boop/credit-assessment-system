@@ -14,6 +14,7 @@ class RuleConfig:
     severity: RuleSeverity
     severity_direction: SeverityDirection = SeverityDirection.HIGHER_IS_WORSE
     severity_thresholds: tuple[SeverityThreshold, ...] = ()
+    indicator: str = ""
 
     def __post_init__(self) -> None:
         if not self.rule_id.strip():
@@ -24,3 +25,6 @@ class RuleConfig:
 
         if not self.category.strip():
             raise ValueError("category cannot be empty")
+
+        if self.indicator and not self.indicator.strip():
+            raise ValueError("indicator cannot be blank")
