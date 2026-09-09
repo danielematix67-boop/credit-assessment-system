@@ -3,6 +3,7 @@ from typing import Any
 import streamlit as st
 
 from app.ui.charts import render_decision_path, render_risk_indicator_dashboard
+from app.ui.components import render_section_header
 from app.ui.credit_position import display_position_table
 from app.ui.report import render_report_tab
 
@@ -30,15 +31,6 @@ def _rule_results(result: Any) -> list[Any]:
 def _status(rule: Any) -> str:
     value = getattr(rule, "status", None)
     return str(getattr(value, "value", value or ""))
-
-
-def _section_header(title: str, description: str) -> None:
-    header = (
-        '<div class="ui-section-header"><div class="ui-section-title">'
-        f'{title}</div><div class="ui-section-description">{description}'
-        "</div></div>"
-    )
-    st.markdown(header, unsafe_allow_html=True)
 
 
 def _status_class(status: str) -> str:
@@ -289,7 +281,7 @@ def render_assessment_overview(result: Any) -> None:
     status = str(getattr(status_obj, "value", status_obj or "Unknown"))
     triggered = sum(_status(rule) == "TRIGGERED" for rule in rules)
 
-    _section_header(
+    render_section_header(
         "Assessment Overview",
         (
             "Concise summary of the deterministic assessment. Detailed rule findings are "
