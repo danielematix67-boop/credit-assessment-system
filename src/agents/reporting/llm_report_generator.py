@@ -28,7 +28,7 @@ class LLMReportGenerator(ReportGenerator):
     """
 
     _INDICATOR_PATTERNS = (
-        re.compile(r"€\s*-?\d[\d,.]*"),
+        re.compile(r"€\s*-?\d(?:[\d,.]*\d)?"),
         re.compile(r"-?\d[\d,.]*\s*%"),
         re.compile(r"-?\d[\d,.]*\s*x\b", re.IGNORECASE),
     )
@@ -127,7 +127,7 @@ class LLMReportGenerator(ReportGenerator):
         for finding in findings:
             for pattern in cls._INDICATOR_PATTERNS:
                 for match in pattern.findall(finding.text):
-                    normalized = " ".join(match.split())
+                    normalized = " ".join(match.split()).rstrip(".,;:")
                     if normalized not in values:
                         values.append(normalized)
 
