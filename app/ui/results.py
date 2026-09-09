@@ -206,11 +206,6 @@ def render_why_section(result: Any) -> None:
 
 def render_assessment_evidence(result: Any) -> None:
     """Present the quantitative evidence supporting the assessment."""
-    st.markdown("### Assessment Evidence")
-    st.caption(
-        "Use the rule summary to see the overall distribution, then select "
-        "an individual rule to inspect its value, threshold and rationale."
-    )
     render_rule_assessment_summary(result)
 
 
