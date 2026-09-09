@@ -7,6 +7,7 @@ from app.ui.charts import render_decision_path, render_risk_indicator_dashboard
 from app.ui.credit_position import display_position_table
 from app.ui.explainability import render_evidence_chain
 from app.ui.report import render_report_tab
+from app.ui.rule_logic import render_rule_logic
 
 
 def resolve_report_badge(
@@ -153,6 +154,8 @@ def render_assessment_overview(result: Any) -> None:
         "The chart shows the evidence produced by the Rule Engine. "
         "It does not calculate or modify the final assessment."
     )
+
+    render_rule_logic(result)
 
 
 def render_decision_evidence(result: Any) -> None:
