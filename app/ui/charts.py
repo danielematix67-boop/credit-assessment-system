@@ -59,33 +59,31 @@ def render_decision_path(result: Any) -> None:
 
     st.subheader("How the Decision Is Produced")
     st.caption(
-        "The final assessment is produced from the deterministic rule outcomes. "
-        "The path below shows the evidence flow without recalculating any business logic."
+        "The assessment follows a traceable path from financial data to indicators, "
+        "rule outcomes and final credit assessment."
     )
 
-    cols = st.columns(5)
     steps = [
-        ("01", "Financial Data", "Credit position", "det"),
-        ("02", "Indicators", f"{len(rule_results)} rules evaluated", "det"),
-        ("03", "Rule Outcomes", f"{triggered} triggered", "det"),
-        ("04", "Risk Drivers", "Severity & category", "det"),
-        ("05", "Assessment", assessment_status, "result"),
+        ("01", "Financial Data", "Credit position"),
+        ("02", "Indicators", f"{len(rule_results)} rules evaluated"),
+        ("03", "Rule Outcomes", f"{triggered} triggered"),
+        ("04", "Risk Drivers", "Severity & category"),
+        ("05", "Assessment", assessment_status),
     ]
 
-    for column, (number, title, description, kind) in zip(cols, steps):
+    cols = st.columns(len(steps))
+    for index, (column, (number, title, description)) in enumerate(zip(cols, steps)):
         with column:
-            st.markdown(
-                f'<div class="decision-path-step {kind}">'
-                f'<div class="decision-path-number">{number}</div>'
-                f'<div class="decision-path-title">{title}</div>'
-                f'<div class="decision-path-description">{description}</div>'
-                f"</div>",
-                unsafe_allow_html=True,
-            )
+            with st.container(border=True):
+                st.caption(number)
+                st.markdown(f"**{title}**")
+                st.caption(description)
+        if index < len(steps) - 1:
+            pass
 
     st.caption(
-        "Interpretation: input data are evaluated against configured thresholds; "
-        "triggered rules identify the risk drivers that support the final assessment."
+        "Decision principle: actual financial indicators are compared with configured "
+        "thresholds; triggered rules become evidence for the final assessment."
     )
 
 
@@ -108,15 +106,12 @@ def render_risk_indicator_dashboard(result: Any) -> None:
 
     rows: list[dict[str, Any]] = []
     for rule_result in rule_results:
-        value = getattr(rule_result, "value", None)
-        threshold = getattr(rule_result, "threshold", None)
-
         rows.append(
             {
                 "Rule": str(getattr(rule_result, "rule_id", "—")),
                 "Indicator": str(getattr(rule_result, "rule_name", "—")),
-                "Actual": value,
-                "Threshold": threshold,
+                "Actual": getattr(rule_result, "value", None),
+                "Threshold": getattr(rule_result, "threshold", None),
                 "Status": _rule_status(rule_result),
                 "Severity": _rule_severity(rule_result),
                 "Category": str(getattr(rule_result, "category", "—")),
@@ -124,8 +119,8 @@ def render_risk_indicator_dashboard(result: Any) -> None:
         )
 
     dataframe = pd.DataFrame(rows)
-
     status_counts = _rule_status_counts(result)
+
     metric_cols = st.columns(4)
     with metric_cols[0]:
         st.metric("Rules evaluated", len(rule_results))
@@ -136,17 +131,18 @@ def render_risk_indicator_dashboard(result: Any) -> None:
     with metric_cols[3]:
         st.metric("Not evaluable", status_counts["NOT_EVALUABLE"])
 
-    display_columns = [
-        "Rule",
-        "Indicator",
-        "Actual",
-        "Threshold",
-        "Status",
-        "Severity",
-        "Category",
-    ]
     st.dataframe(
-        dataframe[display_columns],
+        dataframe[
+            [
+                "Rule",
+                "Indicator",
+                "Actual",
+                "Threshold",
+                "Status",
+                "Severity",
+                "Category",
+            ]
+        ],
         use_container_width=True,
         hide_index=True,
     )
