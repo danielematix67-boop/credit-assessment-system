@@ -3,7 +3,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from app.ui.charts import render_decision_path, render_rule_assessment_summary
+from app.ui.charts import render_risk_indicator_dashboard
 from app.ui.credit_position import display_position_table
 from app.ui.explainability import render_evidence_chain
 from app.ui.report import render_report_tab
@@ -144,10 +144,9 @@ def render_audit_trail(result: Any, assessment_position: Any) -> None:
         st.caption("Detailed calculation path, complete rule evidence and technical provenance.")
 
         st.markdown("#### Assessment flow")
-        render_decision_path(result)
+        from app.ui.charts import render_decision_path
 
-        st.markdown("#### Complete rule evidence")
-        render_rule_assessment_summary(result)
+        render_decision_path(result)
 
         st.markdown("#### Credit data used")
         if assessment_position is not None:
@@ -208,5 +207,6 @@ def render_results(
     )
 
     render_decision_evidence(result)
+    render_risk_indicator_dashboard(result)
     render_evidence_chain(result)
     render_audit_trail(result, assessment_position)
