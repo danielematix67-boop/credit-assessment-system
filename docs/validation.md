@@ -2,19 +2,17 @@
 
 ## 1. Purpose
 
-The validation strategy verifies the functional correctness, architectural integrity, and resilience of the `credit-assessment-system`.
+The validation strategy verifies the functional correctness, architectural integrity and resilience of the `credit-assessment-system`.
 
-The system is a deterministic, rule-based credit assessment application with an optional LLM reporting layer. Validation therefore focuses on a central architectural invariant:
+The application is deterministic at the assessment layer and optional/AI-assisted at the reporting layer. The central invariant is:
 
-> **The deterministic assessment is the source of truth. The LLM can generate narrative content, but it cannot determine, modify, or override the structured credit assessment.**
+> **The deterministic assessment is the source of truth. The LLM can generate narrative content, but it cannot determine, modify or override the structured credit assessment.**
 
-The validation strategy does not evaluate the predictive performance of a statistical or machine-learning model. It validates the behavior of the implemented rule engine, assessment workflow, reporting layer, configuration, LLM integration, fallback behavior, and execution metadata.
+Validation therefore covers rules, configuration, assessment, analysis, reporting, LLM integration, narrative grounding, fallback behavior, workflow propagation, execution metadata and CI quality gates.
 
 ---
 
 ## 2. Validation Pyramid
-
-The project uses multiple levels of automated validation:
 
 ```text
                     SYSTEM VALIDATION
@@ -26,7 +24,7 @@ The project uses multiple levels of automated validation:
           │                │                │
           └────────────────┼────────────────┘
                            ▼
-                    LLM / Fallback Tests
+                 LLM / Grounding Tests
                            │
                            ▼
                     CI Quality Gates
@@ -37,16 +35,14 @@ The project uses multiple levels of automated validation:
 | Unit | Validate individual components and business rules |
 | Integration | Validate interactions between application layers |
 | Workflow | Validate the complete assessment-to-report pipeline |
-| LLM / fallback | Validate provider integration and failure handling |
-| CI | Enforce repeatable quality gates |
+| LLM / grounding | Validate narrative constraints, evidence preservation and provider behavior |
+| CI | Enforce repeatable lint, type and coverage gates |
 
 ---
 
 # 3. Core Architectural Invariants
 
-### 3.1 Deterministic decision authority
-
-The assessment status is calculated from deterministic rule results and configured assessment logic.
+## 3.1 Deterministic decision authority
 
 ```text
 CreditPosition
@@ -60,9 +56,9 @@ Assessment Status
 
 The LLM is not part of this decision path.
 
-### 3.2 Status propagation
+## 3.2 Status propagation
 
-The deterministic status must be preserved throughout the workflow:
+The deterministic status is preserved through the workflow:
 
 ```text
 Assessment.status
@@ -72,9 +68,7 @@ AssessmentAnalysis.assessment_status
 Report.assessment_status
 ```
 
-### 3.3 Structured finding integrity
-
-Structured findings originate from deterministic rule evaluation and are propagated to the analysis and reporting layers.
+## 3.3 Structured finding integrity
 
 ```text
 RuleResult
@@ -88,11 +82,11 @@ AssessmentAnalysis
 Report
 ```
 
-The LLM does not create the structured finding collection.
+The LLM does not create or modify the structured finding collection.
 
-### 3.4 Reporting independence
+## 3.4 Reporting independence
 
-Different reporting strategies may produce different natural-language summaries, but they operate on the same deterministic `AssessmentAnalysis`.
+Different reporting strategies consume the same deterministic `AssessmentAnalysis`:
 
 ```text
                  AssessmentAnalysis
@@ -106,59 +100,33 @@ Different reporting strategies may produce different natural-language summaries,
                        Report
 ```
 
-The assessment status and structured findings remain application-controlled.
+## 3.5 Execution metadata integrity
 
-### 3.5 Execution metadata integrity
-
-Completed workflow executions expose immutable execution metadata without changing the deterministic assessment.
-
-```text
-Workflow
-   │
-   ├── Assessment
-   ├── Analysis
-   ├── Report
-   │
-   └── ExecutionMetadata
-         ├── execution_id
-         ├── reporting_mode
-         ├── generator_used
-         ├── fallback_used
-         ├── error_category
-         └── timings
-```
-
-The metadata is provenance and diagnostic information, not decision data.
+Execution metadata describes provenance and timing. It does not participate in assessment-status calculation.
 
 ---
 
-# 4. Unit Testing
+# 4. Unit and Rule Testing
 
-Unit tests validate individual classes and business contracts in isolation.
-
-The main areas include:
+Unit tests cover:
 
 - domain models;
 - rule status and severity types;
 - severity policy;
-- rule configuration;
-- YAML configuration loading;
+- configuration loading and validation;
 - rule registration and discovery;
-- individual assessment rules;
-- rule engine;
-- assessment service;
-- status calculation;
+- individual financial rules;
+- Rule Engine behavior;
+- assessment service and status calculation;
 - analysis agent;
 - deterministic report generation;
 - LLM report generation;
-- LLM client abstractions;
-- mock LLM client;
-- reporting agent;
-- workflow components;
-- execution metadata;
-- orchestration components.
+- LLM clients and mock client;
+- reporting agent and error classification;
+- workflow and orchestration;
+- execution metadata.
 
-For deterministic rules, the fundamental property is:
+For deterministic rules, the core property is:
 
 ```text
 Same Input
@@ -168,26 +136,23 @@ Same Configuration
 Same RuleResult
 ```
 
-Unit tests should therefore cover normal evaluations, triggered conditions, boundary values, and non-evaluable inputs where applicable.
+Tests cover normal evaluations, triggered conditions, threshold boundaries and non-evaluable inputs where applicable.
 
 ---
 
 # 5. Rule Validation
 
-Each rule produces a structured `RuleResult` for a given evaluation.
+Each rule returns a structured `RuleResult` containing information such as:
 
-A rule result contains information including:
-
-- rule identifier;
-- rule name;
+- rule identifier and name;
 - category;
 - status;
-- evaluated value, when available;
-- configured threshold;
+- evaluated value;
+- threshold;
 - severity;
 - reason.
 
-The supported statuses distinguish three situations:
+The three rule outcomes are:
 
 ```text
 TRIGGERED
@@ -195,82 +160,33 @@ NOT_TRIGGERED
 NOT_EVALUABLE
 ```
 
-This distinction is important for credit-risk assessment because missing or unsuitable data must not automatically be interpreted as a negative credit signal.
+The explicit `NOT_EVALUABLE` state prevents missing or unsuitable data from being silently interpreted as a negative credit signal.
 
-## 5.1 Threshold validation
+### Severity
 
-Tests verify that rule thresholds are applied according to the configured rule definition and that boundary conditions behave consistently with the rule implementation.
-
-## 5.2 Severity validation
-
-Severity is resolved through the configured `SeverityPolicy` when a numeric value is available.
-
-The system supports directional severity evaluation, including:
+Directional severity policies include:
 
 ```text
 LOWER_IS_WORSE
 HIGHER_IS_WORSE
 ```
 
-Configured severity thresholds are therefore tested independently from the primary trigger threshold.
+Tests verify trigger thresholds and graduated severity thresholds independently.
 
-## 5.3 Non-evaluable validation
+### Configuration
 
-A rule that cannot be evaluated returns `NOT_EVALUABLE` rather than incorrectly returning `TRIGGERED` or `NOT_TRIGGERED`.
-
-The assessment service creates findings only when the comment engine returns a comment; the comment engine generates comments for triggered rules.
-
-Conceptually:
-
-```text
-NOT_EVALUABLE
-      ↓
-No triggered finding
-```
+The YAML configuration is validated for required fields, unique rule IDs, supported severity values/directions and valid threshold definitions.
 
 ---
 
-# 6. Rule Configuration Validation
+# 6. Assessment and Analysis Validation
 
-Rule behavior is separated into deterministic implementation logic and external YAML configuration.
-
-The configuration loader validates structural and semantic requirements such as:
-
-- required fields;
-- unique rule identifiers;
-- supported severity values;
-- supported severity directions;
-- valid numeric thresholds;
-- valid severity-threshold definitions.
-
-The intended dependency is:
-
-```text
-config/rules.yaml
-        ↓
-RuleConfigLoader
-        ↓
-RuleConfig
-        ↓
-Rule Registry
-        ↓
-Concrete Rule
-```
-
-This separation allows policy parameters to change without modifying the rule-engine infrastructure.
-
----
-
-# 7. Assessment Service Validation
-
-`AssessmentService` orchestrates the deterministic assessment stage.
-
-Its processing sequence is:
+The deterministic assessment sequence is:
 
 ```text
 CreditPosition
       ↓
-RuleEngine.evaluate()
+RuleEngine
       ↓
 RuleResults
       ↓
@@ -283,35 +199,9 @@ StatusCalculator
 Assessment
 ```
 
-Validation verifies that:
+Validation verifies that rule results, findings and the position identifier are preserved and that the overall status is calculated from deterministic rule results.
 
-- rule results are preserved;
-- comments are generated only where applicable;
-- findings reference the originating rule result;
-- the overall status is calculated from deterministic rule results;
-- the returned `Assessment` contains the expected position identifier.
-
-The assessment service does not invoke an LLM.
-
----
-
-# 8. Analysis Layer Validation
-
-The `AnalysisAgent` transforms an `Assessment` into an `AssessmentAnalysis`.
-
-```text
-Assessment
-    ↓
-AnalysisAgent
-    ↓
-AssessmentAnalysis
-```
-
-The analysis layer is not an alternative decision engine.
-
-Validation focuses on preservation of the deterministic assessment and on the construction of analysis-level information such as key findings, risk factors, and limitations.
-
-The critical property is:
+The analysis stage is validated to ensure:
 
 ```text
 Assessment.status
@@ -319,29 +209,21 @@ Assessment.status
 AssessmentAnalysis.assessment_status
 ```
 
-The analysis object is then used as the controlled input to the reporting layer.
+The analysis layer organizes evidence but does not perform a second credit assessment.
 
 ---
 
-# 9. Reporting Validation
+# 7. Reporting Validation
 
-The reporting architecture separates report generation from assessment logic.
+## 7.1 Deterministic reporting
 
-The application supports a deterministic generator and optional LLM-backed generation with fallback.
+`DeterministicReportGenerator` must produce a report without external LLM dependencies while preserving the structured assessment information.
 
-## 9.1 Deterministic reporting
+## 7.2 LLM reporting
 
-`DeterministicReportGenerator` provides a report-generation path without an external LLM dependency.
+`LLMReportGenerator` consumes `AssessmentAnalysis`, builds a constrained prompt and delegates text generation to an injected `LLMClient`.
 
-Validation verifies that it creates a report from the supplied `AssessmentAnalysis` while preserving the structured assessment information.
-
-## 9.2 LLM reporting
-
-`LLMReportGenerator` uses an injected `LLMClient` to generate narrative content from deterministic analysis data.
-
-The prompt explicitly constrains the model to narrative generation. The model is not asked to calculate a new assessment or determine the credit status.
-
-The LLM therefore operates on:
+The conceptual flow is:
 
 ```text
 AssessmentAnalysis
@@ -351,96 +233,106 @@ Prompt Builder
 LLM Client
        ↓
 Generated Narrative
+       ↓
+Validation / fallback when enabled
 ```
 
-rather than directly on the rule engine.
+The generated narrative is not the source of truth for assessment status.
 
 ---
 
-# 10. LLM Response Validation
+# 8. LLM Narrative Contract
 
-The current implementation performs a deliberately narrow validation of the raw LLM response.
+The prompt contract is tested explicitly. It requires the LLM to:
 
-The response validator checks that the generated response is not empty or whitespace-only. A response that fails this check is rejected.
+- represent all supplied material findings;
+- preserve supplied numerical values and units;
+- avoid rounding, recalculation or conversion;
+- avoid unsupported facts and causal explanations;
+- avoid inferring sales volume, pricing, demand, costs, liquidity, cash flow, debt service capacity or financial stability unless supplied;
+- preserve category order;
+- discuss each category at most once;
+- avoid category headings and list-like output;
+- mention each material indicator value once;
+- avoid repeated indicators, findings and conclusions;
+- end after the final material finding;
+- not generate the assessment status.
 
-```text
-LLM Response
-      ↓
-_is response usable?_
-      │
-   ┌──┴──┐
-   │     │
-  No    Yes
-   │     │
-   ▼     ▼
-Invalid  Narrative
-         accepted
-```
-
-### Important implementation boundary
-
-The current implementation **does not perform string-based validation of the assessment status inside the LLM response**.
-
-It does not search the generated narrative for `NORMAL`, `ATTENTION`, or `CRITICAL`, and it does not reject a response merely because those words are absent.
-
-This is an important distinction from semantic validation. Structured assessment status remains outside the generated narrative and is controlled by application logic.
-
-The application adds the deterministic assessment status to the executive-summary construction, while the structured `Report.assessment_status` remains application-controlled.
-
-This avoids brittle natural-language matching at the decision boundary.
+The dedicated prompt tests assert the presence of these contractual instructions, including category ordering and non-repetition requirements.
 
 ---
 
-# 11. Deterministic Status Protection
+# 9. Indicator Grounding Validation
 
-The final report's structured assessment status is application-controlled.
+The current implementation supports strict indicator grounding for LLM reporting.
+
+When `require_indicator_values=True`, deterministic indicator values extracted from the supplied findings are required to appear in the generated narrative.
 
 Conceptually:
 
 ```text
-AssessmentAnalysis.assessment_status
-                │
-                ├──────────────► Report.assessment_status
-                │
-                └──────────────► Executive-summary context
-                                      │
-                                      ▼
-                                     LLM
+Deterministic findings
+        ↓
+Extract required indicators
+        ↓
+LLM narrative
+        ↓
+Grounding validation
+     /       \
+   valid    invalid
+     ↓         ↓
+  Narrative  Deterministic fallback
 ```
 
-The LLM therefore cannot directly change the structured `Report.assessment_status`.
+Validation tests cover:
 
-The executive summary is constructed with the deterministic status available to the reporting layer, so the generated narrative is not the source of truth for the classification.
+- all required indicator values present;
+- a missing indicator triggering deterministic fallback;
+- no unnecessary fallback when all required values are present;
+- duplicate indicator values not being silently rewritten;
+- strict grounding being configurable;
+- Ollama workflow configuration enabling indicator grounding.
+
+The grounding check is intentionally narrow. It protects required numerical evidence but is not a full semantic fact-checker.
 
 ---
 
-# 12. Deterministic Findings and Limitations
+# 10. Deterministic Status Protection
 
-Structured findings and limitations remain under application control.
+The final structured assessment status is application-controlled.
 
-The reporting layer receives them from `AssessmentAnalysis`; they are not reconstructed from the LLM response.
+For an AI-assisted report the conceptual output is:
 
 ```text
-Deterministic Assessment
-          ↓
-AssessmentAnalysis
-          ├── assessment_status
-          ├── key_findings
-          ├── risk_factors
-          └── limitations
-                    ↓
-                 Reporting
+Assessment Status: Critical
+
+Generated executive narrative
 ```
 
-The LLM generates narrative content from this controlled information. It does not write back into the structured assessment.
+The status line is constructed from deterministic assessment data. The LLM is explicitly instructed not to generate it.
 
-Consequently, an unsupported statement generated by the model does not become a new `RuleFinding`, does not change the structured assessment status, and does not replace the application's structured limitations.
+Tests verify that the status is preserved exactly and that the generated narrative cannot replace the structured status.
 
 ---
 
-# 13. Fallback and Resilience Validation
+# 11. LLM Response Validation Boundary
 
-The reporting agent supports a primary report generator and an optional deterministic fallback.
+The implementation deliberately avoids broad semantic string-matching rules that would attempt to decide whether an arbitrary narrative is "correct".
+
+The validation boundary is instead split into:
+
+1. **Deterministic structured status protection** — status is owned by application logic.
+2. **Prompt contract** — the model receives explicit grounding and narrative constraints.
+3. **Optional indicator grounding validation** — required deterministic numerical evidence must be present when strict mode is enabled.
+4. **Fallback** — a failed grounding check produces a deterministic report.
+
+This provides a controlled compromise between safety, testability and natural-language flexibility.
+
+---
+
+# 12. Fallback and Resilience Validation
+
+The reporting agent supports a primary generator and deterministic fallback:
 
 ```text
                  ReportingAgent
@@ -459,16 +351,18 @@ The reporting agent supports a primary report generator and an optional determin
                             Report
 ```
 
-Validation covers failures such as:
+Tests cover:
 
 - LLM client errors;
-- invalid/empty generated responses;
-- exceptions raised by the primary generator;
-- successful fallback execution;
-- fallback failure handling;
-- terminal propagation when both primary and fallback generation fail.
+- empty/invalid generated responses;
+- provider exceptions;
+- error classification;
+- successful deterministic fallback;
+- fallback failure;
+- terminal propagation when both generators fail;
+- strict grounding failure and deterministic fallback.
 
-The primary reporting error is classified into categories including:
+Operational error categories include:
 
 ```text
 RATE_LIMIT
@@ -485,15 +379,11 @@ The key resilience property is:
 
 > **Failure of the optional LLM reporting path must not invalidate the deterministic assessment.**
 
-The reporting agent records the generator used, the latest reporting error, and the classified error category, supporting execution traceability.
-
 ---
 
-# 14. LLM Provider Abstraction
+# 13. LLM Provider Abstraction
 
-LLM access is abstracted behind an `LLMClient` interface.
-
-The architecture supports provider-specific implementations such as Gemini and Ollama, as well as a mock client for testing.
+LLM access is abstracted behind `LLMClient` with provider-specific implementations such as Gemini and Ollama and a mock implementation for tests.
 
 ```text
                  LLMClient
@@ -503,15 +393,13 @@ The architecture supports provider-specific implementations such as Gemini and O
       Gemini      Ollama       Mock
 ```
 
-Validation focuses on the contract between the reporting generator and the client rather than on the internal implementation of a particular provider.
-
-Provider failures are handled by the reporting layer and can activate deterministic fallback.
+Provider-specific failures are handled by the reporting layer and can activate deterministic fallback.
 
 ---
 
-# 15. Workflow and Orchestration Validation
+# 14. Workflow and Orchestration Validation
 
-The complete workflow connects the deterministic assessment, analysis, and reporting layers.
+The complete workflow is:
 
 ```text
 CreditPosition
@@ -531,9 +419,9 @@ ReportGenerator
 Report
 ```
 
-Workflow and orchestration tests verify that dependencies are correctly constructed and that data is propagated through the complete processing chain.
+Workflow tests verify correct dependency construction and propagation of data through the complete processing chain.
 
-The primary end-to-end invariant is:
+The principal end-to-end invariant is:
 
 ```text
 Assessment.status
@@ -543,171 +431,115 @@ AssessmentAnalysis.assessment_status
 Report.assessment_status
 ```
 
-The structured assessment information remains independent of the selected reporting strategy.
-
-## 15.1 Terminal reporting failure
-
-When the primary reporting generator fails and the deterministic fallback also fails, the workflow does not silently convert the failure into a successful result.
-
-The fallback error is propagated to the caller, while the reporting agent retains the primary error classification for diagnostics.
-
-This behavior is explicitly tested at both reporting-agent and workflow level.
+Terminal reporting failure is also tested: if both primary and fallback generators fail, the error is propagated rather than silently converted into success.
 
 ---
 
-# 16. Execution Metadata Validation
+# 15. Execution Metadata Validation
 
-`ExecutionMetadata` provides immutable provenance and timing information for successfully completed workflow executions.
+`ExecutionMetadata` is immutable provenance for successful workflow executions.
 
-Validation verifies:
+Tests verify:
 
-- a unique execution ID is generated;
-- the start timestamp is timezone-aware and represented in UTC;
-- the selected reporting mode is preserved;
-- primary versus fallback generator state is correctly recorded;
-- `fallback_used` reflects whether deterministic fallback was used;
-- the primary reporting error category is preserved when fallback is activated;
-- phase timings are non-negative;
-- total execution time is consistent with the workflow execution.
+- unique execution ID;
+- timezone-aware UTC timestamp;
+- selected reporting mode;
+- primary/fallback generator state;
+- correct `fallback_used` state;
+- primary reporting error category when fallback occurs;
+- non-negative phase timings;
+- total execution timing consistency.
 
-Conceptually:
-
-```text
-Workflow Execution
-        ↓
-ExecutionMetadata
-        ├── Identity
-        ├── Timestamp
-        ├── Reporting Mode
-        ├── Generator
-        ├── Fallback State
-        ├── Error Category
-        └── Timings
-```
-
-The metadata is validated as provenance information and does not participate in assessment-status calculation.
-
-A terminal workflow failure does not return an `AssessmentWorkflowResult`; therefore completed execution metadata is not expected to be available through the result object in that case.
+The metadata is diagnostic information and does not participate in assessment-status calculation.
 
 ---
 
-# 17. Test Isolation
+# 16. Presentation Validation Boundary
 
-External LLM availability is not required for the standard automated test suite.
+The Streamlit UI is intentionally downstream of the decision engine.
 
-The project provides a mock LLM client and separates tests requiring a live Ollama service through the `ollama` pytest marker.
+The results components consume structured workflow objects and render:
 
-The default pytest configuration excludes Ollama-dependent tests:
+- Executive Report;
+- Decision Evidence;
+- assessment flow;
+- rule-status distribution;
+- risk-indicator dashboard;
+- risk-driver map;
+- rule/indicator/value/threshold detail;
+- credit data;
+- methodology;
+- execution metadata.
 
-```text
-pytest
-  ↓
-standard test suite
-  ↓
-no live Ollama dependency
-```
+The UI does not recalculate thresholds or assessment status.
 
-This keeps CI deterministic while allowing provider-specific integration tests to be executed explicitly when the required service is available.
+This is an architectural validation property rather than a Streamlit unit-test requirement: the business logic remains in `src/` and the UI consumes its outputs.
 
 ---
 
-# 18. CI Quality Gates
+# 17. CI Quality Gates
 
-The GitHub Actions pipeline enforces the main engineering validation gates.
-
-The current CI workflow runs against Python 3.13 and 3.14 and performs:
+The GitHub Actions workflow runs on Python **3.13 and 3.14** and enforces:
 
 ```text
 Install dependencies
         ↓
 Ruff linting
         ↓
-MyPy strict type checking
+Mypy type checking
         ↓
-Pytest
-        ↓
-Coverage threshold
+Pytest + coverage
 ```
 
-The test command enforces a minimum coverage of **95%** for the `src` package.
+The pytest command enforces a minimum coverage of **95% for `src`**.
 
-These checks provide a repeatable baseline for pushes to `main` and pull requests targeting `main`.
+The current CI workflow is configured for pushes to `main` and pull requests targeting `main`.
+
+The latest validated workflow run after the reporting-test formatting changes passed on both Python versions, including Ruff, Mypy and pytest/coverage.
 
 ---
 
-# 19. Validation Matrix
+# 18. Validation Matrix
 
 | Area | Validation mechanism | Expected property |
 |---|---|---|
 | Rule evaluation | Unit tests | Deterministic `RuleResult` |
 | Thresholds | Rule tests | Configured thresholds are applied correctly |
-| Severity | Severity-policy tests | Direction and severity thresholds are respected |
+| Severity | Severity-policy tests | Direction and thresholds are respected |
 | Non-evaluable inputs | Rule/service tests | `NOT_EVALUABLE` is handled explicitly |
 | Configuration | Config tests | Invalid configuration is rejected |
-| Rule registry | Registry tests | Correct rule implementation is discovered |
-| Assessment service | Unit/integration tests | Results, findings, and status are composed correctly |
+| Rule registry | Registry tests | Correct implementation is discovered |
+| Assessment service | Unit/integration tests | Results, findings and status are composed correctly |
 | Analysis | Agent tests | Deterministic status and findings remain authoritative |
-| Deterministic reporting | Generator tests | Report is produced without external LLM dependency |
+| Deterministic reporting | Generator tests | Report works without an external LLM |
+| Prompt contract | Prompt tests | Grounding and narrative constraints remain explicit |
+| Indicator grounding | LLM generator tests | Required values are preserved or fallback occurs |
 | LLM reporting | Generator/client tests | Narrative is generated from controlled analysis data |
-| LLM response validation | Generator tests | Empty/whitespace output is rejected |
-| Error classification | Reporting-agent tests | Primary failures map to stable operational categories |
-| Fallback | Reporting-agent tests | Primary failure can fall back to deterministic reporting |
-| Terminal reporting failure | Reporting-agent/workflow tests | Fallback failure is propagated without masking |
-| Execution metadata | Workflow tests | Provenance and timing metadata are generated consistently |
-| Workflow | Integration/E2E tests | Data is propagated through the full pipeline |
-| Type safety | MyPy strict | Source code satisfies static typing constraints |
-| Code quality | Ruff | Configured lint rules pass |
-| Coverage | Pytest-Cov | `src` coverage remains at or above 95% |
+| Error classification | Reporting-agent tests | Provider failures map to stable categories |
+| Fallback | Reporting-agent tests | Primary failure can fall back deterministically |
+| Terminal failure | Reporting/workflow tests | Fallback failure is propagated |
+| Workflow propagation | Workflow/integration tests | Assessment status remains unchanged across layers |
+| Execution metadata | Workflow tests | Provenance and timings are consistent |
+| CI | GitHub Actions | Ruff, Mypy and pytest/coverage pass on supported Python versions |
 
 ---
 
-# 20. Validation Boundaries and Limitations
+# 19. Testing Philosophy
 
-The automated validation strategy does not prove that an external LLM will always produce factually correct or semantically perfect prose.
+The project uses tests not only to verify implementation details but also to protect architectural boundaries.
 
-Generative output remains probabilistic and should therefore be treated as untrusted content.
-
-The architecture mitigates this risk by keeping the LLM outside the deterministic decision path and by retaining structured assessment information under application control.
-
-The current response validator is intentionally limited to basic response usability. It does not attempt to prove semantic equivalence between generated prose and structured findings through natural-language parsing.
-
-This is preferable to introducing brittle string-matching logic into the decision boundary.
-
-Execution metadata provides in-memory execution provenance for completed workflows, but it is not a persistent audit trail. A production implementation would require additional controls for durable storage, retention, access, correlation, and monitoring.
-
-Future enhancements may include structured LLM outputs, additional schema validation, provider-specific integration testing, persistent observability, and centralized telemetry, provided that these enhancements preserve the deterministic assessment boundary.
-
----
-
-# 21. Summary
-
-The validation strategy is built around a simple architectural principle:
+The most important contracts are therefore:
 
 ```text
-Deterministic Assessment
-          │
-          ├── Source of Truth
-          │
-          ▼
-   AssessmentAnalysis
-          │
-          ▼
-   Reporting Layer
-          │
-     ┌────┴────┐
-     ▼         ▼
-Deterministic  LLM
-   Report     Narrative
-     │         │
-     └────┬────┘
-          ▼
-        Report
+Deterministic rules → deterministic assessment
+
+Deterministic assessment → controlled analysis
+
+Controlled analysis → bounded reporting
+
+LLM failure / invalid grounding → deterministic fallback
+
+Presentation → read-only consumer of decision evidence
 ```
 
-The deterministic rule engine remains responsible for assessment logic, status calculation, and structured findings.
-
-The LLM is an optional reporting component. Its failure does not invalidate the assessment, and its generated narrative does not become the source of truth for structured credit information.
-
-Execution metadata provides additional provenance around successfully completed workflow executions without becoming part of the decision logic.
-
-This separation is the principal architectural property validated by the project's automated tests and CI quality gates.
+This keeps the test suite aligned with the core credit-risk design rather than treating the UI or LLM output as an independent source of truth.
