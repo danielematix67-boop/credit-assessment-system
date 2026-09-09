@@ -30,7 +30,7 @@ class LLMReportGenerator(ReportGenerator):
         self,
         llm_client: LLMClient,
         prompt_builder: ReportPromptBuilder | None = None,
-        require_indicator_values: bool = True,
+        require_indicator_values: bool = False,
     ) -> None:
         self.llm_client = llm_client
         self.prompt_builder = (
