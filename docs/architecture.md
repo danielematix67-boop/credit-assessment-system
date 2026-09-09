@@ -55,8 +55,8 @@ AssessmentService
                                   │
                                   ▼
                           ReportingAgent
-                           /             \
-                          /               \
+                           /             \\
+                          /               \\
        DeterministicReportGenerator   LLMReportGenerator
                           \               /
                            \             /
@@ -95,44 +95,83 @@ Key components include:
 - `app/ui/assessment_configuration.py` — assessment configuration and run action;
 - `app/ui/results.py` — operator-oriented results composition;
 - `app/ui/report.py` — Executive Report presentation;
-- `app/ui/charts.py` — decision evidence and risk visualisations;
+- `app/ui/charts.py` — decision-path and risk-indicator visualisations;
 - `app/ui/workflow_view.py` — compact workflow explanation;
 - `app/workflow/` — application-level workflow composition and execution wrapper.
 
 The UI consumes `AssessmentWorkflowResult` and `RuleResult` objects rather than reimplementing business logic.
 
-### Results hierarchy
+### Current Results hierarchy
 
-The Results view is deliberately organized as:
+The Results view is intentionally organized from the executive outcome toward deeper evidence:
 
 ```text
 Executive Credit Assessment
-        ↓
-Decision Evidence
-        ↓
-Audit trail & methodology
-        ├── Assessment flow
-        ├── Complete rule evidence
-        ├── Credit data used
-        ├── Methodology
-        └── Execution metadata
+          ↓
+Assessment Overview
+          ↓
+Risk Indicator Dashboard
+          ↓
+Audit Trail & Methodology
 ```
 
-The detailed audit area provides additional visual evidence:
+The hierarchy keeps the primary report concise while making deterministic evidence available on demand.
+
+### Decision Path
+
+The Results UI includes a graphical three-stage decision path:
 
 ```text
-Decision Path
-     ↓
-Rule Status Distribution
-     ↓
-Risk Indicator Dashboard
-     ↓
-Risk Driver Map
-     ↓
-Rule → Indicator → Value → Threshold
+Financial Indicators
+        ↓
+Rule Engine Outcomes
+        ↓
+Monitoring Assessment
 ```
 
-This allows the UI to explain the mechanism without moving decision logic into presentation code.
+The visualization dynamically shows the number of rules evaluated, triggered rules and non-evaluable rules, together with the final assessment status and the relevant triggered-rule chips.
+
+The Decision Path is explanatory only. It consumes the outputs of the deterministic assessment and does not recalculate thresholds, severity or status.
+
+### Risk Indicator Dashboard
+
+`render_risk_indicator_dashboard()` provides the detailed rule-evidence surface. It includes:
+
+- KPI counts for indicators, triggered rules, high/critical severity and non-evaluable rules;
+- rule-outcome distribution;
+- severity profile;
+- filterable Rule Catalogue;
+- filtering by status, severity and category;
+- priority-oriented sorting;
+- individual rule inspection.
+
+The individual rule detail view presents:
+
+```text
+Rule ID / Category
+        ↓
+Indicator
+        ↓
+Observed Value vs Configured Threshold
+        ↓
+Status / Severity / Direction
+        ↓
+Rationale
+```
+
+The dashboard is presentation-only and reads deterministic `RuleResult` fields directly. It does not duplicate rule calculations.
+
+### Audit Trail
+
+The audit area contains broader traceability information:
+
+- Decision Path;
+- complete rule evidence;
+- credit data used;
+- methodology;
+- execution metadata.
+
+This replaces the need for multiple overlapping evidence surfaces and keeps detailed diagnostics in one coherent area.
 
 ---
 
@@ -299,7 +338,7 @@ Prompt contract
 LLM narrative
         ↓
 Grounding validation
-     /       \
+     /       \\
    valid    invalid
      ↓         ↓
   Narrative  Deterministic fallback
