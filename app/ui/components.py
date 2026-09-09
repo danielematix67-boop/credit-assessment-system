@@ -1,6 +1,24 @@
 import streamlit as st
 
 # ============================================================
+# Shared UI Components
+# ============================================================
+
+
+def render_section_header(title: str, description: str) -> None:
+    """Render a consistent visual section header."""
+    st.markdown(
+        f"""
+        <div class="ui-section-header">
+            <div class="ui-section-title">{title}</div>
+            <div class="ui-section-description">{description}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ============================================================
 # Badge / Provenance Helpers
 # ============================================================
 
