@@ -3,7 +3,6 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-
 # ============================================================
 # Shared Rule Result Helpers
 # ============================================================
