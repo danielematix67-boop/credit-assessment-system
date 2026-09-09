@@ -5,7 +5,6 @@ from src.llm.client import LLMClient
 from src.llm.prompt_builder import ReportPromptBuilder
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
-from src.models.assessment_status import AssessmentStatus
 from src.models.report import Report, ReportFindingGroup
 
 
@@ -28,16 +27,6 @@ class LLMReportGenerator(ReportGenerator):
     )
     _NUMERIC_SPACING_PATTERN = re.compile(r"(?<=\d)\s*\.\s*(?=\d)")
     _SENTENCE_PATTERN = re.compile(r"[^.!?]+[.!?]+")
-
-    _STATUS_DESCRIPTIONS = {
-        AssessmentStatus.NORMAL: "No significant credit-risk factors identified",
-        AssessmentStatus.ATTENTION: (
-            "Credit-risk factors requiring monitoring identified"
-        ),
-        AssessmentStatus.CRITICAL: (
-            "Significant credit-risk factors affecting the credit profile identified"
-        ),
-    }
 
     def __init__(
         self,
@@ -78,20 +67,19 @@ class LLMReportGenerator(ReportGenerator):
             limitations=analysis.limitations,
         )
 
-    @classmethod
+    @staticmethod
     def _build_executive_summary(
-        cls,
         analysis: AssessmentAnalysis,
         narrative: str,
     ) -> str:
-        """Build one authoritative status line followed by the narrative."""
-        status = analysis.assessment_status
-        description = cls._STATUS_DESCRIPTIONS.get(
-            status,
-            "Assessment status could not be determined",
+        """Build one authoritative status line followed by the LLM narrative."""
+        status_value = getattr(
+            analysis.assessment_status,
+            "value",
+            str(analysis.assessment_status),
         )
-        status_value = getattr(status, "value", str(status))
-        return f"Assessment status: {status_value} — {description}.\n{narrative}"
+        status_label = str(status_value).capitalize()
+        return f"Assessment Status: {status_label}\n\n{narrative}"
 
     # ============================================================
     # Indicator grounding
