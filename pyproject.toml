@@ -3,3 +3,14 @@ markers = [
     "ollama: tests requiring a running Ollama instance",
 ]
 addopts = "-m 'not ollama'"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
