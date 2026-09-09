@@ -2,9 +2,10 @@ from pathlib import Path
 
 import yaml
 
-from src.rules.base.config import RuleConfig, SeverityThreshold
+from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_direction import SeverityDirection
+from src.rules.base.severity_threshold import SeverityThreshold
 
 
 class RuleConfigLoader:
@@ -58,60 +59,35 @@ class RuleConfigLoader:
 
             seen_rule_ids.add(rule_id)
 
-            # ==================================================
-            # Main rule threshold
-            # ==================================================
-
             try:
                 threshold = float(item["threshold"])
-
             except (TypeError, ValueError) as exc:
                 raise ValueError(f"Invalid threshold for rule_id: {rule_id}") from exc
 
-            # ==================================================
-            # Default severity
-            # ==================================================
-
             try:
                 severity = RuleSeverity(item["severity"])
-
             except ValueError as exc:
                 raise ValueError(f"Invalid severity for rule_id: {rule_id}") from exc
 
-            # ==================================================
-            # Severity direction
-            # ==================================================
-
             try:
                 severity_direction = SeverityDirection(item["severity_direction"])
-
             except ValueError as exc:
                 raise ValueError(
                     f"Invalid severity direction for rule_id: {rule_id}"
                 ) from exc
 
-            # ==================================================
-            # Severity thresholds
-            # ==================================================
-
-            severity_thresholds = []
+            severity_thresholds: list[SeverityThreshold] = []
 
             raw_severity_thresholds = item.get(
                 "severity_thresholds",
                 [],
             )
 
-            if not isinstance(
-                raw_severity_thresholds,
-                list,
-            ):
+            if not isinstance(raw_severity_thresholds, list):
                 raise ValueError(f"Invalid severity_thresholds for rule_id: {rule_id}")
 
             for severity_threshold in raw_severity_thresholds:
-                if not isinstance(
-                    severity_threshold,
-                    dict,
-                ):
+                if not isinstance(severity_threshold, dict):
                     raise ValueError(
                         "Invalid severity threshold "
                         f"configuration for rule_id: {rule_id}"
@@ -135,18 +111,13 @@ class RuleConfigLoader:
 
                 try:
                     severity_value = float(severity_threshold["threshold"])
-
-                except (
-                    TypeError,
-                    ValueError,
-                ) as exc:
+                except (TypeError, ValueError) as exc:
                     raise ValueError(
                         f"Invalid severity threshold for rule_id: {rule_id}"
                     ) from exc
 
                 try:
                     severity_level = RuleSeverity(severity_threshold["severity"])
-
                 except ValueError as exc:
                     raise ValueError(
                         f"Invalid severity for severity threshold of rule_id: {rule_id}"
@@ -158,10 +129,6 @@ class RuleConfigLoader:
                         severity=severity_level,
                     )
                 )
-
-            # ==================================================
-            # Build RuleConfig
-            # ==================================================
 
             configs.append(
                 RuleConfig(
