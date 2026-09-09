@@ -8,36 +8,17 @@ from src.models.report import Report
 logger = logging.getLogger(__name__)
 
 
-def _get_llm_error_message(exc: Exception) -> str:
-    """
-    Convert technical LLM errors into a concise,
-    human-readable message.
-
-    The original exception message is preserved when
-    no specific error category can be identified.
-    """
-
+def _get_llm_error_details(exc: Exception) -> tuple[str, str]:
+    """Return a stable error category and concise human-readable message."""
     status_code = getattr(exc, "status_code", None)
     message = str(exc).strip()
     normalized_message = message.lower()
 
-    # ========================================================
-    # Rate limiting
-    # ========================================================
-
     if status_code == 429 or "resource_exhausted" in normalized_message:
-        return "LLM resource limit exceeded."
-
-    # ========================================================
-    # Service unavailable
-    # ========================================================
+        return "RATE_LIMIT", "LLM resource limit exceeded."
 
     if status_code == 503 or "service unavailable" in normalized_message:
-        return "LLM service is temporarily unavailable."
-
-    # ========================================================
-    # Connection errors
-    # ========================================================
+        return "SERVICE_UNAVAILABLE", "LLM service is temporarily unavailable."
 
     if (
         "connection refused" in normalized_message
@@ -47,44 +28,33 @@ def _get_llm_error_message(exc: Exception) -> str:
         or "connectionreseterror" in normalized_message
         or "connection aborted" in normalized_message
     ):
-        return "Local LLM service is unavailable."
-
-    # ========================================================
-    # Authentication / permissions
-    # ========================================================
+        return "CONNECTION_ERROR", "Local LLM service is unavailable."
 
     if status_code == 401 or "unauthorized" in normalized_message:
-        return "LLM authentication failed."
+        return "AUTHENTICATION", "LLM authentication failed."
 
     if status_code == 403 or "permission denied" in normalized_message:
-        return "LLM access was denied."
-
-    # ========================================================
-    # Model not found
-    # ========================================================
+        return "AUTHORIZATION", "LLM access was denied."
 
     if (
         "model not found" in normalized_message
         or "model is not found" in normalized_message
         or "pull model" in normalized_message
     ):
-        return "LLM model is not available."
-
-    # ========================================================
-    # Timeout
-    # ========================================================
+        return "MODEL_UNAVAILABLE", "LLM model is not available."
 
     if "timeout" in normalized_message or "timed out" in normalized_message:
-        return "LLM request timed out."
-
-    # ========================================================
-    # Generic error
-    # ========================================================
+        return "TIMEOUT", "LLM request timed out."
 
     if message:
-        return f"LLM report generation failed: {message}"
+        return "GENERATION_ERROR", f"LLM report generation failed: {message}"
 
-    return "LLM report generation failed."
+    return "GENERATION_ERROR", "LLM report generation failed."
+
+
+def _get_llm_error_message(exc: Exception) -> str:
+    """Convert a technical LLM error into a concise human-readable message."""
+    return _get_llm_error_details(exc)[1]
 
 
 class ReportingAgent(Agent[AssessmentAnalysis, Report]):
@@ -98,6 +68,7 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
 
         self.last_generator_used: str | None = None
         self.last_error: str | None = None
+        self.last_error_category: str | None = None
 
     def run(
         self,
@@ -106,6 +77,7 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
         # Reset diagnostics for every execution.
         self.last_generator_used = None
         self.last_error = None
+        self.last_error_category = None
 
         # ====================================================
         # Primary generator
@@ -127,9 +99,10 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
         # ====================================================
 
         except Exception as exc:
-            error_message = _get_llm_error_message(exc)
+            error_category, error_message = _get_llm_error_details(exc)
 
             self.last_error = error_message
+            self.last_error_category = error_category
 
             generator_name = type(self.report_generator).__name__
 
@@ -139,16 +112,8 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
                 error_message,
             )
 
-            # ------------------------------------------------
-            # No fallback configured
-            # ------------------------------------------------
-
             if self.fallback_generator is None:
                 raise
-
-            # ------------------------------------------------
-            # Deterministic fallback
-            # ------------------------------------------------
 
             self.last_generator_used = "FALLBACK"
 
