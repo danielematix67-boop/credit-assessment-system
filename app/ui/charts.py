@@ -53,6 +53,15 @@ def _rule_indicator(rule_result: Any) -> str:
     )
 
 
+def _severity_counts(rule_results: list[Any]) -> dict[str, int]:
+    counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+    for rule_result in rule_results:
+        severity = _rule_severity(rule_result).upper()
+        if severity in counts:
+            counts[severity] += 1
+    return counts
+
+
 # ============================================================
 # Decision Path
 # ============================================================
@@ -113,8 +122,7 @@ def render_risk_indicator_dashboard(result: Any) -> None:
 
     st.subheader("Risk Indicator Dashboard")
     st.caption(
-        "Inspect the complete Rule Engine output, then select an individual rule "
-        "to examine its indicator, threshold and rationale."
+        "A structured view of the deterministic indicators, rule outcomes and risk severity."
     )
 
     rows: list[dict[str, Any]] = []
@@ -133,34 +141,49 @@ def render_risk_indicator_dashboard(result: Any) -> None:
 
     dataframe = pd.DataFrame(rows)
     status_counts = _rule_status_counts(result)
+    severity_counts = _severity_counts(rule_results)
 
+    # Executive dashboard strip: factual counts only.
     metric_cols = st.columns(4)
     metrics = [
-        ("Rules evaluated", len(rule_results)),
+        ("Indicators", len(rule_results)),
         ("Triggered", status_counts["TRIGGERED"]),
-        ("Not triggered", status_counts["NOT_TRIGGERED"]),
+        ("High / critical", severity_counts["HIGH"] + severity_counts["CRITICAL"]),
         ("Not evaluable", status_counts["NOT_EVALUABLE"]),
     ]
     for column, (label, value) in zip(metric_cols, metrics):
         with column:
             st.metric(label, value)
 
-    st.markdown("#### Rule Outcome Distribution")
-    labels = {
-        "TRIGGERED": "Triggered",
-        "NOT_TRIGGERED": "Not triggered",
-        "NOT_EVALUABLE": "Not evaluable",
-    }
-    chart_data = pd.DataFrame(
-        {
-            "Status": [labels[key] for key in status_counts],
-            "Rules": list(status_counts.values()),
+    st.markdown("#### Risk Signal Overview")
+    overview_cols = st.columns(2)
+    with overview_cols[0]:
+        labels = {
+            "TRIGGERED": "Triggered",
+            "NOT_TRIGGERED": "Not triggered",
+            "NOT_EVALUABLE": "Not evaluable",
         }
-    )
-    st.bar_chart(chart_data, x="Status", y="Rules", horizontal=True, height=210)
+        status_data = pd.DataFrame(
+            {
+                "Status": [labels[key] for key in status_counts],
+                "Rules": list(status_counts.values()),
+            }
+        )
+        st.caption("Rule outcomes")
+        st.bar_chart(status_data, x="Status", y="Rules", horizontal=True, height=190)
+
+    with overview_cols[1]:
+        severity_data = pd.DataFrame(
+            {
+                "Severity": list(severity_counts.keys()),
+                "Rules": list(severity_counts.values()),
+            }
+        )
+        st.caption("Severity profile")
+        st.bar_chart(severity_data, x="Severity", y="Rules", horizontal=True, height=190)
+
     st.caption(
-        "This distribution describes the factual outcomes of the deterministic rules; "
-        "it does not recalculate the assessment."
+        "Both views describe the factual Rule Engine output; they do not recalculate the assessment."
     )
 
     st.markdown("#### Rule Catalogue")
