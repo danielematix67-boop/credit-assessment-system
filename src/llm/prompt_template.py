@@ -37,6 +37,9 @@ class ReportPromptTemplate:
         "- Do not infer causality unless explicitly supported.\n"
         "- Do not infer unsupported trends or business implications.\n"
         "- Preserve numerical values and units exactly.\n"
+        "- Every numerical indicator value present in a material finding "
+        "must be explicitly reported in the narrative.\n"
+        "- Do not round, recalculate, convert or replace supplied indicator values.\n"
         "- Do not mention internal rule IDs or thresholds."
     )
 
@@ -51,7 +54,8 @@ class ReportPromptTemplate:
         "supported by the supplied information.\n"
         "- Use professional credit-analysis language.\n"
         "- Produce a coherent narrative rather than a list of findings.\n"
-        "- Keep the narrative concise, but include all material findings."
+        "- Keep the narrative concise, but include all material findings "
+        "and their supplied indicator values."
     )
 
     OUTPUT_CONTRACT = (
