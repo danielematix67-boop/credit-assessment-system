@@ -4,6 +4,7 @@ import streamlit as st
 
 from app.ui.charts import (
     render_decision_path,
+    render_risk_driver_map,
     render_risk_indicator_dashboard,
     render_rule_assessment_summary,
 )
@@ -439,7 +440,7 @@ def render_results(
     assessment_position: Any,
     selected_reporting_mode: str,
 ) -> None:
-    """Render the complete assessment result section."""
+    """Render the complete assessment result section with progressive disclosure."""
     if result is None:
         return
 
@@ -454,12 +455,33 @@ def render_results(
     )
 
     # ========================================================
-    # Primary user journey: RESULT -> DECISION PATH -> WHY -> EVIDENCE -> DATA
+    # LEVEL 1 — EXECUTIVE SUMMARY
     # ========================================================
     render_result_hero(result)
+
+    # ========================================================
+    # LEVEL 2 — RISK ANALYSIS
+    # ========================================================
+    st.markdown("## Risk Analysis")
+    st.caption(
+        "Move from the final assessment to the active risk drivers, then investigate "
+        "individual rule outcomes only when needed."
+    )
+
     render_decision_path(result)
     render_risk_indicator_dashboard(result)
+    render_risk_driver_map(result)
     render_why_section(result)
+
+    # ========================================================
+    # LEVEL 3 — EVIDENCE & AUDIT TRAIL
+    # ========================================================
+    st.markdown("## Evidence & Audit Trail")
+    st.caption(
+        "Use this section to verify the quantitative evidence, source data and "
+        "execution path behind the assessment."
+    )
+
     render_assessment_evidence(result)
     render_assessed_position(assessment_position)
     render_execution_trace(
@@ -469,47 +491,52 @@ def render_results(
     )
     render_methodology(report_badge_kind, report_badge_label)
 
-    st.markdown("---")
-    st.markdown("### Detailed Results")
-    st.caption("Open a section below when you need additional detail or traceability.")
-
-    report_icon = (
-        "🤖"
-        if report_badge_kind == "ai"
-        else "⚠️"
-        if report_badge_kind == "fallback"
-        else "🔒"
-    )
-
-    overview_tab, findings_tab, analysis_tab, report_tab = st.tabs(
-        [
-            "Overview",
-            "🔒 Rule Findings",
-            "🔒 Analysis",
-            f"{report_icon} Executive Report",
-        ]
-    )
-
-    with overview_tab:
-        render_overview_tab(
-            result=result,
-            selected_reporting_mode=selected_reporting_mode,
-            report_badge_kind=report_badge_kind,
-            report_badge_label=report_badge_label,
-            configured_model=configured_model,
+    # ========================================================
+    # ADDITIONAL VIEWS — kept secondary to the primary journey
+    # ========================================================
+    with st.expander("Additional Views", expanded=False):
+        st.caption(
+            "These views expose the underlying structured objects for detailed "
+            "inspection. The primary decision journey above remains the recommended path."
         )
 
-    with findings_tab:
-        render_findings_tab(result)
-
-    with analysis_tab:
-        render_analysis_tab(result)
-
-    with report_tab:
-        render_report_tab(
-            result=result,
-            selected_reporting_mode=selected_reporting_mode,
-            report_badge_kind=report_badge_kind,
-            report_badge_label=report_badge_label,
-            configured_model=configured_model,
+        report_icon = (
+            "🤖"
+            if report_badge_kind == "ai"
+            else "⚠️"
+            if report_badge_kind == "fallback"
+            else "🔒"
         )
+
+        overview_tab, findings_tab, analysis_tab, report_tab = st.tabs(
+            [
+                "Overview",
+                "🔒 Rule Findings",
+                "🔒 Analysis",
+                f"{report_icon} Executive Report",
+            ]
+        )
+
+        with overview_tab:
+            render_overview_tab(
+                result=result,
+                selected_reporting_mode=selected_reporting_mode,
+                report_badge_kind=report_badge_kind,
+                report_badge_label=report_badge_label,
+                configured_model=configured_model,
+            )
+
+        with findings_tab:
+            render_findings_tab(result)
+
+        with analysis_tab:
+            render_analysis_tab(result)
+
+        with report_tab:
+            render_report_tab(
+                result=result,
+                selected_reporting_mode=selected_reporting_mode,
+                report_badge_kind=report_badge_kind,
+                report_badge_label=report_badge_label,
+                configured_model=configured_model,
+            )
