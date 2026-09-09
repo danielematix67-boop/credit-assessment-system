@@ -2,7 +2,11 @@ from typing import Any
 
 import streamlit as st
 
-from app.ui.charts import render_rule_assessment_summary
+from app.ui.charts import (
+    render_decision_path,
+    render_risk_indicator_dashboard,
+    render_rule_assessment_summary,
+)
 from app.ui.components import show_badge
 from app.ui.credit_position import display_position_table
 from app.ui.report import render_report_tab
@@ -455,9 +459,11 @@ def render_results(
     )
 
     # ========================================================
-    # Primary user journey: RESULT -> WHY -> EVIDENCE -> DATA
+    # Primary user journey: RESULT -> DECISION PATH -> WHY -> EVIDENCE -> DATA
     # ========================================================
     render_result_hero(result)
+    render_decision_path(result)
+    render_risk_indicator_dashboard(result)
     render_why_section(result)
     render_assessment_evidence(result)
     render_assessed_position(assessment_position)
