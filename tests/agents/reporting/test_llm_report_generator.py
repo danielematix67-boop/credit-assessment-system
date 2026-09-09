@@ -172,16 +172,14 @@ def test_strips_response_whitespace() -> None:
     )
 
 
-def test_removes_exact_duplicate_sentences() -> None:
+def test_preserves_repeated_sentences_without_aggressive_rewriting() -> None:
     response = (
         "Revenue growth declined. EBITDA is negative. "
         "Revenue growth declined. EBITDA is negative."
     )
     generator, _ = make_generator(response=response)
     report = generator.generate(make_analysis())
-    assert report.executive_summary.endswith(
-        "Revenue growth declined. EBITDA is negative."
-    )
+    assert report.executive_summary.endswith(response)
 
 
 def test_extracts_indicator_values_from_findings() -> None:
