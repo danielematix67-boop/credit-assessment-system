@@ -278,7 +278,7 @@ Extract required indicators
 LLM narrative
         ↓
 Grounding validation
-     /       \
+     /       \\
    valid    invalid
      ↓         ↓
   Narrative  Deterministic fallback
@@ -458,22 +458,36 @@ The metadata is diagnostic information and does not participate in assessment-st
 
 The Streamlit UI is intentionally downstream of the decision engine.
 
-The results components consume structured workflow objects and render:
+The current Results view is validated as a presentation hierarchy:
 
-- Executive Report;
-- Decision Evidence;
-- assessment flow;
-- rule-status distribution;
-- risk-indicator dashboard;
-- risk-driver map;
-- rule/indicator/value/threshold detail;
+```text
+Executive Credit Assessment
+          ↓
+Assessment Overview
+          ↓
+Risk Indicator Dashboard
+          ↓
+Audit Trail & Methodology
+```
+
+The presentation layer consumes structured workflow objects and renders:
+
+- Executive Credit Assessment;
+- concise assessment KPIs and context;
+- graphical Decision Path;
+- rule-outcome distribution;
+- severity profile;
+- filterable Rule Catalogue;
+- individual rule detail with indicator, actual value, configured threshold, status, severity, direction and rationale;
 - credit data;
 - methodology;
 - execution metadata.
 
-The UI does not recalculate thresholds or assessment status.
+The Risk Indicator Dashboard is the single detailed rule-evidence surface. The Audit Trail contains broader workflow and traceability information.
 
-This is an architectural validation property rather than a Streamlit unit-test requirement: the business logic remains in `src/` and the UI consumes its outputs.
+All visualizations are presentation-only: the UI does not recalculate thresholds, severity or assessment status. It reads deterministic `RuleResult` and assessment outputs produced by the core application.
+
+Legacy overlapping evidence views are intentionally not part of the current presentation boundary. The UI avoids duplicating the same rule evidence across multiple independent components.
 
 ---
 
@@ -494,8 +508,6 @@ Pytest + coverage
 The pytest command enforces a minimum coverage of **95% for `src`**.
 
 The current CI workflow is configured for pushes to `main` and pull requests targeting `main`.
-
-The latest validated workflow run after the reporting-test formatting changes passed on both Python versions, including Ruff, Mypy and pytest/coverage.
 
 ---
 
@@ -520,6 +532,7 @@ The latest validated workflow run after the reporting-test formatting changes pa
 | Terminal failure | Reporting/workflow tests | Fallback failure is propagated |
 | Workflow propagation | Workflow/integration tests | Assessment status remains unchanged across layers |
 | Execution metadata | Workflow tests | Provenance and timings are consistent |
+| Presentation boundary | UI architecture review | UI remains read-only and does not reproduce decision logic |
 | CI | GitHub Actions | Ruff, Mypy and pytest/coverage pass on supported Python versions |
 
 ---
