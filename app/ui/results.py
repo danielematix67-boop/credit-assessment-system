@@ -43,14 +43,6 @@ def _severity(rule: Any) -> str:
     return str(getattr(value, "value", value or ""))
 
 
-def _format_value(value: Any) -> str:
-    if value is None:
-        return "—"
-    if isinstance(value, float):
-        return f"{value:,.2f}"
-    return str(value)
-
-
 def _section_header(title: str, description: str) -> None:
     """Render a consistent visual section header."""
     st.markdown(
@@ -164,13 +156,13 @@ def render_assessment_overview(result: Any) -> None:
 
 
 def render_decision_evidence(result: Any) -> None:
-    """Show the deterministic evidence an operator needs to validate the judgement."""
+    """Show a concise summary of the deterministic findings supporting the judgement."""
     rules = _rule_results(result)
     triggered = [rule for rule in rules if _status(rule) == "TRIGGERED"]
 
     _section_header(
         "Decision Evidence",
-        "Deterministic rules supporting the final credit judgement.",
+        "The material findings that directly support the final credit judgement.",
     )
 
     if not triggered:
@@ -183,26 +175,34 @@ def render_decision_evidence(result: Any) -> None:
         key=lambda rule: severity_rank.get(_severity(rule).upper(), 99),
     )
 
-    rows = []
     for rule in triggered:
         category = getattr(rule, "category", "—")
         category = getattr(category, "value", str(category))
         indicator = getattr(rule, "indicator", None) or getattr(rule, "rule_name", "—")
-        rows.append(
-            {
-                "Rule": str(getattr(rule, "rule_id", "—")),
-                "Indicator": str(indicator),
-                "Actual": _format_value(getattr(rule, "value", None)),
-                "Threshold": _format_value(getattr(rule, "threshold", None)),
-                "Severity": _severity(rule) or "—",
-                "Category": str(category),
-            }
-        )
+        severity = _severity(rule) or "—"
+        reason = getattr(rule, "reason", None)
 
-    st.dataframe(
-        pd.DataFrame(rows),
-        use_container_width=True,
-        hide_index=True,
+        with st.container(border=True):
+            cols = st.columns(4)
+            with cols[0]:
+                st.caption("Finding")
+                st.write(f"{getattr(rule, 'rule_id', '—')} · {indicator}")
+            with cols[1]:
+                st.caption("Actual")
+                st.write(str(getattr(rule, "value", "—")))
+            with cols[2]:
+                st.caption("Severity")
+                st.write(severity)
+            with cols[3]:
+                st.caption("Category")
+                st.write(str(category))
+
+            if reason:
+                st.caption(f"Rationale: {reason}")
+
+    st.caption(
+        "The complete rule catalogue, including non-triggered and non-evaluable rules, "
+        "is available in the Risk Indicator Dashboard below."
     )
 
 
