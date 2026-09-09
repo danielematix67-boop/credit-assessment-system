@@ -11,6 +11,9 @@ line-length = 120
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 
+[tool.ruff.lint.isort]
+known-third-party = ["pandas", "streamlit"]
+
 [tool.mypy]
 python_version = "3.13"
 strict = true
