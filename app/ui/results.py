@@ -5,7 +5,7 @@ import streamlit as st
 from app.ui.charts import render_rule_assessment_summary
 from app.ui.components import show_badge
 from app.ui.credit_position import display_position_table
-from app.ui.report import render_report_source, render_report_tab
+from app.ui.report import render_report_tab
 
 
 def get_llm_model_from_result(result: Any) -> str | None:
