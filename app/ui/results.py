@@ -1,6 +1,5 @@
 from typing import Any
 
-import pandas as pd
 import streamlit as st
 
 from app.ui.charts import render_decision_path, render_risk_indicator_dashboard
@@ -42,52 +41,39 @@ def _section_header(title: str, description: str) -> None:
 
 def _apply_results_styles() -> None:
     st.markdown(
-        '''<style>.ui-section-header{margin:1.7rem 0 .8rem 0;padding-bottom:.55rem;border-bottom:1px solid rgba(128,128,128,.20)}.ui-section-title{font-size:1.15rem;font-weight:700;letter-spacing:-.01em;line-height:1.3}.ui-section-description{margin-top:.18rem;color:rgba(128,128,128,.95);font-size:.82rem;line-height:1.45}div[data-testid="stMetric"]{padding:.15rem 0}</style>''',
+        '''<style>.ui-section-header{margin:1.7rem 0 .8rem 0;padding-bottom:.55rem;border-bottom:1px solid rgba(128,128,128,.20)}.ui-section-title{font-size:1.15rem;font-weight:700;letter-spacing:-.01em;line-height:1.3}.ui-section-description{margin-top:.18rem;color:rgba(128,128,128,.95);font-size:.82rem;line-height:1.45}</style>''',
         unsafe_allow_html=True,
     )
 
 
 def render_assessment_overview(result: Any) -> None:
-    """Show only the category-level overview."""
+    """Show only a concise assessment summary without risk-category duplication."""
     rules = _rule_results(result)
     if not rules:
         return
 
-    triggered = [rule for rule in rules if _status(rule) == "TRIGGERED"]
+    assessment = getattr(result, "assessment", None)
+    status_obj = getattr(assessment, "status", None)
+    status = str(getattr(status_obj, "value", status_obj or "Unknown"))
+    triggered = sum(_status(rule) == "TRIGGERED" for rule in rules)
+
     _section_header(
         "Assessment Overview",
-        "Category-level distribution of risks identified by the deterministic Rule Engine.",
+        "Concise summary of the deterministic assessment. Detailed rule findings are shown only in the Risk Indicator Dashboard.",
     )
-    if triggered:
-        category_counts = (
-            pd.DataFrame(
-                {"Category": [str(getattr(rule, "category", "—")) for rule in triggered]}
-            )
-            .value_counts("Category")
-            .rename("Triggered rules")
-            .reset_index()
-            .sort_values("Triggered rules", ascending=True)
-        )
-        st.bar_chart(
-            category_counts,
-            x="Category",
-            y="Triggered rules",
-            horizontal=True,
-            height=max(180, 55 * len(category_counts)),
-        )
-    else:
-        st.success("No deterministic risk rules were triggered by the available information.")
-    st.caption(
-        "This chart summarises rule outcomes by category; it does not recalculate the assessment."
-    )
+    cols = st.columns(2)
+    with cols[0]:
+        st.metric("Assessment status", status)
+    with cols[1]:
+        st.metric("Triggered rules", triggered)
 
 
 def render_audit_trail(result: Any, assessment_position: Any) -> None:
-    """Keep technical provenance without duplicating the rule catalogue."""
+    """Keep technical provenance separate from the main findings view."""
     with st.expander("Audit trail & methodology", expanded=False):
         st.caption(
             "Technical provenance is kept here. Detailed rule findings are shown only "
-            "in the Risk Indicator Dashboard above to avoid duplicate evidence tables."
+            "in the Risk Indicator Dashboard to avoid duplicate evidence."
         )
         st.markdown("#### Assessment flow")
         render_decision_path(result)
@@ -133,11 +119,9 @@ def render_results(
     _apply_results_styles()
     st.divider()
     generator_used = getattr(result, "report_generator_used", None)
-    configured_model = None
     report_badge_kind, report_badge_label = resolve_report_badge(
         selected_reporting_mode,
         generator_used,
-        configured_model,
     )
 
     render_report_tab(
@@ -145,7 +129,7 @@ def render_results(
         selected_reporting_mode=selected_reporting_mode,
         report_badge_kind=report_badge_kind,
         report_badge_label=report_badge_label,
-        configured_model=configured_model,
+        configured_model=None,
     )
     render_assessment_overview(result)
     render_risk_indicator_dashboard(result)
