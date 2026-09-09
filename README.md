@@ -38,28 +38,38 @@ The architecture deliberately separates **decision-making from AI-generated comm
 The results interface exposes the evidence behind the judgement, including:
 
 - overall assessment status;
-- triggered risk drivers;
 - actual indicator values;
 - configured thresholds;
 - rule status and severity;
-- rule categories and rationale.
+- rule categories and rationale;
+- a graphical path from financial indicators to Rule Engine outcomes and final assessment.
 
-### Decision visualisation
+### Professional Results UI
 
-The Streamlit Results view now explains the decision path visually rather than presenting only a final label:
+The Streamlit Results view is organized around a clear operator-oriented hierarchy:
 
-**Financial Data → Indicators → Rule Outcomes → Risk Drivers → Assessment**
+```text
+Executive Credit Assessment
+          ↓
+Assessment Overview
+          ↓
+Risk Indicator Dashboard
+          ↓
+Audit Trail & Methodology
+```
 
-The UI includes:
+The interface combines a concise executive result with progressively deeper deterministic evidence:
 
-- **Decision Evidence** — the triggered deterministic rules supporting the judgement;
-- **Assessment Evidence** — distribution of triggered, not-triggered and non-evaluable rules;
-- **Risk Indicator Dashboard** — rule counts, active risk categories and a filterable rule catalogue;
-- **Risk Driver Map** — links triggered rules to risk categories and the final assessment;
-- **Rule → Indicator → Value → Threshold** detail for individual rules;
-- **Audit trail & methodology** — complete evidence, credit data, workflow path and execution provenance.
+- **Executive Credit Assessment** — primary outcome and narrative report;
+- **Assessment Overview** — compact KPIs and high-level assessment context;
+- **Decision Path** — visual explanation of how financial indicators feed deterministic rule outcomes and the final monitoring assessment;
+- **Risk Indicator Dashboard** — rule-outcome and severity distributions, filterable rule catalogue and priority-oriented inspection;
+- **Rule Detail** — individual rule card showing indicator, observed value, configured threshold, status, severity, direction, category and rationale;
+- **Audit Trail & Methodology** — credit data used, methodology, workflow path and execution metadata.
 
-This makes the application suitable for demonstrating not only *what* the system decided, but *how* it reached the decision.
+All visual evidence is presentation-only: the UI consumes deterministic `RuleResult` and assessment objects and does not recalculate thresholds, severity or assessment status.
+
+This makes the application suitable for demonstrating not only *what* the system decided, but *how* the deterministic assessment mechanism produced the decision.
 
 ### Executive Report
 
@@ -129,12 +139,12 @@ Deterministic Assessment
               │
               ▼
         Reporting Layer
-          /          \
-         /            \
+          /          \\
+         /            \\
  Deterministic       LLM
     Report           Narrative
-         \            /
-          \          /
+         \\            /
+          \\          /
               Report
                  │
                  ▼
@@ -166,23 +176,25 @@ The LLM consumes already-produced assessment evidence. It cannot change the unde
 ```text
 1. Credit Data
        ↓
-2. Rule Evaluation
+2. Financial Indicators
+       ↓
+3. Rule Evaluation
        ├── TRIGGERED
        ├── NOT_TRIGGERED
        └── NOT_EVALUABLE
        ↓
-3. Rule Findings
+4. Rule Findings
        ↓
-4. Assessment Status
+5. Assessment Status
        ↓
-5. Structured Analysis
+6. Structured Analysis
        ↓
-6. Executive Report
+7. Executive Report
        ↓
-7. Execution Provenance
+8. Execution Provenance
 ```
 
-The Streamlit interface mirrors this flow so the user can move from the final outcome back to the quantitative evidence and technical provenance.
+The Streamlit interface mirrors this flow through a compact graphical **Decision Path**. The visualization highlights the deterministic boundary between financial indicators, rule outcomes and the final monitoring assessment.
 
 ---
 
@@ -223,9 +235,9 @@ Rule
 
 The main operator path is:
 
-**Overall Result → Decision Evidence → Risk Drivers → Rule → Actual Value vs Threshold**
+**Overall Result → Assessment Overview → Risk Indicator Dashboard → Rule Detail**
 
-The application therefore does not rely on an opaque model score to explain the judgement.
+The Decision Path provides the higher-level mechanism, while the Risk Indicator Dashboard provides detailed rule evidence. The UI does not reconstruct or duplicate rule calculations.
 
 ---
 
@@ -288,15 +300,18 @@ The interface is organized around:
 
 The Results page follows the operator-oriented hierarchy:
 
-**RESULT → WHY → EVIDENCE → CREDIT DATA → WORKFLOW → DETAILS**
+**Executive Report → Assessment Overview → Risk Indicator Dashboard → Audit Trail**
 
 The main result sections are:
 
 1. **Executive Credit Assessment** — primary output and narrative.
-2. **Decision Evidence** — deterministic triggered rules supporting the judgement.
-3. **Audit trail & methodology** — full evidence, credit data, workflow path and execution metadata.
+2. **Assessment Overview** — concise assessment KPIs and context.
+3. **Risk Indicator Dashboard** — detailed deterministic rule evidence, distributions and filterable catalogue.
+4. **Audit Trail & Methodology** — decision path, credit data, methodology and execution metadata.
 
-Detailed visual evidence is available inside the audit area, including rule-status distribution, the risk-indicator dashboard, risk-driver mapping and individual rule/indicator details.
+The detailed dashboard supports filtering by rule status, severity and category, priority-oriented sorting, and inspection of an individual rule through its indicator, actual value, configured threshold and rationale.
+
+The UI deliberately avoids duplicating legacy evidence views. The Risk Indicator Dashboard is the single detailed rule-evidence surface, while the Audit Trail contains the broader workflow and traceability information.
 
 ---
 
@@ -411,7 +426,7 @@ pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 
 ## Documentation
 
-- [`docs/architecture.md`](docs/architecture.md) — system architecture and component responsibilities.
+- [`docs/architecture.md`](docs/architecture.md) — system architecture, component responsibilities and current Results UI structure.
 - [`docs/architecture-decisions.md`](docs/architecture-decisions.md) — architectural decisions and rationale.
 - [`docs/validation.md`](docs/validation.md) — validation strategy, LLM grounding contract, fallback behavior and CI gates.
 - [`docs/security-data-handling.md`](docs/security-data-handling.md) — trust boundaries, data minimization, LLM handling and secrets.
@@ -429,6 +444,7 @@ pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 - **Resilience** — LLM failures can fall back to deterministic reporting.
 - **Auditability** — execution metadata records reporting provenance and timings.
 - **Testability** — deterministic core logic is independently testable.
+- **Professional evidence presentation** — the UI explains the deterministic mechanism without reproducing business logic.
 
 ---
 
@@ -443,8 +459,9 @@ pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 - [x] Gemini and local Ollama integration
 - [x] Deterministic LLM fallback
 - [x] Streamlit assessment interface
-- [x] Decision-path and risk-driver visualisations
+- [x] Decision-path and risk-indicator visualisations
 - [x] Executive Report hierarchy
+- [x] Filterable rule catalogue and individual rule evidence
 - [x] LLM narrative grounding and indicator validation
 - [x] Execution observability and audit metadata
 - [x] LLM error classification and failure-path testing
