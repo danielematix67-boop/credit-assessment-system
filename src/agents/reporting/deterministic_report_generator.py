@@ -1,7 +1,6 @@
 from src.agents.reporting.report_generator import ReportGenerator
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
-from src.models.assessment_status import AssessmentStatus
 from src.models.report import Report, ReportFindingGroup
 
 
