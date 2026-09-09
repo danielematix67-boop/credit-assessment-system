@@ -85,12 +85,6 @@ def _apply_results_styles() -> None:
             font-size: 0.82rem;
             line-height: 1.45;
         }
-        .results-lead {
-            margin: 0.2rem 0 1.0rem 0;
-            color: rgba(128, 128, 128, 0.95);
-            font-size: 0.88rem;
-            line-height: 1.5;
-        }
         div[data-testid="stMetric"] {
             padding: 0.15rem 0;
         }
@@ -203,14 +197,13 @@ def render_results(
         configured_model=configured_model,
     )
 
-    with st.container(border=True):
-        render_report_tab(
-            result=result,
-            selected_reporting_mode=selected_reporting_mode,
-            report_badge_kind=report_badge_kind,
-            report_badge_label=report_badge_label,
-            configured_model=configured_model,
-        )
+    render_report_tab(
+        result=result,
+        selected_reporting_mode=selected_reporting_mode,
+        report_badge_kind=report_badge_kind,
+        report_badge_label=report_badge_label,
+        configured_model=configured_model,
+    )
 
     render_decision_evidence(result)
     render_audit_trail(result, assessment_position)
