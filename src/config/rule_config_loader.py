@@ -13,25 +13,19 @@ class RuleConfigLoader:
         self,
         path: Path,
     ) -> list[RuleConfig]:
-        with path.open(
-            "r",
-            encoding="utf-8",
-        ) as file:
+        with path.open("r", encoding="utf-8") as file:
             data = yaml.safe_load(file)
 
         if not isinstance(data, dict):
             raise ValueError("Invalid rule configuration")
-
         if "rules" not in data:
             raise ValueError("Missing 'rules' section")
 
         rules = data["rules"]
-
         if not isinstance(rules, list):
             raise ValueError("'rules' must be a list")
 
         configs = []
-
         seen_rule_ids = set()
 
         for item in rules:
@@ -46,17 +40,13 @@ class RuleConfigLoader:
                 "severity",
                 "severity_direction",
             }
-
             missing_fields = required_fields - item.keys()
-
             if missing_fields:
                 raise ValueError(f"Missing required fields: {sorted(missing_fields)}")
 
             rule_id = item["rule_id"]
-
             if rule_id in seen_rule_ids:
                 raise ValueError(f"Duplicate rule_id: {rule_id}")
-
             seen_rule_ids.add(rule_id)
 
             try:
@@ -76,13 +66,12 @@ class RuleConfigLoader:
                     f"Invalid severity direction for rule_id: {rule_id}"
                 ) from exc
 
+            indicator = item.get("indicator", item["rule_name"])
+            if not isinstance(indicator, str) or not indicator.strip():
+                raise ValueError(f"Invalid indicator for rule_id: {rule_id}")
+
             severity_thresholds: list[SeverityThreshold] = []
-
-            raw_severity_thresholds = item.get(
-                "severity_thresholds",
-                [],
-            )
-
+            raw_severity_thresholds = item.get("severity_thresholds", [])
             if not isinstance(raw_severity_thresholds, list):
                 raise ValueError(f"Invalid severity_thresholds for rule_id: {rule_id}")
 
@@ -93,15 +82,10 @@ class RuleConfigLoader:
                         f"configuration for rule_id: {rule_id}"
                     )
 
-                required_severity_fields = {
-                    "threshold",
-                    "severity",
-                }
-
+                required_severity_fields = {"threshold", "severity"}
                 missing_severity_fields = (
                     required_severity_fields - severity_threshold.keys()
                 )
-
                 if missing_severity_fields:
                     raise ValueError(
                         "Missing severity threshold fields "
@@ -120,7 +104,8 @@ class RuleConfigLoader:
                     severity_level = RuleSeverity(severity_threshold["severity"])
                 except ValueError as exc:
                     raise ValueError(
-                        f"Invalid severity for severity threshold of rule_id: {rule_id}"
+                        "Invalid severity for severity threshold "
+                        f"of rule_id: {rule_id}"
                     ) from exc
 
                 severity_thresholds.append(
@@ -139,6 +124,7 @@ class RuleConfigLoader:
                     severity=severity,
                     severity_direction=severity_direction,
                     severity_thresholds=tuple(severity_thresholds),
+                    indicator=indicator.strip(),
                 )
             )
 
