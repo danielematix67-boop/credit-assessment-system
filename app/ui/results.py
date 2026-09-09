@@ -7,7 +7,6 @@ from app.ui.charts import render_decision_path, render_risk_indicator_dashboard
 from app.ui.credit_position import display_position_table
 from app.ui.explainability import render_evidence_chain
 from app.ui.report import render_report_tab
-from app.ui.rule_logic import render_rule_logic
 
 
 def resolve_report_badge(
@@ -50,7 +49,7 @@ def _apply_results_styles() -> None:
 
 
 def render_assessment_overview(result: Any) -> None:
-    """Show only the category-level overview; rule evidence is shown elsewhere."""
+    """Show only the category-level overview."""
     rules = _rule_results(result)
     if not rules:
         return
@@ -58,7 +57,7 @@ def render_assessment_overview(result: Any) -> None:
     triggered = [rule for rule in rules if _status(rule) == "TRIGGERED"]
     _section_header(
         "Assessment Overview",
-        "Category-level distribution of the risks identified by the deterministic Rule Engine.",
+        "Category-level distribution of risks identified by the deterministic Rule Engine.",
     )
     if triggered:
         category_counts = (
@@ -80,19 +79,21 @@ def render_assessment_overview(result: Any) -> None:
     else:
         st.success("No deterministic risk rules were triggered by the available information.")
     st.caption(
-        "This chart summarises the rule outcomes by category; it does not recalculate the assessment."
+        "This chart summarises rule outcomes by category; it does not recalculate the assessment."
     )
-    render_rule_logic(result)
 
 
 def render_audit_trail(result: Any, assessment_position: Any) -> None:
-    """Keep technical provenance and traceability in one dedicated area."""
+    """Keep technical provenance and detailed traceability in one dedicated area."""
     with st.expander("Audit trail & methodology", expanded=False):
         st.caption(
-            "Detailed calculation path, complete rule traceability and technical provenance."
+            "Technical provenance and detailed deterministic traceability are kept here "
+            "to avoid repeating evidence in the main results view."
         )
         st.markdown("#### Assessment flow")
         render_decision_path(result)
+        st.markdown("#### Detailed rule traceability")
+        render_evidence_chain(result)
         st.markdown("#### Credit data used")
         if assessment_position is not None:
             display_position_table(assessment_position)
@@ -151,5 +152,4 @@ def render_results(
     )
     render_assessment_overview(result)
     render_risk_indicator_dashboard(result)
-    render_evidence_chain(result)
     render_audit_trail(result, assessment_position)
