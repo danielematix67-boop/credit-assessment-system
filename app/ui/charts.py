@@ -1,6 +1,7 @@
+from typing import Any
+
 import pandas as pd
 import streamlit as st
-from typing import Any
 
 
 # ============================================================
@@ -486,30 +487,56 @@ def render_rule_indicator_detail(result: Any) -> None:
     with info_cols[3]:
         st.metric("Category", str(category))
 
-    detail_cols = st.columns(2)
+    st.markdown(f"**Indicator:** {indicator}")
 
-    with detail_cols[0]:
-        st.markdown("**Indicator**")
-        st.write(indicator)
-        st.markdown("**Actual value**")
-        st.write("Not available" if value is None else f"{float(value):g}")
+    if value is None or threshold is None:
+        st.info(
+            "The quantitative comparison cannot be displayed because "
+            "the rule result does not contain both a value and a threshold."
+        )
+    else:
+        value_float = float(value)
+        threshold_float = float(threshold)
+        gap = value_float - threshold_float
 
-    with detail_cols[1]:
-        st.markdown("**Configured threshold**")
-        st.write("Not available" if threshold is None else f"{float(threshold):g}")
-        st.markdown("**Rationale**")
-        st.write(reason or "No additional rationale provided.")
-
-    if value is not None and threshold is not None:
         comparison_data = pd.DataFrame(
             {
-                "Measure": ["Actual", "Threshold"],
-                "Value": [float(value), float(threshold)],
+                "Metric": ["Actual value", "Threshold"],
+                "Value": [value_float, threshold_float],
             }
-        ).set_index("Measure")
-
-        st.bar_chart(comparison_data, y="Value", height=240)
-        st.caption(
-            "The chart compares the observed indicator with the configured threshold. "
-            "The Rule Engine remains the source of truth for the rule outcome."
         )
+
+        st.markdown("##### Actual vs Threshold")
+        st.bar_chart(
+            comparison_data,
+            x="Metric",
+            y="Value",
+            horizontal=True,
+            height=190,
+        )
+
+        value_cols = st.columns(3)
+
+        with value_cols[0]:
+            st.metric("Actual value", f"{value_float:g}")
+
+        with value_cols[1]:
+            st.metric("Threshold", f"{threshold_float:g}")
+
+        with value_cols[2]:
+            st.metric("Threshold gap", f"{gap:+g}")
+
+        if status == "TRIGGERED":
+            st.warning(
+                f"The actual value differs from the configured threshold by "
+                f"{gap:+g}. This rule is therefore recorded as TRIGGERED by the Rule Engine."
+            )
+        elif status == "NOT_TRIGGERED":
+            st.success(
+                f"The actual value differs from the configured threshold by "
+                f"{gap:+g}. This rule is recorded as NOT_TRIGGERED by the Rule Engine."
+            )
+
+    if reason:
+        st.markdown("**Why did this rule produce this result?**")
+        st.info(reason)
