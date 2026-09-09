@@ -42,4 +42,8 @@ class OllamaClient(LLMClient):
             think=False,
         )
 
-        return response["response"]
+        generated_text = response["response"]
+        if not isinstance(generated_text, str):
+            raise TypeError("Ollama response field 'response' must be a string")
+
+        return generated_text
