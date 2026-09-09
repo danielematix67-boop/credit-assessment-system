@@ -215,6 +215,20 @@ def test_strips_response_whitespace() -> None:
     )
 
 
+def test_removes_exact_duplicate_sentences() -> None:
+    response = (
+        "Revenue growth declined. EBITDA is negative. "
+        "Revenue growth declined. EBITDA is negative."
+    )
+    generator, _ = make_generator(response=response)
+
+    report = generator.generate(make_analysis())
+
+    assert report.executive_summary.endswith(
+        "Revenue growth declined. EBITDA is negative."
+    )
+
+
 # ============================================================
 # Indicator grounding for local LLM
 # ============================================================
@@ -233,7 +247,7 @@ def test_extracts_indicator_values_from_findings() -> None:
     assert values == ["-20.0%", "€-120,000", "7.0x"]
 
 
-def test_local_llm_adds_only_missing_indicator_findings() -> None:
+def test_local_llm_adds_only_missing_indicator_values() -> None:
     findings = [
         make_finding("Revenue growth declined to -20.0%."),
         make_finding("EBITDA is negative at €-120,000."),
@@ -252,7 +266,8 @@ def test_local_llm_adds_only_missing_indicator_findings() -> None:
     assert report.executive_summary.count("€-120,000") == 1
     assert report.executive_summary.count("7.0x") == 1
     assert "Reported indicator values:" not in report.executive_summary
-    assert "The assessment also reflects:" in report.executive_summary
+    assert "Revenue growth: -20.0%." in report.executive_summary
+    assert "The assessment also reflects:" not in report.executive_summary
 
 
 def test_local_llm_does_not_append_when_all_indicator_values_are_present() -> None:
@@ -288,6 +303,30 @@ def test_standard_llm_does_not_force_indicator_grounding() -> None:
 
     assert "20.0%" not in report.executive_summary
     assert "The assessment also reflects:" not in report.executive_summary
+
+
+# ============================================================
+# Prompt ordering
+# ============================================================
+
+
+def test_prompt_contains_authoritative_category_order() -> None:
+    findings = [
+        make_finding("Leverage finding.", category="leverage"),
+        make_finding("Revenue finding.", category="revenue"),
+        make_finding("Profitability finding.", category="profitability"),
+    ]
+
+    prompt = ReportPromptBuilder().build(make_analysis(key_findings=findings))
+
+    revenue_index = prompt.index("1. revenue")
+    profitability_index = prompt.index("2. profitability")
+    leverage_index = prompt.index("3. leverage")
+
+    assert revenue_index < profitability_index < leverage_index
+    assert "Discuss each category at most once." in prompt
+    assert "Do not return to an earlier category" in prompt
+    assert "Do not repeat an indicator" in prompt
 
 
 # ============================================================
