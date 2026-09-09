@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import ClassVar
 
 from src.models.position import CreditPosition
@@ -144,7 +145,7 @@ class Rule(ABC):
     def register(
         cls,
         rule_id: str,
-    ):
+    ) -> Callable[[type["Rule"]], type["Rule"]]:
         """
         Register a concrete Rule implementation.
 
