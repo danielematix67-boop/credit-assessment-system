@@ -114,7 +114,10 @@ def render_risk_indicator_dashboard(result: Any) -> None:
         rows.append(
             {
                 "Rule": str(getattr(rule_result, "rule_id", "—")),
-                "Indicator": str(getattr(rule_result, "rule_name", "—")),
+                "Indicator": str(
+                    getattr(rule_result, "indicator", None)
+                    or getattr(rule_result, "rule_name", "—")
+                ),
                 "Actual": getattr(rule_result, "value", None),
                 "Threshold": getattr(rule_result, "threshold", None),
                 "Status": _rule_status(rule_result),
@@ -332,10 +335,13 @@ def render_risk_driver_map(result: Any) -> None:
                     for rule_result in category_rules:
                         rule_id = str(getattr(rule_result, "rule_id", "—"))
                         rule_name = str(getattr(rule_result, "rule_name", "—"))
+                        indicator = str(
+                            getattr(rule_result, "indicator", None) or rule_name
+                        )
                         value = getattr(rule_result, "value", None)
                         threshold = getattr(rule_result, "threshold", None)
 
-                        st.markdown(f"**{rule_id}** · {rule_name}")
+                        st.markdown(f"**{rule_id}** · {indicator}")
                         if value is not None and threshold is not None:
                             st.caption(
                                 f"Actual {float(value):g} vs threshold {float(threshold):g}"
@@ -458,6 +464,7 @@ def render_rule_indicator_detail(result: Any) -> None:
 
     rule_id = getattr(selected_rule, "rule_id", "—")
     rule_name = getattr(selected_rule, "rule_name", "—")
+    indicator = getattr(selected_rule, "indicator", None) or rule_name
     category = getattr(selected_rule, "category", "—")
     status = _rule_status(selected_rule)
     severity = _rule_severity(selected_rule)
@@ -479,7 +486,7 @@ def render_rule_indicator_detail(result: Any) -> None:
     with info_cols[3]:
         st.metric("Category", str(category))
 
-    st.markdown(f"**Indicator:** {rule_name}")
+    st.markdown(f"**Indicator:** {indicator}")
 
     if value is None or threshold is None:
         st.info(
