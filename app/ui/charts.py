@@ -15,17 +15,11 @@ def _get_rule_results(result: Any) -> list[Any]:
 
 def _rule_status_counts(result: Any) -> dict[str, int]:
     """Count actual RuleResult statuses without applying business logic."""
-    counts = {
-        "TRIGGERED": 0,
-        "NOT_TRIGGERED": 0,
-        "NOT_EVALUABLE": 0,
-    }
-
+    counts = {"TRIGGERED": 0, "NOT_TRIGGERED": 0, "NOT_EVALUABLE": 0}
     for rule_result in _get_rule_results(result):
         status = getattr(getattr(rule_result, "status", None), "value", "")
         if status in counts:
             counts[status] += 1
-
     return counts
 
 
@@ -75,7 +69,6 @@ def render_decision_path(result: Any) -> None:
     assessment_status = str(
         getattr(status_obj, "value", str(status_obj or "Unknown"))
     )
-
     counts = _rule_status_counts(result)
     triggered = counts["TRIGGERED"]
 
@@ -113,15 +106,15 @@ def render_decision_path(result: Any) -> None:
 
 
 def render_risk_indicator_dashboard(result: Any) -> None:
-    """Render a scalable dashboard for rule outcomes and risk categories."""
+    """Render the complete rule-outcome and indicator diagnostic dashboard."""
     rule_results = _get_rule_results(result)
     if not rule_results:
         return
 
     st.subheader("Risk Indicator Dashboard")
     st.caption(
-        "Start from the overall rule outcome, then narrow the rule catalogue by "
-        "status, severity or category when you need to investigate specific drivers."
+        "Inspect the complete Rule Engine output, then select an individual rule "
+        "to examine its indicator, threshold and rationale."
     )
 
     rows: list[dict[str, Any]] = []
@@ -142,44 +135,38 @@ def render_risk_indicator_dashboard(result: Any) -> None:
     status_counts = _rule_status_counts(result)
 
     metric_cols = st.columns(4)
-    with metric_cols[0]:
-        st.metric("Rules evaluated", len(rule_results))
-    with metric_cols[1]:
-        st.metric("Triggered", status_counts["TRIGGERED"])
-    with metric_cols[2]:
-        st.metric("Not triggered", status_counts["NOT_TRIGGERED"])
-    with metric_cols[3]:
-        st.metric("Not evaluable", status_counts["NOT_EVALUABLE"])
+    metrics = [
+        ("Rules evaluated", len(rule_results)),
+        ("Triggered", status_counts["TRIGGERED"]),
+        ("Not triggered", status_counts["NOT_TRIGGERED"]),
+        ("Not evaluable", status_counts["NOT_EVALUABLE"]),
+    ]
+    for column, (label, value) in zip(metric_cols, metrics):
+        with column:
+            st.metric(label, value)
 
-    triggered = dataframe[dataframe["Status"] == "TRIGGERED"]
-
-    if triggered.empty:
-        st.success("No risk indicators breached their configured thresholds.")
-    else:
-        st.markdown("#### Active Risk Drivers")
-        category_counts = (
-            triggered.groupby("Category", dropna=False)
-            .size()
-            .reset_index(name="Triggered rules")
-            .sort_values("Triggered rules", ascending=True)
-        )
-
-        st.bar_chart(
-            category_counts,
-            x="Category",
-            y="Triggered rules",
-            horizontal=True,
-            height=max(180, 55 * len(category_counts)),
-        )
-
-    st.markdown("#### Rule Catalogue")
+    st.markdown("#### Rule Outcome Distribution")
+    labels = {
+        "TRIGGERED": "Triggered",
+        "NOT_TRIGGERED": "Not triggered",
+        "NOT_EVALUABLE": "Not evaluable",
+    }
+    chart_data = pd.DataFrame(
+        {
+            "Status": [labels[key] for key in status_counts],
+            "Rules": list(status_counts.values()),
+        }
+    )
+    st.bar_chart(chart_data, x="Status", y="Rules", horizontal=True, height=210)
     st.caption(
-        "Filter the evaluated rules before opening the detailed table. "
-        "This keeps the interface usable as the rule library grows."
+        "This distribution describes the factual outcomes of the deterministic rules; "
+        "it does not recalculate the assessment."
     )
 
-    filter_cols = st.columns([1.2, 1.2, 1.6, 1.4])
+    st.markdown("#### Rule Catalogue")
+    st.caption("Filter the complete rule set before inspecting individual rule evidence.")
 
+    filter_cols = st.columns([1.2, 1.2, 1.6, 1.4])
     with filter_cols[0]:
         status_options = ["All", "TRIGGERED", "NOT_TRIGGERED", "NOT_EVALUABLE"]
         selected_status = st.selectbox(
@@ -227,7 +214,6 @@ def render_risk_indicator_dashboard(result: Any) -> None:
         )
 
     filtered = dataframe.copy()
-
     if selected_status != "All":
         filtered = filtered[filtered["Status"] == selected_status]
     if selected_severity != "All":
@@ -255,7 +241,6 @@ def render_risk_indicator_dashboard(result: Any) -> None:
 
     total_filtered = len(filtered)
     st.caption(f"Showing {total_filtered} of {len(dataframe)} evaluated rules.")
-
     display_columns = [
         "Rule",
         "Indicator",
@@ -275,6 +260,9 @@ def render_risk_indicator_dashboard(result: Any) -> None:
                 use_container_width=True,
                 hide_index=True,
             )
+
+    with st.expander("Inspect individual rule detail", expanded=True):
+        render_rule_indicator_detail(result)
 
 
 # ============================================================
@@ -298,11 +286,7 @@ def render_risk_driver_map(result: Any) -> None:
 
     assessment = getattr(result, "assessment", None)
     assessment_status = str(
-        getattr(
-            getattr(assessment, "status", None),
-            "value",
-            "Unknown",
-        )
+        getattr(getattr(assessment, "status", None), "value", "Unknown")
     )
 
     grouped: dict[str, list[Any]] = {}
@@ -325,11 +309,9 @@ def render_risk_driver_map(result: Any) -> None:
         ),
     )
 
-    cols_per_row = 2
-    for start in range(0, len(category_items), cols_per_row):
-        row_items = category_items[start : start + cols_per_row]
+    for start in range(0, len(category_items), 2):
+        row_items = category_items[start : start + 2]
         columns = st.columns(len(row_items))
-
         for column, (category, category_rules) in zip(columns, row_items):
             with column:
                 with st.container(border=True):
@@ -340,13 +322,11 @@ def render_risk_driver_map(result: Any) -> None:
                     st.markdown(f"**{category.upper()}**")
                     st.metric("Triggered rules", len(category_rules))
                     st.caption(f"Highest severity: {highest_severity}")
-
                     for rule_result in category_rules:
                         rule_id = str(getattr(rule_result, "rule_id", "—"))
                         indicator = _rule_indicator(rule_result)
                         value = getattr(rule_result, "value", None)
                         threshold = getattr(rule_result, "threshold", None)
-
                         st.markdown(f"**{rule_id}** · {indicator}")
                         if value is not None and threshold is not None:
                             st.caption(
@@ -371,61 +351,6 @@ def render_risk_driver_map(result: Any) -> None:
 
 
 # ============================================================
-# Rule Assessment Summary
-# ============================================================
-
-
-def render_rule_assessment_summary(result: Any) -> None:
-    """Render a visual summary of the deterministic rule engine."""
-    rule_results = _get_rule_results(result)
-
-    if not rule_results:
-        return
-
-    status_counts = _rule_status_counts(result)
-    total_rules = sum(status_counts.values())
-
-    labels = {
-        "TRIGGERED": "Triggered",
-        "NOT_TRIGGERED": "Not triggered",
-        "NOT_EVALUABLE": "Not evaluable",
-    }
-
-    st.subheader("Assessment Evidence")
-    st.caption(
-        f"The Rule Engine evaluated {total_rules} rules. "
-        "The distribution below shows the factual rule outcomes behind the assessment."
-    )
-
-    metric_cols = st.columns(3)
-
-    metric_definitions = [
-        ("Triggered", "TRIGGERED"),
-        ("Not triggered", "NOT_TRIGGERED"),
-        ("Not evaluable", "NOT_EVALUABLE"),
-    ]
-
-    for column, (label, status) in zip(metric_cols, metric_definitions):
-        with column:
-            st.metric(label, status_counts[status])
-
-    chart_data = {
-        "Status": [labels[status] for status in status_counts],
-        "Rules": list(status_counts.values()),
-    }
-
-    st.bar_chart(
-        chart_data,
-        x="Status",
-        y="Rules",
-        horizontal=True,
-        height=220,
-    )
-
-    render_rule_indicator_detail(result)
-
-
-# ============================================================
 # Rule Indicator Detail
 # ============================================================
 
@@ -433,11 +358,10 @@ def render_rule_assessment_summary(result: Any) -> None:
 def render_rule_indicator_detail(result: Any) -> None:
     """Render the quantitative detail behind an individual rule result."""
     rule_results = _get_rule_results(result)
-
     if not rule_results:
         return
 
-    st.markdown("#### Rule → Indicator → Value → Threshold")
+    st.markdown("##### Rule → Indicator → Value → Threshold")
     st.caption(
         "Select a rule to inspect the quantitative indicator, configured threshold "
         "and rationale used by the deterministic Rule Engine."
@@ -455,7 +379,6 @@ def render_rule_indicator_detail(result: Any) -> None:
         for index, rule_result in enumerate(rule_results)
         if _rule_status(rule_result) == "TRIGGERED"
     ]
-
     default_index = triggered_indices[0] if triggered_indices else 0
 
     selected_label = st.selectbox(
@@ -464,7 +387,6 @@ def render_rule_indicator_detail(result: Any) -> None:
         index=default_index,
         key="rule_indicator_detail",
     )
-
     selected_index = rule_labels.index(selected_label)
     selected_rule = rule_results[selected_index]
 
@@ -479,75 +401,49 @@ def render_rule_indicator_detail(result: Any) -> None:
     reason = getattr(selected_rule, "reason", None)
 
     info_cols = st.columns(5)
+    values = [
+        ("Rule", rule_id),
+        ("Status", status),
+        ("Severity", severity),
+        ("Category", category),
+        ("Direction", direction),
+    ]
+    for column, (label, display_value) in zip(info_cols, values):
+        with column:
+            st.caption(label)
+            st.write(display_value)
 
-    with info_cols[0]:
-        st.metric("Rule", str(rule_id))
-
-    with info_cols[1]:
-        st.metric("Status", status)
-
-    with info_cols[2]:
-        st.metric("Severity", severity)
-
-    with info_cols[3]:
-        st.metric("Category", str(category))
-
-    with info_cols[4]:
-        st.metric("Direction", direction)
-
-    st.markdown(f"**Indicator:** {indicator}")
-
-    if value is None or threshold is None:
-        st.info(
-            "The quantitative comparison cannot be displayed because "
-            "the rule result does not contain both a value and a threshold."
-        )
-    else:
-        value_float = float(value)
-        threshold_float = float(threshold)
-        gap = value_float - threshold_float
-
-        comparison_data = pd.DataFrame(
+    if value is not None and threshold is not None:
+        chart_data = pd.DataFrame(
             {
-                "Metric": ["Actual value", "Threshold"],
-                "Value": [value_float, threshold_float],
+                "Measure": ["Actual", "Threshold"],
+                "Value": [float(value), float(threshold)],
             }
         )
-
         st.markdown("##### Actual vs Threshold")
+        st.bar_chart(chart_data, x="Measure", y="Value", height=260)
         st.caption(
             "The chart shows the observed indicator against the deterministic decision boundary."
         )
-        st.bar_chart(
-            comparison_data,
-            x="Metric",
-            y="Value",
-            horizontal=True,
-            height=190,
-        )
 
-        value_cols = st.columns(3)
-
-        with value_cols[0]:
-            st.metric("Actual value", f"{value_float:g}")
-
-        with value_cols[1]:
-            st.metric("Threshold", f"{threshold_float:g}")
-
-        with value_cols[2]:
-            st.metric("Threshold gap", f"{gap:+g}")
+        metric_cols = st.columns(3)
+        with metric_cols[0]:
+            st.metric("Actual", f"{float(value):g}")
+        with metric_cols[1]:
+            st.metric("Threshold", f"{float(threshold):g}")
+        with metric_cols[2]:
+            st.metric("Gap", f"{float(value) - float(threshold):g}")
 
         if status == "TRIGGERED":
             st.warning(
-                f"The actual value is on the adverse side of the configured threshold "
-                f"for this rule ({direction}). The Rule Engine recorded this rule as TRIGGERED."
+                f"The indicator is classified as triggered under the configured direction: {direction}."
             )
         elif status == "NOT_TRIGGERED":
             st.success(
-                f"The actual value remains on the non-adverse side of the configured "
-                f"threshold for this rule ({direction}). The Rule Engine recorded this rule as NOT_TRIGGERED."
+                f"The indicator remains within the non-triggered range under the configured direction: {direction}."
             )
+    else:
+        st.info("Actual or threshold value is not available for this rule.")
 
     if reason:
-        st.markdown("**Why did this rule produce this result?**")
-        st.info(reason)
+        st.caption(f"Rationale: {reason}")
