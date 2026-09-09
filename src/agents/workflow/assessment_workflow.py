@@ -10,7 +10,6 @@ from src.services.assessment_service import AssessmentService
 
 
 class AssessmentWorkflow:
-
     def __init__(
         self,
         assessment_service: AssessmentService,
@@ -25,7 +24,6 @@ class AssessmentWorkflow:
         self,
         position: CreditPosition,
     ) -> AssessmentWorkflowResult:
-
         # ----------------------------------------------------
         # Deterministic assessment
         # ----------------------------------------------------
@@ -34,9 +32,7 @@ class AssessmentWorkflow:
 
         assessment = self.assessment_service.assess(position)
 
-        assessment_elapsed_time = (
-            time.perf_counter() - assessment_start
-        )
+        assessment_elapsed_time = time.perf_counter() - assessment_start
 
         # ----------------------------------------------------
         # Deterministic analysis
@@ -46,9 +42,7 @@ class AssessmentWorkflow:
 
         analysis = self.analysis_agent.run(assessment)
 
-        analysis_elapsed_time = (
-            time.perf_counter() - analysis_start
-        )
+        analysis_elapsed_time = time.perf_counter() - analysis_start
 
         # ----------------------------------------------------
         # Reporting
@@ -58,9 +52,7 @@ class AssessmentWorkflow:
 
         report = self.reporting_agent.run(analysis)
 
-        reporting_elapsed_time = (
-            time.perf_counter() - reporting_start
-        )
+        reporting_elapsed_time = time.perf_counter() - reporting_start
 
         # ----------------------------------------------------
         # Reporting provenance
@@ -83,9 +75,7 @@ class AssessmentWorkflow:
         # ----------------------------------------------------
 
         total_elapsed_time = (
-            assessment_elapsed_time
-            + analysis_elapsed_time
-            + reporting_elapsed_time
+            assessment_elapsed_time + analysis_elapsed_time + reporting_elapsed_time
         )
 
         return AssessmentWorkflowResult(

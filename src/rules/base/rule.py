@@ -10,7 +10,6 @@ from src.rules.result import RuleResult
 
 
 class Rule(ABC):
-
     _registry: ClassVar[dict[str, type["Rule"]]] = {}
 
     def __init__(
@@ -71,16 +70,10 @@ class Rule(ABC):
         message is generated while preserving the rule reference.
         """
 
-        rule_reference = (
-            f"[{self.config.rule_id} - "
-            f"{self.config.rule_name}]"
-        )
+        rule_reference = f"[{self.config.rule_id} - {self.config.rule_name}]"
 
         if reason is None:
-            return (
-                f"{rule_reference} "
-                "Rule evaluation completed."
-            )
+            return f"{rule_reference} Rule evaluation completed."
 
         return f"{rule_reference} {reason}"
 
@@ -161,11 +154,8 @@ class Rule(ABC):
         def decorator(
             rule_class: type["Rule"],
         ) -> type["Rule"]:
-
             if rule_id in cls._registry:
-                raise ValueError(
-                    f"Rule already registered: {rule_id}"
-                )
+                raise ValueError(f"Rule already registered: {rule_id}")
 
             cls._registry[rule_id] = rule_class
 
@@ -186,6 +176,4 @@ class Rule(ABC):
             return cls._registry[rule_id]
 
         except KeyError:
-            raise ValueError(
-                f"Unknown rule_id: {rule_id}"
-            ) from None
+            raise ValueError(f"Unknown rule_id: {rule_id}") from None

@@ -20,7 +20,6 @@ class EbitdaMarginRule(Rule):
         self,
         position: CreditPosition,
     ) -> RuleResult:
-
         value = position.ebitda_margin
 
         if value is None:

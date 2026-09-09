@@ -3,13 +3,12 @@ import pytest
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
+from src.rules.base.severity_direction import SeverityDirection
 from src.rules.base.severity_threshold import SeverityThreshold
 from src.rules.base.status import RuleStatus
-from src.rules.base.severity_direction import SeverityDirection
 from src.rules.financial.profitability.financial_expenses_to_ebitda import (
     FinancialExpensesToEbitdaRule,
 )
-
 
 RULE_ID = "TEST_RULE"
 RULE_NAME = "Test interest expense to EBITDA"
@@ -184,10 +183,7 @@ def test_interest_expense_to_ebitda_rule_negative_ebitda_is_not_evaluable(
     assert result.severity == rule_config.severity
 
     assert result.reason is not None
-    assert (
-        "EBITDA is negative or zero"
-        in result.reason
-    )
+    assert "EBITDA is negative or zero" in result.reason
 
 
 def test_interest_expense_to_ebitda_rule_uses_configured_threshold():

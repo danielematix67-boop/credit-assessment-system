@@ -19,29 +19,20 @@ def render_assessment_configuration(
 
     st.divider()
 
-    st.subheader(
-        "Assessment Configuration"
-    )
+    st.subheader("Assessment Configuration")
 
-    configuration_col1, configuration_col2 = (
-        st.columns(2)
-    )
+    configuration_col1, configuration_col2 = st.columns(2)
 
     # --------------------------------------------------------
     # Reporting Mode
     # --------------------------------------------------------
 
     with configuration_col1:
-
-        st.caption(
-            "Reporting mode"
-        )
+        st.caption("Reporting mode")
 
         show_badge(
             reporting_mode,
-            reporting_mode_badge_kind(
-                reporting_mode
-            ),
+            reporting_mode_badge_kind(reporting_mode),
         )
 
     # --------------------------------------------------------
@@ -49,18 +40,11 @@ def render_assessment_configuration(
     # --------------------------------------------------------
 
     with configuration_col2:
-
         if input_mode == "Demo Scenario":
-
-            st.caption(
-                "Input source: **Demo Scenario**"
-            )
+            st.caption("Input source: **Demo Scenario**")
 
         else:
-
-            st.caption(
-                "Input source: **Manual Input**"
-            )
+            st.caption("Input source: **Manual Input**")
 
     # --------------------------------------------------------
     # Run Assessment Button

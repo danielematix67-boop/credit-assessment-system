@@ -207,8 +207,7 @@ def test_rule_result_contains_rule_reference(
     assert result.rule_id == base_config.rule_id
     assert result.rule_name == base_config.rule_name
     assert result.reason == (
-        "[TEST_RULE - Test rule] "
-        "Value exceeded the configured threshold."
+        "[TEST_RULE - Test rule] Value exceeded the configured threshold."
     )
 
 
@@ -222,10 +221,7 @@ def test_rule_result_generates_default_reason_without_reason_input(
         status=RuleStatus.TRIGGERED,
     )
 
-    assert result.reason == (
-        "[TEST_RULE - Test rule] "
-        "Rule evaluation completed."
-    )
+    assert result.reason == ("[TEST_RULE - Test rule] Rule evaluation completed.")
 
 
 def test_not_evaluable_result_contains_rule_reference(
@@ -238,7 +234,4 @@ def test_not_evaluable_result_contains_rule_reference(
     )
 
     assert result.status == RuleStatus.NOT_EVALUABLE
-    assert result.reason == (
-        "[TEST_RULE - Test rule] "
-        "Required input is not available."
-    )
+    assert result.reason == ("[TEST_RULE - Test rule] Required input is not available.")

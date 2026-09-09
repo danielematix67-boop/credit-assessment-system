@@ -12,23 +12,15 @@ class RuleConfig:
     category: str
     threshold: float
     severity: RuleSeverity
-    severity_direction: SeverityDirection = (
-        SeverityDirection.HIGHER_IS_WORSE
-    )
+    severity_direction: SeverityDirection = SeverityDirection.HIGHER_IS_WORSE
     severity_thresholds: tuple[SeverityThreshold, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.rule_id.strip():
-            raise ValueError(
-                "rule_id cannot be empty"
-            )
+            raise ValueError("rule_id cannot be empty")
 
         if not self.rule_name.strip():
-            raise ValueError(
-                "rule_name cannot be empty"
-            )
+            raise ValueError("rule_name cannot be empty")
 
         if not self.category.strip():
-            raise ValueError(
-                "category cannot be empty"
-            )
+            raise ValueError("category cannot be empty")

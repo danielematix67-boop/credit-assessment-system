@@ -73,30 +73,21 @@ def test_assessment_service_generates_expected_assessment(
     assessment_position,
     assessment_scenario,
 ):
-    assessment = assessment_service.assess(
-        assessment_position
-    )
+    assessment = assessment_service.assess(assessment_position)
 
     assert isinstance(assessment, Assessment)
     assert assessment.position_id == assessment_position.position_id
 
-    assert (
-        assessment.status
-        == assessment_scenario["expected_status"]
-    )
+    assert assessment.status == assessment_scenario["expected_status"]
 
-    assert len(assessment.rule_results) == len(
-        assessment_service.rule_engine.rules
-    )
+    assert len(assessment.rule_results) == len(assessment_service.rule_engine.rules)
 
 
 def test_assessment_service_creates_findings_for_triggered_rules(
     assessment_service,
     assessment_position,
 ):
-    assessment = assessment_service.assess(
-        assessment_position
-    )
+    assessment = assessment_service.assess(assessment_position)
 
     triggered_rules = {
         result.rule_id
@@ -104,10 +95,7 @@ def test_assessment_service_creates_findings_for_triggered_rules(
         if result.status == RuleStatus.TRIGGERED
     }
 
-    finding_rule_ids = {
-        finding.result.rule_id
-        for finding in assessment.findings
-    }
+    finding_rule_ids = {finding.result.rule_id for finding in assessment.findings}
 
     assert finding_rule_ids == triggered_rules
     assert len(assessment.findings) == len(triggered_rules)
@@ -129,8 +117,7 @@ def test_assessment_service_does_not_create_findings_for_non_triggered_rules(
     assessment = assessment_service.assess(position)
 
     assert all(
-        result.status != RuleStatus.TRIGGERED
-        for result in assessment.rule_results
+        result.status != RuleStatus.TRIGGERED for result in assessment.rule_results
     )
 
     assert assessment.findings == []

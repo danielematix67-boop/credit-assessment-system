@@ -77,9 +77,7 @@ def test_orchestrator_preserves_assessment_status(
     orchestrator,
     critical_position,
 ):
-    expected_status = assessment_service.assess(
-        critical_position
-    ).status
+    expected_status = assessment_service.assess(critical_position).status
 
     report = orchestrator.run(critical_position)
 

@@ -13,20 +13,15 @@ def create_default_assessment_workflow(
     use_llm: bool = False,
     llm_client: LLMClient | None = None,
 ) -> AssessmentWorkflow:
-
     assessment_service = create_default_assessment_service()
 
     analysis_agent = AnalysisAgent()
 
-    deterministic_report_generator = (
-        DeterministicReportGenerator()
-    )
+    deterministic_report_generator = DeterministicReportGenerator()
 
     if use_llm:
         if llm_client is None:
-            raise ValueError(
-                "llm_client is required when use_llm=True"
-            )
+            raise ValueError("llm_client is required when use_llm=True")
 
         report_generator = LLMReportGenerator(
             llm_client=llm_client,

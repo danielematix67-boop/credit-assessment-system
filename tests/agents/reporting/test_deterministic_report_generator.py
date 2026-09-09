@@ -42,15 +42,9 @@ def make_analysis(
     return AssessmentAnalysis(
         position_id=position_id,
         assessment_status=status,
-        key_findings=(
-            key_findings if key_findings is not None else []
-        ),
-        risk_factors=(
-            risk_factors if risk_factors is not None else []
-        ),
-        limitations=(
-            limitations if limitations is not None else []
-        ),
+        key_findings=(key_findings if key_findings is not None else []),
+        risk_factors=(risk_factors if risk_factors is not None else []),
+        limitations=(limitations if limitations is not None else []),
     )
 
 
@@ -120,9 +114,7 @@ def test_deterministic_report_generator_preserves_analysis_data(
 
     assert report.position_id == analysis.position_id
     assert report.assessment_status == analysis.assessment_status
-    assert report.findings_by_category == (
-        findings_by_category_from_analysis(analysis)
-    )
+    assert report.findings_by_category == (findings_by_category_from_analysis(analysis))
     assert report.limitations == analysis.limitations
 
 
@@ -156,9 +148,7 @@ def test_deterministic_report_generator_generates_distinct_summary_per_status(
     }
 
     assert len(summaries) == len(AssessmentStatus)
-    assert len(set(summaries.values())) == len(
-        AssessmentStatus
-    )
+    assert len(set(summaries.values())) == len(AssessmentStatus)
 
 
 def test_deterministic_report_generator_groups_findings_by_category(
@@ -189,9 +179,7 @@ def test_deterministic_report_generator_groups_findings_by_category(
 
     report = generator.generate(analysis)
 
-    assert report.findings_by_category == (
-        findings_by_category_from_analysis(analysis)
-    )
+    assert report.findings_by_category == (findings_by_category_from_analysis(analysis))
 
 
 def test_deterministic_report_generator_preserves_arbitrary_content(
@@ -242,7 +230,5 @@ def test_deterministic_report_generator_preserves_arbitrary_content(
 
     assert report.position_id == analysis.position_id
     assert report.assessment_status == analysis.assessment_status
-    assert report.findings_by_category == (
-        findings_by_category_from_analysis(analysis)
-    )
+    assert report.findings_by_category == (findings_by_category_from_analysis(analysis))
     assert report.limitations == analysis.limitations

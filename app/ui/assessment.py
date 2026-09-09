@@ -1,9 +1,8 @@
 import streamlit as st
 
-from src.models.position import CreditPosition
-
 from app.workflow.assessment_workflow_factory import create_workflow
 from app.workflow.runner import run_assessment
+from src.models.position import CreditPosition
 
 
 def get_spinner_message(reporting_mode: str) -> str:
@@ -16,10 +15,7 @@ def get_spinner_message(reporting_mode: str) -> str:
         )
 
     if reporting_mode == "Ollama + Fallback":
-        return (
-            "Executing deterministic assessment "
-            "and generating local LLM report..."
-        )
+        return "Executing deterministic assessment and generating local LLM report..."
 
     return "Executing deterministic assessment workflow..."
 
@@ -43,21 +39,14 @@ def build_credit_position(
     """
 
     if input_mode == "Manual Input":
-
         try:
-            return CreditPosition(
-                **position_data
-            )
+            return CreditPosition(**position_data)
 
         except TypeError as error:
-            raise TypeError(
-                "Unable to construct CreditPosition."
-            ) from error
+            raise TypeError("Unable to construct CreditPosition.") from error
 
     if position is None:
-        raise ValueError(
-            "No credit position is available."
-        )
+        raise ValueError("No credit position is available.")
 
     return position
 
@@ -74,18 +63,13 @@ def execute_assessment(
         )
 
     except Exception as error:
-        st.error(
-            "Unable to create the assessment workflow."
-        )
+        st.error("Unable to create the assessment workflow.")
         st.exception(error)
         st.stop()
 
-    spinner_message = get_spinner_message(
-        reporting_mode
-    )
+    spinner_message = get_spinner_message(reporting_mode)
 
     with st.spinner(spinner_message):
-
         try:
             result = run_assessment(
                 workflow,
@@ -93,9 +77,7 @@ def execute_assessment(
             )
 
         except Exception as error:
-            st.error(
-                "Assessment execution failed."
-            )
+            st.error("Assessment execution failed.")
             st.exception(error)
             st.stop()
 
@@ -117,11 +99,7 @@ def store_assessment_result(
 
     st.session_state["assessment_input_mode"] = input_mode
 
-    st.session_state["assessment_reporting_mode"] = (
-        reporting_mode
-    )
+    st.session_state["assessment_reporting_mode"] = reporting_mode
 
     if input_mode == "Demo Scenario":
-        st.session_state["assessment_scenario"] = (
-            scenario_name
-        )
+        st.session_state["assessment_scenario"] = scenario_name

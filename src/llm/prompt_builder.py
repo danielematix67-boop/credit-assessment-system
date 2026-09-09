@@ -27,11 +27,7 @@ class ReportPromptBuilder:
         self,
         template: ReportPromptTemplate | None = None,
     ) -> None:
-        self.template = (
-            template
-            if template is not None
-            else ReportPromptTemplate()
-        )
+        self.template = template if template is not None else ReportPromptTemplate()
 
     def build(
         self,
@@ -113,10 +109,7 @@ class ReportPromptBuilder:
             lines = [f"{category}:"]
 
             for finding in findings:
-                lines.append(
-                    f"- [{finding.severity.value.upper()}] "
-                    f"{finding.text}"
-                )
+                lines.append(f"- [{finding.severity.value.upper()}] {finding.text}")
 
             sections.append("\n".join(lines))
 

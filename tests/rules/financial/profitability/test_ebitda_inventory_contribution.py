@@ -9,7 +9,6 @@ from src.rules.financial.profitability.ebitda_inventory_contribution import (
     EbitdaInventoryContributionRule,
 )
 
-
 RULE_ID = "TEST_RULE"
 RULE_NAME = "Test EBITDA inventory contribution rule"
 CATEGORY = "test"

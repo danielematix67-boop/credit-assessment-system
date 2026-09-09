@@ -1,11 +1,10 @@
-from src.models.position import CreditPosition
-from src.models.report import Report
 from src.agents.workflow.assessment_workflow import AssessmentWorkflow
 from src.models.assessment_workflow import AssessmentWorkflowResult
+from src.models.position import CreditPosition
+from src.models.report import Report
 
 
 class AssessmentOrchestrator:
-
     def __init__(
         self,
         workflow: AssessmentWorkflow,

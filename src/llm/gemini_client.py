@@ -7,7 +7,6 @@ from src.llm.client import LLMClient
 
 
 class GeminiClient(LLMClient):
-
     def __init__(
         self,
         api_key: str | None = None,
@@ -15,11 +14,7 @@ class GeminiClient(LLMClient):
         temperature: float = 0.2,
         max_output_tokens: int = 2048,
     ) -> None:
-
-        resolved_api_key = (
-            api_key
-            or os.getenv("GEMINI_API_KEY")
-        )
+        resolved_api_key = api_key or os.getenv("GEMINI_API_KEY")
 
         if not resolved_api_key:
             raise ValueError(
@@ -36,12 +31,10 @@ class GeminiClient(LLMClient):
         self.temperature = temperature
         self.max_output_tokens = max_output_tokens
 
-
     def generate(
         self,
         prompt: str,
     ) -> str:
-
         response = self.client.models.generate_content(
             model=self.model,
             contents=prompt,
@@ -54,8 +47,6 @@ class GeminiClient(LLMClient):
         text = response.text
 
         if text is None:
-            raise ValueError(
-                "Gemini returned an empty response"
-            )
+            raise ValueError("Gemini returned an empty response")
 
         return text

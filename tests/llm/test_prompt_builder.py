@@ -1,8 +1,8 @@
 from src.llm.prompt_builder import ReportPromptBuilder
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
-from src.rules.base.severity import RuleSeverity
 from src.models.assessment_status import AssessmentStatus
+from src.rules.base.severity import RuleSeverity
 
 
 def make_finding(
@@ -34,7 +34,6 @@ def make_analysis(
 
 
 class TestReportPromptBuilder:
-
     def test_build_includes_deterministic_findings(self) -> None:
         finding = make_finding(
             rule_id="R001",
@@ -89,20 +88,11 @@ class TestReportPromptBuilder:
         assert "Profitability:" in prompt
         assert "Leverage:" in prompt
 
-        assert (
-            "- [HIGH] Revenue growth declined by 20.0%."
-            in prompt
-        )
+        assert "- [HIGH] Revenue growth declined by 20.0%." in prompt
 
-        assert (
-            "- [HIGH] EBITDA is negative at €-120,000."
-            in prompt
-        )
+        assert "- [HIGH] EBITDA is negative at €-120,000." in prompt
 
-        assert (
-            "- [HIGH] NFP to EBITDA is 7.0x."
-            in prompt
-        )
+        assert "- [HIGH] NFP to EBITDA is 7.0x." in prompt
 
     def test_build_groups_multiple_findings_in_same_category(
         self,
@@ -132,15 +122,9 @@ class TestReportPromptBuilder:
 
         assert prompt.count("Profitability:") == 1
 
-        assert (
-            "- [HIGH] EBITDA is negative at €-120,000."
-            in prompt
-        )
+        assert "- [HIGH] EBITDA is negative at €-120,000." in prompt
 
-        assert (
-            "- [HIGH] Interest coverage ratio is -0.2x."
-            in prompt
-        )
+        assert "- [HIGH] Interest coverage ratio is -0.2x." in prompt
 
     def test_build_orders_findings_by_severity(self) -> None:
         low_finding = make_finding(
@@ -255,9 +239,12 @@ class TestReportPromptBuilder:
 
         prompt = ReportPromptBuilder().build(analysis)
 
-        assert prompt.count(
-            "Revenue growth declined by 20.0%.",
-        ) == 1
+        assert (
+            prompt.count(
+                "Revenue growth declined by 20.0%.",
+            )
+            == 1
+        )
 
     def test_build_excludes_assessment_status(self) -> None:
         finding = make_finding(

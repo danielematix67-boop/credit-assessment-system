@@ -4,7 +4,6 @@ from src.rules.result import RuleResult
 
 
 class FindingEngine:
-
     def __init__(self, comment_engine: CommentEngine):
         self.comment_engine = comment_engine
 

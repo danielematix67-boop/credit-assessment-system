@@ -5,7 +5,6 @@ import pytest
 from src.config.rule_config_loader import RuleConfigLoader
 from src.rules.base.severity import RuleSeverity
 
-
 RULES_CONFIG_PATH = Path("config/rules.yaml")
 
 
@@ -13,10 +12,7 @@ RULES_CONFIG_PATH = Path("config/rules.yaml")
 def rule_configs():
     loader = RuleConfigLoader()
 
-    return {
-        config.rule_id: config
-        for config in loader.load(RULES_CONFIG_PATH)
-    }
+    return {config.rule_id: config for config in loader.load(RULES_CONFIG_PATH)}
 
 
 @pytest.mark.parametrize(

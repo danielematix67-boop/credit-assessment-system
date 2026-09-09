@@ -6,18 +6,16 @@ from app.demo_scenarios import (
     DEMO_SCENARIOS,
     build_demo_position,
 )
-
 from app.ui.credit_position import (
     build_credit_position_from_ui,
     build_scenario_data_table,
 )
-
 from src.models.position import CreditPosition
-
 
 # ============================================================
 # Credit Data Source
 # ============================================================
+
 
 def render_credit_data_source() -> tuple[
     CreditPosition | None,
@@ -79,7 +77,6 @@ def render_credit_data_source() -> tuple[
     # ========================================================
 
     if input_mode == "Demo Scenario":
-
         return _render_demo_scenario()
 
     # ========================================================
@@ -92,6 +89,7 @@ def render_credit_data_source() -> tuple[
 # ============================================================
 # Demo Scenario
 # ============================================================
+
 
 def _render_demo_scenario() -> tuple[
     CreditPosition | None,
@@ -125,16 +123,10 @@ def _render_demo_scenario() -> tuple[
     # --------------------------------------------------------
 
     try:
-
-        position = build_demo_position(
-            scenario_name
-        )
+        position = build_demo_position(scenario_name)
 
     except Exception as error:
-
-        st.error(
-            "Unable to construct the selected demo scenario."
-        )
+        st.error("Unable to construct the selected demo scenario.")
 
         st.exception(error)
 
@@ -173,9 +165,7 @@ def _render_demo_scenario() -> tuple[
         unsafe_allow_html=True,
     )
 
-    scenario_data = build_scenario_data_table(
-        position
-    )
+    scenario_data = build_scenario_data_table(position)
 
     st.dataframe(
         scenario_data,
@@ -221,6 +211,7 @@ def _render_demo_scenario() -> tuple[
 # Manual Input
 # ============================================================
 
+
 def _render_manual_input() -> tuple[
     CreditPosition | None,
     dict[str, Any] | None,
@@ -238,36 +229,25 @@ def _render_manual_input() -> tuple[
 
     position_data = build_credit_position_from_ui()
 
-    provided_fields = sum(
-        value is not None
-        for value in position_data.values()
-    )
+    provided_fields = sum(value is not None for value in position_data.values())
 
-    missing_fields = (
-        len(position_data)
-        - provided_fields
-    )
+    missing_fields = len(position_data) - provided_fields
 
-    summary_col1, summary_col2, summary_col3 = (
-        st.columns(3)
-    )
+    summary_col1, summary_col2, summary_col3 = st.columns(3)
 
     with summary_col1:
-
         st.metric(
             "Model Fields",
             len(position_data),
         )
 
     with summary_col2:
-
         st.metric(
             "Provided",
             provided_fields,
         )
 
     with summary_col3:
-
         st.metric(
             "Missing",
             missing_fields,
@@ -284,6 +264,7 @@ def _render_manual_input() -> tuple[
 # ============================================================
 # Scenario Card
 # ============================================================
+
 
 def _render_scenario_card(
     *,

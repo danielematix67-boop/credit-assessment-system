@@ -9,7 +9,6 @@ from src.rules.result import RuleResult
 
 
 class AnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
-
     @staticmethod
     def _to_analysis_finding(
         finding: RuleFinding,
@@ -40,7 +39,6 @@ class AnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
         self,
         assessment: Assessment,
     ) -> AssessmentAnalysis:
-
         triggered_findings = [
             finding
             for finding in assessment.findings
@@ -54,8 +52,7 @@ class AnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
         ]
 
         key_findings = [
-            self._to_analysis_finding(finding)
-            for finding in triggered_findings
+            self._to_analysis_finding(finding) for finding in triggered_findings
         ]
 
         risk_factors = [
@@ -64,10 +61,7 @@ class AnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
             if finding.result.severity == RuleSeverity.HIGH
         ]
 
-        limitations = [
-            self._to_limitation(result)
-            for result in not_evaluable_results
-        ]
+        limitations = [self._to_limitation(result) for result in not_evaluable_results]
 
         return AssessmentAnalysis(
             position_id=assessment.position_id,

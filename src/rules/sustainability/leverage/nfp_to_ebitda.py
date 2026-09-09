@@ -14,7 +14,6 @@ class NfpToEbitdaRule(Rule):
         self,
         position: CreditPosition,
     ) -> RuleResult:
-
         value = position.nfp_to_ebitda
 
         if value is None:

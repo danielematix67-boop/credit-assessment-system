@@ -1,9 +1,9 @@
 import streamlit as st
 
-
 # ============================================================
 # Badge / Provenance Helpers
 # ============================================================
+
 
 def render_badge(
     label: str,
@@ -29,17 +29,13 @@ def render_badge(
 
     icon = icons[kind]
 
-    return (
-        f'<span class="badge {css_class}">'
-        f'{icon} {label}</span>'
-    )
+    return f'<span class="badge {css_class}">{icon} {label}</span>'
 
 
 def show_badge(
     label: str,
     kind: str = "det",
 ) -> None:
-
     st.markdown(
         f'<div class="badge-row">{render_badge(label, kind)}</div>',
         unsafe_allow_html=True,
@@ -63,6 +59,7 @@ def reporting_mode_badge_kind(
 # ============================================================
 # Scenario Card
 # ============================================================
+
 
 def render_scenario_card(
     scenario_name: str,

@@ -9,9 +9,7 @@ def report_data():
     return {
         "position_id": "TEST_POSITION",
         "assessment_status": AssessmentStatus.CRITICAL,
-        "executive_summary": (
-            "The credit assessment is classified as critical."
-        ),
+        "executive_summary": ("The credit assessment is classified as critical."),
         "findings_by_category": {
             "revenue": [
                 "Revenue growth deterioration",

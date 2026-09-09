@@ -7,9 +7,7 @@ def test_discover_rules_loads_registered_rules():
 
     assert Rule._registry
     assert all(
-        isinstance(rule_id, str)
-        and rule_id
-        and issubclass(rule_class, Rule)
+        isinstance(rule_id, str) and rule_id and issubclass(rule_class, Rule)
         for rule_id, rule_class in Rule._registry.items()
     )
 

@@ -14,24 +14,20 @@ class InterestCoverageRatioRule(Rule):
         self,
         position: CreditPosition,
     ) -> RuleResult:
-
         ebitda = position.ebitda
         interest_expense = position.interest_expense
 
         if ebitda is None:
-
             return self._not_evaluable(
                 reason="EBITDA is not available.",
             )
 
         if interest_expense is None:
-
             return self._not_evaluable(
                 reason="Interest expense is not available.",
             )
 
         if interest_expense <= 0:
-
             return self._not_evaluable(
                 reason=(
                     "Interest expense must be greater than zero "

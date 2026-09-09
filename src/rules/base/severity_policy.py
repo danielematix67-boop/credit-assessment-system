@@ -37,28 +37,14 @@ class SeverityPolicy:
         self,
         value: float,
     ) -> RuleSeverity | None:
-
         if self.direction == SeverityDirection.HIGHER_IS_WORSE:
-
-            applicable = [
-                item
-                for item in self.thresholds
-                if value >= item.threshold
-            ]
+            applicable = [item for item in self.thresholds if value >= item.threshold]
 
         elif self.direction == SeverityDirection.LOWER_IS_WORSE:
-
-            applicable = [
-                item
-                for item in self.thresholds
-                if value <= item.threshold
-            ]
+            applicable = [item for item in self.thresholds if value <= item.threshold]
 
         else:
-            raise ValueError(
-                "Unsupported severity direction: "
-                f"{self.direction}"
-            )
+            raise ValueError(f"Unsupported severity direction: {self.direction}")
 
         if not applicable:
             return None

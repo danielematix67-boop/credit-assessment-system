@@ -5,7 +5,6 @@ from src.models.report import Report
 
 
 class ReportGenerator(ABC):
-
     @abstractmethod
     def generate(
         self,

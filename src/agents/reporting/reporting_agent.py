@@ -5,7 +5,6 @@ from src.agents.reporting.report_generator import ReportGenerator
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.report import Report
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -75,10 +74,7 @@ def _get_llm_error_message(exc: Exception) -> str:
     # Timeout
     # ========================================================
 
-    if (
-        "timeout" in normalized_message
-        or "timed out" in normalized_message
-    ):
+    if "timeout" in normalized_message or "timed out" in normalized_message:
         return "LLM request timed out."
 
     # ========================================================
@@ -92,7 +88,6 @@ def _get_llm_error_message(exc: Exception) -> str:
 
 
 class ReportingAgent(Agent[AssessmentAnalysis, Report]):
-
     def __init__(
         self,
         report_generator: ReportGenerator,
@@ -108,7 +103,6 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
         self,
         analysis: AssessmentAnalysis,
     ) -> Report:
-
         # Reset diagnostics for every execution.
         self.last_generator_used = None
         self.last_error = None
@@ -122,14 +116,9 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
 
             self.last_generator_used = "PRIMARY"
 
-            generator_name = type(
-                self.report_generator
-            ).__name__
+            generator_name = type(self.report_generator).__name__
 
-            print(
-                f"\n  [PRIMARY] Report generated successfully "
-                f"({generator_name})."
-            )
+            print(f"\n  [PRIMARY] Report generated successfully ({generator_name}).")
 
             return report
 
@@ -138,18 +127,14 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
         # ====================================================
 
         except Exception as exc:
-
             error_message = _get_llm_error_message(exc)
 
             self.last_error = error_message
 
-            generator_name = type(
-                self.report_generator
-            ).__name__
+            generator_name = type(self.report_generator).__name__
 
             logger.warning(
-                "Primary report generator failed "
-                "(%s): %s",
+                "Primary report generator failed (%s): %s",
                 generator_name,
                 error_message,
             )
@@ -171,27 +156,18 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
             print("  " + "-" * 50)
             print(f"  Generator: {generator_name}")
             print(f"  Reason: {error_message}")
-            print(
-                "  Action: Using deterministic fallback "
-                "report generator."
-            )
+            print("  Action: Using deterministic fallback report generator.")
 
             try:
-                report = self.fallback_generator.generate(
-                    analysis
-                )
+                report = self.fallback_generator.generate(analysis)
 
             except Exception:
-                logger.exception(
-                    "Deterministic fallback report generation failed."
-                )
+                logger.exception("Deterministic fallback report generation failed.")
 
                 self.last_generator_used = None
 
                 raise
 
-            print(
-                "  [FALLBACK] Report generated successfully."
-            )
+            print("  [FALLBACK] Report generated successfully.")
 
             return report

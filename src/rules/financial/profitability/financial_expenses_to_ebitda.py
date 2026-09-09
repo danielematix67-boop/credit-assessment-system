@@ -15,7 +15,6 @@ class FinancialExpensesToEbitdaRule(Rule):
         self,
         position: CreditPosition,
     ) -> RuleResult:
-
         interest_expense = position.interest_expense
         ebitda = position.ebitda
 

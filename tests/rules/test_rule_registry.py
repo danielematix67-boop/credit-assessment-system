@@ -40,19 +40,13 @@ def test_default_rules_registry_returns_rules():
     rules = get_default_rules()
 
     assert rules
-    assert all(
-        isinstance(rule, Rule)
-        for rule in rules
-    )
+    assert all(isinstance(rule, Rule) for rule in rules)
 
 
 def test_default_rules_registry_returns_unique_rule_ids():
     rules = get_default_rules()
 
-    rule_ids = [
-        rule.config.rule_id
-        for rule in rules
-    ]
+    rule_ids = [rule.config.rule_id for rule in rules]
 
     assert len(rule_ids) == len(set(rule_ids))
 
@@ -85,17 +79,10 @@ def test_build_rules_creates_rules_from_configuration():
 
     assert len(rules) == len(configs)
 
-    assert all(
-        isinstance(rule, Rule)
-        for rule in rules
-    )
+    assert all(isinstance(rule, Rule) for rule in rules)
 
-    assert [
-        rule.config.rule_id
-        for rule in rules
-    ] == [
-        config.rule_id
-        for config in configs
+    assert [rule.config.rule_id for rule in rules] == [
+        config.rule_id for config in configs
     ]
 
 
@@ -104,10 +91,7 @@ def test_build_rules_preserves_configuration_order(
 ):
     available_rules = get_default_rules()
 
-    rule_ids = [
-        rule.config.rule_id
-        for rule in available_rules
-    ]
+    rule_ids = [rule.config.rule_id for rule in available_rules]
 
     if len(rule_ids) < 2:
         pytest.skip("At least two registered rules are required.")
@@ -127,10 +111,7 @@ def test_build_rules_preserves_configuration_order(
 
     rules = build_rules(configs)
 
-    assert [
-        rule.config.rule_id
-        for rule in rules
-    ] == ordered_ids
+    assert [rule.config.rule_id for rule in rules] == ordered_ids
 
 
 def test_build_rules_preserves_configuration_object(

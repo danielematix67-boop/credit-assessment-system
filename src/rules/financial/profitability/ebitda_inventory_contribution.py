@@ -18,11 +18,8 @@ class EbitdaInventoryContributionRule(Rule):
         self,
         position: CreditPosition,
     ) -> RuleResult:
-
         ebitda = position.ebitda
-        inventory_change = (
-            position.change_in_finished_goods_inventory
-        )
+        inventory_change = position.change_in_finished_goods_inventory
 
         if ebitda is None:
             return self._not_evaluable(
@@ -31,10 +28,7 @@ class EbitdaInventoryContributionRule(Rule):
 
         if inventory_change is None:
             return self._not_evaluable(
-                reason=(
-                    "Change in finished goods inventory "
-                    "is not available."
-                ),
+                reason=("Change in finished goods inventory is not available."),
             )
 
         if ebitda <= 0:

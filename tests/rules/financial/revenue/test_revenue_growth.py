@@ -8,7 +8,6 @@ from src.rules.base.severity_threshold import SeverityThreshold
 from src.rules.base.status import RuleStatus
 from src.rules.financial.revenue.revenue_growth import RevenueGrowthRule
 
-
 R001_CONFIG = RuleConfig(
     rule_id="R001",
     rule_name="Revenue deterioration",

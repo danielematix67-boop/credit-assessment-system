@@ -7,7 +7,6 @@ from src.rules.base.config import RuleConfig, SeverityThreshold
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_direction import SeverityDirection
 
-
 RULES_CONFIG_PATH = Path("config/rules.yaml")
 
 
@@ -170,10 +169,7 @@ def test_rule_config_loader_preserves_configuration_values(
     assert config.category == "test_category"
     assert config.threshold == pytest.approx(0.30)
     assert config.severity == RuleSeverity.MEDIUM
-    assert (
-        config.severity_direction
-        == SeverityDirection.LOWER_IS_WORSE
-    )
+    assert config.severity_direction == SeverityDirection.LOWER_IS_WORSE
     assert config.severity_thresholds == ()
 
 
@@ -245,10 +241,7 @@ def test_rule_config_loader_loads_severity_thresholds(
     thresholds = configs[0].severity_thresholds
 
     assert len(thresholds) == 3
-    assert all(
-        isinstance(item, SeverityThreshold)
-        for item in thresholds
-    )
+    assert all(isinstance(item, SeverityThreshold) for item in thresholds)
 
 
 def test_rule_config_loader_preserves_severity_threshold_order(

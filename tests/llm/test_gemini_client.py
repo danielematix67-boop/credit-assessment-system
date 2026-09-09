@@ -2,7 +2,6 @@ from unittest.mock import MagicMock, patch
 
 from src.llm.gemini_client import GeminiClient
 
-
 # ============================================================
 # Test data
 # ============================================================
@@ -18,7 +17,6 @@ DEFAULT_MAX_OUTPUT_TOKENS = 2048
 
 
 def test_gemini_client_initializes_with_api_key():
-
     mock_client = MagicMock()
 
     with patch.dict(
@@ -29,7 +27,6 @@ def test_gemini_client_initializes_with_api_key():
             "src.llm.gemini_client.genai.Client",
             return_value=mock_client,
         ) as client_class:
-
             client = GeminiClient()
 
     client_class.assert_called_once_with(
@@ -43,16 +40,13 @@ def test_gemini_client_initializes_with_api_key():
     assert client.client is mock_client
 
 
-
 def test_gemini_client_initializes_with_custom_configuration():
-
     mock_client = MagicMock()
 
     with patch(
         "src.llm.gemini_client.genai.Client",
         return_value=mock_client,
     ):
-
         client = GeminiClient(
             api_key="custom-key",
             model="custom-model",
@@ -65,15 +59,12 @@ def test_gemini_client_initializes_with_custom_configuration():
     assert client.max_output_tokens == 4096
 
 
-
 def test_gemini_client_requires_api_key():
-
     with patch.dict(
         "os.environ",
         {},
         clear=True,
     ):
-
         try:
             GeminiClient()
 
@@ -81,9 +72,7 @@ def test_gemini_client_requires_api_key():
             assert "Gemini API key not configured" in str(error)
 
         else:
-            raise AssertionError(
-                "Expected ValueError when API key is missing"
-            )
+            raise AssertionError("Expected ValueError when API key is missing")
 
 
 # ============================================================
@@ -92,7 +81,6 @@ def test_gemini_client_requires_api_key():
 
 
 def test_gemini_client_generates_response():
-
     response = MagicMock()
     response.text = "CRITICAL assessment identified."
 
@@ -104,7 +92,6 @@ def test_gemini_client_generates_response():
         "src.llm.gemini_client.genai.Client",
         return_value=mock_client,
     ):
-
         client = GeminiClient(
             api_key="test-api-key",
             model="test-model",
@@ -119,9 +106,7 @@ def test_gemini_client_generates_response():
     mock_client.models.generate_content.assert_called_once()
 
 
-
 def test_gemini_client_passes_generation_configuration():
-
     response = MagicMock()
     response.text = "Generated response."
 
@@ -133,7 +118,6 @@ def test_gemini_client_passes_generation_configuration():
         "src.llm.gemini_client.genai.Client",
         return_value=mock_client,
     ):
-
         client = GeminiClient(
             api_key="test-api-key",
             model="test-model",
@@ -145,14 +129,10 @@ def test_gemini_client_passes_generation_configuration():
             "Generate executive summary.",
         )
 
-    _, kwargs = (
-        mock_client.models.generate_content.call_args
-    )
+    _, kwargs = mock_client.models.generate_content.call_args
 
     assert kwargs["model"] == "test-model"
-    assert kwargs["contents"] == (
-        "Generate executive summary."
-    )
+    assert kwargs["contents"] == ("Generate executive summary.")
 
     config = kwargs["config"]
 
@@ -160,9 +140,7 @@ def test_gemini_client_passes_generation_configuration():
     assert config.max_output_tokens == 4096
 
 
-
 def test_gemini_client_rejects_empty_response():
-
     response = MagicMock()
     response.text = None
 
@@ -174,7 +152,6 @@ def test_gemini_client_rejects_empty_response():
         "src.llm.gemini_client.genai.Client",
         return_value=mock_client,
     ):
-
         client = GeminiClient(
             api_key="test-api-key",
         )
@@ -188,6 +165,4 @@ def test_gemini_client_rejects_empty_response():
             assert "Gemini returned an empty response" in str(error)
 
         else:
-            raise AssertionError(
-                "Expected ValueError for empty response"
-            )
+            raise AssertionError("Expected ValueError for empty response")

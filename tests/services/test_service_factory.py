@@ -47,14 +47,10 @@ def test_default_assessment_service_produces_complete_assessment(
     assert assessment.status == AssessmentStatus.CRITICAL
 
     configured_rule_ids = {
-        rule.config.rule_id
-        for rule in assessment_service.rule_engine.rules
+        rule.config.rule_id for rule in assessment_service.rule_engine.rules
     }
 
-    result_ids = {
-        result.rule_id
-        for result in assessment.rule_results
-    }
+    result_ids = {result.rule_id for result in assessment.rule_results}
 
     assert result_ids == configured_rule_ids
 
@@ -71,10 +67,7 @@ def test_default_assessment_service_produces_findings_consistent_with_triggered_
         if result.status == RuleStatus.TRIGGERED
     }
 
-    findings = {
-        finding.result.rule_id: finding
-        for finding in assessment.findings
-    }
+    findings = {finding.result.rule_id: finding for finding in assessment.findings}
 
     assert set(findings).issubset(triggered_results)
 
@@ -96,20 +89,15 @@ def test_default_assessment_service_generates_expected_status_for_normal_positio
     assert assessment.status == AssessmentStatus.NORMAL
 
     configured_rule_ids = {
-        rule.config.rule_id
-        for rule in assessment_service.rule_engine.rules
+        rule.config.rule_id for rule in assessment_service.rule_engine.rules
     }
 
-    result_ids = {
-        result.rule_id
-        for result in assessment.rule_results
-    }
+    result_ids = {result.rule_id for result in assessment.rule_results}
 
     assert result_ids == configured_rule_ids
 
     assert all(
-        result.status != RuleStatus.TRIGGERED
-        for result in assessment.rule_results
+        result.status != RuleStatus.TRIGGERED for result in assessment.rule_results
     )
 
     assert assessment.findings == []

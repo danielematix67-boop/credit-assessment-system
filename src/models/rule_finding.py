@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 from src.comments.comment import Comment
 from src.rules.result import RuleResult
 

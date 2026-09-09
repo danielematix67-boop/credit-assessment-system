@@ -68,10 +68,7 @@ def test_rule_config_accepts_valid_severity_direction(
 def test_rule_config_uses_default_severity_direction(
     rule_config,
 ):
-    assert (
-        rule_config.severity_direction
-        == SeverityDirection.HIGHER_IS_WORSE
-    )
+    assert rule_config.severity_direction == SeverityDirection.HIGHER_IS_WORSE
 
 
 def test_rule_config_uses_empty_severity_thresholds_by_default(
@@ -97,7 +94,6 @@ def test_rule_config_is_immutable(rule_config):
 
 
 def test_rule_config_accepts_valid_configuration():
-
     config = RuleConfig(
         rule_id="R003",
         rule_name="EBITDA Margin",
@@ -112,8 +108,5 @@ def test_rule_config_accepts_valid_configuration():
     assert config.category == "profitability"
     assert config.threshold == 0.05
     assert config.severity == RuleSeverity.MEDIUM
-    assert (
-        config.severity_direction
-        == SeverityDirection.HIGHER_IS_WORSE
-    )
+    assert config.severity_direction == SeverityDirection.HIGHER_IS_WORSE
     assert config.severity_thresholds == ()

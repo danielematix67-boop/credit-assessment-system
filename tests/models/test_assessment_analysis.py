@@ -17,9 +17,7 @@ def test_assessment_analysis_can_be_created():
     assert analysis.assessment_status == AssessmentStatus.CRITICAL
     assert analysis.key_findings == ["Revenue deterioration"]
     assert analysis.risk_factors == ["High leverage"]
-    assert analysis.limitations == [
-        "Some indicators were not evaluable"
-    ]
+    assert analysis.limitations == ["Some indicators were not evaluable"]
 
 
 def test_assessment_analysis_is_immutable():

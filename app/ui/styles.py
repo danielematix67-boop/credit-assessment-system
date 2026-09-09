@@ -1,6 +1,5 @@
 import streamlit as st
 
-
 # ============================================================
 # Styling
 # ============================================================
@@ -30,7 +29,6 @@ import streamlit as st
 
 
 def apply_styles() -> None:
-
     st.markdown(
         """
         <style>

@@ -98,10 +98,7 @@ def test_analysis_agent_produces_structured_analysis(
         severity=RuleSeverity.MEDIUM,
     )
 
-    findings = [
-        make_finding(result)
-        for result in triggered_results
-    ]
+    findings = [make_finding(result) for result in triggered_results]
 
     assessment = make_assessment(
         status=AssessmentStatus.CRITICAL,
@@ -119,8 +116,7 @@ def test_analysis_agent_produces_structured_analysis(
     assert analysis.assessment_status == assessment.status
 
     assert all(
-        isinstance(finding, AnalysisFinding)
-        for finding in analysis.key_findings
+        isinstance(finding, AnalysisFinding) for finding in analysis.key_findings
     )
 
     expected_findings = [
@@ -225,10 +221,7 @@ def test_analysis_agent_does_not_depend_on_rule_ids(
         ),
     ]
 
-    findings = [
-        make_finding(result)
-        for result in results
-    ]
+    findings = [make_finding(result) for result in results]
 
     assessment = make_assessment(
         rule_results=results,
@@ -239,34 +232,19 @@ def test_analysis_agent_does_not_depend_on_rule_ids(
 
     assert analysis.assessment_status == assessment.status
 
-    assert [
-        finding.rule_id
-        for finding in analysis.key_findings
-    ] == [
-        result.rule_id
-        for result in results
+    assert [finding.rule_id for finding in analysis.key_findings] == [
+        result.rule_id for result in results
     ]
 
-    assert [
-        finding.category
-        for finding in analysis.key_findings
-    ] == [
-        result.category
-        for result in results
+    assert [finding.category for finding in analysis.key_findings] == [
+        result.category for result in results
     ]
 
-    assert [
-        finding.text
-        for finding in analysis.key_findings
-    ] == [
-        finding.comment.text
-        for finding in findings
+    assert [finding.text for finding in analysis.key_findings] == [
+        finding.comment.text for finding in findings
     ]
 
-    assert [
-        finding.rule_id
-        for finding in analysis.risk_factors
-    ] == [
+    assert [finding.rule_id for finding in analysis.risk_factors] == [
         results[0].rule_id
     ]
 
@@ -297,15 +275,13 @@ def test_analysis_agent_ignores_not_triggered_rules(
 
     analysis = analysis_agent.run(assessment)
 
-    assert [
-        finding.rule_id
-        for finding in analysis.key_findings
-    ] == [triggered_result.rule_id]
+    assert [finding.rule_id for finding in analysis.key_findings] == [
+        triggered_result.rule_id
+    ]
 
-    assert [
-        finding.rule_id
-        for finding in analysis.risk_factors
-    ] == [triggered_result.rule_id]
+    assert [finding.rule_id for finding in analysis.risk_factors] == [
+        triggered_result.rule_id
+    ]
 
     assert analysis.limitations == []
 
@@ -418,10 +394,6 @@ def test_analysis_agent_selects_high_severity_risk_factors(
     assert len(analysis.key_findings) == 1
     assert analysis.key_findings[0].text == finding.comment.text
 
-    expected_risk_factors = (
-        analysis.key_findings
-        if expected_as_risk_factor
-        else []
-    )
+    expected_risk_factors = analysis.key_findings if expected_as_risk_factor else []
 
     assert analysis.risk_factors == expected_risk_factors

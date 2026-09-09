@@ -17,7 +17,6 @@ from src.models.assessment_workflow import AssessmentWorkflowResult
 from src.models.position import CreditPosition
 from src.rules.base.status import RuleStatus
 
-
 # ============================================================
 # Fixtures
 # ============================================================
@@ -115,30 +114,15 @@ def test_factory_creates_executable_workflow(
 
     assert isinstance(result, AssessmentWorkflowResult)
 
-    assert (
-        result.assessment.position_id
-        == representative_position.position_id
-    )
+    assert result.assessment.position_id == representative_position.position_id
 
-    assert (
-        result.analysis.position_id
-        == result.assessment.position_id
-    )
+    assert result.analysis.position_id == result.assessment.position_id
 
-    assert (
-        result.report.position_id
-        == result.assessment.position_id
-    )
+    assert result.report.position_id == result.assessment.position_id
 
-    assert (
-        result.analysis.assessment_status
-        == result.assessment.status
-    )
+    assert result.analysis.assessment_status == result.assessment.status
 
-    assert (
-        result.report.assessment_status
-        == result.assessment.status
-    )
+    assert result.report.assessment_status == result.assessment.status
 
 
 # ============================================================
@@ -199,10 +183,7 @@ def test_factory_does_not_create_findings_not_present_in_assessment(
         if finding.result.status == RuleStatus.TRIGGERED
     }
 
-    analysis_rule_ids = {
-        finding.rule_id
-        for finding in result.analysis.key_findings
-    }
+    analysis_rule_ids = {finding.rule_id for finding in result.analysis.key_findings}
 
     assert analysis_rule_ids <= assessment_rule_ids
 
@@ -251,10 +232,7 @@ def test_llm_workflow_preserves_deterministic_assessment_data(
 
     assert actual_findings == expected_findings
 
-    assert (
-        result.report.assessment_status
-        == result.assessment.status
-    )
+    assert result.report.assessment_status == result.assessment.status
 
 
 def test_llm_workflow_preserves_assessment_status(
@@ -268,15 +246,9 @@ def test_llm_workflow_preserves_assessment_status(
 
     result = workflow.run(representative_position)
 
-    assert (
-        result.analysis.assessment_status
-        == result.assessment.status
-    )
+    assert result.analysis.assessment_status == result.assessment.status
 
-    assert (
-        result.report.assessment_status
-        == result.assessment.status
-    )
+    assert result.report.assessment_status == result.assessment.status
 
 
 # ============================================================

@@ -3,10 +3,10 @@ from typing import Any
 
 import streamlit as st
 
-
 # ============================================================
 # Environment Detection
 # ============================================================
+
 
 def is_streamlit_cloud() -> bool:
     """
@@ -25,7 +25,8 @@ def is_streamlit_cloud() -> bool:
     ).lower()
 
     return (
-        runtime_env in {
+        runtime_env
+        in {
             "cloud",
             "community",
         }
@@ -36,6 +37,7 @@ def is_streamlit_cloud() -> bool:
 # ============================================================
 # Secrets Helpers
 # ============================================================
+
 
 def get_secret(
     key: str,
@@ -59,6 +61,7 @@ def get_secret(
 # Gemini Configuration
 # ============================================================
 
+
 def get_gemini_api_key() -> str | None:
     """
     Retrieve the Gemini API key.
@@ -76,9 +79,7 @@ def get_gemini_api_key() -> str | None:
     if secret_value:
         return str(secret_value)
 
-    environment_value = os.getenv(
-        "GEMINI_API_KEY"
-    )
+    environment_value = os.getenv("GEMINI_API_KEY")
 
     if environment_value:
         return environment_value
@@ -89,6 +90,7 @@ def get_gemini_api_key() -> str | None:
 # ============================================================
 # Ollama Configuration
 # ============================================================
+
 
 def get_ollama_configuration() -> tuple[str, str]:
     """
@@ -120,9 +122,7 @@ def get_ollama_configuration() -> tuple[str, str]:
     )
 
     ollama_model = (
-        ollama_section.get("model")
-        or os.getenv("OLLAMA_MODEL")
-        or "qwen3:0.6b"
+        ollama_section.get("model") or os.getenv("OLLAMA_MODEL") or "qwen3:0.6b"
     )
 
     return (
@@ -134,6 +134,7 @@ def get_ollama_configuration() -> tuple[str, str]:
 # ============================================================
 # Reporting Modes
 # ============================================================
+
 
 def get_reporting_modes() -> list[str]:
     """

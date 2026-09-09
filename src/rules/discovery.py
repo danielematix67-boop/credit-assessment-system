@@ -12,7 +12,7 @@ def discover_rules() -> None:
     Importing an already loaded module does not re-execute it.
     Therefore this function is idempotent and must not be used
     to rebuild a cleared Rule registry.
-    
+
     """
 
     package = src.rules

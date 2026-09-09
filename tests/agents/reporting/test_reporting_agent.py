@@ -11,7 +11,6 @@ from src.models.assessment_status import AssessmentStatus
 from src.models.report import Report, ReportFindingGroup
 from src.rules.base.severity import RuleSeverity
 
-
 # ============================================================
 # Fixtures
 # ============================================================
@@ -90,9 +89,7 @@ def build_report(
         position_id=analysis.position_id,
         assessment_status=analysis.assessment_status,
         executive_summary=executive_summary,
-        findings_by_category=(
-            findings_by_category_from_analysis(analysis)
-        ),
+        findings_by_category=(findings_by_category_from_analysis(analysis)),
         limitations=analysis.limitations,
     )
 
@@ -101,9 +98,7 @@ def flatten_report_findings(
     report: Report,
 ) -> list[AnalysisFinding]:
     return [
-        finding
-        for group in report.findings_by_category
-        for finding in group.findings
+        finding for group in report.findings_by_category for finding in group.findings
     ]
 
 
@@ -154,14 +149,9 @@ def test_reporting_agent_preserves_report_content(
     report = agent.run(analysis)
 
     assert report.position_id == analysis.position_id
-    assert report.assessment_status == (
-        analysis.assessment_status
-    )
+    assert report.assessment_status == (analysis.assessment_status)
 
-    assert (
-        flatten_report_findings(report)
-        == analysis.key_findings
-    )
+    assert flatten_report_findings(report) == analysis.key_findings
 
     assert report.limitations == analysis.limitations
 
@@ -339,10 +329,7 @@ def test_reporting_agent_is_independent_of_number_of_findings(
 
     report = agent.run(analysis)
 
-    assert (
-        flatten_report_findings(report)
-        == findings
-    )
+    assert flatten_report_findings(report) == findings
 
     assert report.limitations == analysis.limitations
 
@@ -488,9 +475,7 @@ def test_reporting_agent_depends_only_on_report_generator_contract(
 
     report = agent.run(analysis)
 
-    assert report.executive_summary == (
-        "LLM-generated summary"
-    )
+    assert report.executive_summary == ("LLM-generated summary")
 
     primary.generate.assert_called_once_with(analysis)
     fallback.generate.assert_not_called()

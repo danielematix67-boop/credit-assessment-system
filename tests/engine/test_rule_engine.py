@@ -9,7 +9,6 @@ from src.rules.base.status import RuleStatus
 from src.rules.registry import get_default_rules
 from src.rules.result import RuleResult
 
-
 # ============================================================
 # Fixtures
 # ============================================================
@@ -124,10 +123,7 @@ def test_rule_engine_returns_one_result_per_rule(
 
     assert len(results) == len(rules)
 
-    assert all(
-        result in results
-        for result in results_by_rule.values()
-    )
+    assert all(result in results for result in results_by_rule.values())
 
 
 # ============================================================
@@ -160,12 +156,8 @@ def test_rule_engine_preserves_rule_evaluation_order(
 
     results = engine.evaluate(position)
 
-    assert [
-        result.rule_id
-        for result in results
-    ] == [
-        rule.evaluate.return_value.rule_id
-        for rule in rules
+    assert [result.rule_id for result in results] == [
+        rule.evaluate.return_value.rule_id for rule in rules
     ]
 
 
@@ -202,15 +194,9 @@ def test_rule_engine_evaluates_all_default_rules(
 
     assert len(results) == len(rules)
 
-    result_rule_ids = {
-        result.rule_id
-        for result in results
-    }
+    result_rule_ids = {result.rule_id for result in results}
 
-    configured_rule_ids = {
-        rule.config.rule_id
-        for rule in rules
-    }
+    configured_rule_ids = {rule.config.rule_id for rule in rules}
 
     assert result_rule_ids == configured_rule_ids
 

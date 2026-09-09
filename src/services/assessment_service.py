@@ -7,7 +7,6 @@ from src.services.assessment_status_calculator import AssessmentStatusCalculator
 
 
 class AssessmentService:
-
     def __init__(
         self,
         rule_engine: RuleEngine,

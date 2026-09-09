@@ -9,7 +9,6 @@ from src.rules.sustainability.leverage.nfp_to_ebitda import (
     NfpToEbitdaRule,
 )
 
-
 R004_CONFIG = RuleConfig(
     rule_id="R004",
     rule_name="nfp / EBITDA leverage",

@@ -5,7 +5,6 @@ import pytest
 
 from src.llm.ollama_client import OllamaClient
 
-
 # ============================================================
 # Test data
 # ============================================================
@@ -53,9 +52,7 @@ def test_ollama_client_initializes_with_default_configuration(
         model=TEST_MODEL,
     )
 
-    default_temperature, default_num_predict = (
-        get_default_generation_parameters()
-    )
+    default_temperature, default_num_predict = get_default_generation_parameters()
 
     assert client.model == TEST_MODEL
     assert client.host == DEFAULT_HOST
@@ -163,9 +160,7 @@ def test_ollama_client_generates_response_with_default_parameters(
 
     result = client.generate(prompt)
 
-    default_temperature, default_num_predict = (
-        get_default_generation_parameters()
-    )
+    default_temperature, default_num_predict = get_default_generation_parameters()
 
     assert result == response
 

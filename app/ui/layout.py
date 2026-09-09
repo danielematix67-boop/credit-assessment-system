@@ -4,9 +4,7 @@ import streamlit as st
 def render_header() -> None:
     """Render the application header."""
 
-    st.title(
-        "Credit Assessment System"
-    )
+    st.title("Credit Assessment System")
 
     st.markdown(
         """

@@ -53,10 +53,7 @@ def test_lower_is_worse_returns_none_before_first_threshold(
 ):
     first_threshold = lower_is_worse_policy.thresholds[0].threshold
 
-    assert (
-        lower_is_worse_policy.evaluate(first_threshold + 1)
-        is None
-    )
+    assert lower_is_worse_policy.evaluate(first_threshold + 1) is None
 
 
 def test_higher_is_worse_returns_none_before_first_threshold(
@@ -64,10 +61,7 @@ def test_higher_is_worse_returns_none_before_first_threshold(
 ):
     first_threshold = higher_is_worse_policy.thresholds[0].threshold
 
-    assert (
-        higher_is_worse_policy.evaluate(first_threshold - 1)
-        is None
-    )
+    assert higher_is_worse_policy.evaluate(first_threshold - 1) is None
 
 
 @pytest.mark.parametrize(
@@ -84,10 +78,7 @@ def test_threshold_boundaries_are_inclusive(
     policy = request.getfixturevalue(policy_fixture)
 
     for threshold in policy.thresholds:
-        assert (
-            policy.evaluate(threshold.threshold)
-            == threshold.severity
-        )
+        assert policy.evaluate(threshold.threshold) == threshold.severity
 
 
 @pytest.mark.parametrize(
@@ -104,10 +95,7 @@ def test_policy_assigns_configured_severity_at_each_threshold(
     policy = request.getfixturevalue(policy_fixture)
 
     for threshold in policy.thresholds:
-        assert (
-            policy.evaluate(threshold.threshold)
-            == threshold.severity
-        )
+        assert policy.evaluate(threshold.threshold) == threshold.severity
 
 
 def test_lower_is_worse_selects_worst_reached_severity(
@@ -116,9 +104,7 @@ def test_lower_is_worse_selects_worst_reached_severity(
     worst_threshold = lower_is_worse_policy.thresholds[-1]
 
     assert (
-        lower_is_worse_policy.evaluate(
-            worst_threshold.threshold - 1
-        )
+        lower_is_worse_policy.evaluate(worst_threshold.threshold - 1)
         == worst_threshold.severity
     )
 
@@ -129,9 +115,7 @@ def test_higher_is_worse_selects_worst_reached_severity(
     worst_threshold = higher_is_worse_policy.thresholds[-1]
 
     assert (
-        higher_is_worse_policy.evaluate(
-            worst_threshold.threshold + 1
-        )
+        higher_is_worse_policy.evaluate(worst_threshold.threshold + 1)
         == worst_threshold.severity
     )
 

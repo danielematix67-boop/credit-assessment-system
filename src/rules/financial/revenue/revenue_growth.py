@@ -6,12 +6,10 @@ from src.rules.result import RuleResult
 
 @Rule.register("R001")
 class RevenueGrowthRule(Rule):
-
     def evaluate(
         self,
         position: CreditPosition,
     ) -> RuleResult:
-
         value = position.revenue_growth
 
         if value is None:

@@ -75,10 +75,7 @@ class ReportPromptTemplate:
         Render the complete prompt using deterministic findings.
         """
 
-        deterministic_input = (
-            "DETERMINISTIC ASSESSMENT FINDINGS:\n\n"
-            f"{findings}"
-        )
+        deterministic_input = f"DETERMINISTIC ASSESSMENT FINDINGS:\n\n{findings}"
 
         return "\n\n".join(
             [

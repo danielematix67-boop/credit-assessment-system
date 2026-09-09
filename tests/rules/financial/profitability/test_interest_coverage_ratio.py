@@ -10,7 +10,6 @@ from src.rules.financial.profitability.interest_coverage_ratio import (
     InterestCoverageRatioRule,
 )
 
-
 RULE_ID = "R007"
 RULE_NAME = "Interest coverage ratio"
 CATEGORY = "profitability"
@@ -107,7 +106,6 @@ def assert_result_metadata(result, config):
         ),
     ],
 )
-
 def test_interest_coverage_ratio_rule_evaluates_ratio(
     rule,
     rule_config,

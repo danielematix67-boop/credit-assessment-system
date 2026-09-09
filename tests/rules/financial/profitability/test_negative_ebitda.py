@@ -7,7 +7,6 @@ from src.rules.financial.profitability.negative_ebitda import (
     NegativeEbitdaRule,
 )
 
-
 R002_CONFIG = RuleConfig(
     rule_id="R002",
     rule_name="Negative EBITDA",

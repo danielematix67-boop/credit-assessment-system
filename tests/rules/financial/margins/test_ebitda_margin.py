@@ -5,7 +5,6 @@ from src.rules.base.severity_direction import SeverityDirection
 from src.rules.base.status import RuleStatus
 from src.rules.financial.margins.ebitda_margin import EbitdaMarginRule
 
-
 R003_CONFIG = RuleConfig(
     rule_id="R003",
     rule_name="EBITDA margin deterioration",

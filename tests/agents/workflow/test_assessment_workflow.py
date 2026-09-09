@@ -15,7 +15,6 @@ from src.models.position import CreditPosition
 from src.models.report import Report
 from src.rules.base.severity import RuleSeverity
 
-
 # ============================================================
 # Helpers
 # ============================================================
@@ -81,9 +80,7 @@ def test_assessment_workflow_executes_all_stages(
     assert result.analysis.position_id == position.position_id
     assert result.report.position_id == position.position_id
 
-    assert result.report.assessment_status == (
-        result.assessment.status
-    )
+    assert result.report.assessment_status == (result.assessment.status)
 
     assert result.report_generator_used == "PRIMARY"
     assert result.report_generation_error is None
@@ -97,9 +94,7 @@ def test_assessment_workflow_executes_all_stages(
 def test_assessment_workflow_accepts_agent_contracts(
     assessment_service,
 ):
-    class TestAnalysisAgent(
-        Agent[Assessment, AssessmentAnalysis]
-    ):
+    class TestAnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
         def run(
             self,
             assessment: Assessment,
@@ -126,9 +121,7 @@ def test_assessment_workflow_accepts_agent_contracts(
                 limitations=[],
             )
 
-    class TestReportingAgent(
-        Agent[AssessmentAnalysis, Report]
-    ):
+    class TestReportingAgent(Agent[AssessmentAnalysis, Report]):
         def run(
             self,
             analysis: AssessmentAnalysis,
@@ -154,13 +147,9 @@ def test_assessment_workflow_accepts_agent_contracts(
     assert result.analysis.position_id == position.position_id
     assert result.report.position_id == position.position_id
 
-    assert result.analysis.assessment_status == (
-        result.assessment.status
-    )
+    assert result.analysis.assessment_status == (result.assessment.status)
 
-    assert result.report.assessment_status == (
-        result.analysis.assessment_status
-    )
+    assert result.report.assessment_status == (result.analysis.assessment_status)
 
     assert len(result.analysis.key_findings) == 1
     assert len(result.analysis.risk_factors) == 1
@@ -213,13 +202,9 @@ def test_assessment_workflow_propagates_primary_reporting_status():
 
     result = workflow.run(make_position())
 
-    assert result.report_generator_used == (
-        reporting_agent.last_generator_used
-    )
+    assert result.report_generator_used == (reporting_agent.last_generator_used)
 
-    assert result.report_generation_error == (
-        reporting_agent.last_error
-    )
+    assert result.report_generation_error == (reporting_agent.last_error)
 
 
 def test_assessment_workflow_propagates_fallback_reporting_status():
@@ -249,10 +234,6 @@ def test_assessment_workflow_propagates_fallback_reporting_status():
 
     result = workflow.run(make_position())
 
-    assert result.report_generator_used == (
-        reporting_agent.last_generator_used
-    )
+    assert result.report_generator_used == (reporting_agent.last_generator_used)
 
-    assert result.report_generation_error == (
-        reporting_agent.last_error
-    )
+    assert result.report_generation_error == (reporting_agent.last_error)

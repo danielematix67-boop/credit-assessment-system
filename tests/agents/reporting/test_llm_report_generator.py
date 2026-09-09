@@ -13,7 +13,6 @@ from src.models.assessment_status import AssessmentStatus
 from src.models.report import Report, ReportFindingGroup
 from src.rules.base.severity import RuleSeverity
 
-
 # ============================================================
 # Fixtures / Factories
 # ============================================================
@@ -45,21 +44,9 @@ def make_analysis(
     return AssessmentAnalysis(
         position_id=position_id,
         assessment_status=status,
-        key_findings=(
-            key_findings
-            if key_findings is not None
-            else []
-        ),
-        risk_factors=(
-            risk_factors
-            if risk_factors is not None
-            else []
-        ),
-        limitations=(
-            limitations
-            if limitations is not None
-            else []
-        ),
+        key_findings=(key_findings if key_findings is not None else []),
+        risk_factors=(risk_factors if risk_factors is not None else []),
+        limitations=(limitations if limitations is not None else []),
     )
 
 
@@ -84,9 +71,7 @@ def analysis() -> AssessmentAnalysis:
     ]
 
     risk_factors = [
-        finding
-        for finding in findings
-        if finding.severity == RuleSeverity.HIGH
+        finding for finding in findings if finding.severity == RuleSeverity.HIGH
     ]
 
     limitations = [
@@ -117,11 +102,7 @@ def valid_response(
 def different_status(
     status: AssessmentStatus,
 ) -> AssessmentStatus:
-    return next(
-        candidate
-        for candidate in AssessmentStatus
-        if candidate != status
-    )
+    return next(candidate for candidate in AssessmentStatus if candidate != status)
 
 
 # ============================================================
@@ -134,11 +115,7 @@ def generate_report(
     response: str | None = None,
 ) -> tuple[LLMReportGenerator, Report, MockLLMClient]:
     client = MockLLMClient(
-        response=(
-            response
-            if response is not None
-            else valid_response(analysis)
-        ),
+        response=(response if response is not None else valid_response(analysis)),
     )
 
     generator = LLMReportGenerator(client)
@@ -152,9 +129,7 @@ def report_findings(
     report: Report,
 ) -> list[AnalysisFinding]:
     return [
-        finding
-        for group in report.findings_by_category
-        for finding in group.findings
+        finding for group in report.findings_by_category for finding in group.findings
     ]
 
 
@@ -286,9 +261,7 @@ def test_llm_report_generator_generates_report(
     assert report.assessment_status == analysis.assessment_status
 
     expected_summary = (
-        f"Assessment status: "
-        f"{analysis.assessment_status.value}.\n"
-        f"{client.response}"
+        f"Assessment status: {analysis.assessment_status.value}.\n{client.response}"
     )
 
     assert report.executive_summary == expected_summary
@@ -443,9 +416,7 @@ def test_llm_report_generator_uses_deterministic_status(
         status=status,
     )
 
-    llm_response = (
-        "The company presents several financial findings."
-    )
+    llm_response = "The company presents several financial findings."
 
     _, report, _ = generate_report(
         analysis,
@@ -476,18 +447,13 @@ def test_llm_report_generator_llm_does_not_control_report_status(
         response=llm_response,
     )
 
-    assert report.assessment_status == (
-        analysis.assessment_status
-    )
+    assert report.assessment_status == (analysis.assessment_status)
 
 
 def test_llm_report_generator_adds_status_to_llm_narrative(
     analysis,
 ):
-    narrative = (
-        "Revenue and profitability indicators show "
-        "material weaknesses."
-    )
+    narrative = "Revenue and profitability indicators show material weaknesses."
 
     _, report, _ = generate_report(
         analysis,
@@ -495,9 +461,7 @@ def test_llm_report_generator_adds_status_to_llm_narrative(
     )
 
     assert report.executive_summary == (
-        f"Assessment status: "
-        f"{analysis.assessment_status.value}.\n"
-        f"{narrative}"
+        f"Assessment status: {analysis.assessment_status.value}.\n{narrative}"
     )
 
 
@@ -509,19 +473,14 @@ def test_llm_report_generator_adds_status_to_llm_narrative(
 def test_llm_report_generator_accepts_normal_narrative(
     analysis,
 ):
-    response = (
-        "Revenue and profitability indicators show "
-        "material weaknesses."
-    )
+    response = "Revenue and profitability indicators show material weaknesses."
 
     _, report, _ = generate_report(
         analysis,
         response=response,
     )
 
-    assert report.assessment_status == (
-        analysis.assessment_status
-    )
+    assert report.assessment_status == (analysis.assessment_status)
 
     assert response in report.executive_summary
 
@@ -540,28 +499,21 @@ def test_llm_report_generator_accepts_narrative_without_status(
     )
 
     assert report.executive_summary == (
-        f"Assessment status: "
-        f"{analysis.assessment_status.value}.\n"
-        f"{response}"
+        f"Assessment status: {analysis.assessment_status.value}.\n{response}"
     )
 
 
 def test_llm_report_generator_does_not_require_status_in_llm_response(
     analysis,
 ):
-    response = (
-        "The company presents weaknesses in revenue "
-        "growth and profitability."
-    )
+    response = "The company presents weaknesses in revenue growth and profitability."
 
     _, report, _ = generate_report(
         analysis,
         response=response,
     )
 
-    assert report.assessment_status == (
-        analysis.assessment_status
-    )
+    assert report.assessment_status == (analysis.assessment_status)
 
     assert response in report.executive_summary
 
@@ -585,9 +537,7 @@ def test_llm_report_generator_accepts_multiple_status_words_in_narrative(
         response=response,
     )
 
-    assert report.assessment_status == (
-        analysis.assessment_status
-    )
+    assert report.assessment_status == (analysis.assessment_status)
 
     assert response in report.executive_summary
 
@@ -642,23 +592,17 @@ def test_llm_report_generator_rejects_whitespace_response(
 def test_llm_report_generator_strips_response_whitespace(
     analysis,
 ):
-    response = (
-        "  Revenue and profitability show weaknesses.  "
-    )
+    response = "  Revenue and profitability show weaknesses.  "
 
     _, report, _ = generate_report(
         analysis,
         response=response,
     )
 
-    expected_narrative = (
-        "Revenue and profitability show weaknesses."
-    )
+    expected_narrative = "Revenue and profitability show weaknesses."
 
     assert report.executive_summary == (
-        f"Assessment status: "
-        f"{analysis.assessment_status.value}.\n"
-        f"{expected_narrative}"
+        f"Assessment status: {analysis.assessment_status.value}.\n{expected_narrative}"
     )
 
 
@@ -714,9 +658,7 @@ def test_llm_report_generator_preserves_structured_data(
 
     assert report.position_id == analysis.position_id
 
-    assert report.assessment_status == (
-        analysis.assessment_status
-    )
+    assert report.assessment_status == (analysis.assessment_status)
 
     assert report.findings_by_category == (
         findings_by_category_from_analysis(
@@ -724,9 +666,7 @@ def test_llm_report_generator_preserves_structured_data(
         )
     )
 
-    assert report.limitations == (
-        analysis.limitations
-    )
+    assert report.limitations == (analysis.limitations)
 
 
 def test_llm_report_generator_does_not_modify_analysis(
@@ -748,25 +688,18 @@ def test_llm_report_generator_does_not_modify_analysis(
         analysis,
     )
 
-    assert analysis.key_findings == (
-        original_key_findings
-    )
+    assert analysis.key_findings == (original_key_findings)
 
-    assert analysis.risk_factors == (
-        original_risk_factors
-    )
+    assert analysis.risk_factors == (original_risk_factors)
 
-    assert analysis.limitations == (
-        original_limitations
-    )
+    assert analysis.limitations == (original_limitations)
 
 
 def test_llm_report_generator_does_not_use_generated_text_as_structured_data(
     analysis,
 ):
     injected_text = (
-        "Generated content that does not exist "
-        "in the deterministic analysis."
+        "Generated content that does not exist in the deterministic analysis."
     )
 
     _, report, _ = generate_report(
@@ -778,18 +711,11 @@ def test_llm_report_generator_does_not_use_generated_text_as_structured_data(
         report,
     )
 
-    assert structured_findings == (
-        analysis.key_findings
-    )
+    assert structured_findings == (analysis.key_findings)
 
-    assert report.limitations == (
-        analysis.limitations
-    )
+    assert report.limitations == (analysis.limitations)
 
-    assert all(
-        finding.text != injected_text
-        for finding in structured_findings
-    )
+    assert all(finding.text != injected_text for finding in structured_findings)
 
 
 def test_llm_report_generator_preserves_finding_order(
@@ -799,9 +725,12 @@ def test_llm_report_generator_preserves_finding_order(
         analysis,
     )
 
-    assert report_findings(
-        report,
-    ) == analysis.key_findings
+    assert (
+        report_findings(
+            report,
+        )
+        == analysis.key_findings
+    )
 
 
 def test_llm_report_generator_preserves_categories(
@@ -811,15 +740,9 @@ def test_llm_report_generator_preserves_categories(
         analysis,
     )
 
-    expected_categories = [
-        finding.category
-        for finding in analysis.key_findings
-    ]
+    expected_categories = [finding.category for finding in analysis.key_findings]
 
-    actual_categories = [
-        finding.category
-        for finding in report_findings(report)
-    ]
+    actual_categories = [finding.category for finding in report_findings(report)]
 
     assert actual_categories == expected_categories
 
@@ -838,16 +761,10 @@ def test_llm_report_generator_groups_findings_by_category(
 
     grouped = report.findings_by_category
 
-    categories = [
-        group.category
-        for group in grouped
-    ]
+    categories = [group.category for group in grouped]
 
     expected_categories = list(
-        dict.fromkeys(
-            finding.category
-            for finding in analysis.key_findings
-        )
+        dict.fromkeys(finding.category for finding in analysis.key_findings)
     )
 
     assert categories == expected_categories
@@ -902,19 +819,13 @@ def test_llm_report_generator_supports_empty_analysis(
 
     assert report.position_id == analysis.position_id
 
-    assert report.assessment_status == (
-        analysis.assessment_status
-    )
+    assert report.assessment_status == (analysis.assessment_status)
 
     expected_summary = (
-        f"Assessment status: "
-        f"{analysis.assessment_status.value}.\n"
-        f"{client.response}"
+        f"Assessment status: {analysis.assessment_status.value}.\n{client.response}"
     )
 
-    assert report.executive_summary == (
-        expected_summary
-    )
+    assert report.executive_summary == (expected_summary)
 
     assert report.findings_by_category == []
     assert report.limitations == []
@@ -938,10 +849,7 @@ def test_llm_report_generator_builds_executive_summary(
 
     prompt_builder.build.return_value = "Test prompt"
 
-    narrative = (
-        "Revenue and profitability indicators show "
-        "material weaknesses."
-    )
+    narrative = "Revenue and profitability indicators show material weaknesses."
 
     client.generate.return_value = narrative
 
@@ -953,9 +861,7 @@ def test_llm_report_generator_builds_executive_summary(
     report = generator.generate(analysis)
 
     assert report.executive_summary == (
-        f"Assessment status: "
-        f"{analysis.assessment_status.value}.\n"
-        f"{narrative}"
+        f"Assessment status: {analysis.assessment_status.value}.\n{narrative}"
     )
 
 
@@ -1006,14 +912,10 @@ def test_llm_report_generator_executes_expected_pipeline(
     )
 
     assert report.executive_summary == (
-        f"Assessment status: "
-        f"{analysis.assessment_status.value}.\n"
-        f"{narrative}"
+        f"Assessment status: {analysis.assessment_status.value}.\n{narrative}"
     )
 
-    assert report.assessment_status == (
-        analysis.assessment_status
-    )
+    assert report.assessment_status == (analysis.assessment_status)
 
     assert report.findings_by_category == (
         findings_by_category_from_analysis(
@@ -1021,9 +923,8 @@ def test_llm_report_generator_executes_expected_pipeline(
         )
     )
 
-    assert report.limitations == (
-        analysis.limitations
-    )
+    assert report.limitations == (analysis.limitations)
+
 
 def test_llm_report_generator_uses_injected_prompt_builder(
     analysis,

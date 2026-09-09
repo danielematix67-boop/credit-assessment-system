@@ -15,11 +15,7 @@ def make_result(status: RuleStatus) -> RuleResult:
         rule_name="Test rule",
         category="test",
         status=status,
-        value=(
-            1.0
-            if status != RuleStatus.NOT_EVALUABLE
-            else None
-        ),
+        value=(1.0 if status != RuleStatus.NOT_EVALUABLE else None),
         threshold=0.0,
         severity=RuleSeverity.MEDIUM,
     )
@@ -93,10 +89,7 @@ def test_assessment_status_is_derived_from_rule_statuses(
     rule_statuses,
     expected_status,
 ):
-    results = [
-        make_result(status)
-        for status in rule_statuses
-    ]
+    results = [make_result(status) for status in rule_statuses]
 
     calculator = AssessmentStatusCalculator()
 
@@ -120,10 +113,7 @@ def test_non_triggered_rules_do_not_affect_attention_status(
 
     calculator = AssessmentStatusCalculator()
 
-    assert (
-        calculator.calculate(results)
-        == AssessmentStatus.ATTENTION
-    )
+    assert calculator.calculate(results) == AssessmentStatus.ATTENTION
 
 
 @pytest.mark.parametrize(
@@ -147,14 +137,8 @@ def test_multiple_triggered_rules_remain_critical(
         *additional_statuses,
     ]
 
-    results = [
-        make_result(status)
-        for status in rule_statuses
-    ]
+    results = [make_result(status) for status in rule_statuses]
 
     calculator = AssessmentStatusCalculator()
 
-    assert (
-        calculator.calculate(results)
-        == AssessmentStatus.CRITICAL
-    )
+    assert calculator.calculate(results) == AssessmentStatus.CRITICAL

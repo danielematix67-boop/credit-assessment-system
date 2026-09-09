@@ -7,6 +7,7 @@ from dataclasses import dataclass
 # Rules read the position and independently determine whether their conditions
 # are triggered. Missing financial information is represented by None.
 
+
 @dataclass
 class CreditPosition:
     position_id: str
@@ -56,5 +57,3 @@ class CreditPosition:
     # =========================
 
     revenue_growth: float | None = None
-
-    

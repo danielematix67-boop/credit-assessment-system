@@ -2,7 +2,6 @@ from src.llm.client import LLMClient
 
 
 class MockLLMClient(LLMClient):
-
     DEFAULT_RESPONSE = "CRITICAL assessment identified."
 
     def __init__(

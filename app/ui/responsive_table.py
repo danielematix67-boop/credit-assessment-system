@@ -2,7 +2,6 @@ from typing import Any
 
 import streamlit as st
 
-
 # ============================================================
 # Responsive Position Table
 # ============================================================

@@ -4,11 +4,9 @@ from src.rules.result import RuleResult
 
 
 class AssessmentStatusCalculator:
-
     def calculate(self, results: list[RuleResult]) -> AssessmentStatus:
         triggered_count = sum(
-            result.status == RuleStatus.TRIGGERED
-            for result in results
+            result.status == RuleStatus.TRIGGERED for result in results
         )
 
         if triggered_count >= 2:

@@ -3,7 +3,6 @@
 import sys
 from pathlib import Path
 
-
 # ============================================================
 # Project Path
 # ============================================================
@@ -20,46 +19,36 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import streamlit as st
 
-
 # ============================================================
 # Application Imports
 # ============================================================
-
 from app.ui.assessment import (
     build_credit_position,
     execute_assessment,
     store_assessment_result,
 )
-
 from app.ui.assessment_configuration import (
     render_assessment_configuration,
 )
-
 from app.ui.input_source import (
     render_credit_data_source,
 )
-
-from app.ui.results import (
-    render_results,
-)
-
-from app.ui.sidebar import (
-    render_sidebar,
-)
-
-from app.ui.styles import (
-    apply_styles,
-)
-
-from app.ui.workflow_view import (
-    render_workflow_architecture,
-)
-
 from app.ui.layout import (
     render_footer,
     render_header,
 )
-
+from app.ui.results import (
+    render_results,
+)
+from app.ui.sidebar import (
+    render_sidebar,
+)
+from app.ui.styles import (
+    apply_styles,
+)
+from app.ui.workflow_view import (
+    render_workflow_architecture,
+)
 
 # ============================================================
 # Page Configuration
@@ -127,9 +116,7 @@ run_button = render_assessment_configuration(
 # Execute Assessment
 # ============================================================
 if run_button:
-
     try:
-
         position = build_credit_position(
             position=position,
             position_data=position_data,
@@ -137,10 +124,7 @@ if run_button:
         )
 
     except (TypeError, ValueError) as error:
-
-        st.error(
-            str(error)
-        )
+        st.error(str(error))
 
         st.stop()
 
@@ -154,29 +138,19 @@ if run_button:
         position=position,
         input_mode=input_mode,
         reporting_mode=reporting_mode,
-        scenario_name=(
-            scenario_name
-            if input_mode == "Demo Scenario"
-            else None
-        ),
+        scenario_name=(scenario_name if input_mode == "Demo Scenario" else None),
     )
 # ============================================================
 # Results
 # ============================================================
 
-result = st.session_state.get(
-    "assessment_result"
-)
+result = st.session_state.get("assessment_result")
 
-assessment_position = st.session_state.get(
-    "assessment_position"
-)
+assessment_position = st.session_state.get("assessment_position")
 
-selected_reporting_mode = (
-    st.session_state.get(
-        "assessment_reporting_mode",
-        reporting_mode,
-    )
+selected_reporting_mode = st.session_state.get(
+    "assessment_reporting_mode",
+    reporting_mode,
 )
 
 render_results(

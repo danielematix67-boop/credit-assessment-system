@@ -9,9 +9,7 @@ def render_workflow_architecture() -> None:
     It does not execute any assessment logic.
     """
 
-    st.subheader(
-        "Assessment Workflow"
-    )
+    st.subheader("Assessment Workflow")
 
     st.caption(
         "End-to-end processing architecture. Blue steps are fully "
@@ -61,19 +59,16 @@ def render_workflow_architecture() -> None:
         description,
         kind,
     ) in enumerate(workflow_steps):
-
         pipeline_html += (
             f'<div class="pipeline-step {kind}">'
             f'<div class="pipeline-number">{number}</div>'
             f'<div class="pipeline-title">{title}</div>'
             f'<div class="pipeline-description">{description}</div>'
-            f'</div>'
+            f"</div>"
         )
 
         if index < len(workflow_steps) - 1:
-            pipeline_html += (
-                '<div class="pipeline-arrow">→</div>'
-            )
+            pipeline_html += '<div class="pipeline-arrow">→</div>'
 
     pipeline_html += "</div>"
 

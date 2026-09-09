@@ -47,10 +47,7 @@ def test_credit_position_preserves_position_identifier(
     credit_position,
     position_data,
 ):
-    assert (
-        credit_position.position_id
-        == position_data["position_id"]
-    )
+    assert credit_position.position_id == position_data["position_id"]
 
 
 def test_credit_position_optional_fields_default_to_none():

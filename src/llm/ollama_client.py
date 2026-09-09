@@ -18,7 +18,6 @@ class OllamaClient(LLMClient):
         temperature: float = 0.0,
         num_predict: int = 512,
     ) -> None:
-
         self.model = model
         self.host = host
         self.temperature = temperature
@@ -32,7 +31,6 @@ class OllamaClient(LLMClient):
         self,
         prompt: str,
     ) -> str:
-
         response = self.client.generate(
             model=self.model,
             prompt=prompt,

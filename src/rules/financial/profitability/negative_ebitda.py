@@ -6,12 +6,10 @@ from src.rules.result import RuleResult
 
 @Rule.register("R002")
 class NegativeEbitdaRule(Rule):
-
     def evaluate(
         self,
         position: CreditPosition,
     ) -> RuleResult:
-
         if position.ebitda is None:
             return self._not_evaluable(
                 reason="EBITDA is not available.",

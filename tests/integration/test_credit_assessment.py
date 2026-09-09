@@ -10,7 +10,6 @@ from src.llm.mock_client import MockLLMClient
 from src.models.position import CreditPosition
 from src.rules.base.status import RuleStatus
 
-
 # ============================================================
 # Fixtures
 # ============================================================
@@ -58,10 +57,7 @@ def report_findings_by_category(report):
     """
     Return report findings grouped by category.
     """
-    return {
-        group.category: group.findings
-        for group in report.findings_by_category
-    }
+    return {group.category: group.findings for group in report.findings_by_category}
 
 
 def analysis_findings_by_category(analysis):
@@ -107,11 +103,8 @@ def assert_prompt_contains_any(
     normalized_prompt = normalize_prompt(prompt)
 
     assert any(
-        alternative.lower() in normalized_prompt
-        for alternative in alternatives
-    ), (
-        f"None of {alternatives!r} found in prompt."
-    )
+        alternative.lower() in normalized_prompt for alternative in alternatives
+    ), f"None of {alternatives!r} found in prompt."
 
 
 def assert_deterministic_information_is_preserved(result):
@@ -123,25 +116,15 @@ def assert_deterministic_information_is_preserved(result):
     assert result.analysis is not None
     assert result.report is not None
 
-    assert (
-        result.analysis.assessment_status
-        == result.assessment.status
+    assert result.analysis.assessment_status == result.assessment.status
+
+    assert result.report.assessment_status == result.assessment.status
+
+    assert report_findings_by_category(result.report) == analysis_findings_by_category(
+        result.analysis
     )
 
-    assert (
-        result.report.assessment_status
-        == result.assessment.status
-    )
-
-    assert (
-        report_findings_by_category(result.report)
-        == analysis_findings_by_category(result.analysis)
-    )
-
-    assert (
-        result.report.limitations
-        == result.analysis.limitations
-    )
+    assert result.report.limitations == result.analysis.limitations
 
 
 def make_valid_llm_response():
@@ -169,7 +152,6 @@ def make_valid_llm_response():
 def test_credit_assessment_end_to_end(
     risk_position,
 ):
-
     workflow = create_default_assessment_workflow(
         use_llm=False,
     )
@@ -182,32 +164,17 @@ def test_credit_assessment_end_to_end(
     assert result.analysis is not None
     assert result.report is not None
 
-    assert (
-        result.assessment.position_id
-        == risk_position.position_id
-    )
+    assert result.assessment.position_id == risk_position.position_id
 
-    assert (
-        result.analysis.position_id
-        == risk_position.position_id
-    )
+    assert result.analysis.position_id == risk_position.position_id
 
-    assert (
-        result.report.position_id
-        == risk_position.position_id
-    )
+    assert result.report.position_id == risk_position.position_id
 
     assert result.assessment.status is not None
 
-    assert (
-        result.analysis.assessment_status
-        == result.assessment.status
-    )
+    assert result.analysis.assessment_status == result.assessment.status
 
-    assert (
-        result.report.assessment_status
-        == result.assessment.status
-    )
+    assert result.report.assessment_status == result.assessment.status
 
     assert result.report.executive_summary
 
@@ -220,7 +187,6 @@ def test_credit_assessment_end_to_end(
 def test_credit_assessment_propagates_findings_through_pipeline(
     risk_position,
 ):
-
     workflow = create_default_assessment_workflow(
         use_llm=False,
     )
@@ -259,15 +225,11 @@ def test_credit_assessment_propagates_findings_through_pipeline(
 
     assert actual_analysis_findings == expected_findings
 
-    assert (
-        report_findings_by_category(report)
-        == analysis_findings_by_category(analysis)
+    assert report_findings_by_category(report) == analysis_findings_by_category(
+        analysis
     )
 
-    assert (
-        report.limitations
-        == analysis.limitations
-    )
+    assert report.limitations == analysis.limitations
 
 
 # ============================================================
@@ -278,7 +240,6 @@ def test_credit_assessment_propagates_findings_through_pipeline(
 def test_llm_workflow_uses_primary_generator(
     risk_position,
 ):
-
     llm_client = MockLLMClient(
         response=make_valid_llm_response(),
     )
@@ -303,10 +264,7 @@ def test_llm_workflow_uses_primary_generator(
 
     assert result.report.executive_summary
 
-    assert (
-        workflow.reporting_agent.last_generator_used
-        == "PRIMARY"
-    )
+    assert workflow.reporting_agent.last_generator_used == "PRIMARY"
 
     assert workflow.reporting_agent.last_error is None
 
@@ -314,7 +272,6 @@ def test_llm_workflow_uses_primary_generator(
 def test_credit_assessment_llm_workflow(
     risk_position,
 ):
-
     llm_client = MockLLMClient(
         response=make_valid_llm_response(),
     )
@@ -339,10 +296,7 @@ def test_credit_assessment_llm_workflow(
 
     assert result.report.executive_summary
 
-    assert (
-        workflow.reporting_agent.last_generator_used
-        == "PRIMARY"
-    )
+    assert workflow.reporting_agent.last_generator_used == "PRIMARY"
 
     assert workflow.reporting_agent.last_error is None
 
@@ -350,7 +304,6 @@ def test_credit_assessment_llm_workflow(
 def test_llm_workflow_sends_prompt_to_llm_client(
     risk_position,
 ):
-
     llm_client = MockLLMClient(
         response=make_valid_llm_response(),
     )
@@ -376,7 +329,6 @@ def test_llm_workflow_sends_prompt_to_llm_client(
 def test_llm_prompt_contains_deterministic_assessment_data(
     risk_position,
 ):
-
     deterministic_workflow = create_default_assessment_workflow(
         use_llm=False,
     )
@@ -414,7 +366,6 @@ def test_llm_prompt_contains_deterministic_assessment_data(
 def test_llm_prompt_contains_safety_constraints(
     risk_position,
 ):
-
     llm_client = MockLLMClient(
         response=make_valid_llm_response(),
     )
@@ -468,6 +419,7 @@ def test_llm_prompt_contains_safety_constraints(
         ),
     )
 
+
 # ============================================================
 # LLM cannot modify deterministic assessment
 # ============================================================
@@ -476,7 +428,6 @@ def test_llm_prompt_contains_safety_constraints(
 def test_llm_cannot_change_deterministic_assessment(
     risk_position,
 ):
-
     deterministic_workflow = create_default_assessment_workflow(
         use_llm=False,
     )
@@ -503,20 +454,11 @@ def test_llm_cannot_change_deterministic_assessment(
         risk_position,
     )
 
-    assert (
-        result.assessment.status
-        == expected_status
-    )
+    assert result.assessment.status == expected_status
 
-    assert (
-        result.analysis.assessment_status
-        == expected_status
-    )
+    assert result.analysis.assessment_status == expected_status
 
-    assert (
-        result.report.assessment_status
-        == expected_status
-    )
+    assert result.report.assessment_status == expected_status
 
     assert result.report.executive_summary
 
@@ -533,7 +475,6 @@ def test_llm_cannot_change_deterministic_assessment(
 def test_llm_cannot_replace_deterministic_findings(
     risk_position,
 ):
-
     llm_client = MockLLMClient(
         response=(
             "The company has a strong financial profile "
@@ -558,15 +499,9 @@ def test_llm_cannot_replace_deterministic_findings(
         result.analysis,
     )
 
-    assert (
-        report_by_category
-        == analysis_by_category
-    )
+    assert report_by_category == analysis_by_category
 
-    deterministic_findings = [
-        finding.text
-        for finding in result.analysis.key_findings
-    ]
+    deterministic_findings = [finding.text for finding in result.analysis.key_findings]
 
     for finding in deterministic_findings:
         assert finding in [
@@ -584,11 +519,9 @@ def test_llm_cannot_replace_deterministic_findings(
 def test_llm_cannot_replace_deterministic_limitations(
     risk_position,
 ):
-
     llm_client = MockLLMClient(
         response=(
-            "All available financial information has been "
-            "considered and summarized."
+            "All available financial information has been considered and summarized."
         ),
     )
 
@@ -601,10 +534,7 @@ def test_llm_cannot_replace_deterministic_limitations(
         risk_position,
     )
 
-    assert (
-        result.report.limitations
-        == result.analysis.limitations
-    )
+    assert result.report.limitations == result.analysis.limitations
 
 
 # ============================================================
@@ -615,7 +545,6 @@ def test_llm_cannot_replace_deterministic_limitations(
 def test_llm_response_is_rejected_when_empty(
     risk_position,
 ):
-
     llm_client = MockLLMClient(
         response="   ",
     )
@@ -631,30 +560,18 @@ def test_llm_response_is_rejected_when_empty(
 
     assert result.report is not None
 
-    assert (
-        workflow.reporting_agent.last_generator_used
-        == "FALLBACK"
+    assert workflow.reporting_agent.last_generator_used == "FALLBACK"
+
+    assert workflow.reporting_agent.last_error == (
+        "LLM report generation failed: LLM returned an empty response"
     )
 
-    assert (
-        workflow.reporting_agent.last_error
-        ==
-        (
-            "LLM report generation failed: "
-            "LLM returned an empty response"
-        )
-    )
-
-    assert (
-        result.report.assessment_status
-        == result.assessment.status
-    )
+    assert result.report.assessment_status == result.assessment.status
 
 
 def test_llm_response_content_is_preserved(
     risk_position,
 ):
-
     response = (
         "This narrative was generated by the LLM "
         "to summarize the available information."
@@ -673,36 +590,19 @@ def test_llm_response_content_is_preserved(
         risk_position,
     )
 
-    assert (
-        workflow.reporting_agent.last_generator_used
-        == "PRIMARY"
-    )
+    assert workflow.reporting_agent.last_generator_used == "PRIMARY"
 
-    assert (
-        response
-        in result.report.executive_summary
-    )
+    assert response in result.report.executive_summary
 
-    assert (
-        result.report.executive_summary.startswith(
-            "Assessment status:"
-        )
-    )
+    assert result.report.executive_summary.startswith("Assessment status:")
 
 
 def test_llm_response_whitespace_is_normalized(
     risk_position,
 ):
+    response = "   Generated narrative content with surrounding spaces.   "
 
-    response = (
-        "   Generated narrative content "
-        "with surrounding spaces.   "
-    )
-
-    expected_response = (
-        "Generated narrative content "
-        "with surrounding spaces."
-    )
+    expected_response = "Generated narrative content with surrounding spaces."
 
     llm_client = MockLLMClient(
         response=response,
@@ -717,22 +617,14 @@ def test_llm_response_whitespace_is_normalized(
         risk_position,
     )
 
-    assert (
-        expected_response
-        in result.report.executive_summary
-    )
+    assert expected_response in result.report.executive_summary
 
-    assert (
-        result.report.executive_summary.startswith(
-            "Assessment status:"
-        )
-    )
+    assert result.report.executive_summary.startswith("Assessment status:")
 
 
 def test_llm_accepts_response_without_assessment_status(
     risk_position,
 ):
-
     response = (
         "The generated narrative focuses on "
         "financial indicators and relevant observations."
@@ -751,23 +643,13 @@ def test_llm_accepts_response_without_assessment_status(
         risk_position,
     )
 
-    assert (
-        workflow.reporting_agent.last_generator_used
-        == "PRIMARY"
-    )
+    assert workflow.reporting_agent.last_generator_used == "PRIMARY"
 
     assert workflow.reporting_agent.last_error is None
 
-    assert (
-        response
-        in result.report.executive_summary
-    )
+    assert response in result.report.executive_summary
 
-    assert (
-        result.report.executive_summary.startswith(
-            "Assessment status:"
-        )
-    )
+    assert result.report.executive_summary.startswith("Assessment status:")
 
 
 # ============================================================
@@ -778,7 +660,6 @@ def test_llm_accepts_response_without_assessment_status(
 def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails(
     risk_position,
 ):
-
     llm_client = MockLLMClient(
         error=RuntimeError(
             "LLM service unavailable",
@@ -798,27 +679,16 @@ def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails(
     assert result.analysis is not None
     assert result.report is not None
 
-    assert (
-        result.assessment.status
-        == result.analysis.assessment_status
-    )
+    assert result.assessment.status == result.analysis.assessment_status
 
-    assert (
-        result.report.assessment_status
-        == result.assessment.status
-    )
+    assert result.report.assessment_status == result.assessment.status
 
     assert result.report.executive_summary
 
-    assert (
-        workflow.reporting_agent.last_generator_used
-        == "FALLBACK"
-    )
+    assert workflow.reporting_agent.last_generator_used == "FALLBACK"
 
     assert (
-        workflow.reporting_agent.last_error
-        ==
-        "LLM service is temporarily unavailable."
+        workflow.reporting_agent.last_error == "LLM service is temporarily unavailable."
     )
 
     assert_deterministic_information_is_preserved(
@@ -834,7 +704,6 @@ def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails(
 def test_not_evaluable_rules_do_not_generate_findings(
     normal_position,
 ):
-
     workflow = create_default_assessment_workflow(
         use_llm=False,
     )
@@ -846,20 +715,17 @@ def test_not_evaluable_rules_do_not_generate_findings(
     not_evaluable_results = [
         rule_result
         for rule_result in result.assessment.rule_results
-        if rule_result.status
-        == RuleStatus.NOT_EVALUABLE
+        if rule_result.status == RuleStatus.NOT_EVALUABLE
     ]
 
     assert not_evaluable_results
 
     not_evaluable_rule_ids = {
-        rule_result.rule_id
-        for rule_result in not_evaluable_results
+        rule_result.rule_id for rule_result in not_evaluable_results
     }
 
     finding_rule_ids = {
-        finding.result.rule_id
-        for finding in result.assessment.findings
+        finding.result.rule_id for finding in result.assessment.findings
     }
 
     assert finding_rule_ids.isdisjoint(
@@ -868,7 +734,4 @@ def test_not_evaluable_rules_do_not_generate_findings(
 
     assert result.analysis.key_findings == []
 
-    assert (
-        report_findings_by_category(result.report)
-        == {}
-    )
+    assert report_findings_by_category(result.report) == {}

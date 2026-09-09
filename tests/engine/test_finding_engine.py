@@ -10,7 +10,6 @@ from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
-
 # ============================================================
 # Fixtures
 # ============================================================

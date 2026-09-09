@@ -5,19 +5,13 @@ from src.models.report import Report, ReportFindingGroup
 
 
 class DeterministicReportGenerator(ReportGenerator):
-
     def generate(
         self,
         analysis: AssessmentAnalysis,
     ) -> Report:
+        summary = self._generate_summary(analysis)
 
-        summary = self._generate_summary(
-            analysis
-        )
-
-        findings_by_category = self._group_findings_by_category(
-            analysis.key_findings
-        )
+        findings_by_category = self._group_findings_by_category(analysis.key_findings)
 
         return Report(
             position_id=analysis.position_id,
@@ -31,7 +25,6 @@ class DeterministicReportGenerator(ReportGenerator):
     def _generate_summary(
         analysis: AssessmentAnalysis,
     ) -> str:
-
         if analysis.assessment_status == AssessmentStatus.NORMAL:
             summary = (
                 "Assessment status: NORMAL.\n\n"
@@ -63,17 +56,13 @@ class DeterministicReportGenerator(ReportGenerator):
             summary += "\n\nKey risk factors:\n"
 
             for risk_factor in analysis.risk_factors:
-                summary += (
-                    f"- {risk_factor.text}\n"
-                )
+                summary += f"- {risk_factor.text}\n"
 
         elif analysis.key_findings:
             summary += "\n\nKey findings:\n"
 
             for finding in analysis.key_findings:
-                summary += (
-                    f"- {finding.text}\n"
-                )
+                summary += f"- {finding.text}\n"
 
         return summary
 
@@ -81,7 +70,6 @@ class DeterministicReportGenerator(ReportGenerator):
     def _group_findings_by_category(
         findings,
     ) -> list[ReportFindingGroup]:
-
         grouped: dict[str, list] = {}
 
         for finding in findings:
