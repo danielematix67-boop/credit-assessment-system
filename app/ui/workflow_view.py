@@ -5,15 +5,16 @@ def render_workflow_architecture() -> None:
     """Show the credit-monitoring workflow in one compact view."""
     with st.expander("How the monitoring assessment works", expanded=False):
         st.caption(
-            "The workflow mirrors the operator's reading sequence: establish the position, "
-            "check the available information, identify risk signals, reach the judgement, and document it."
+            "The workflow shows how raw credit information becomes a documented "
+            "monitoring judgement and executive report."
         )
 
         workflow_steps = [
             ("01", "Credit Position", "Data & information", "det"),
-            ("02", "Risk Assessment", "Indicators & rules", "det"),
-            ("03", "Monitoring Judgement", "Findings & severity", "det"),
-            ("04", "Executive Report", "Decision & rationale", "ai"),
+            ("02", "Financial Indicators", "Actual values", "det"),
+            ("03", "Rule Engine", "Thresholds & outcomes", "det"),
+            ("04", "Monitoring Judgement", "Risk & severity", "det"),
+            ("05", "Executive Report", "Decision & rationale", "ai"),
         ]
 
         pipeline_html = '<div class="pipeline-wrap">'
@@ -31,8 +32,7 @@ def render_workflow_architecture() -> None:
 
         st.markdown(pipeline_html, unsafe_allow_html=True)
         st.caption(
-            "The Rule Engine determines the credit judgement, rule outcomes, severity and thresholds. "
-            "The Analysis layer organises the findings. "
-            "AI is used only for report narrative and "
-            "cannot change the judgement."
+            "The Rule Engine owns the deterministic judgement, rule outcomes, "
+            "severity and thresholds. The Analysis layer organises the findings. "
+            "AI is used only for report narrative and cannot change the judgement."
         )
