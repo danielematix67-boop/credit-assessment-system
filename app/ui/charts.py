@@ -126,9 +126,7 @@ def render_risk_indicator_dashboard(result: Any) -> None:
     dataframe = pd.DataFrame(rows)
     status_counts = _rule_status_counts(result)
 
-    # --------------------------------------------------------
-    # Executive summary
-    # --------------------------------------------------------
+    # Executive summary: answer "how many rules and exceptions?" first.
     metric_cols = st.columns(4)
     with metric_cols[0]:
         st.metric("Rules evaluated", len(rule_results))
@@ -141,9 +139,6 @@ def render_risk_indicator_dashboard(result: Any) -> None:
 
     triggered = dataframe[dataframe["Status"] == "TRIGGERED"]
 
-    # --------------------------------------------------------
-    # Risk overview: only triggered rules drive this chart
-    # --------------------------------------------------------
     if triggered.empty:
         st.success("No risk indicators breached their configured thresholds.")
     else:
@@ -163,13 +158,12 @@ def render_risk_indicator_dashboard(result: Any) -> None:
             height=max(180, 55 * len(category_counts)),
         )
 
-    # --------------------------------------------------------
-    # Scalable rule catalogue
-    # --------------------------------------------------------
+    # Scalable catalogue: with hundreds of rules, exceptions should be the
+    # default investigation path rather than a long unfiltered table.
     st.markdown("#### Rule Catalogue")
     st.caption(
-        "The catalogue is intentionally filterable: with hundreds of rules, review "
-        "the exceptions first instead of scanning the complete rule set."
+        "Filter the evaluated rules before opening the detailed table. "
+        "This keeps the interface usable as the rule library grows."
     )
 
     filter_cols = st.columns([1.2, 1.2, 1.6, 1.4])
@@ -214,15 +208,9 @@ def render_risk_indicator_dashboard(result: Any) -> None:
         )
 
     with filter_cols[3]:
-        sort_options = {
-            "Priority": "_priority",
-            "Rule ID": "Rule",
-            "Category": "Category",
-            "Status": "Status",
-        }
         selected_sort = st.selectbox(
             "Sort by",
-            list(sort_options),
+            ["Priority", "Rule ID", "Category", "Status"],
             key="rule_catalogue_sort",
         )
 
@@ -243,10 +231,15 @@ def render_risk_indicator_dashboard(result: Any) -> None:
         ),
         axis=1,
     )
-    filtered = filtered.sort_values(
-        sort_options[selected_sort],
-        ascending=selected_sort in {"Rule ID", "Category", "Status"},
-    )
+
+    if selected_sort == "Priority":
+        filtered = filtered.sort_values("_priority", ascending=True)
+    elif selected_sort == "Rule ID":
+        filtered = filtered.sort_values("Rule", ascending=True)
+    elif selected_sort == "Category":
+        filtered = filtered.sort_values(["Category", "Rule"], ascending=True)
+    else:
+        filtered = filtered.sort_values(["Status", "Rule"], ascending=True)
 
     total_filtered = len(filtered)
     st.caption(f"Showing {total_filtered} of {len(dataframe)} evaluated rules.")
@@ -270,11 +263,6 @@ def render_risk_indicator_dashboard(result: Any) -> None:
                 use_container_width=True,
                 hide_index=True,
             )
-
-    # --------------------------------------------------------
-    # Detailed inspection remains separate from the catalogue
-    # --------------------------------------------------------
-    render_rule_indicator_detail(result)
 
 
 # ============================================================
