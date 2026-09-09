@@ -54,11 +54,6 @@ def expected_status_line(status: AssessmentStatus) -> str:
     return f"Assessment Status: {status.value.capitalize()}"
 
 
-# ============================================================
-# Contract and dependencies
-# ============================================================
-
-
 def test_implements_report_generator_contract() -> None:
     generator, _ = make_generator()
     assert isinstance(generator, ReportGenerator)
@@ -83,11 +78,6 @@ def test_accepts_custom_prompt_builder() -> None:
     assert generator.prompt_builder is prompt_builder
     prompt_builder.build.assert_called_once()
     client.generate.assert_called_once_with("Test prompt")
-
-
-# ============================================================
-# Generation and deterministic status
-# ============================================================
 
 
 def test_generates_report_with_deterministic_status_and_narrative() -> None:
@@ -140,11 +130,6 @@ def test_removes_llm_status_prefix_case_insensitively(response: str) -> None:
     assert report.executive_summary.count("Assessment Status:") == 1
 
 
-# ============================================================
-# Response validation
-# ============================================================
-
-
 def test_rejects_empty_response() -> None:
     generator, _ = make_generator(response="")
     with pytest.raises(ValueError, match="LLM returned an empty response"):
@@ -177,11 +162,6 @@ def test_removes_exact_duplicate_sentences() -> None:
     assert report.executive_summary.endswith("Revenue growth declined. EBITDA is negative.")
 
 
-# ============================================================
-# Indicator grounding for local LLM
-# ============================================================
-
-
 def test_extracts_indicator_values_from_findings() -> None:
     findings = [
         make_finding("Revenue growth declined to -20.0%."),
@@ -192,11 +172,11 @@ def test_extracts_indicator_values_from_findings() -> None:
     assert LLMReportGenerator._extract_indicator_values(findings) == ["-20.0%", "€-120,000", "7.0x"]
 
 
-def test_local_llm_adds_only_missing_indicator_values() -> None:
+def test_local_llm_falls_back_when_indicator_values_are_missing() -> None:
     findings = [
-        make_finding("Revenue growth declined to -20.0%."),
-        make_finding("EBITDA is negative at €-120,000."),
-        make_finding("NFP to EBITDA stands at 7.0x."),
+        make_finding("Revenue growth declined to -20.0%.", category="Revenue"),
+        make_finding("EBITDA is negative at €-120,000.", category="Profitability"),
+        make_finding("NFP to EBITDA stands at 7.0x.", category="Leverage"),
     ]
     analysis = make_analysis(status=AssessmentStatus.CRITICAL, key_findings=findings)
     generator, _ = make_generator(
@@ -204,17 +184,18 @@ def test_local_llm_adds_only_missing_indicator_values() -> None:
         require_indicator_values=True,
     )
     report = generator.generate(analysis)
-    assert report.executive_summary.count("-20.0%") == 1
-    assert report.executive_summary.count("€-120,000") == 1
-    assert report.executive_summary.count("7.0x") == 1
-    assert "Revenue growth: -20.0%." in report.executive_summary
-    assert "Reported indicator values:" not in report.executive_summary
+    assert report.executive_summary == (
+        "Assessment Status: Critical\n\n"
+        "Revenue growth declined to -20.0%.\n\n"
+        "EBITDA is negative at €-120,000.\n\n"
+        "NFP to EBITDA stands at 7.0x."
+    )
 
 
-def test_local_llm_does_not_append_when_all_indicator_values_are_present() -> None:
+def test_local_llm_does_not_fallback_when_all_indicator_values_are_present() -> None:
     findings = [
-        make_finding("Revenue growth declined to 20.0%."),
-        make_finding("NFP to EBITDA stands at 7.0x."),
+        make_finding("Revenue growth declined to 20.0%.", category="Revenue"),
+        make_finding("NFP to EBITDA stands at 7.0x.", category="Leverage"),
     ]
     analysis = make_analysis(key_findings=findings)
     response = "Revenue growth declined to 20.0% and NFP to EBITDA stands at 7.0x."
@@ -223,8 +204,6 @@ def test_local_llm_does_not_append_when_all_indicator_values_are_present() -> No
     assert report.executive_summary.endswith(response)
     assert report.executive_summary.count("20.0%") == 1
     assert report.executive_summary.count("7.0x") == 1
-    assert "The assessment also reflects:" not in report.executive_summary
-    assert "Reported indicator values:" not in report.executive_summary
 
 
 def test_standard_llm_does_not_force_indicator_grounding() -> None:
@@ -232,11 +211,6 @@ def test_standard_llm_does_not_force_indicator_grounding() -> None:
     generator, _ = make_generator(require_indicator_values=False)
     report = generator.generate(analysis)
     assert "20.0%" not in report.executive_summary
-
-
-# ============================================================
-# Prompt ordering
-# ============================================================
 
 
 def test_prompt_contains_authoritative_category_order() -> None:
@@ -252,11 +226,6 @@ def test_prompt_contains_authoritative_category_order() -> None:
     assert "Do not repeat an indicator" in prompt
     assert "Do not generate the assessment status." in prompt
     assert "Do not infer sales volume, pricing" in prompt
-
-
-# ============================================================
-# Structured data preservation and grouping
-# ============================================================
 
 
 def test_preserves_structured_data() -> None:
