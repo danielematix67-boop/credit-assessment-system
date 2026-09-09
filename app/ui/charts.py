@@ -320,6 +320,50 @@ def render_risk_indicator_dashboard(result: Any) -> None:
         with column:
             st.metric(label, value)
 
+    # Presentation-only decision bridge. Every value is derived from the
+    # existing RuleResult collection and deterministic assessment status.
+    st.markdown("#### Assessment Decision Bridge")
+    st.caption(
+        "A compact visual bridge between evaluated indicators, rule outcomes and the "
+        "final deterministic monitoring assessment."
+    )
+
+    bridge_cols = st.columns([1, 0.22, 1, 0.22, 1])
+    bridge_items = [
+        ("Indicators evaluated", str(len(rule_results)), "Financial evidence"),
+        ("Rules triggered", str(status_counts["TRIGGERED"]), "Risk evidence"),
+        (
+            "Final assessment",
+            str(getattr(getattr(assessment, "status", None), "value", "Unknown")),
+            "Deterministic judgement",
+        ),
+    ]
+
+    for index, (label, value, description) in enumerate(bridge_items):
+        if index in (0, 2, 4):
+            column = bridge_cols[index]
+            with column:
+                st.container(border=True)
+                st.markdown(f"**{label}**")
+                st.markdown(f"### {value}")
+                st.caption(description)
+        else:
+            with bridge_cols[index]:
+                st.markdown("<div style='text-align:center; padding-top:2.1rem; font-size:1.3rem;'>→</div>", unsafe_allow_html=True)
+
+    bridge_meta = st.columns(3)
+    bridge_meta[0].caption(f"{len(rule_results)} indicators evaluated")
+    bridge_meta[1].caption(
+        f"{status_counts['TRIGGERED']} of {len(rule_results)} rules triggered"
+    )
+    bridge_meta[2].caption(
+        f"{severity_counts['HIGH'] + severity_counts['CRITICAL']} high/critical severity outcomes"
+    )
+    st.caption(
+        "This bridge is explanatory only. It does not recalculate thresholds, severity "
+        "or assessment status."
+    )
+
     st.markdown("#### Risk Signal Overview")
     overview_cols = st.columns(2)
     with overview_cols[0]:
