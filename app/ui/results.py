@@ -95,6 +95,73 @@ def _apply_results_styles() -> None:
     )
 
 
+def render_assessment_overview(result: Any) -> None:
+    """Show the high-level path from rule outcomes to the final assessment."""
+    rules = _rule_results(result)
+    if not rules:
+        return
+
+    assessment = getattr(result, "assessment", None)
+    status_obj = getattr(assessment, "status", None)
+    assessment_status = str(
+        getattr(status_obj, "value", str(status_obj or "Unknown"))
+    )
+    status_counts = {
+        "TRIGGERED": sum(_status(rule) == "TRIGGERED" for rule in rules),
+        "NOT_TRIGGERED": sum(_status(rule) == "NOT_TRIGGERED" for rule in rules),
+        "NOT_EVALUABLE": sum(_status(rule) == "NOT_EVALUABLE" for rule in rules),
+    }
+    triggered = [rule for rule in rules if _status(rule) == "TRIGGERED"]
+    categories = {
+        str(getattr(rule, "category", "—"))
+        for rule in triggered
+        if str(getattr(rule, "category", "—")) not in {"", "—"}
+    }
+
+    _section_header(
+        "Assessment Overview",
+        "A high-level view of how deterministic rule outcomes translate into the final credit assessment.",
+    )
+
+    metric_cols = st.columns(4)
+    metrics = [
+        ("Rules evaluated", len(rules)),
+        ("Triggered rules", status_counts["TRIGGERED"]),
+        ("Active risk categories", len(categories)),
+        ("Final assessment", assessment_status),
+    ]
+    for column, (label, value) in zip(metric_cols, metrics):
+        with column:
+            st.metric(label, value)
+
+    if triggered:
+        category_counts = (
+            pd.DataFrame(
+                {
+                    "Category": [str(getattr(rule, "category", "—")) for rule in triggered]
+                }
+            )
+            .value_counts("Category")
+            .rename("Triggered rules")
+            .reset_index()
+            .sort_values("Triggered rules", ascending=True)
+        )
+        st.markdown("#### Triggered Rules by Risk Category")
+        st.bar_chart(
+            category_counts,
+            x="Category",
+            y="Triggered rules",
+            horizontal=True,
+            height=max(180, 55 * len(category_counts)),
+        )
+    else:
+        st.success("No deterministic risk rules were triggered by the available information.")
+
+    st.caption(
+        "The chart shows the evidence produced by the Rule Engine. It does not calculate or modify the final assessment."
+    )
+
+
 def render_decision_evidence(result: Any) -> None:
     """Show the deterministic evidence an operator needs to validate the judgement."""
     rules = _rule_results(result)
@@ -204,6 +271,7 @@ def render_results(
         configured_model=configured_model,
     )
 
+    render_assessment_overview(result)
     render_decision_evidence(result)
     render_risk_indicator_dashboard(result)
     render_evidence_chain(result)
