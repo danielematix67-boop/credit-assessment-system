@@ -276,52 +276,88 @@ Accepted
 
 ## Context
 
-A credit assessment interface should explain not only the final status but also how the deterministic rule engine produced it. A single label is insufficient for an operator or academic demonstration of explainability.
+A credit assessment interface should explain not only the final status but also how the deterministic Rule Engine produced it. A single label is insufficient for an operator or academic demonstration of explainability.
 
-The UI therefore needs visual evidence connecting financial data, indicators, rule outcomes, risk drivers and final assessment.
+The UI therefore needs a clear visual hierarchy connecting the final assessment to the quantitative rule evidence without duplicating the underlying business logic.
 
 ## Decision
 
-The Streamlit Results view follows an operator-oriented hierarchy:
+The Streamlit Results view follows this hierarchy:
 
 ```text
 Executive Credit Assessment
-        ↓
-Decision Evidence
-        ↓
-Audit trail & methodology
+          ↓
+Assessment Overview
+          ↓
+Risk Indicator Dashboard
+          ↓
+Audit Trail & Methodology
 ```
 
-The audit area provides deterministic visual evidence through:
+The **Executive Credit Assessment** is the primary output. The **Assessment Overview** provides concise KPIs and context. The **Risk Indicator Dashboard** is the single detailed rule-evidence surface, while the **Audit Trail & Methodology** contains workflow, credit-data and execution-level traceability.
 
-- decision-path cards;
-- rule-status distribution;
-- risk-indicator dashboard;
-- filterable rule catalogue;
-- risk-driver map by category;
-- rule/indicator/value/threshold detail;
-- assessed credit data;
-- methodology and execution metadata.
+The dashboard provides:
 
-UI components read `RuleResult` and workflow domain objects. They do not recompute business rules.
+- rule-outcome distribution;
+- severity profile;
+- KPI counts for indicators, triggered rules, high/critical severity and non-evaluable rules;
+- filtering by status, severity and category;
+- priority-oriented sorting;
+- individual rule inspection.
+
+The individual rule detail exposes:
+
+```text
+Rule ID / Category
+        ↓
+Indicator
+        ↓
+Observed Value vs Configured Threshold
+        ↓
+Status / Severity / Direction
+        ↓
+Rationale
+```
+
+The Results view also includes a compact graphical **Decision Path**:
+
+```text
+Financial Indicators
+        ↓
+Rule Engine Outcomes
+        ↓
+Monitoring Assessment
+```
+
+The Decision Path dynamically summarizes evaluated rules, triggered rules, non-evaluable rules and the final assessment status.
+
+All these visualizations consume deterministic workflow outputs. They do not recalculate thresholds, severity or assessment status.
+
+Legacy overlapping evidence surfaces such as a separate Evidence Chain, Rule Logic/Decision Boundaries and Risk Driver Map are intentionally not part of the current Results hierarchy. Detailed rule evidence is centralized in the Risk Indicator Dashboard, reducing repetition and keeping the operator path coherent.
 
 ## Rationale
 
-This makes the assessment mechanism inspectable and demonstrates the link between deterministic evidence and the final judgement. It also keeps the primary user flow concise while preserving detailed diagnostics for users who need them.
+This structure makes the assessment mechanism inspectable while keeping the main result concise. It also scales better as the rule catalogue grows because the dashboard provides filtering, sorting and focused individual-rule inspection rather than requiring a separate UI component for each rule family.
+
+The visual Decision Path explains the mechanism at a glance, while the dashboard provides the underlying quantitative evidence.
 
 ## Consequences
 
 ### Positive
 
 - The final status can be traced back to quantitative evidence.
-- Triggered rules become visible risk drivers rather than opaque exceptions.
+- The main result remains concise and operator-oriented.
+- Detailed rule evidence has a single dedicated surface.
+- Triggered rules, severity and non-evaluable states are visible without exposing implementation details.
 - The UI scales better as the rule catalogue grows through filtering and prioritisation.
 - Presentation logic remains downstream of the decision layer.
+- Removing overlapping legacy views reduces visual repetition.
 
 ### Trade-offs
 
-- The results page contains more visual components than a minimal dashboard.
+- The Results page contains more visual components than a minimal dashboard.
 - The audit area must remain synchronized with domain models and workflow behavior.
+- The UI depends on stable `RuleResult` fields for presentation and explainability.
 
 ## Alternatives Considered
 
@@ -332,6 +368,10 @@ Rejected because it provides insufficient explainability.
 ### Reimplement rule calculations in the UI
 
 Rejected because it would duplicate business logic and risk divergence from the deterministic Rule Engine.
+
+### Multiple overlapping evidence panels
+
+Rejected because repeating the same rule information across separate sections reduces clarity. The current design centralizes detailed rule evidence in the Risk Indicator Dashboard.
 
 ---
 
@@ -375,7 +415,7 @@ flowchart LR
     META --> TRACE[Provenance / Timing / Error Classification]
     CFG[config/rules.yaml] --> RCL[Rule Config Loader]
     RCL --> RE
-    UI --> EVID[Decision Evidence / Risk Visualisations]
+    UI --> EVID[Decision Path / Risk Indicator Dashboard]
     EVID --> RR
 ```
 
