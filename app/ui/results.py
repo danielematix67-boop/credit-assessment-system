@@ -2,31 +2,14 @@ from typing import Any
 
 import streamlit as st
 
-from app.ui.charts import (
-    render_rule_assessment_summary,
-)
-
-from app.ui.components import (
-    show_badge,
-)
-
-from app.ui.credit_position import (
-    display_position_table,
-)
+from app.ui.charts import render_rule_assessment_summary
+from app.ui.components import show_badge
+from app.ui.credit_position import display_position_table
 
 
-def get_llm_model_from_result(
-    result: Any,
-) -> str | None:
-    """
-    Retrieve the configured LLM model from the workflow result.
-    """
-
-    return getattr(
-        result,
-        "llm_model",
-        None,
-    )
+def get_llm_model_from_result(result: Any) -> str | None:
+    """Retrieve the configured LLM model from the workflow result."""
+    return getattr(result, "llm_model", None)
 
 
 def resolve_report_badge(
@@ -34,130 +17,138 @@ def resolve_report_badge(
     generator_used: str | None,
     configured_model: str | None,
 ) -> tuple[str, str]:
-    """
-    Resolve the badge kind and label for the Executive Report.
-
-    The badge reflects the actual generator used for the report,
-    including deterministic fallback.
-
-    Icons are intentionally not included in the labels because
-    they are rendered centrally by show_badge().
-    """
-
+    """Resolve the badge for the actual Executive Report generator."""
     if generator_used == "FALLBACK":
         return "fallback", "Deterministic fallback"
 
     if generator_used == "PRIMARY":
         if selected_reporting_mode == "Gemini + Fallback":
             return "ai", "AI-generated — Gemini"
-
         if selected_reporting_mode == "Ollama + Fallback":
             return "ai", "AI-generated — Local LLM"
 
     return "det", "Deterministic — Rule Engine"
 
 
-def render_provenance(
-    report_badge_kind: str,
-    report_badge_label: str,
-) -> None:
-    """
-    Render the provenance of the assessment.
-    """
-
-    st.subheader("Provenance of This Assessment")
-
-    provenance_col1, provenance_col2 = st.columns(2)
-
-    with provenance_col1:
-        st.markdown("**Assessment Status & Rule Findings**")
-        show_badge("Deterministic — Rule Engine", "det")
-        st.caption(
-            "Assessment status, severity and rule findings are "
-            "determined exclusively by the deterministic rule engine."
-        )
-
-    with provenance_col2:
-        st.markdown("**Executive Report**")
-        show_badge(report_badge_label, report_badge_kind)
-        st.caption(
-            "The reporting layer interprets the structured assessment "
-            "but has no decision authority."
-        )
+def _normalized_status(result: Any) -> str:
+    status = getattr(getattr(result, "assessment", None), "status", None)
+    value = getattr(status, "value", str(status or "Unknown"))
+    return str(value).upper().replace("-", "_")
 
 
-def render_assessment_overview(
-    result: Any,
-) -> None:
-    """
-    Render the high-level assessment metrics.
-    """
+def _status_kind(status: str) -> str:
+    """Map assessment status to the existing badge categories."""
+    if status in {"CRITICAL", "HIGH_RISK", "HIGH RISK"}:
+        return "fallback"
+    if status in {"WARNING", "MEDIUM_RISK", "MEDIUM RISK"}:
+        return "fallback"
+    return "det"
 
-    st.subheader("Assessment Overview")
 
+def _rule_status_counts(result: Any) -> dict[str, int]:
+    """Count actual RuleResult statuses without applying business logic."""
+    counts = {
+        "TRIGGERED": 0,
+        "NOT_TRIGGERED": 0,
+        "NOT_EVALUABLE": 0,
+    }
+
+    assessment = getattr(result, "assessment", None)
+    for rule_result in getattr(assessment, "rule_results", []) or []:
+        status = getattr(getattr(rule_result, "status", None), "value", "")
+        if status in counts:
+            counts[status] += 1
+
+    return counts
+
+
+def render_result_hero(result: Any) -> None:
+    """Render the primary result as the first thing the user sees."""
+    status = getattr(
+        getattr(getattr(result, "assessment", None), "status", None),
+        "value",
+        "Unknown",
+    )
+    status = str(status)
+    status_kind = _status_kind(status.upper().replace("-", "_"))
+    counts = _rule_status_counts(result)
+
+    st.markdown("## Credit Assessment")
     st.caption(
-        "High-level outcome of the deterministic assessment "
-        "and execution of the reporting workflow."
+        "The assessment result is determined by the deterministic Rule Engine. "
+        "The AI layer is used only to produce the narrative report."
     )
 
-    primary_cols = st.columns(3)
+    with st.container(border=True):
+        result_col, metrics_col = st.columns([1.7, 3.3])
 
-    with primary_cols[0]:
-        st.metric(
-            "Assessment Status",
-            result.assessment.status.value,
-        )
+        with result_col:
+            st.markdown("**ASSESSMENT RESULT**")
+            show_badge(status, status_kind)
+            st.markdown("### Why this result?")
+            st.caption(
+                "The sections below show the rule findings and quantitative "
+                "evidence behind this outcome."
+            )
 
-    with primary_cols[1]:
-        st.metric(
-            "Key Findings",
-            len(result.analysis.key_findings),
-        )
-
-    with primary_cols[2]:
-        st.metric(
-            "Risk Factors",
-            len(result.analysis.risk_factors),
-        )
-
-    execution_cols = st.columns(3)
-
-    with execution_cols[0]:
-        st.metric(
-            "Limitations",
-            len(result.analysis.limitations),
-        )
-
-    with execution_cols[1]:
-        st.metric(
-            "Total Execution",
-            f"{result.total_elapsed_time:.2f} s",
-        )
-
-    with execution_cols[2]:
-        st.metric(
-            "Reporting",
-            f"{result.reporting_elapsed_time:.2f} s",
-        )
+        with metrics_col:
+            metric_cols = st.columns(3)
+            with metric_cols[0]:
+                st.metric("Triggered", counts["TRIGGERED"])
+            with metric_cols[1]:
+                st.metric("Not triggered", counts["NOT_TRIGGERED"])
+            with metric_cols[2]:
+                st.metric("Not evaluable", counts["NOT_EVALUABLE"])
 
 
-def render_assessed_position(
-    assessment_position: Any,
-) -> None:
-    """
-    Render the credit position used by the assessment.
-    """
-
-    st.subheader("Assessed Credit Position")
-
+def render_why_section(result: Any) -> None:
+    """Explain the main drivers of the assessment using existing findings."""
+    st.markdown("### Why? — Main Risk Drivers")
     st.caption(
-        "Financial inputs received by the assessment workflow. "
-        "These values are displayed for traceability and are "
-        "not generated or modified by the assessment engine."
+        "These findings explain which rules contributed to the assessment. "
+        "They are produced by the deterministic analysis layer."
+    )
+
+    findings = list(getattr(getattr(result, "analysis", None), "key_findings", []) or [])
+
+    if not findings:
+        st.success("No key findings were identified by the assessment.")
+        return
+
+    for finding in findings:
+        with st.container(border=True):
+            col1, col2 = st.columns([1.1, 4.9])
+            with col1:
+                st.markdown(f"**{finding.rule_id}**")
+                st.caption(str(finding.severity.value))
+            with col2:
+                st.markdown(f"**{str(finding.category).upper()}**")
+                st.write(finding.text)
+
+
+def render_assessment_evidence(result: Any) -> None:
+    """Present the quantitative evidence supporting the assessment."""
+    st.markdown("### Assessment Evidence")
+    st.caption(
+        "Use the rule summary to see the overall distribution, then select "
+        "an individual rule to inspect its value, threshold and rationale."
+    )
+    render_rule_assessment_summary(result)
+
+
+def render_assessed_position(assessment_position: Any) -> None:
+    """Render the credit position used by the assessment."""
+    st.markdown("### Credit Data Used")
+    st.caption(
+        "These are the financial inputs received by the assessment workflow. "
+        "They are displayed for traceability and are not modified by the engine."
     )
 
     if assessment_position is not None:
-        display_position_table(assessment_position)
+        with st.expander("View assessed credit position", expanded=False):
+            display_position_table(assessment_position)
+    else:
+        st.info("The assessed credit position is not available.")
 
 
 def render_execution_trace(
@@ -165,54 +156,113 @@ def render_execution_trace(
     selected_reporting_mode: str,
     configured_model: str | None,
 ) -> None:
-    """
-    Render the execution trace of the assessment workflow.
-    """
+    """Render a compact view of the assessment workflow."""
+    st.markdown("### Assessment Workflow")
+    st.caption("How the result is produced from input data to final report.")
 
-    st.subheader("Execution Trace")
+    cols = st.columns(4)
 
-    st.caption("Traceability of the main processing stages.")
-
-    trace_row_1 = st.columns(2)
-
-    with trace_row_1[0]:
+    with cols[0]:
         st.success("✓ Credit Data")
-        st.caption("Position received")
+        st.caption("Input position")
 
-    with trace_row_1[1]:
+    with cols[1]:
         st.success("✓ Rule Engine")
-        st.caption("Deterministic assessment")
+        st.caption("Deterministic rules")
 
-    trace_row_2 = st.columns(2)
+    with cols[2]:
+        st.success("✓ Analysis")
+        st.caption("Structured interpretation")
 
-    with trace_row_2[0]:
-        st.success("✓ Analysis Agent")
-        st.caption("Assessment interpreted")
-
-    with trace_row_2[1]:
+    with cols[3]:
         if generator_used == "FALLBACK":
-            st.warning("⚠ Reporting Fallback")
-            st.caption(
-                "Executive Report generated by the "
-                "deterministic fallback generator"
-            )
+            st.warning("⚠ Reporting")
+            st.caption("Deterministic fallback")
         elif generator_used == "PRIMARY":
             if selected_reporting_mode == "Gemini + Fallback":
-                st.success("✓ Gemini Reporting")
-                st.caption("Executive Report generated by Gemini")
+                st.success("✓ Reporting")
+                st.caption("Gemini")
             elif selected_reporting_mode == "Ollama + Fallback":
-                st.success("✓ Local LLM Reporting")
-                st.caption("Executive Report generated by local LLM")
+                st.success("✓ Reporting")
+                st.caption("Local LLM")
             else:
-                st.success("✓ Deterministic Reporting")
-                st.caption(
-                    "Executive Report generated deterministically"
-                )
+                st.success("✓ Reporting")
+                st.caption("Deterministic")
         else:
             st.info("Reporting")
-            st.caption(
-                "Executive Report generator information is unavailable"
-            )
+            st.caption("Generator unavailable")
+
+
+def render_methodology(
+    report_badge_kind: str,
+    report_badge_label: str,
+) -> None:
+    """Explain the separation between decision and reporting layers."""
+    with st.expander("How to read this assessment", expanded=False):
+        st.markdown("**1. Decision Layer — Rule Engine**")
+        show_badge("Deterministic", "det")
+        st.write(
+            "The assessment status, rule status, severity and thresholds "
+            "come from the deterministic Rule Engine."
+        )
+
+        st.markdown("**2. Reporting Layer — Executive Report**")
+        show_badge(report_badge_label, report_badge_kind)
+        st.write(
+            "The Reporting Layer turns the structured assessment into an "
+            "executive narrative. It has no decision authority."
+        )
+
+        st.markdown("**How to interpret rule statuses**")
+        st.write(
+            "• **Triggered** — the rule condition was met.\n"
+            "• **Not triggered** — the rule condition was not met.\n"
+            "• **Not evaluable** — the required data was unavailable."
+        )
+
+
+def render_provenance(
+    report_badge_kind: str,
+    report_badge_label: str,
+) -> None:
+    """Render detailed provenance information."""
+    st.subheader("Assessment Methodology")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Assessment Status & Rule Findings**")
+        show_badge("Deterministic — Rule Engine", "det")
+        st.caption(
+            "Assessment status, severity and rule findings are determined "
+            "exclusively by the deterministic rule engine."
+        )
+    with col2:
+        st.markdown("**Executive Report**")
+        show_badge(report_badge_label, report_badge_kind)
+        st.caption(
+            "The reporting layer interprets the structured assessment but "
+            "has no decision authority."
+        )
+
+
+def render_assessment_overview(result: Any) -> None:
+    """Render detailed assessment and execution metrics."""
+    st.subheader("Assessment Overview")
+    st.caption("Detailed outcome and workflow execution metrics.")
+
+    cols = st.columns(6)
+    values = [
+        ("Status", result.assessment.status.value),
+        ("Key Findings", len(result.analysis.key_findings)),
+        ("Risk Factors", len(result.analysis.risk_factors)),
+        ("Limitations", len(result.analysis.limitations)),
+        ("Total Time", f"{result.total_elapsed_time:.2f} s"),
+        ("Reporting", f"{result.reporting_elapsed_time:.2f} s"),
+    ]
+
+    for column, (label, value) in zip(cols, values):
+        with column:
+            st.metric(label, value)
 
 
 def render_overview_tab(
@@ -222,194 +272,79 @@ def render_overview_tab(
     report_badge_label: str,
     configured_model: str | None,
 ) -> None:
-    """
-    Render the Overview tab.
-    """
-
-    st.markdown("### Assessment Summary")
-
-    status = result.assessment.status.value
-
-    normalized_status = status.upper().replace("-", "_")
-
-    if normalized_status in {
-        "CRITICAL",
-        "HIGH_RISK",
-        "HIGH RISK",
-    }:
-        st.error(f"Assessment Status: **{status}**")
-    elif normalized_status in {
-        "WARNING",
-        "MEDIUM_RISK",
-        "MEDIUM RISK",
-    }:
-        st.warning(f"Assessment Status: **{status}**")
-    else:
-        st.success(f"Assessment Status: **{status}**")
-
-    show_badge("Determined by rule engine only", "det")
-
-    st.markdown(
-        """
-        The assessment status is produced by the
-        deterministic assessment service and is not
-        generated by the LLM.
-        """
-    )
+    """Render the detailed Overview tab."""
+    render_provenance(report_badge_kind, report_badge_label)
+    render_assessment_overview(result)
 
     st.markdown("### Input Source")
-
-    input_source = st.session_state.get(
-        "assessment_input_mode",
-        "Unknown",
-    )
-
+    input_source = st.session_state.get("assessment_input_mode", "Unknown")
     if input_source == "Demo Scenario":
         selected_scenario = st.session_state.get("assessment_scenario")
-        st.info(
-            f"Assessment executed using demo scenario: "
-            f"**{selected_scenario}**"
-        )
+        st.info(f"Assessment executed using demo scenario: **{selected_scenario}**")
     else:
-        st.info(
-            "Assessment executed using manually provided credit data."
-        )
+        st.info("Assessment executed using manually provided credit data.")
 
     st.markdown("### Reporting Configuration")
     st.info(f"Reporting layer: **{selected_reporting_mode}**")
 
-    show_badge(report_badge_label, report_badge_kind)
-
     st.markdown("### System Architecture")
+    col1, col2 = st.columns(2)
 
-    architecture_col1, architecture_col2 = st.columns(2)
-
-    with architecture_col1:
-        st.markdown(
-            """
-            <div class="section-card det">
-                <div style="font-weight:650;">Decision Layer</div>
-            """,
-            unsafe_allow_html=True,
-        )
+    with col1:
+        st.markdown("**Decision Layer**")
         show_badge("Deterministic", "det")
-        st.markdown(
-            """
-                <ul style="margin-top:0.6rem; padding-left:1.1rem;
-                    font-size:0.86rem;">
-                    <li>Deterministic rule engine</li>
-                    <li>Configured thresholds</li>
-                    <li>Rule-based severity</li>
-                    <li>Traceable findings</li>
-                    <li>Deterministic assessment status</li>
-                </ul>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.caption("Rule engine · thresholds · severity · traceable assessment status")
 
-    with architecture_col2:
-        st.markdown(
-            """
-            <div class="section-card ai">
-                <div style="font-weight:650;">Reporting Layer</div>
-            """,
-            unsafe_allow_html=True,
-        )
+    with col2:
+        st.markdown("**Reporting Layer**")
         show_badge("AI-assisted, with fallback", "ai")
-        st.markdown(
-            """
-                <ul style="margin-top:0.6rem; padding-left:1.1rem;
-                    font-size:0.86rem;">
-                    <li>Structured assessment as input</li>
-                    <li>Optional LLM generation</li>
-                    <li>Cloud or local LLM provider</li>
-                    <li>No decision authority</li>
-                    <li>Deterministic fallback</li>
-                </ul>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.caption("Structured assessment · optional LLM · deterministic fallback · no decision authority")
 
 
 def render_findings_tab(result: Any) -> None:
     """Render the deterministic rule findings tab."""
-
-    st.markdown("### Deterministic Rule Engine Findings")
-
+    st.markdown("### Rule Findings")
     show_badge("Deterministic — fully traceable", "det")
+    st.caption("The factual rule findings that form the basis of the assessment.")
 
-    st.caption(
-        "These findings constitute the factual basis of the assessment. "
-        "No LLM is involved in this tab."
-    )
-
-    if not result.analysis.key_findings:
+    findings = list(getattr(getattr(result, "analysis", None), "key_findings", []) or [])
+    if not findings:
         st.success("No rule violations or key findings were identified.")
         return
 
-    for finding in result.analysis.key_findings:
-        with st.container(border=True):
-            finding_col1, finding_col2 = st.columns([1.2, 4.8])
-
-            with finding_col1:
-                st.markdown(f"**{finding.rule_id}**")
-                st.caption(finding.severity.value)
-
-            with finding_col2:
-                st.markdown(f"**{finding.category.upper()}**")
-                st.write(finding.text)
+    for finding in findings:
+        with st.expander(
+            f"{finding.rule_id} · {finding.category} · {finding.severity.value}",
+            expanded=False,
+        ):
+            st.write(finding.text)
 
 
 def render_analysis_tab(result: Any) -> None:
-    """Render the deterministic Analysis Agent tab."""
-
-    st.markdown("### Analysis Agent")
-
+    """Render the structured analysis tab."""
+    st.markdown("### Analysis")
     show_badge("Deterministic — rule-based interpretation", "det")
+    st.caption("Structured interpretation of the deterministic assessment output.")
 
-    st.caption(
-        "Structured interpretation of the deterministic assessment "
-        "output. No LLM is involved in this tab."
-    )
+    sections = [
+        ("Key Findings", result.analysis.key_findings, "No key findings were identified."),
+        ("Risk Factors", result.analysis.risk_factors, "No risk factors were identified."),
+        ("Limitations", result.analysis.limitations, "No limitations were identified."),
+    ]
 
-    st.markdown("#### Key Findings")
+    for title, items, empty_message in sections:
+        st.markdown(f"#### {title}")
+        if not items:
+            st.success(empty_message)
+            continue
 
-    if result.analysis.key_findings:
-        for finding in result.analysis.key_findings:
+        for item in items:
             with st.container(border=True):
-                finding_col1, finding_col2 = st.columns([1.2, 4.8])
-
-                with finding_col1:
-                    st.markdown(f"**{finding.rule_id}**")
-                    st.caption(finding.severity.value)
-
-                with finding_col2:
-                    st.markdown(f"**{finding.category.upper()}**")
-                    st.write(finding.text)
-    else:
-        st.success("No key findings were identified.")
-
-    st.markdown("#### Risk Factors")
-
-    if result.analysis.risk_factors:
-        for risk in result.analysis.risk_factors:
-            with st.container(border=True):
-                st.markdown("**RISK FACTOR**")
-                st.write(risk.text)
-    else:
-        st.success("No risk factors were identified.")
-
-    st.markdown("#### Limitations")
-
-    if result.analysis.limitations:
-        for limitation in result.analysis.limitations:
-            with st.container(border=True):
-                st.markdown("**LIMITATION**")
-                st.write(limitation.text)
-    else:
-        st.success("No limitations were identified.")
+                if hasattr(item, "rule_id"):
+                    st.markdown(f"**{item.rule_id}** · {item.severity.value}")
+                else:
+                    st.markdown(f"**{title[:-1].upper() if title.endswith('s') else title.upper()}**")
+                st.write(item.text)
 
 
 def render_report_source(
@@ -417,41 +352,23 @@ def render_report_source(
     selected_reporting_mode: str,
 ) -> None:
     """Render the provenance of the Executive Report."""
-
     if generator_used == "PRIMARY":
         if selected_reporting_mode == "Gemini + Fallback":
             show_badge("AI-generated — Gemini", "ai")
-            st.caption(
-                "The Executive Report was generated by Gemini using "
-                "the structured deterministic assessment as input. "
-                "The LLM has no decision authority."
-            )
+            st.caption("The Executive Report was generated by Gemini from the structured deterministic assessment.")
             return
-
         if selected_reporting_mode == "Ollama + Fallback":
             show_badge("AI-generated — Local LLM", "ai")
-            st.caption(
-                "The Executive Report was generated by the local LLM "
-                "using the structured deterministic assessment as input. "
-                "The LLM has no decision authority."
-            )
+            st.caption("The Executive Report was generated by the local LLM from the structured deterministic assessment.")
             return
 
     if generator_used == "FALLBACK":
         show_badge("Deterministic fallback", "fallback")
-        st.caption(
-            "The primary LLM generator was unavailable or failed. "
-            "The Executive Report was therefore generated by the "
-            "predefined deterministic fallback generator."
-        )
+        st.caption("The primary LLM generator was unavailable or failed; the deterministic fallback generated the report.")
         return
 
     show_badge("Deterministic — Rule Engine", "det")
-    st.caption(
-        "The Executive Report was generated by the predefined "
-        "deterministic report generator using configured report "
-        "templates and deterministic assessment results."
-    )
+    st.caption("The Executive Report was generated deterministically from the assessment results.")
 
 
 def render_report_tab(
@@ -462,26 +379,16 @@ def render_report_tab(
     configured_model: str | None,
 ) -> None:
     """Render the Executive Report tab."""
-
     generator_used = getattr(result, "report_generator_used", None)
     generation_error = getattr(result, "report_generation_error", None)
 
-    st.markdown("### Reporting Agent")
-    st.caption(
-        "The Reporting Agent produces the Executive Report from the "
-        "deterministic assessment results."
-    )
-
-    render_report_source(
-        generator_used=generator_used,
-        selected_reporting_mode=selected_reporting_mode,
-    )
+    st.markdown("### Executive Report")
+    st.caption("Narrative interpretation of the deterministic assessment.")
+    render_report_source(generator_used, selected_reporting_mode)
 
     if generator_used == "FALLBACK" and generation_error:
         with st.expander("Technical information", expanded=False):
             st.caption(f"Primary generator error: {generation_error}")
-
-    st.markdown("### Executive Report")
 
     with st.container(border=True):
         st.markdown(result.report.executive_summary)
@@ -489,27 +396,14 @@ def render_report_tab(
     if result.report.findings_by_category:
         st.markdown("### Report Findings")
         show_badge("Deterministic — Rule Engine", "det")
-        st.caption(
-            "These findings are sourced directly from the deterministic "
-            "rule engine. They are not generated or modified by the LLM."
-        )
-
         for group in result.report.findings_by_category:
-            with st.expander(group.category.title(), expanded=True):
+            with st.expander(group.category.title(), expanded=False):
                 for finding in group.findings:
-                    st.markdown(
-                        f"**{finding.rule_id}** · {finding.severity.value}"
-                    )
+                    st.markdown(f"**{finding.rule_id}** · {finding.severity.value}")
                     st.write(finding.text)
 
     if result.report.limitations:
         st.markdown("### Report Limitations")
-        show_badge("Deterministic — Rule Engine", "det")
-        st.caption(
-            "These limitations originate from the deterministic "
-            "assessment logic and are not generated by the LLM."
-        )
-
         for limitation in result.report.limitations:
             st.warning(limitation.text)
 
@@ -519,48 +413,37 @@ def render_results(
     assessment_position: Any,
     selected_reporting_mode: str,
 ) -> None:
-    """
-    Render the complete assessment result section.
-
-    This function is intentionally responsible only for presentation.
-    It does not execute assessment logic.
-    """
-
+    """Render the complete assessment result section."""
     if result is None:
         return
 
     st.divider()
 
     generator_used = getattr(result, "report_generator_used", None)
-
     configured_model = get_llm_model_from_result(result)
-
     report_badge_kind, report_badge_label = resolve_report_badge(
         selected_reporting_mode=selected_reporting_mode,
         generator_used=generator_used,
         configured_model=configured_model,
     )
 
-    render_provenance(
-        report_badge_kind=report_badge_kind,
-        report_badge_label=report_badge_label,
-    )
-
-    render_assessment_overview(result)
-
     # ========================================================
-    # Rule Assessment Summary
+    # Primary user journey: RESULT -> WHY -> EVIDENCE -> DATA
     # ========================================================
-
-    render_rule_assessment_summary(result)
-
+    render_result_hero(result)
+    render_why_section(result)
+    render_assessment_evidence(result)
     render_assessed_position(assessment_position)
-
     render_execution_trace(
         generator_used=generator_used,
         selected_reporting_mode=selected_reporting_mode,
         configured_model=configured_model,
     )
+    render_methodology(report_badge_kind, report_badge_label)
+
+    st.markdown("---")
+    st.markdown("### Detailed Results")
+    st.caption("Open a section below when you need additional detail or traceability.")
 
     report_icon = (
         "🤖"
@@ -570,12 +453,7 @@ def render_results(
         else "🔒"
     )
 
-    (
-        overview_tab,
-        findings_tab,
-        analysis_tab,
-        report_tab,
-    ) = st.tabs(
+    overview_tab, findings_tab, analysis_tab, report_tab = st.tabs(
         [
             "Overview",
             "🔒 Rule Findings",
