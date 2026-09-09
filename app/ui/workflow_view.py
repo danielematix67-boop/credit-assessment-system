@@ -2,18 +2,18 @@ import streamlit as st
 
 
 def render_workflow_architecture() -> None:
-    """Show the assessment pipeline in one compact view."""
-    with st.expander("How the assessment works", expanded=False):
+    """Show the credit-monitoring workflow in one compact view."""
+    with st.expander("How the monitoring assessment works", expanded=False):
         st.caption(
-            "The system first determines the credit assessment deterministically, "
-            "then converts the structured result into the Executive Report."
+            "The workflow mirrors the operator's reading sequence: establish the position, "
+            "check the available information, identify risk signals, reach the judgement, and document it."
         )
 
         workflow_steps = [
-            ("01", "Credit Data", "Financial input", "det"),
-            ("02", "Rule Engine", "Rules & thresholds", "det"),
-            ("03", "Analysis", "Risk findings", "det"),
-            ("04", "Executive Report", "Deterministic / Gemini / Ollama", "ai"),
+            ("01", "Credit Position", "Data & information", "det"),
+            ("02", "Risk Assessment", "Indicators & rules", "det"),
+            ("03", "Monitoring Judgement", "Findings & severity", "det"),
+            ("04", "Executive Report", "Decision & rationale", "ai"),
         ]
 
         pipeline_html = '<div class="pipeline-wrap">'
@@ -31,6 +31,6 @@ def render_workflow_architecture() -> None:
 
         st.markdown(pipeline_html, unsafe_allow_html=True)
         st.caption(
-            "The Rule Engine is the sole authority for assessment status, severity and thresholds. "
-            "LLMs only generate the report narrative and cannot change the decision."
+            "The Rule Engine determines the credit judgement, rule outcomes, severity and thresholds. "
+            "The Analysis layer organises the findings. AI is used only for report narrative and cannot change the judgement."
         )
