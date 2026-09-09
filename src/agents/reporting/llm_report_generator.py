@@ -1,5 +1,6 @@
 import re
 
+from src.agents.reporting.deterministic_report_generator import DeterministicReportGenerator
 from src.agents.reporting.report_generator import ReportGenerator
 from src.llm.client import LLMClient
 from src.llm.prompt_builder import ReportPromptBuilder
@@ -25,6 +26,10 @@ class LLMReportGenerator(ReportGenerator):
         r"^\s*Assessment status:\s*[^.\n]+\.?(?:\s*\n)?",
         re.IGNORECASE,
     )
+    _CATEGORY_PREFIX_PATTERN = re.compile(
+        r"^\s*(?:Revenue|Profitability|Leverage|Liquidity|Capital|Cash Flow|Limitations)\s*:\s*",
+        re.IGNORECASE,
+    )
     _NUMERIC_SPACING_PATTERN = re.compile(r"(?<=\d)\s*\.\s*(?=\d)")
     _SENTENCE_PATTERN = re.compile(r"[^.!?]+[.!?]+")
 
@@ -47,10 +52,13 @@ class LLMReportGenerator(ReportGenerator):
         validated_response = self._validate_response(response)
 
         if self.require_indicator_values:
-            validated_response = self._ensure_indicator_values(
-                narrative=validated_response,
-                findings=analysis.key_findings,
-            )
+            try:
+                validated_response = self._validate_indicator_grounding(
+                    narrative=validated_response,
+                    findings=analysis.key_findings,
+                )
+            except ValueError:
+                return DeterministicReportGenerator().generate(analysis)
 
         executive_summary = self._build_executive_summary(
             analysis=analysis,
@@ -106,85 +114,33 @@ class LLMReportGenerator(ReportGenerator):
         return values
 
     @classmethod
+    def _validate_indicator_grounding(
+        cls,
+        narrative: str,
+        findings: list[AnalysisFinding],
+    ) -> str:
+        """Accept the LLM narrative only when every supplied indicator is present exactly once."""
+        narrative = cls._NUMERIC_SPACING_PATTERN.sub(".", narrative)
+        required_values = cls._extract_indicator_values(findings)
+
+        for value in required_values:
+            occurrences = narrative.count(value)
+            if occurrences != 1:
+                raise ValueError(
+                    f"LLM narrative must contain indicator {value!r} exactly once; "
+                    f"found {occurrences} occurrences"
+                )
+
+        return narrative
+
+    @classmethod
     def _ensure_indicator_values(
         cls,
         narrative: str,
         findings: list[AnalysisFinding],
     ) -> str:
-        """
-        Ensure local-LLM narratives retain every deterministic indicator value.
-
-        Missing values are inserted into the paragraph corresponding to their
-        deterministic category. If the LLM still omits a value, the output is
-        rejected so the reporting layer can use its deterministic fallback
-        rather than append an artificial list of values to the report.
-        """
-        narrative = cls._NUMERIC_SPACING_PATTERN.sub(".", narrative)
-        required_values = cls._extract_indicator_values(findings)
-        missing_values = [value for value in required_values if value not in narrative]
-        if not missing_values:
-            return narrative
-
-        paragraphs = [part.strip() for part in narrative.split("\n\n") if part.strip()]
-        if not paragraphs:
-            paragraphs = [narrative.strip()]
-
-        for finding in findings:
-            relevant_missing = [
-                value for value in missing_values if value in finding.text
-            ]
-            if not relevant_missing:
-                continue
-
-            label = cls._indicator_label(finding.text, relevant_missing[0])
-            sentence = f"{label}: {', '.join(relevant_missing)}."
-            target_index = cls._category_index_for_finding(finding, findings)
-
-            while len(paragraphs) <= target_index:
-                paragraphs.append("")
-
-            if paragraphs[target_index]:
-                paragraphs[target_index] = (
-                    f"{paragraphs[target_index].rstrip('. ')}. {sentence}"
-                )
-            else:
-                paragraphs[target_index] = sentence
-
-            for value in relevant_missing:
-                if value in missing_values:
-                    missing_values.remove(value)
-
-        if missing_values:
-            raise ValueError(
-                "LLM narrative omitted required indicator values: "
-                + ", ".join(missing_values)
-            )
-
-        return "\n\n".join(paragraphs)
-
-    @staticmethod
-    def _category_index_for_finding(
-        finding: AnalysisFinding,
-        findings: list[AnalysisFinding],
-    ) -> int:
-        """Return the deterministic category position of a finding."""
-        categories: list[str] = []
-        for item in findings:
-            if item.category not in categories:
-                categories.append(item.category)
-        return categories.index(finding.category)
-
-    @staticmethod
-    def _indicator_label(text: str, value: str) -> str:
-        """Derive a concise indicator label from a deterministic finding."""
-        prefix = text.split(value, 1)[0].strip(" ,:;.-")
-        prefix = re.sub(
-            r"\b(?:declined|increased|decreased|stands|is|was|remains|reached|at|to)\b.*$",
-            "",
-            prefix,
-            flags=re.IGNORECASE,
-        ).strip(" ,:;.-")
-        return prefix or "Indicator value"
+        """Backward-compatible alias for strict indicator validation."""
+        return cls._validate_indicator_grounding(narrative, findings)
 
     # ============================================================
     # Finding grouping
@@ -216,12 +172,20 @@ class LLMReportGenerator(ReportGenerator):
         narrative = response.strip()
         narrative = cls._STATUS_PREFIX_PATTERN.sub("", narrative, count=1).strip()
         narrative = cls._NUMERIC_SPACING_PATTERN.sub(".", narrative)
+        narrative = cls._remove_category_prefixes(narrative)
         narrative = cls._remove_duplicate_sentences(narrative)
         narrative = cls._remove_repeated_indicator_mentions(narrative)
 
         if not narrative:
             raise ValueError("LLM returned an empty narrative")
         return narrative
+
+    @classmethod
+    def _remove_category_prefixes(cls, narrative: str) -> str:
+        """Remove accidental category labels from the beginning of narrative paragraphs."""
+        paragraphs = [part.strip() for part in narrative.split("\n\n") if part.strip()]
+        cleaned = [cls._CATEGORY_PREFIX_PATTERN.sub("", paragraph, count=1).strip() for paragraph in paragraphs]
+        return "\n\n".join(part for part in cleaned if part)
 
     @classmethod
     def _remove_duplicate_sentences(cls, narrative: str) -> str:
