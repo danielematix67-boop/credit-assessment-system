@@ -451,6 +451,52 @@ def test_reporting_agent_resets_diagnostics_after_success(
 
 
 # ============================================================
+# Error classification
+# ============================================================
+
+
+class StatusCodeError(Exception):
+    def __init__(self, message: str, status_code: int) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
+@pytest.mark.parametrize(
+    ("error", "expected_category"),
+    [
+        (StatusCodeError("quota exceeded", 429), "RATE_LIMIT"),
+        (StatusCodeError("service unavailable", 503), "SERVICE_UNAVAILABLE"),
+        (RuntimeError("connection refused"), "CONNECTION_ERROR"),
+        (StatusCodeError("unauthorized", 401), "AUTHENTICATION"),
+        (StatusCodeError("permission denied", 403), "AUTHORIZATION"),
+        (RuntimeError("model not found"), "MODEL_UNAVAILABLE"),
+        (TimeoutError("request timed out"), "TIMEOUT"),
+        (RuntimeError("unexpected provider failure"), "GENERATION_ERROR"),
+    ],
+)
+def test_reporting_agent_classifies_primary_errors(
+    analysis,
+    error,
+    expected_category,
+):
+    primary = MagicMock(spec=ReportGenerator)
+    fallback = MagicMock(spec=ReportGenerator)
+    primary.generate.side_effect = error
+    fallback.generate.return_value = build_report(analysis)
+
+    agent = ReportingAgent(
+        report_generator=primary,
+        fallback_generator=fallback,
+    )
+
+    agent.run(analysis)
+
+    assert agent.last_generator_used == "FALLBACK"
+    assert agent.last_error_category == expected_category
+    assert agent.last_error
+
+
+# ============================================================
 # Report generator implementation independence
 # ============================================================
 
