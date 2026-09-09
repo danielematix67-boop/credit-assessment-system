@@ -117,6 +117,7 @@ def render_report_tab(
     if result.report.limitations:
         st.markdown("### Report Limitations")
         for limitation in result.report.limitations:
-            st.write(f"• {limitation}")
+            limitation_text = getattr(limitation, "text", str(limitation))
+            st.write(f"• {limitation_text}")
 
     render_execution_metadata(result)
