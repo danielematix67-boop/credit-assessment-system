@@ -30,6 +30,19 @@ def _format_value(value: Any) -> str:
     return str(value)
 
 
+def _section_header(title: str, description: str) -> None:
+    """Render a consistent visual section header."""
+    st.markdown(
+        f"""
+        <div class="ui-section-header">
+            <div class="ui-section-title">{title}</div>
+            <div class="ui-section-description">{description}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_report_source(
     generator_used: str | None,
     selected_reporting_mode: str,
@@ -85,7 +98,10 @@ def render_key_risk_drivers(result: Any) -> None:
     """Render only the highest-priority deterministic risk drivers."""
     triggered = [r for r in _rule_results(result) if _status_value(r) == "TRIGGERED"]
 
-    st.markdown("### Key Risk Drivers")
+    _section_header(
+        "Key Risk Drivers",
+        "The highest-priority rules contributing to the credit assessment.",
+    )
     if not triggered:
         st.success("No risk rules were triggered by the available financial information.")
         return
@@ -140,7 +156,10 @@ def render_report_limitations(result: Any) -> None:
     if not limitations:
         return
 
-    st.markdown("### Data Limitations")
+    _section_header(
+        "Data Limitations",
+        "Information gaps that may affect the completeness of the assessment.",
+    )
     for limitation in limitations:
         st.write(f"• {getattr(limitation, 'text', str(limitation))}")
 
@@ -181,10 +200,9 @@ def render_report_tab(
     generator_used = getattr(result, "report_generator_used", None)
     generation_error = getattr(result, "report_generation_error", None)
 
-    st.markdown("# Executive Credit Assessment Report")
-    st.caption(
-        "Final output of the Credit Assessment System. The Rule Engine determines the assessment; "
-        "the reporting layer produces the narrative."
+    _section_header(
+        "Executive Credit Assessment",
+        "Final credit judgement and management summary.",
     )
 
     with st.container(border=True):
@@ -208,7 +226,10 @@ def render_report_tab(
 
         render_report_kpis(result)
 
-    st.markdown("## Executive Conclusion")
+    _section_header(
+        "Executive Conclusion",
+        "Management-level interpretation of the assessment and its main implications.",
+    )
     with st.container(border=True):
         st.markdown(str(getattr(report, "executive_summary", "No executive summary available.")))
 
