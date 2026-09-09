@@ -276,6 +276,58 @@ def render_decision_path(result: Any) -> None:
 
 
 # ============================================================
+# Rule Evidence Matrix
+# ============================================================
+
+
+def render_rule_evidence_matrix(result: Any) -> None:
+    """Show a compact, display-only matrix of deterministic rule evidence."""
+    rule_results = _get_rule_results(result)
+    if not rule_results:
+        return
+
+    st.markdown("#### Rule Evidence Matrix")
+    st.caption(
+        "The matrix shows how each deterministic indicator is evaluated against its "
+        "configured threshold and records the resulting rule outcome."
+    )
+
+    rows: list[dict[str, Any]] = []
+    for rule_result in rule_results:
+        rows.append(
+            {
+                "Rule": str(getattr(rule_result, "rule_id", "—")),
+                "Indicator": _rule_indicator(rule_result),
+                "Actual": _format_indicator_value(getattr(rule_result, "value", None)),
+                "Threshold": _format_indicator_value(
+                    getattr(rule_result, "threshold", None)
+                ),
+                "Status": _status_label(_rule_status(rule_result)),
+                "Severity": _rule_severity(rule_result),
+            }
+        )
+
+    matrix = pd.DataFrame(rows)
+    st.dataframe(
+        matrix,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Rule": st.column_config.TextColumn("Rule", width="small"),
+            "Indicator": st.column_config.TextColumn("Indicator", width="medium"),
+            "Actual": st.column_config.TextColumn("Actual", width="small"),
+            "Threshold": st.column_config.TextColumn("Threshold", width="small"),
+            "Status": st.column_config.TextColumn("Status", width="small"),
+            "Severity": st.column_config.TextColumn("Severity", width="small"),
+        },
+    )
+    st.caption(
+        "Presentation-only evidence view. Values, thresholds, status and severity are "
+        "read directly from RuleResult and are not recalculated by the UI."
+    )
+
+
+# ============================================================
 # Risk Indicator Dashboard
 # ============================================================
 
@@ -398,6 +450,8 @@ def render_risk_indicator_dashboard(result: Any) -> None:
     st.caption(
         "Both views describe the factual Rule Engine output; they do not recalculate the assessment."
     )
+
+    render_rule_evidence_matrix(result)
 
     st.markdown("#### Rule Catalogue")
     st.caption("Filter the complete rule set before inspecting individual rule evidence.")
