@@ -98,15 +98,15 @@ def render_decision_path(result: Any) -> None:
 
 
 def render_risk_indicator_dashboard(result: Any) -> None:
-    """Render a compact dashboard of rule indicators and risk categories."""
+    """Render a scalable dashboard for rule outcomes and risk categories."""
     rule_results = _get_rule_results(result)
     if not rule_results:
         return
 
     st.subheader("Risk Indicator Dashboard")
     st.caption(
-        "Quantitative evidence behind the assessment: actual values, thresholds, "
-        "rule outcomes and risk categories produced by the Rule Engine."
+        "Start from the overall rule outcome, then narrow the rule catalogue by "
+        "status, severity or category when you need to investigate specific drivers."
     )
 
     rows: list[dict[str, Any]] = []
@@ -126,6 +126,9 @@ def render_risk_indicator_dashboard(result: Any) -> None:
     dataframe = pd.DataFrame(rows)
     status_counts = _rule_status_counts(result)
 
+    # --------------------------------------------------------
+    # Executive summary
+    # --------------------------------------------------------
     metric_cols = st.columns(4)
     with metric_cols[0]:
         st.metric("Rules evaluated", len(rule_results))
@@ -136,42 +139,142 @@ def render_risk_indicator_dashboard(result: Any) -> None:
     with metric_cols[3]:
         st.metric("Not evaluable", status_counts["NOT_EVALUABLE"])
 
-    st.dataframe(
-        dataframe[
-            [
-                "Rule",
-                "Indicator",
-                "Actual",
-                "Threshold",
-                "Status",
-                "Severity",
-                "Category",
-            ]
-        ],
-        use_container_width=True,
-        hide_index=True,
-    )
-
     triggered = dataframe[dataframe["Status"] == "TRIGGERED"]
+
+    # --------------------------------------------------------
+    # Risk overview: only triggered rules drive this chart
+    # --------------------------------------------------------
     if triggered.empty:
         st.success("No risk indicators breached their configured thresholds.")
-        return
+    else:
+        st.markdown("#### Active Risk Drivers")
+        category_counts = (
+            triggered.groupby("Category", dropna=False)
+            .size()
+            .reset_index(name="Triggered rules")
+            .sort_values("Triggered rules", ascending=True)
+        )
 
-    st.markdown("#### Triggered Risk Drivers by Category")
-    category_counts = (
-        triggered.groupby("Category", dropna=False)
-        .size()
-        .reset_index(name="Triggered rules")
-        .sort_values("Triggered rules", ascending=True)
+        st.bar_chart(
+            category_counts,
+            x="Category",
+            y="Triggered rules",
+            horizontal=True,
+            height=max(180, 55 * len(category_counts)),
+        )
+
+    # --------------------------------------------------------
+    # Scalable rule catalogue
+    # --------------------------------------------------------
+    st.markdown("#### Rule Catalogue")
+    st.caption(
+        "The catalogue is intentionally filterable: with hundreds of rules, review "
+        "the exceptions first instead of scanning the complete rule set."
     )
 
-    st.bar_chart(
-        category_counts,
-        x="Category",
-        y="Triggered rules",
-        horizontal=True,
-        height=max(180, 55 * len(category_counts)),
+    filter_cols = st.columns([1.2, 1.2, 1.6, 1.4])
+
+    with filter_cols[0]:
+        status_options = ["All", "TRIGGERED", "NOT_TRIGGERED", "NOT_EVALUABLE"]
+        selected_status = st.selectbox(
+            "Status",
+            status_options,
+            index=1 if status_counts["TRIGGERED"] else 0,
+            key="rule_catalogue_status",
+        )
+
+    with filter_cols[1]:
+        severity_values = sorted(
+            {
+                str(value)
+                for value in dataframe["Severity"].dropna().tolist()
+                if str(value) not in {"", "—"}
+            },
+            key=_severity_rank,
+            reverse=True,
+        )
+        selected_severity = st.selectbox(
+            "Severity",
+            ["All", *severity_values],
+            key="rule_catalogue_severity",
+        )
+
+    with filter_cols[2]:
+        categories = sorted(
+            {
+                str(value)
+                for value in dataframe["Category"].dropna().tolist()
+                if str(value) not in {"", "—"}
+            }
+        )
+        selected_category = st.selectbox(
+            "Category",
+            ["All", *categories],
+            key="rule_catalogue_category",
+        )
+
+    with filter_cols[3]:
+        sort_options = {
+            "Priority": "_priority",
+            "Rule ID": "Rule",
+            "Category": "Category",
+            "Status": "Status",
+        }
+        selected_sort = st.selectbox(
+            "Sort by",
+            list(sort_options),
+            key="rule_catalogue_sort",
+        )
+
+    filtered = dataframe.copy()
+
+    if selected_status != "All":
+        filtered = filtered[filtered["Status"] == selected_status]
+    if selected_severity != "All":
+        filtered = filtered[filtered["Severity"] == selected_severity]
+    if selected_category != "All":
+        filtered = filtered[filtered["Category"] == selected_category]
+
+    filtered["_priority"] = filtered.apply(
+        lambda row: (
+            0 if row["Status"] == "TRIGGERED" else 1,
+            -_severity_rank(str(row["Severity"])),
+            str(row["Rule"]),
+        ),
+        axis=1,
     )
+    filtered = filtered.sort_values(
+        sort_options[selected_sort],
+        ascending=selected_sort in {"Rule ID", "Category", "Status"},
+    )
+
+    total_filtered = len(filtered)
+    st.caption(f"Showing {total_filtered} of {len(dataframe)} evaluated rules.")
+
+    display_columns = [
+        "Rule",
+        "Indicator",
+        "Actual",
+        "Threshold",
+        "Status",
+        "Severity",
+        "Category",
+    ]
+
+    with st.expander("View filtered rule results", expanded=total_filtered <= 20):
+        if filtered.empty:
+            st.info("No rules match the selected filters.")
+        else:
+            st.dataframe(
+                filtered[display_columns],
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    # --------------------------------------------------------
+    # Detailed inspection remains separate from the catalogue
+    # --------------------------------------------------------
+    render_rule_indicator_detail(result)
 
 
 # ============================================================
