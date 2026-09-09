@@ -13,17 +13,13 @@ from src.models.assessment_status import AssessmentStatus
 from src.models.report import Report, ReportFindingGroup
 from src.rules.base.severity import RuleSeverity
 
-# ============================================================
-# Fixtures / Factories
-# ============================================================
 
-
-def make_analysis_finding(
+def make_finding(
+    text: str = "Test finding.",
     *,
     rule_id: str = "TEST_RULE",
     category: str = "Test Category",
     severity: RuleSeverity = RuleSeverity.MEDIUM,
-    text: str = "Test finding.",
 ) -> AnalysisFinding:
     return AnalysisFinding(
         rule_id=rule_id,
@@ -35,511 +31,150 @@ def make_analysis_finding(
 
 def make_analysis(
     *,
-    position_id: str = "TEST_POSITION",
     status: AssessmentStatus = AssessmentStatus.ATTENTION,
     key_findings: list[AnalysisFinding] | None = None,
     risk_factors: list[AnalysisFinding] | None = None,
     limitations: list[AnalysisFinding] | None = None,
 ) -> AssessmentAnalysis:
+    findings = key_findings if key_findings is not None else []
     return AssessmentAnalysis(
-        position_id=position_id,
-        assessment_status=status,
-        key_findings=(key_findings if key_findings is not None else []),
-        risk_factors=(risk_factors if risk_factors is not None else []),
-        limitations=(limitations if limitations is not None else []),
-    )
-
-
-@pytest.fixture
-def analysis() -> AssessmentAnalysis:
-    findings = [
-        make_analysis_finding(
-            rule_id=f"RULE_{index}",
-            category=category,
-            severity=severity,
-            text=f"Finding {index}.",
-        )
-        for index, (category, severity) in enumerate(
-            [
-                ("Revenue", RuleSeverity.MEDIUM),
-                ("Profitability", RuleSeverity.HIGH),
-                ("Profitability", RuleSeverity.MEDIUM),
-                ("Leverage", RuleSeverity.HIGH),
-            ],
-            start=1,
-        )
-    ]
-
-    risk_factors = [
-        finding for finding in findings if finding.severity == RuleSeverity.HIGH
-    ]
-
-    limitations = [
-        make_analysis_finding(
-            rule_id=f"LIMITATION_{index}",
-            category="Limitation Category",
-            severity=RuleSeverity.MEDIUM,
-            text=f"Limitation {index}.",
-        )
-        for index in range(1, 3)
-    ]
-
-    return make_analysis(
         position_id="TEST_POSITION",
-        status=AssessmentStatus.ATTENTION,
+        assessment_status=status,
         key_findings=findings,
-        risk_factors=risk_factors,
-        limitations=limitations,
+        risk_factors=risk_factors if risk_factors is not None else findings,
+        limitations=limitations if limitations is not None else [],
     )
 
 
-def valid_response(
-    analysis: AssessmentAnalysis,
-) -> str:
-    return "The assessment identified relevant findings."
-
-
-def different_status(
-    status: AssessmentStatus,
-) -> AssessmentStatus:
-    return next(candidate for candidate in AssessmentStatus if candidate != status)
-
-
-# ============================================================
-# Helpers
-# ============================================================
-
-
-def generate_report(
-    analysis: AssessmentAnalysis,
-    response: str | None = None,
-) -> tuple[LLMReportGenerator, Report, MockLLMClient]:
-    client = MockLLMClient(
-        response=(response if response is not None else valid_response(analysis)),
-    )
-
-    generator = LLMReportGenerator(client)
-
-    report = generator.generate(analysis)
-
-    return generator, report, client
-
-
-def report_findings(
-    report: Report,
-) -> list[AnalysisFinding]:
-    return [
-        finding for group in report.findings_by_category for finding in group.findings
-    ]
-
-
-def findings_by_category_from_analysis(
-    analysis: AssessmentAnalysis,
-) -> list[ReportFindingGroup]:
-    categories: dict[
-        str,
-        list[AnalysisFinding],
-    ] = {}
-
-    for finding in analysis.key_findings:
-        categories.setdefault(
-            finding.category,
-            [],
-        ).append(finding)
-
-    return [
-        ReportFindingGroup(
-            category=category,
-            findings=findings,
-        )
-        for category, findings in categories.items()
-    ]
-
-
-# ============================================================
-# Contract
-# ============================================================
-
-
-def test_llm_report_generator_implements_report_generator_contract(
-    analysis,
-):
-    client = MockLLMClient(
-        response=valid_response(analysis),
-    )
-
-    generator = LLMReportGenerator(client)
-
-    assert isinstance(
-        generator,
-        ReportGenerator,
-    )
-
-
-def test_llm_report_generator_accepts_llm_client_contract(
-    analysis,
-):
-    client = MagicMock(
-        spec=LLMClient,
-    )
-
-    client.generate.return_value = valid_response(
-        analysis,
-    )
-
-    generator = LLMReportGenerator(client)
-
-    report = generator.generate(analysis)
-
-    assert isinstance(
-        report,
-        Report,
-    )
-
-
-def test_llm_report_generator_accepts_prompt_builder_dependency(
-    analysis,
-):
-    client = MagicMock(
-        spec=LLMClient,
-    )
-
-    prompt_builder = MagicMock(
-        spec=ReportPromptBuilder,
-    )
-
-    prompt_builder.build.return_value = "Test prompt"
-    client.generate.return_value = valid_response(
-        analysis,
-    )
-
+def make_generator(
+    response: str = "The company presents relevant financial findings.",
+    *,
+    require_indicator_values: bool = False,
+) -> tuple[LLMReportGenerator, MockLLMClient]:
+    client = MockLLMClient(response=response)
     generator = LLMReportGenerator(
-        llm_client=client,
-        prompt_builder=prompt_builder,
+        client,
+        require_indicator_values=require_indicator_values,
     )
+    return generator, client
 
-    assert generator.prompt_builder is prompt_builder
 
-
-def test_llm_report_generator_creates_default_prompt_builder(
-    analysis,
-):
-    client = MagicMock(
-        spec=LLMClient,
-    )
-
-    client.generate.return_value = valid_response(
-        analysis,
-    )
-
-    generator = LLMReportGenerator(client)
-
-    assert isinstance(
-        generator.prompt_builder,
-        ReportPromptBuilder,
-    )
+def expected_status_line(status: AssessmentStatus) -> str:
+    descriptions = {
+        AssessmentStatus.NORMAL: "No significant credit-risk factors identified",
+        AssessmentStatus.ATTENTION: (
+            "Credit-risk factors requiring monitoring identified"
+        ),
+        AssessmentStatus.CRITICAL: (
+            "Significant credit-risk factors affecting the credit profile identified"
+        ),
+    }
+    return f"Assessment status: {status.value} — {descriptions[status]}."
 
 
 # ============================================================
-# Basic generation
+# Contract and dependencies
 # ============================================================
 
 
-def test_llm_report_generator_generates_report(
-    analysis,
-):
-    _, report, client = generate_report(
-        analysis,
-    )
-
-    assert isinstance(
-        report,
-        Report,
-    )
-
-    assert report.position_id == analysis.position_id
-    assert report.assessment_status == analysis.assessment_status
-
-    expected_summary = (
-        f"Assessment status: {analysis.assessment_status.value}.\n{client.response}"
-    )
-
-    assert report.executive_summary == expected_summary
+def test_implements_report_generator_contract() -> None:
+    generator, _ = make_generator()
+    assert isinstance(generator, ReportGenerator)
 
 
-def test_llm_report_generator_invokes_llm_client(
-    analysis,
-):
-    client = MagicMock(
-        spec=LLMClient,
-    )
-
-    client.generate.return_value = valid_response(
-        analysis,
-    )
-
+def test_accepts_llm_client_contract() -> None:
+    client = MagicMock(spec=LLMClient)
+    client.generate.return_value = "Generated narrative."
     generator = LLMReportGenerator(client)
 
-    generator.generate(analysis)
+    report = generator.generate(make_analysis())
 
+    assert isinstance(report, Report)
     client.generate.assert_called_once()
 
 
-# ============================================================
-# Prompt builder interaction
-# ============================================================
-
-
-def test_llm_report_generator_builds_prompt_from_analysis(
-    analysis,
-):
-    client = MagicMock(
-        spec=LLMClient,
-    )
-
-    prompt_builder = MagicMock(
-        spec=ReportPromptBuilder,
-    )
-
-    prompt_builder.build.return_value = "Generated test prompt"
-    client.generate.return_value = valid_response(
-        analysis,
-    )
-
-    generator = LLMReportGenerator(
-        llm_client=client,
-        prompt_builder=prompt_builder,
-    )
-
-    generator.generate(analysis)
-
-    prompt_builder.build.assert_called_once_with(
-        analysis,
-    )
-
-
-def test_llm_report_generator_passes_built_prompt_to_client(
-    analysis,
-):
-    client = MagicMock(
-        spec=LLMClient,
-    )
-
-    prompt_builder = MagicMock(
-        spec=ReportPromptBuilder,
-    )
-
-    expected_prompt = "Generated test prompt"
-
-    prompt_builder.build.return_value = expected_prompt
-    client.generate.return_value = valid_response(
-        analysis,
-    )
-
-    generator = LLMReportGenerator(
-        llm_client=client,
-        prompt_builder=prompt_builder,
-    )
-
-    generator.generate(analysis)
-
-    client.generate.assert_called_once_with(
-        expected_prompt,
-    )
-
-
-def test_llm_report_generator_uses_single_prompt_build(
-    analysis,
-):
-    client = MagicMock(
-        spec=LLMClient,
-    )
-
-    prompt_builder = MagicMock(
-        spec=ReportPromptBuilder,
-    )
-
+def test_accepts_custom_prompt_builder() -> None:
+    client = MagicMock(spec=LLMClient)
+    client.generate.return_value = "Generated narrative."
+    prompt_builder = MagicMock(spec=ReportPromptBuilder)
     prompt_builder.build.return_value = "Test prompt"
-    client.generate.return_value = valid_response(
-        analysis,
-    )
 
-    generator = LLMReportGenerator(
-        llm_client=client,
-        prompt_builder=prompt_builder,
-    )
+    generator = LLMReportGenerator(client, prompt_builder=prompt_builder)
+    generator.generate(make_analysis())
 
-    generator.generate(analysis)
-
-    assert prompt_builder.build.call_count == 1
-
-
-def test_llm_report_generator_uses_single_client_request(
-    analysis,
-):
-    client = MagicMock(
-        spec=LLMClient,
-    )
-
-    prompt_builder = MagicMock(
-        spec=ReportPromptBuilder,
-    )
-
-    prompt_builder.build.return_value = "Test prompt"
-    client.generate.return_value = valid_response(
-        analysis,
-    )
-
-    generator = LLMReportGenerator(
-        llm_client=client,
-        prompt_builder=prompt_builder,
-    )
-
-    generator.generate(analysis)
-
-    assert client.generate.call_count == 1
+    assert generator.prompt_builder is prompt_builder
+    prompt_builder.build.assert_called_once()
+    client.generate.assert_called_once_with("Test prompt")
 
 
 # ============================================================
-# Deterministic status ownership
+# Generation and deterministic status
 # ============================================================
+
+
+def test_generates_report_with_deterministic_status_and_narrative() -> None:
+    analysis = make_analysis(status=AssessmentStatus.ATTENTION)
+    narrative = "Revenue and profitability show material weaknesses."
+    generator, _ = make_generator(response=narrative)
+
+    report = generator.generate(analysis)
+
+    assert report.position_id == analysis.position_id
+    assert report.assessment_status == analysis.assessment_status
+    assert report.executive_summary == (
+        f"{expected_status_line(analysis.assessment_status)}\n{narrative}"
+    )
+
+
+@pytest.mark.parametrize("status", list(AssessmentStatus))
+def test_status_line_is_descriptive_and_single_line(
+    status: AssessmentStatus,
+) -> None:
+    analysis = make_analysis(status=status)
+    generator, _ = make_generator(response="Generated narrative.")
+
+    report = generator.generate(analysis)
+    lines = report.executive_summary.splitlines()
+
+    assert lines[0] == expected_status_line(status)
+    assert len(lines[0].splitlines()) == 1
+    assert lines[1] == "Generated narrative."
+    assert report.executive_summary.count("Assessment status:") == 1
+
+
+def test_llm_generated_status_is_removed_and_cannot_override_deterministic_status() -> None:
+    analysis = make_analysis(status=AssessmentStatus.CRITICAL)
+    response = (
+        "Assessment status: NORMAL.\n"
+        "The company presents material financial weaknesses."
+    )
+    generator, _ = make_generator(response=response)
+
+    report = generator.generate(analysis)
+
+    assert report.assessment_status == AssessmentStatus.CRITICAL
+    assert report.executive_summary == (
+        f"{expected_status_line(AssessmentStatus.CRITICAL)}\n"
+        "The company presents material financial weaknesses."
+    )
+    assert report.executive_summary.count("Assessment status:") == 1
 
 
 @pytest.mark.parametrize(
-    "status",
-    list(AssessmentStatus),
+    "response",
+    [
+        "Assessment status: CRITICAL.\nNarrative.",
+        "Assessment status: ATTENTION — some description.\nNarrative.",
+        "assessment status: NORMAL.\nNarrative.",
+    ],
 )
-def test_llm_report_generator_uses_deterministic_status(
-    status,
-):
-    analysis = make_analysis(
-        status=status,
-    )
+def test_removes_llm_status_prefix_case_insensitively(response: str) -> None:
+    generator, _ = make_generator(response=response)
 
-    llm_response = "The company presents several financial findings."
+    report = generator.generate(make_analysis())
 
-    _, report, _ = generate_report(
-        analysis,
-        response=llm_response,
-    )
-
-    assert report.assessment_status == status
-
-    assert report.executive_summary.startswith(
-        f"Assessment status: {status.value}.",
-    )
-
-
-def test_llm_report_generator_llm_does_not_control_report_status(
-    analysis,
-):
-    different = different_status(
-        analysis.assessment_status,
-    )
-
-    llm_response = (
-        f"The company is classified as {different.value} "
-        "based on the observed financial indicators."
-    )
-
-    _, report, _ = generate_report(
-        analysis,
-        response=llm_response,
-    )
-
-    assert report.assessment_status == (analysis.assessment_status)
-
-
-def test_llm_report_generator_adds_status_to_llm_narrative(
-    analysis,
-):
-    narrative = "Revenue and profitability indicators show material weaknesses."
-
-    _, report, _ = generate_report(
-        analysis,
-        response=narrative,
-    )
-
-    assert report.executive_summary == (
-        f"Assessment status: {analysis.assessment_status.value}.\n{narrative}"
-    )
-
-
-# ============================================================
-# Valid responses
-# ============================================================
-
-
-def test_llm_report_generator_accepts_normal_narrative(
-    analysis,
-):
-    response = "Revenue and profitability indicators show material weaknesses."
-
-    _, report, _ = generate_report(
-        analysis,
-        response=response,
-    )
-
-    assert report.assessment_status == (analysis.assessment_status)
-
-    assert response in report.executive_summary
-
-
-def test_llm_report_generator_accepts_narrative_without_status(
-    analysis,
-):
-    response = (
-        "Revenue growth has declined and EBITDA remains "
-        "negative, indicating financial weaknesses."
-    )
-
-    _, report, _ = generate_report(
-        analysis,
-        response=response,
-    )
-
-    assert report.executive_summary == (
-        f"Assessment status: {analysis.assessment_status.value}.\n{response}"
-    )
-
-
-def test_llm_report_generator_does_not_require_status_in_llm_response(
-    analysis,
-):
-    response = "The company presents weaknesses in revenue growth and profitability."
-
-    _, report, _ = generate_report(
-        analysis,
-        response=response,
-    )
-
-    assert report.assessment_status == (analysis.assessment_status)
-
-    assert response in report.executive_summary
-
-
-def test_llm_report_generator_accepts_multiple_status_words_in_narrative(
-    analysis,
-):
-    """
-    Status words appearing in the LLM narrative do not control
-    the deterministic assessment status.
-    """
-
-    response = (
-        "The company is not classified as critical and the "
-        "current findings should be monitored rather than "
-        "treated as a normal financial position."
-    )
-
-    _, report, _ = generate_report(
-        analysis,
-        response=response,
-    )
-
-    assert report.assessment_status == (analysis.assessment_status)
-
-    assert response in report.executive_summary
+    assert report.executive_summary.endswith("Narrative.")
+    assert report.executive_summary.count("Assessment status:") == 1
 
 
 # ============================================================
@@ -547,411 +182,183 @@ def test_llm_report_generator_accepts_multiple_status_words_in_narrative(
 # ============================================================
 
 
-def test_llm_report_generator_rejects_empty_response(
-    analysis,
-):
-    client = MockLLMClient(
-        response="",
-    )
+def test_rejects_empty_response() -> None:
+    generator, _ = make_generator(response="")
 
-    generator = LLMReportGenerator(client)
-
-    with pytest.raises(
-        ValueError,
-        match="LLM returned an empty response",
-    ):
-        generator.generate(analysis)
+    with pytest.raises(ValueError, match="LLM returned an empty response"):
+        generator.generate(make_analysis())
 
 
-@pytest.mark.parametrize(
-    "response",
-    [
-        " ",
-        "\n",
-        "\t",
-        "   \n\t  ",
-    ],
-)
-def test_llm_report_generator_rejects_whitespace_response(
-    analysis,
-    response,
-):
-    client = MockLLMClient(
-        response=response,
-    )
+@pytest.mark.parametrize("response", [" ", "\n", "\t", "  \n\t  "])
+def test_rejects_whitespace_response(response: str) -> None:
+    generator, _ = make_generator(response=response)
 
-    generator = LLMReportGenerator(client)
-
-    with pytest.raises(
-        ValueError,
-        match="LLM returned an empty response",
-    ):
-        generator.generate(analysis)
+    with pytest.raises(ValueError, match="LLM returned an empty response"):
+        generator.generate(make_analysis())
 
 
-def test_llm_report_generator_strips_response_whitespace(
-    analysis,
-):
-    response = "  Revenue and profitability show weaknesses.  "
+def test_rejects_status_only_response_after_status_prefix_is_removed() -> None:
+    generator, _ = make_generator(response="Assessment status: CRITICAL.")
 
-    _, report, _ = generate_report(
-        analysis,
-        response=response,
-    )
+    with pytest.raises(ValueError, match="LLM returned an empty narrative"):
+        generator.generate(make_analysis())
 
-    expected_narrative = "Revenue and profitability show weaknesses."
+
+def test_strips_response_whitespace() -> None:
+    generator, _ = make_generator(response="  Generated narrative.  ")
+
+    report = generator.generate(make_analysis())
 
     assert report.executive_summary == (
-        f"Assessment status: {analysis.assessment_status.value}.\n{expected_narrative}"
+        f"{expected_status_line(AssessmentStatus.ATTENTION)}\n"
+        "Generated narrative."
     )
 
 
 # ============================================================
-# Error handling
+# Indicator grounding for local LLM
 # ============================================================
 
 
-def test_llm_report_generator_propagates_client_errors(
-    analysis,
-):
-    client = MagicMock(
-        spec=LLMClient,
-    )
-
-    client.generate.side_effect = RuntimeError(
-        "LLM service unavailable",
-    )
-
-    prompt_builder = MagicMock(
-        spec=ReportPromptBuilder,
-    )
-
-    prompt_builder.build.return_value = "Test prompt"
-
-    generator = LLMReportGenerator(
-        llm_client=client,
-        prompt_builder=prompt_builder,
-    )
-
-    with pytest.raises(
-        RuntimeError,
-        match="LLM service unavailable",
-    ):
-        generator.generate(analysis)
-
-    client.generate.assert_called_once_with(
-        "Test prompt",
-    )
-
-
-# ============================================================
-# Structured data preservation
-# ============================================================
-
-
-def test_llm_report_generator_preserves_structured_data(
-    analysis,
-):
-    _, report, _ = generate_report(
-        analysis,
-    )
-
-    assert report.position_id == analysis.position_id
-
-    assert report.assessment_status == (analysis.assessment_status)
-
-    assert report.findings_by_category == (
-        findings_by_category_from_analysis(
-            analysis,
-        )
-    )
-
-    assert report.limitations == (analysis.limitations)
-
-
-def test_llm_report_generator_does_not_modify_analysis(
-    analysis,
-):
-    original_key_findings = list(
-        analysis.key_findings,
-    )
-
-    original_risk_factors = list(
-        analysis.risk_factors,
-    )
-
-    original_limitations = list(
-        analysis.limitations,
-    )
-
-    generate_report(
-        analysis,
-    )
-
-    assert analysis.key_findings == (original_key_findings)
-
-    assert analysis.risk_factors == (original_risk_factors)
-
-    assert analysis.limitations == (original_limitations)
-
-
-def test_llm_report_generator_does_not_use_generated_text_as_structured_data(
-    analysis,
-):
-    injected_text = (
-        "Generated content that does not exist in the deterministic analysis."
-    )
-
-    _, report, _ = generate_report(
-        analysis,
-        response=injected_text,
-    )
-
-    structured_findings = report_findings(
-        report,
-    )
-
-    assert structured_findings == (analysis.key_findings)
-
-    assert report.limitations == (analysis.limitations)
-
-    assert all(finding.text != injected_text for finding in structured_findings)
-
-
-def test_llm_report_generator_preserves_finding_order(
-    analysis,
-):
-    _, report, _ = generate_report(
-        analysis,
-    )
-
-    assert (
-        report_findings(
-            report,
-        )
-        == analysis.key_findings
-    )
-
-
-def test_llm_report_generator_preserves_categories(
-    analysis,
-):
-    _, report, _ = generate_report(
-        analysis,
-    )
-
-    expected_categories = [finding.category for finding in analysis.key_findings]
-
-    actual_categories = [finding.category for finding in report_findings(report)]
-
-    assert actual_categories == expected_categories
-
-
-# ============================================================
-# Category grouping
-# ============================================================
-
-
-def test_llm_report_generator_groups_findings_by_category(
-    analysis,
-):
-    _, report, _ = generate_report(
-        analysis,
-    )
-
-    grouped = report.findings_by_category
-
-    categories = [group.category for group in grouped]
-
-    expected_categories = list(
-        dict.fromkeys(finding.category for finding in analysis.key_findings)
-    )
-
-    assert categories == expected_categories
-
-
-def test_llm_report_generator_keeps_findings_with_same_category_together(
-    analysis,
-):
-    _, report, _ = generate_report(
-        analysis,
-    )
-
-    profitability_groups = [
-        group
-        for group in report.findings_by_category
-        if group.category == "Profitability"
+def test_extracts_indicator_values_from_findings() -> None:
+    findings = [
+        make_finding("Revenue growth declined to -20.0%."),
+        make_finding("EBITDA is negative at €-120,000."),
+        make_finding("NFP to EBITDA stands at 7.0x."),
+        make_finding("Revenue growth also equals -20.0%."),
     ]
 
-    assert len(profitability_groups) == 1
+    values = LLMReportGenerator._extract_indicator_values(findings)
 
-    expected = [
-        finding
-        for finding in analysis.key_findings
-        if finding.category == "Profitability"
+    assert values == ["-20.0%", "€-120,000", "7.0x"]
+
+
+def test_local_llm_adds_only_missing_indicator_findings() -> None:
+    findings = [
+        make_finding("Revenue growth declined to -20.0%."),
+        make_finding("EBITDA is negative at €-120,000."),
+        make_finding("NFP to EBITDA stands at 7.0x."),
     ]
+    analysis = make_analysis(status=AssessmentStatus.CRITICAL, key_findings=findings)
+    response = "EBITDA is negative at €-120,000 and leverage stands at 7.0x."
+    generator, _ = make_generator(
+        response=response,
+        require_indicator_values=True,
+    )
 
-    assert profitability_groups[0].findings == expected
+    report = generator.generate(analysis)
+
+    assert report.executive_summary.count("-20.0%") == 1
+    assert report.executive_summary.count("€-120,000") == 1
+    assert report.executive_summary.count("7.0x") == 1
+    assert "Reported indicator values:" not in report.executive_summary
+    assert "The assessment also reflects:" in report.executive_summary
 
 
-# ============================================================
-# Empty analysis
-# ============================================================
+def test_local_llm_does_not_append_when_all_indicator_values_are_present() -> None:
+    findings = [
+        make_finding("Revenue growth declined to 20.0%."),
+        make_finding("NFP to EBITDA stands at 7.0x."),
+    ]
+    analysis = make_analysis(key_findings=findings)
+    response = (
+        "Revenue growth declined to 20.0% and NFP to EBITDA stands at 7.0x."
+    )
+    generator, _ = make_generator(
+        response=response,
+        require_indicator_values=True,
+    )
+
+    report = generator.generate(analysis)
+
+    assert report.executive_summary.endswith(response)
+    assert "The assessment also reflects:" not in report.executive_summary
+    assert "Reported indicator values:" not in report.executive_summary
+    assert report.executive_summary.count("20.0%") == 1
+    assert report.executive_summary.count("7.0x") == 1
 
 
-@pytest.mark.parametrize(
-    "status",
-    list(AssessmentStatus),
-)
-def test_llm_report_generator_supports_empty_analysis(
-    status,
-):
+def test_standard_llm_does_not_force_indicator_grounding() -> None:
     analysis = make_analysis(
-        status=status,
-        key_findings=[],
-        risk_factors=[],
-        limitations=[],
+        key_findings=[make_finding("Revenue growth declined to 20.0%.")]
     )
+    generator, _ = make_generator(require_indicator_values=False)
 
-    _, report, client = generate_report(
-        analysis,
+    report = generator.generate(analysis)
+
+    assert "20.0%" not in report.executive_summary
+    assert "The assessment also reflects:" not in report.executive_summary
+
+
+# ============================================================
+# Structured data preservation and grouping
+# ============================================================
+
+
+def test_preserves_structured_data() -> None:
+    findings = [
+        make_finding("Revenue finding.", category="Revenue"),
+        make_finding("Profitability finding.", category="Profitability"),
+    ]
+    limitations = [make_finding("Missing data.", category="Limitations")]
+    analysis = make_analysis(
+        key_findings=findings,
+        limitations=limitations,
     )
+    generator, _ = make_generator()
+
+    report = generator.generate(analysis)
 
     assert report.position_id == analysis.position_id
+    assert report.assessment_status == analysis.assessment_status
+    assert report.limitations == limitations
+    assert report.findings_by_category == [
+        ReportFindingGroup(category="Revenue", findings=[findings[0]]),
+        ReportFindingGroup(category="Profitability", findings=[findings[1]]),
+    ]
 
-    assert report.assessment_status == (analysis.assessment_status)
 
-    expected_summary = (
-        f"Assessment status: {analysis.assessment_status.value}.\n{client.response}"
+def test_group_findings_by_category_preserves_order() -> None:
+    findings = [
+        make_finding("Finding 1.", category="Revenue"),
+        make_finding("Finding 2.", category="Profitability"),
+        make_finding("Finding 3.", category="Revenue"),
+    ]
+
+    groups = LLMReportGenerator._group_findings_by_category(findings)
+
+    assert groups == [
+        ReportFindingGroup(category="Revenue", findings=[findings[0], findings[2]]),
+        ReportFindingGroup(category="Profitability", findings=[findings[1]]),
+    ]
+
+
+def test_does_not_modify_analysis() -> None:
+    findings = [make_finding("Revenue growth declined to -20.0%.")]
+    analysis = make_analysis(key_findings=findings)
+    original = (
+        list(analysis.key_findings),
+        list(analysis.risk_factors),
+        list(analysis.limitations),
     )
-
-    assert report.executive_summary == (expected_summary)
-
-    assert report.findings_by_category == []
-    assert report.limitations == []
-
-
-# ============================================================
-# Executive summary construction
-# ============================================================
-
-
-def test_llm_report_generator_builds_executive_summary(
-    analysis,
-):
-    client = MagicMock(
-        spec=LLMClient,
-    )
-
-    prompt_builder = MagicMock(
-        spec=ReportPromptBuilder,
-    )
-
-    prompt_builder.build.return_value = "Test prompt"
-
-    narrative = "Revenue and profitability indicators show material weaknesses."
-
-    client.generate.return_value = narrative
-
-    generator = LLMReportGenerator(
-        llm_client=client,
-        prompt_builder=prompt_builder,
-    )
-
-    report = generator.generate(analysis)
-
-    assert report.executive_summary == (
-        f"Assessment status: {analysis.assessment_status.value}.\n{narrative}"
-    )
-
-
-# ============================================================
-# End-to-end interaction
-# ============================================================
-
-
-def test_llm_report_generator_executes_expected_pipeline(
-    analysis,
-):
-    """
-    Verify the high-level orchestration:
-
-        AssessmentAnalysis
-            -> PromptBuilder
-            -> LLMClient
-            -> Report
-    """
-
-    client = MagicMock(
-        spec=LLMClient,
-    )
-
-    prompt_builder = MagicMock(
-        spec=ReportPromptBuilder,
-    )
-
-    prompt = "Generated prompt"
-    narrative = "Generated narrative."
-
-    prompt_builder.build.return_value = prompt
-    client.generate.return_value = narrative
-
-    generator = LLMReportGenerator(
-        llm_client=client,
-        prompt_builder=prompt_builder,
-    )
-
-    report = generator.generate(analysis)
-
-    prompt_builder.build.assert_called_once_with(
-        analysis,
-    )
-
-    client.generate.assert_called_once_with(
-        prompt,
-    )
-
-    assert report.executive_summary == (
-        f"Assessment status: {analysis.assessment_status.value}.\n{narrative}"
-    )
-
-    assert report.assessment_status == (analysis.assessment_status)
-
-    assert report.findings_by_category == (
-        findings_by_category_from_analysis(
-            analysis,
-        )
-    )
-
-    assert report.limitations == (analysis.limitations)
-
-
-def test_llm_report_generator_uses_injected_prompt_builder(
-    analysis,
-):
-    prompt_builder = MagicMock(
-        spec=ReportPromptBuilder,
-    )
-
-    prompt_builder.build.return_value = "CUSTOM PROMPT"
-
-    client = MagicMock(
-        spec=LLMClient,
-    )
-
-    client.generate.return_value = "Generated narrative"
-
-    generator = LLMReportGenerator(
-        llm_client=client,
-        prompt_builder=prompt_builder,
-    )
+    generator, _ = make_generator(require_indicator_values=True)
 
     generator.generate(analysis)
 
-    prompt_builder.build.assert_called_once_with(
-        analysis,
-    )
+    assert analysis.key_findings == original[0]
+    assert analysis.risk_factors == original[1]
+    assert analysis.limitations == original[2]
 
-    client.generate.assert_called_once_with(
-        "CUSTOM PROMPT",
-    )
+
+def test_propagates_client_errors() -> None:
+    client = MagicMock(spec=LLMClient)
+    client.generate.side_effect = RuntimeError("LLM service unavailable")
+    prompt_builder = MagicMock(spec=ReportPromptBuilder)
+    prompt_builder.build.return_value = "Test prompt"
+    generator = LLMReportGenerator(client, prompt_builder=prompt_builder)
+
+    with pytest.raises(RuntimeError, match="LLM service unavailable"):
+        generator.generate(make_analysis())
+
+    prompt_builder.build.assert_called_once()
+    client.generate.assert_called_once_with("Test prompt")
