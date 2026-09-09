@@ -329,27 +329,31 @@ def render_risk_indicator_dashboard(result: Any) -> None:
     )
 
     bridge_cols = st.columns([1, 0.22, 1, 0.22, 1])
+    assessment = getattr(result, "assessment", None)
+    assessment_status = str(
+        getattr(getattr(assessment, "status", None), "value", "Unknown")
+    )
     bridge_items = [
         ("Indicators evaluated", str(len(rule_results)), "Financial evidence"),
         ("Rules triggered", str(status_counts["TRIGGERED"]), "Risk evidence"),
-        (
-            "Final assessment",
-            str(getattr(getattr(assessment, "status", None), "value", "Unknown")),
-            "Deterministic judgement",
-        ),
+        ("Final assessment", assessment_status, "Deterministic judgement"),
     ]
 
     for index, (label, value, description) in enumerate(bridge_items):
         if index in (0, 2, 4):
             column = bridge_cols[index]
             with column:
-                st.container(border=True)
-                st.markdown(f"**{label}**")
-                st.markdown(f"### {value}")
-                st.caption(description)
+                with st.container(border=True):
+                    st.caption(label)
+                    st.markdown(f"### {value}")
+                    st.caption(description)
         else:
             with bridge_cols[index]:
-                st.markdown("<div style='text-align:center; padding-top:2.1rem; font-size:1.3rem;'>→</div>", unsafe_allow_html=True)
+                st.markdown(
+                    "<div style='text-align:center; padding-top:2.1rem; "
+                    "font-size:1.3rem;'>→</div>",
+                    unsafe_allow_html=True,
+                )
 
     bridge_meta = st.columns(3)
     bridge_meta[0].caption(f"{len(rule_results)} indicators evaluated")
@@ -357,7 +361,8 @@ def render_risk_indicator_dashboard(result: Any) -> None:
         f"{status_counts['TRIGGERED']} of {len(rule_results)} rules triggered"
     )
     bridge_meta[2].caption(
-        f"{severity_counts['HIGH'] + severity_counts['CRITICAL']} high/critical severity outcomes"
+        f"{severity_counts['HIGH'] + severity_counts['CRITICAL']} "
+        "high/critical severity outcomes"
     )
     st.caption(
         "This bridge is explanatory only. It does not recalculate thresholds, severity "
