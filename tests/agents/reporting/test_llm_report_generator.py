@@ -231,7 +231,10 @@ def test_local_llm_does_not_fallback_when_all_indicator_values_are_present() -> 
         make_finding("NFP to EBITDA stands at 7.0x.", category="Leverage"),
     ]
     analysis = make_analysis(key_findings=findings)
-    response = "Revenue growth declined to 20.0% and NFP to EBITDA stands at 7.0x."
+    response = (
+        "Revenue growth declined to 20.0% and "
+        "NFP to EBITDA stands at 7.0x."
+    )
     generator, _ = make_generator(
         response=response,
         require_indicator_values=True,
@@ -335,30 +338,37 @@ def test_propagates_client_errors() -> None:
 def test_discursive_narrative_preserves_all_findings_and_indicators() -> None:
     findings = [
         make_finding(
-            "Revenue growth declined to -20.0%, indicating a deterioration in the company's top-line performance.",
+            "Revenue growth declined to -20.0%, indicating a deterioration "
+            "in the company's top-line performance.",
             category="Revenue",
         ),
         make_finding(
-            "EBITDA is negative, with a reported value of €-120,000, indicating negative operating profitability.",
+            "EBITDA is negative, with a reported value of €-120,000, "
+            "indicating negative operating profitability.",
             category="Profitability",
         ),
         make_finding(
-            "The interest coverage ratio is -0.2x, indicating that EBITDA provides insufficient coverage of interest expense.",
+            "The interest coverage ratio is -0.2x, indicating that EBITDA "
+            "provides insufficient coverage of interest expense.",
             category="Profitability",
         ),
         make_finding("EBITDA margin is -8.0%.", category="Profitability"),
         make_finding(
-            "NFP to EBITDA stands at 7.0x, above the acceptable level, indicating elevated leverage relative to operating earnings.",
+            "NFP to EBITDA stands at 7.0x, above the acceptable level, "
+            "indicating elevated leverage relative to operating earnings.",
             category="Leverage",
         ),
     ]
     analysis = make_analysis(status=AssessmentStatus.CRITICAL, key_findings=findings)
     response = (
-        "Revenue growth declined to -20.0%, indicating a deterioration in the company's top-line performance.\n\n"
-        "EBITDA is negative, with a reported value of €-120,000, indicating negative operating profitability. "
-        "The interest coverage ratio is -0.2x, indicating that EBITDA provides insufficient coverage of interest expense. "
+        "Revenue growth declined to -20.0%, indicating a deterioration in the "
+        "company's top-line performance.\n\n"
+        "EBITDA is negative, with a reported value of €-120,000, indicating "
+        "negative operating profitability. The interest coverage ratio is -0.2x, "
+        "indicating that EBITDA provides insufficient coverage of interest expense. "
         "EBITDA margin is -8.0%.\n\n"
-        "NFP to EBITDA stands at 7.0x, above the acceptable level, indicating elevated leverage relative to operating earnings."
+        "NFP to EBITDA stands at 7.0x, above the acceptable level, indicating "
+        "elevated leverage relative to operating earnings."
     )
     generator, _ = make_generator(
         response=response,
