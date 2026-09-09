@@ -217,6 +217,7 @@ class LLMReportGenerator(ReportGenerator):
         narrative = cls._STATUS_PREFIX_PATTERN.sub("", narrative, count=1).strip()
         narrative = cls._NUMERIC_SPACING_PATTERN.sub(".", narrative)
         narrative = cls._remove_duplicate_sentences(narrative)
+        narrative = cls._remove_repeated_indicator_mentions(narrative)
 
         if not narrative:
             raise ValueError("LLM returned an empty narrative")
@@ -256,5 +257,38 @@ class LLMReportGenerator(ReportGenerator):
 
             if unique_sentences:
                 cleaned_paragraphs.append(" ".join(unique_sentences).strip())
+
+        return "\n\n".join(cleaned_paragraphs).strip()
+
+    @classmethod
+    def _remove_repeated_indicator_mentions(cls, narrative: str) -> str:
+        """Keep the first sentence containing each indicator value only."""
+        paragraphs = [part.strip() for part in narrative.split("\n\n") if part.strip()]
+        cleaned_paragraphs: list[str] = []
+        seen_values: set[str] = set()
+
+        for paragraph in paragraphs:
+            kept: list[str] = []
+            for sentence in cls._SENTENCE_PATTERN.findall(paragraph):
+                values = cls._extract_indicator_values(
+                    [
+                        AnalysisFinding(
+                            rule_id="_validation",
+                            category="_validation",
+                            severity=None,  # type: ignore[arg-type]
+                            text=sentence,
+                        )
+                    ]
+                )
+                repeated = values and all(value in seen_values for value in values)
+                if repeated:
+                    continue
+                kept.append(" ".join(sentence.split()).strip())
+                seen_values.update(values)
+
+            if kept:
+                cleaned_paragraphs.append(" ".join(kept).strip())
+            elif not cls._SENTENCE_PATTERN.findall(paragraph):
+                cleaned_paragraphs.append(paragraph)
 
         return "\n\n".join(cleaned_paragraphs).strip()
