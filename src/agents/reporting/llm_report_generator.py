@@ -75,10 +75,6 @@ class LLMReportGenerator(ReportGenerator):
             limitations=analysis.limitations,
         )
 
-    # ============================================================
-    # Executive summary
-    # ============================================================
-
     @classmethod
     def _build_executive_summary(
         cls,
@@ -116,12 +112,16 @@ class LLMReportGenerator(ReportGenerator):
         narrative: str,
         findings: list[AnalysisFinding],
     ) -> str:
-        """Insert missing indicator values without adding a repeated tail."""
-        missing_values = [
-            value
-            for value in cls._extract_indicator_values(findings)
-            if value not in narrative
-        ]
+        """
+        Ensure local-LLM narratives retain every deterministic indicator value.
+
+        Missing values are inserted into the paragraph corresponding to their
+        deterministic category. If the LLM still omits a value, the output is
+        rejected so the reporting layer can use its deterministic fallback
+        rather than append an artificial list of values to the report.
+        """
+        required_values = cls._extract_indicator_values(findings)
+        missing_values = [value for value in required_values if value not in narrative]
         if not missing_values:
             return narrative
 
@@ -139,20 +139,25 @@ class LLMReportGenerator(ReportGenerator):
             label = cls._indicator_label(finding.text, relevant_missing[0])
             sentence = f"{label}: {', '.join(relevant_missing)}."
             target_index = cls._category_index_for_finding(finding, findings)
-            insert_at = min(target_index, len(paragraphs) - 1)
-            paragraphs[insert_at] = (
-                f"{paragraphs[insert_at].rstrip('. ')}. {sentence}"
-            )
+
+            while len(paragraphs) <= target_index:
+                paragraphs.append("")
+
+            if paragraphs[target_index]:
+                paragraphs[target_index] = (
+                    f"{paragraphs[target_index].rstrip('. ')}. {sentence}"
+                )
+            else:
+                paragraphs[target_index] = sentence
 
             for value in relevant_missing:
                 if value in missing_values:
                     missing_values.remove(value)
 
         if missing_values:
-            paragraphs.append(
-                "Additional reported indicator values: "
+            raise ValueError(
+                "LLM narrative omitted required indicator values: "
                 + ", ".join(missing_values)
-                + "."
             )
 
         return "\n\n".join(paragraphs)
