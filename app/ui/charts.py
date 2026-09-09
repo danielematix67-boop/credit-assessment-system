@@ -281,7 +281,9 @@ def render_risk_driver_map(result: Any) -> None:
 
     if not triggered_rules:
         st.subheader("Risk Driver Map")
-        st.success("No triggered rules were identified, so no active risk drivers are present.")
+        st.success(
+            "No triggered rules were identified, so no active risk drivers are present."
+        )
         return
 
     assessment = getattr(result, "assessment", None)
@@ -391,7 +393,6 @@ def render_rule_indicator_detail(result: Any) -> None:
     selected_rule = rule_results[selected_index]
 
     rule_id = getattr(selected_rule, "rule_id", "—")
-    indicator = _rule_indicator(selected_rule)
     category = getattr(selected_rule, "category", "—")
     status = _rule_status(selected_rule)
     severity = _rule_severity(selected_rule)
@@ -436,11 +437,13 @@ def render_rule_indicator_detail(result: Any) -> None:
 
         if status == "TRIGGERED":
             st.warning(
-                f"The indicator is classified as triggered under the configured direction: {direction}."
+                "The indicator is classified as triggered under the configured "
+                f"direction: {direction}."
             )
         elif status == "NOT_TRIGGERED":
             st.success(
-                f"The indicator remains within the non-triggered range under the configured direction: {direction}."
+                "The indicator remains within the non-triggered range under the "
+                f"configured direction: {direction}."
             )
     else:
         st.info("Actual or threshold value is not available for this rule.")
