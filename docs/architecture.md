@@ -30,7 +30,8 @@ For the rationale behind these choices, see [`architecture-decisions.md`](archit
 | **Pluggable rules** | Rules are discovered and resolved through a registry using `rule_id`. |
 | **Provider independence** | LLM providers are accessed through the `LLMClient` abstraction. |
 | **Graceful degradation** | LLM reporting can fall back to deterministic report generation. |
-| **Immutable assessment state** | Core assessment, analysis, and report objects use immutable dataclasses where appropriate. |
+| **Execution observability** | Workflow executions expose immutable provenance, fallback state, error classification, and phase timings. |
+| **Immutable assessment state** | Core assessment, analysis, report, and execution metadata objects use immutable dataclasses where appropriate. |
 | **UI/domain decoupling** | Streamlit is confined to `app/`; business logic lives in `src/`. |
 
 ---
@@ -72,6 +73,15 @@ Report Generator   Report Generator
           \       /
            ▼     ▼
              Report
+
+      + ExecutionMetadata
+        ├── execution_id
+        ├── started_at
+        ├── reporting_mode
+        ├── generator_used
+        ├── fallback_used
+        ├── error_category
+        └── phase timings
 ```
 
 The complete workflow is encapsulated by `AssessmentWorkflow` and exposed through `AssessmentOrchestrator`.
@@ -109,7 +119,7 @@ The Streamlit application is responsible for:
 - selecting reporting mode;
 - constructing the workflow through factory functions;
 - executing the workflow;
-- rendering the resulting domain objects.
+- rendering the resulting domain objects and execution metadata.
 
 The UI does not implement credit-risk business rules.
 
@@ -134,7 +144,7 @@ Factories keep dependency construction outside the domain components.
 Assessment → Analysis → Reporting
 ```
 
-The workflow also carries execution-level information such as timing and reporting provenance.
+The workflow also carries execution-level information such as execution identity, timing, reporting provenance, fallback state, and classified reporting errors through `ExecutionMetadata`.
 
 ### 4.4 Assessment Layer — `src/services/`
 
@@ -162,6 +172,7 @@ The workflow communicates through explicit domain objects rather than passing lo
 | `AnalysisFinding` | Normalized finding used by downstream analysis/reporting. |
 | `AssessmentAnalysis` | Structured representation of findings, risk factors, status, and limitations. |
 | `Report` | Final user-facing deliverable. |
+| `ExecutionMetadata` | Immutable provenance, fallback, error classification, and timing information for one workflow execution. |
 | `AssessmentWorkflowResult` | Complete workflow output including assessment, analysis, report, provenance, and timing information. |
 
 ### 5.1 Status and Severity
@@ -320,15 +331,64 @@ The prompt explicitly establishes that:
 - unsupported facts must not be invented;
 - the LLM cannot make or change a credit decision.
 
-### 8.3 Fallback
+### 8.3 Fallback and Error Classification
 
 When LLM reporting is unavailable or its output is rejected by validation, the workflow can use `DeterministicReportGenerator`.
 
+The reporting agent classifies primary reporting failures into operational categories such as:
+
+```text
+RATE_LIMIT
+SERVICE_UNAVAILABLE
+CONNECTION_ERROR
+AUTHENTICATION
+AUTHORIZATION
+MODEL_UNAVAILABLE
+TIMEOUT
+GENERATION_ERROR
+```
+
 The fallback changes the narrative generation path only; it does not change the underlying assessment.
+
+If both the primary and fallback generators fail, the terminal error is propagated rather than silently masking the failure.
 
 ---
 
-## 9. Repository Structure
+## 9. Execution Observability
+
+Each successfully completed workflow execution can expose immutable `ExecutionMetadata` through `AssessmentWorkflowResult`.
+
+The metadata captures:
+
+- a unique `execution_id`;
+- UTC `started_at` timestamp;
+- selected `reporting_mode`;
+- generator used (`PRIMARY`, `FALLBACK`, or unavailable after terminal failure);
+- whether fallback was used;
+- classified reporting `error_category`, when applicable;
+- assessment, analysis, reporting, and total execution times.
+
+Conceptually:
+
+```text
+Workflow Execution
+        │
+        ▼
+ExecutionMetadata
+        ├── Identity
+        ├── Timestamp
+        ├── Reporting provenance
+        ├── Error classification
+        └── Phase timings
+```
+
+The metadata is intended for traceability and operational diagnostics. It does not become part of the deterministic credit decision.
+
+The Streamlit application exposes these fields through the **Execution & Audit Metadata** section of the Executive Report.
+
+---
+
+## 10. Repository Structure
 
 ```text
 credit-assessment-system/
@@ -356,16 +416,17 @@ credit-assessment-system/
 ├── docs/
 │   ├── architecture.md          # System architecture
 │   ├── architecture-decisions.md# Architectural decisions and rationale
-│   └── validation.md             # Validation and testing strategy
+│   ├── validation.md             # Validation and testing strategy
+│   └── security-data-handling.md# Security and data-handling principles
 │
 └── tests/                       # Unit, integration and workflow tests
 ```
 
 ---
 
-## 10. Extension Points
+## 11. Extension Points
 
-### 10.1 Adding a New Rule
+### 11.1 Adding a New Rule
 
 A new rule requires:
 
@@ -375,13 +436,13 @@ A new rule requires:
 
 The central Rule Engine does not need to be modified.
 
-### 10.2 Adding a New LLM Provider
+### 11.2 Adding a New LLM Provider
 
 A new provider can implement the `LLMClient` interface and be injected into the reporting workflow.
 
 The assessment engine remains unchanged.
 
-### 10.3 Adding a New Report Generator
+### 11.3 Adding a New Report Generator
 
 A new report generator can implement the reporting abstraction and consume the existing `AssessmentAnalysis`.
 
@@ -389,7 +450,7 @@ The deterministic assessment remains independent of the reporting implementation
 
 ---
 
-## 11. Architectural Boundary
+## 12. Architectural Boundary
 
 The system deliberately separates **decision authority** from **language generation**:
 
