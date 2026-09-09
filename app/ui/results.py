@@ -2,9 +2,8 @@ from typing import Any
 
 import streamlit as st
 
-from app.ui.charts import render_decision_path, render_risk_indicator_dashboard
+from app.ui.charts import render_risk_indicator_dashboard
 from app.ui.components import render_section_header
-from app.ui.credit_position import display_position_table
 from app.ui.report import render_report_tab
 
 
@@ -295,46 +294,6 @@ def render_assessment_overview(result: Any) -> None:
         st.metric("Triggered rules", triggered)
 
 
-def render_audit_trail(result: Any, assessment_position: Any) -> None:
-    """Keep technical provenance separate from the main findings view."""
-    with st.expander("Audit trail & methodology", expanded=False):
-        st.caption(
-            "Technical provenance is kept here. Detailed rule findings are shown only "
-            "in the Risk Indicator Dashboard to avoid duplicate evidence."
-        )
-        st.markdown("#### Assessment flow")
-        render_decision_path(result)
-        st.markdown("#### Credit data used")
-        if assessment_position is not None:
-            display_position_table(assessment_position)
-        else:
-            st.info("The assessed credit position is not available.")
-        st.markdown("#### Methodology")
-        st.write(
-            "The Rule Engine is the sole authority for assessment status, rule outcomes, "
-            "severity and thresholds. The Analysis layer organises the resulting findings. "
-            "The Reporting layer converts the structured result into the Executive Report. "
-            "Gemini and Ollama can generate narrative text, but cannot change the credit judgement."
-        )
-        metadata = getattr(result, "execution_metadata", None)
-        if metadata is not None:
-            st.markdown("#### Execution")
-            cols = st.columns(4)
-            values = [
-                ("Generator", getattr(metadata, "generator_used", "—") or "—"),
-                ("Fallback", "Yes" if getattr(metadata, "fallback_used", False) else "No"),
-                (
-                    "Reporting time",
-                    f"{getattr(metadata, 'reporting_elapsed_time', 0.0):.3f} s",
-                ),
-                ("Total time", f"{getattr(metadata, 'total_elapsed_time', 0.0):.3f} s"),
-            ]
-            for column, (label, value) in zip(cols, values):
-                with column:
-                    st.caption(label)
-                    st.write(value)
-
-
 def render_results(
     result: Any,
     assessment_position: Any,
@@ -362,4 +321,3 @@ def render_results(
     )
     render_assessment_overview(result)
     render_risk_indicator_dashboard(result)
-    render_audit_trail(result, assessment_position)
