@@ -6,6 +6,14 @@ from src.models.report import Report, ReportFindingGroup
 
 
 class DeterministicReportGenerator(ReportGenerator):
+    _STATUS_DESCRIPTIONS = {
+        AssessmentStatus.NORMAL: "No significant credit-risk factors identified",
+        AssessmentStatus.ATTENTION: "Credit-risk factors requiring monitoring identified",
+        AssessmentStatus.CRITICAL: (
+            "Significant credit-risk factors affecting the credit profile identified"
+        ),
+    }
+
     def generate(
         self,
         analysis: AssessmentAnalysis,
@@ -22,48 +30,36 @@ class DeterministicReportGenerator(ReportGenerator):
             limitations=analysis.limitations,
         )
 
-    @staticmethod
+    @classmethod
     def _generate_summary(
+        cls,
         analysis: AssessmentAnalysis,
     ) -> str:
-        if analysis.assessment_status == AssessmentStatus.NORMAL:
-            summary = (
-                "Assessment status: NORMAL.\n\n"
-                "The credit assessment does not identify "
-                "significant risk factors."
-            )
+        status = analysis.assessment_status
+        description = cls._STATUS_DESCRIPTIONS.get(
+            status,
+            "Assessment status could not be determined",
+        )
+        status_value = getattr(status, "value", str(status))
 
-        elif analysis.assessment_status == AssessmentStatus.ATTENTION:
-            summary = (
-                "Assessment status: ATTENTION.\n\n"
-                "The credit assessment identifies some "
-                "elements requiring monitoring."
-            )
-
-        elif analysis.assessment_status == AssessmentStatus.CRITICAL:
-            summary = (
-                "Assessment status: CRITICAL.\n\n"
-                "The credit assessment identifies significant "
-                "risk factors affecting the credit profile."
-            )
-
-        else:
-            summary = (
-                "Assessment status: UNDEFINED.\n\n"
-                "The credit assessment status could not be determined."
-            )
+        summary = (
+            f"Assessment status: {status_value} — {description}.\n"
+            "The credit assessment identifies the following relevant findings."
+        )
 
         if analysis.risk_factors:
-            summary += "\n\nKey risk factors:\n"
-
-            for risk_factor in analysis.risk_factors:
-                summary += f"- {risk_factor.text}\n"
+            summary += "\n"
+            summary += " ".join(
+                risk_factor.text.rstrip(".") + "."
+                for risk_factor in analysis.risk_factors
+            )
 
         elif analysis.key_findings:
-            summary += "\n\nKey findings:\n"
-
-            for finding in analysis.key_findings:
-                summary += f"- {finding.text}\n"
+            summary += "\n"
+            summary += " ".join(
+                finding.text.rstrip(".") + "."
+                for finding in analysis.key_findings
+            )
 
         return summary
 
