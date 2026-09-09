@@ -275,5 +275,6 @@ def render_results(
     render_assessment_overview(result)
     render_decision_evidence(result)
     render_risk_indicator_dashboard(result)
-    render_evidence_chain(result)
+    with st.expander("Evidence Chain — detailed traceability", expanded=False):
+        render_evidence_chain(result)
     render_audit_trail(result, assessment_position)
