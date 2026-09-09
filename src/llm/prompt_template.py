@@ -41,7 +41,7 @@ class ReportPromptTemplate:
         "- Group related findings within each category into one coherent passage.\n"
         "- Synthesise multiple findings describing the same risk instead of repeating the conclusion.\n"
         "- Within each category, discuss higher-severity findings before lower-severity findings.\n"
-        "- Do not return to an earlier category after moving to the next category.\n"
+        "- Never return to a category after moving to the next category.\n"
         "- Mention each material indicator value once, in the paragraph belonging to its category.\n"
         "- Do not repeat an indicator in a second sentence merely to explain it again.\n"
         "- Avoid formulaic repetition such as 'indicating', 'highlighting', 'suggesting' or "
