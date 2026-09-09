@@ -5,7 +5,6 @@ import streamlit as st
 
 from app.ui.charts import render_decision_path, render_risk_indicator_dashboard
 from app.ui.credit_position import display_position_table
-from app.ui.explainability import render_evidence_chain
 from app.ui.report import render_report_tab
 
 
@@ -84,16 +83,14 @@ def render_assessment_overview(result: Any) -> None:
 
 
 def render_audit_trail(result: Any, assessment_position: Any) -> None:
-    """Keep technical provenance and detailed traceability in one dedicated area."""
+    """Keep technical provenance without duplicating the rule catalogue."""
     with st.expander("Audit trail & methodology", expanded=False):
         st.caption(
-            "Technical provenance and detailed deterministic traceability are kept here "
-            "to avoid repeating evidence in the main results view."
+            "Technical provenance is kept here. Detailed rule findings are shown only "
+            "in the Risk Indicator Dashboard above to avoid duplicate evidence tables."
         )
         st.markdown("#### Assessment flow")
         render_decision_path(result)
-        st.markdown("#### Detailed rule traceability")
-        render_evidence_chain(result)
         st.markdown("#### Credit data used")
         if assessment_position is not None:
             display_position_table(assessment_position)
