@@ -1,3 +1,5 @@
+import re
+
 from src.agents.reporting.report_generator import ReportGenerator
 from src.llm.client import LLMClient
 from src.llm.prompt_builder import ReportPromptBuilder
@@ -24,15 +26,23 @@ class LLMReportGenerator(ReportGenerator):
     any deterministic assessment information.
     """
 
+    _INDICATOR_PATTERNS = (
+        re.compile(r"€\s*-?\d[\d,.]*"),
+        re.compile(r"-?\d[\d,.]*\s*%"),
+        re.compile(r"-?\d[\d,.]*\s*x\b", re.IGNORECASE),
+    )
+
     def __init__(
         self,
         llm_client: LLMClient,
         prompt_builder: ReportPromptBuilder | None = None,
+        require_indicator_values: bool = False,
     ) -> None:
         self.llm_client = llm_client
         self.prompt_builder = (
             prompt_builder if prompt_builder is not None else ReportPromptBuilder()
         )
+        self.require_indicator_values = require_indicator_values
 
     def generate(
         self,
@@ -53,6 +63,12 @@ class LLMReportGenerator(ReportGenerator):
         response = self.llm_client.generate(prompt)
 
         validated_response = self._validate_response(response)
+
+        if self.require_indicator_values:
+            validated_response = self._ensure_indicator_values(
+                narrative=validated_response,
+                findings=analysis.key_findings,
+            )
 
         executive_summary = self._build_executive_summary(
             analysis=analysis,
@@ -89,6 +105,51 @@ class LLMReportGenerator(ReportGenerator):
         """
 
         return f"Assessment status: {analysis.assessment_status.value}.\n{narrative}"
+
+    # ============================================================
+    # Indicator grounding
+    # ============================================================
+
+    @classmethod
+    def _extract_indicator_values(cls, findings: list[AnalysisFinding]) -> list[str]:
+        """Extract supplied numerical indicator values from deterministic findings."""
+        values: list[str] = []
+
+        for finding in findings:
+            for pattern in cls._INDICATOR_PATTERNS:
+                for match in pattern.findall(finding.text):
+                    normalized = " ".join(match.split())
+                    if normalized not in values:
+                        values.append(normalized)
+
+        return values
+
+    @classmethod
+    def _ensure_indicator_values(
+        cls,
+        narrative: str,
+        findings: list[AnalysisFinding],
+    ) -> str:
+        """
+        Ensure local-LLM narratives retain deterministic indicator values.
+
+        Missing values are appended verbatim from the deterministic
+        findings. This is a grounding safeguard, not new LLM-generated
+        assessment content.
+        """
+        indicator_values = cls._extract_indicator_values(findings)
+        missing_values = [
+            value for value in indicator_values if value not in narrative
+        ]
+
+        if not missing_values:
+            return narrative
+
+        values_text = ", ".join(missing_values)
+        return (
+            f"{narrative.rstrip()} "
+            f"Reported indicator values: {values_text}."
+        )
 
     # ============================================================
     # Finding grouping
