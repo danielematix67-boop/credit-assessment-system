@@ -325,7 +325,7 @@ def test_prompt_contains_authoritative_category_order() -> None:
 
     assert revenue_index < profitability_index < leverage_index
     assert "Discuss each category at most once." in prompt
-    assert "Do not return to an earlier category" in prompt
+    assert "Never return to a category after moving to the next category." in prompt
     assert "Do not repeat an indicator" in prompt
 
 
