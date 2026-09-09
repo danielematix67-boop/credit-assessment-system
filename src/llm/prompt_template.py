@@ -45,47 +45,59 @@ class ReportPromptTemplate:
 
     NARRATIVE_GUIDANCE = (
         "NARRATIVE GUIDANCE:\n"
-        "- Group related findings into coherent financial themes.\n"
-        "- Synthesise multiple findings from the same category rather "
-        "than describing each rule separately.\n"
-        "- Prioritise HIGH-severity findings when structuring the narrative.\n"
-        "- Avoid repeating the same information.\n"
-        "- Explain relationships between findings only when directly "
-        "supported by the supplied information.\n"
+        "- Follow the category order provided in CATEGORY ORDER exactly.\n"
+        "- Start with the first category and move sequentially through the list.\n"
+        "- Discuss each category at most once.\n"
+        "- Within a category, synthesise all relevant findings into one coherent passage.\n"
+        "- Within a category, prioritise higher-severity findings first.\n"
+        "- Do not return to an earlier category after moving to the next one.\n"
+        "- Do not repeat an indicator, finding or conclusion in multiple sentences.\n"
+        "- Each material indicator value should appear once in the narrative.\n"
+        "- If several findings express the same underlying risk, describe it once using the supplied values.\n"
+        "- Avoid generic filler such as 'these findings indicate' when it adds no new information.\n"
+        "- Explain relationships between findings only when directly supported by the supplied information.\n"
         "- Use professional credit-analysis language.\n"
         "- Produce a coherent narrative rather than a list of findings.\n"
-        "- Keep the narrative concise, but include all material findings "
-        "and their supplied indicator values."
+        "- Keep the narrative concise while covering every material finding."
     )
 
     OUTPUT_CONTRACT = (
         "OUTPUT REQUIREMENTS:\n"
         "- Return only the executive narrative.\n"
-        "- Do not include headings.\n"
-        "- Do not use bullet points.\n"
+        "- Do not include headings, category labels or bullet points.\n"
         "- Do not include the assessment status.\n"
-        "- Do not include recommendations.\n"
+        "- Do not include recommendations or calls to action.\n"
         "- Do not mention the LLM or language model.\n"
         "- Do not mention rules, rule IDs or thresholds.\n"
-        "- Do not add information not present in the findings."
+        "- Do not add information not present in the findings.\n"
+        "- Do not repeat the same sentence, finding or indicator value.\n"
+        "- The narrative must follow the supplied category order from start to finish."
     )
 
     def render(
         self,
         *,
         findings: str,
+        category_order: str,
     ) -> str:
         """
         Render the complete prompt using deterministic findings.
         """
 
         deterministic_input = f"DETERMINISTIC ASSESSMENT FINDINGS:\n\n{findings}"
+        category_instruction = (
+            "CATEGORY ORDER:\n"
+            f"{category_order}\n\n"
+            "The category order is authoritative. Use it only to structure "
+            "the narrative; do not print the category names."
+        )
 
         return "\n\n".join(
             [
                 self.ROLE,
                 self.ARCHITECTURAL_BOUNDARY,
                 self.GROUNDING_RULES,
+                category_instruction,
                 deterministic_input,
                 self.NARRATIVE_GUIDANCE,
                 self.OUTPUT_CONTRACT,
