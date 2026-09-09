@@ -69,7 +69,6 @@ def render_report_tab(
                     st.write(finding.text)
 
     if result.report.limitations:
-        st.markdown("### Limitations")
+        st.markdown("### Report Limitations")
         for limitation in result.report.limitations:
-            with st.container(border=True):
-                st.write(limitation)
+            st.write(f"• {limitation}")
