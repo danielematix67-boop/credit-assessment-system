@@ -39,6 +39,11 @@ def _rule_severity(rule_result: Any) -> str:
     return str(getattr(severity_obj, "value", str(severity_obj or "—")))
 
 
+def _rule_direction(rule_result: Any) -> str:
+    direction_obj = getattr(rule_result, "direction", None)
+    return str(getattr(direction_obj, "value", str(direction_obj or "—")))
+
+
 def _severity_rank(severity: str) -> int:
     """Return a display-only severity ranking."""
     return {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}.get(
@@ -468,11 +473,12 @@ def render_rule_indicator_detail(result: Any) -> None:
     category = getattr(selected_rule, "category", "—")
     status = _rule_status(selected_rule)
     severity = _rule_severity(selected_rule)
+    direction = _rule_direction(selected_rule)
     value = getattr(selected_rule, "value", None)
     threshold = getattr(selected_rule, "threshold", None)
     reason = getattr(selected_rule, "reason", None)
 
-    info_cols = st.columns(4)
+    info_cols = st.columns(5)
 
     with info_cols[0]:
         st.metric("Rule", str(rule_id))
@@ -485,6 +491,9 @@ def render_rule_indicator_detail(result: Any) -> None:
 
     with info_cols[3]:
         st.metric("Category", str(category))
+
+    with info_cols[4]:
+        st.metric("Direction", direction)
 
     st.markdown(f"**Indicator:** {indicator}")
 
@@ -506,6 +515,9 @@ def render_rule_indicator_detail(result: Any) -> None:
         )
 
         st.markdown("##### Actual vs Threshold")
+        st.caption(
+            "The chart shows the observed indicator against the deterministic decision boundary."
+        )
         st.bar_chart(
             comparison_data,
             x="Metric",
@@ -527,13 +539,13 @@ def render_rule_indicator_detail(result: Any) -> None:
 
         if status == "TRIGGERED":
             st.warning(
-                f"The actual value differs from the configured threshold by "
-                f"{gap:+g}. This rule is therefore recorded as TRIGGERED by the Rule Engine."
+                f"The actual value is on the adverse side of the configured threshold "
+                f"for this rule ({direction}). The Rule Engine recorded this rule as TRIGGERED."
             )
         elif status == "NOT_TRIGGERED":
             st.success(
-                f"The actual value differs from the configured threshold by "
-                f"{gap:+g}. This rule is recorded as NOT_TRIGGERED by the Rule Engine."
+                f"The actual value remains on the non-adverse side of the configured "
+                f"threshold for this rule ({direction}). The Rule Engine recorded this rule as NOT_TRIGGERED."
             )
 
     if reason:
