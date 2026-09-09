@@ -97,13 +97,19 @@ class LLMReportGenerator(ReportGenerator):
     @classmethod
     def _extract_indicator_values(cls, findings: list[AnalysisFinding]) -> list[str]:
         """Extract supplied numerical indicator values from findings."""
+        return cls._extract_indicator_values_from_text(
+            " ".join(finding.text for finding in findings)
+        )
+
+    @classmethod
+    def _extract_indicator_values_from_text(cls, text: str) -> list[str]:
+        """Extract and normalise numerical indicator values from arbitrary text."""
         values: list[str] = []
-        for finding in findings:
-            for pattern in cls._INDICATOR_PATTERNS:
-                for match in pattern.findall(finding.text):
-                    normalized = " ".join(match.split()).rstrip(".,;:")
-                    if normalized not in values:
-                        values.append(normalized)
+        for pattern in cls._INDICATOR_PATTERNS:
+            for match in pattern.findall(text):
+                normalized = " ".join(match.split()).rstrip(".,;:")
+                if normalized not in values:
+                    values.append(normalized)
         return values
 
     @classmethod
@@ -270,17 +276,10 @@ class LLMReportGenerator(ReportGenerator):
         for paragraph in paragraphs:
             kept: list[str] = []
             for sentence in cls._SENTENCE_PATTERN.findall(paragraph):
-                values = cls._extract_indicator_values(
-                    [
-                        AnalysisFinding(
-                            rule_id="_validation",
-                            category="_validation",
-                            severity=None,  # type: ignore[arg-type]
-                            text=sentence,
-                        )
-                    ]
+                values = cls._extract_indicator_values_from_text(sentence)
+                repeated = bool(values) and all(
+                    value in seen_values for value in values
                 )
-                repeated = values and all(value in seen_values for value in values)
                 if repeated:
                     continue
                 kept.append(" ".join(sentence.split()).strip())
