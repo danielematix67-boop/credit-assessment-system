@@ -10,22 +10,7 @@ from src.models.report import Report, ReportFindingGroup
 
 
 class LLMReportGenerator(ReportGenerator):
-    """
-    Report generator based on an abstract LLM client.
-
-    The LLM is used exclusively to generate the executive narrative.
-
-    The deterministic assessment remains the source of truth for:
-
-    - assessment status;
-    - findings;
-    - finding severity;
-    - finding categories;
-    - limitations.
-
-    The LLM does not perform assessment logic and does not modify
-    any deterministic assessment information.
-    """
+    """Generate the executive narrative from deterministic findings."""
 
     _INDICATOR_PATTERNS = (
         re.compile(r"€\s*-?\d(?:[\d,.]*\d)?"),
@@ -38,6 +23,7 @@ class LLMReportGenerator(ReportGenerator):
         re.IGNORECASE,
     )
 
+    _NUMERIC_SPACING_PATTERN = re.compile(r"(?<=\d)\s+\.\s*(?=\d)")
     _SENTENCE_PATTERN = re.compile(r"[^.!?]+[.!?]+")
 
     _STATUS_DESCRIPTIONS = {
@@ -62,14 +48,10 @@ class LLMReportGenerator(ReportGenerator):
         )
         self.require_indicator_values = require_indicator_values
 
-    def generate(
-        self,
-        analysis: AssessmentAnalysis,
-    ) -> Report:
+    def generate(self, analysis: AssessmentAnalysis) -> Report:
         """Generate a report from a deterministic assessment."""
         prompt = self.prompt_builder.build(analysis)
         response = self.llm_client.generate(prompt)
-
         validated_response = self._validate_response(response)
 
         if self.require_indicator_values:
@@ -83,15 +65,13 @@ class LLMReportGenerator(ReportGenerator):
             narrative=validated_response,
         )
 
-        findings_by_category = self._group_findings_by_category(
-            analysis.key_findings,
-        )
-
         return Report(
             position_id=analysis.position_id,
             assessment_status=analysis.assessment_status,
             executive_summary=executive_summary,
-            findings_by_category=findings_by_category,
+            findings_by_category=self._group_findings_by_category(
+                analysis.key_findings,
+            ),
             limitations=analysis.limitations,
         )
 
@@ -105,14 +85,13 @@ class LLMReportGenerator(ReportGenerator):
         analysis: AssessmentAnalysis,
         narrative: str,
     ) -> str:
-        """Build a deterministic status line followed by the narrative."""
+        """Build one authoritative status line followed by the narrative."""
         status = analysis.assessment_status
         description = cls._STATUS_DESCRIPTIONS.get(
             status,
             "Assessment status could not be determined",
         )
         status_value = getattr(status, "value", str(status))
-
         return f"Assessment status: {status_value} — {description}.\n{narrative}"
 
     # ============================================================
@@ -121,16 +100,14 @@ class LLMReportGenerator(ReportGenerator):
 
     @classmethod
     def _extract_indicator_values(cls, findings: list[AnalysisFinding]) -> list[str]:
-        """Extract supplied numerical indicator values from deterministic findings."""
+        """Extract supplied numerical indicator values from findings."""
         values: list[str] = []
-
         for finding in findings:
             for pattern in cls._INDICATOR_PATTERNS:
                 for match in pattern.findall(finding.text):
                     normalized = " ".join(match.split()).rstrip(".,;:")
                     if normalized not in values:
                         values.append(normalized)
-
         return values
 
     @classmethod
@@ -139,37 +116,58 @@ class LLMReportGenerator(ReportGenerator):
         narrative: str,
         findings: list[AnalysisFinding],
     ) -> str:
-        """
-        Ensure local-LLM narratives retain deterministic indicator values.
-
-        Only values absent from the generated narrative are supplemented.
-        The supplement is deliberately concise to avoid repeating the full
-        deterministic finding or introducing a second explanation.
-        """
+        """Insert missing indicator values without adding a repeated tail."""
         missing_values = [
             value
             for value in cls._extract_indicator_values(findings)
             if value not in narrative
         ]
-
         if not missing_values:
             return narrative
 
-        supplements: list[str] = []
+        paragraphs = [part.strip() for part in narrative.split("\n\n") if part.strip()]
+        if not paragraphs:
+            paragraphs = [narrative.strip()]
+
         for finding in findings:
-            for value in missing_values:
-                if value not in finding.text:
-                    continue
+            relevant_missing = [
+                value for value in missing_values if value in finding.text
+            ]
+            if not relevant_missing:
+                continue
 
-                label = cls._indicator_label(finding.text, value)
-                supplement = f"{label}: {value}"
-                if supplement not in supplements:
-                    supplements.append(supplement)
+            label = cls._indicator_label(finding.text, relevant_missing[0])
+            sentence = f"{label}: {', '.join(relevant_missing)}."
+            target_index = cls._category_index_for_finding(finding, findings)
+            insert_at = min(target_index, len(paragraphs) - 1)
+            paragraphs[insert_at] = (
+                f"{paragraphs[insert_at].rstrip('. ')}. {sentence}"
+            )
 
-        if not supplements:
-            supplements = [f"Indicator value: {value}" for value in missing_values]
+            for value in relevant_missing:
+                if value in missing_values:
+                    missing_values.remove(value)
 
-        return f"{narrative.rstrip('. ')}. " + "; ".join(supplements) + "."
+        if missing_values:
+            paragraphs.append(
+                "Additional reported indicator values: "
+                + ", ".join(missing_values)
+                + "."
+            )
+
+        return "\n\n".join(paragraphs)
+
+    @staticmethod
+    def _category_index_for_finding(
+        finding: AnalysisFinding,
+        findings: list[AnalysisFinding],
+    ) -> int:
+        """Return the deterministic category position of a finding."""
+        categories: list[str] = []
+        for item in findings:
+            if item.category not in categories:
+                categories.append(item.category)
+        return categories.index(finding.category)
 
     @staticmethod
     def _indicator_label(text: str, value: str) -> str:
@@ -181,7 +179,6 @@ class LLMReportGenerator(ReportGenerator):
             prefix,
             flags=re.IGNORECASE,
         ).strip(" ,:;.-")
-
         return prefix or "Indicator value"
 
     # ============================================================
@@ -194,18 +191,10 @@ class LLMReportGenerator(ReportGenerator):
     ) -> list[ReportFindingGroup]:
         """Group deterministic findings by category."""
         grouped: dict[str, list[AnalysisFinding]] = {}
-
         for finding in findings:
-            grouped.setdefault(
-                finding.category,
-                [],
-            ).append(finding)
-
+            grouped.setdefault(finding.category, []).append(finding)
         return [
-            ReportFindingGroup(
-                category=category,
-                findings=category_findings,
-            )
+            ReportFindingGroup(category=category, findings=category_findings)
             for category, category_findings in grouped.items()
         ]
 
@@ -215,51 +204,52 @@ class LLMReportGenerator(ReportGenerator):
 
     @classmethod
     def _validate_response(cls, response: str) -> str:
-        """
-        Validate and normalise the LLM-generated executive narrative.
-
-        The assessment status is owned by the deterministic engine, so a
-        status line produced by the LLM is removed before the application
-        adds its authoritative status line. Exact duplicate sentences are
-        also removed to keep the executive narrative concise.
-        """
+        """Normalise the LLM narrative and remove prohibited duplication."""
         if not response or not response.strip():
             raise ValueError("LLM returned an empty response")
 
         narrative = response.strip()
         narrative = cls._STATUS_PREFIX_PATTERN.sub("", narrative, count=1).strip()
-
-        if not narrative:
-            raise ValueError("LLM returned an empty narrative")
-
+        narrative = cls._NUMERIC_SPACING_PATTERN.sub(".", narrative)
         narrative = cls._remove_duplicate_sentences(narrative)
 
         if not narrative:
             raise ValueError("LLM returned an empty narrative")
-
         return narrative
 
     @classmethod
     def _remove_duplicate_sentences(cls, narrative: str) -> str:
-        """Remove exact repeated sentences while preserving original order."""
-        sentences = cls._SENTENCE_PATTERN.findall(narrative)
-        if not sentences:
-            return narrative
-
+        """Remove exact repeated sentences while preserving paragraphs and order."""
+        paragraphs = [part.strip() for part in narrative.split("\n\n") if part.strip()]
+        cleaned_paragraphs: list[str] = []
         seen: set[str] = set()
-        unique_sentences: list[str] = []
 
-        for sentence in sentences:
-            cleaned = " ".join(sentence.split()).strip()
-            key = cleaned.casefold()
-            if key in seen:
+        for paragraph in paragraphs:
+            sentences = cls._SENTENCE_PATTERN.findall(paragraph)
+            if not sentences:
+                key = " ".join(paragraph.split()).casefold()
+                if key not in seen:
+                    seen.add(key)
+                    cleaned_paragraphs.append(paragraph)
                 continue
-            seen.add(key)
-            unique_sentences.append(cleaned)
 
-        remainder = narrative[sum(len(sentence) for sentence in sentences) :].strip()
-        result = " ".join(unique_sentences)
-        if remainder:
-            result = f"{result} {remainder}".strip()
+            unique_sentences: list[str] = []
+            for sentence in sentences:
+                cleaned = " ".join(sentence.split()).strip()
+                key = cleaned.casefold()
+                if key in seen:
+                    continue
+                seen.add(key)
+                unique_sentences.append(cleaned)
 
-        return result
+            remainder = paragraph
+            for sentence in sentences:
+                remainder = remainder.replace(sentence, "", 1)
+            remainder = " ".join(remainder.split()).strip()
+            if remainder:
+                unique_sentences.append(remainder)
+
+            if unique_sentences:
+                cleaned_paragraphs.append(" ".join(unique_sentences).strip())
+
+        return "\n\n".join(cleaned_paragraphs).strip()
