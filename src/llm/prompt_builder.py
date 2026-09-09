@@ -22,6 +22,11 @@ class ReportPromptBuilder:
         "MEDIUM": 1,
         "LOW": 2,
     }
+    _CATEGORY_PRIORITY = {
+        "revenue": 0,
+        "profitability": 1,
+        "leverage": 2,
+    }
 
     def __init__(
         self,
@@ -36,22 +41,18 @@ class ReportPromptBuilder:
         """
         Build the complete prompt for executive narrative generation.
 
-        Findings are grouped by their deterministic category order and
+        Findings are grouped by deterministic category order and
         ordered by severity before being passed to the LLM.
 
         Risk factors are not passed as a separate duplicated list,
         since they are already a subset of key findings.
         """
 
-        grouped_findings = self._group_findings(
-            analysis.key_findings,
-        )
+        grouped_findings = self._group_findings(analysis.key_findings)
         category_order = list(grouped_findings.keys())
 
         return self.template.render(
-            findings=self._format_grouped_findings(
-                grouped_findings,
-            ),
+            findings=self._format_grouped_findings(grouped_findings),
             category_order=self._format_category_order(category_order),
         )
 
@@ -67,9 +68,10 @@ class ReportPromptBuilder:
         """
         Group findings by deterministic category.
 
-        Categories preserve their first deterministic occurrence.
-        Findings within each category are ordered by severity.
-        Original order is preserved for findings with equal severity.
+        Categories follow the authoritative financial order: revenue,
+        profitability, leverage, then any additional categories in first
+        occurrence order. Findings within each category are ordered by
+        severity, while equal-severity findings retain their source order.
         """
 
         grouped: dict[str, list[AnalysisFinding]] = defaultdict(list)
@@ -77,15 +79,23 @@ class ReportPromptBuilder:
         for finding in findings:
             grouped[finding.category].append(finding)
 
-        for category_findings in grouped.values():
-            category_findings.sort(
+        ordered_categories = sorted(
+            grouped,
+            key=lambda category: cls._CATEGORY_PRIORITY.get(
+                category.casefold(),
+                len(cls._CATEGORY_PRIORITY),
+            ),
+        )
+
+        for category in ordered_categories:
+            grouped[category].sort(
                 key=lambda finding: cls._SEVERITY_PRIORITY.get(
                     finding.severity.value.upper(),
                     99,
                 )
             )
 
-        return dict(grouped)
+        return {category: grouped[category] for category in ordered_categories}
 
     # ============================================================
     # Formatting
