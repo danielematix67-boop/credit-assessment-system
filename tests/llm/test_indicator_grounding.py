@@ -97,3 +97,18 @@ def test_standard_llm_report_does_not_force_indicator_append() -> None:
 
     assert "20.0%" not in report.executive_summary
     assert "Reported indicator values:" not in report.executive_summary
+
+
+def test_ollama_workflow_enables_indicator_grounding() -> None:
+    from app.workflow.assessment_workflow_factory import create_workflow
+
+    workflow = create_workflow(
+        "Ollama + Fallback",
+        ollama_host="http://localhost:11434",
+        ollama_model="qwen3:0.6b",
+    )
+
+    generator = workflow.reporting_agent.report_generator
+
+    assert isinstance(generator, LLMReportGenerator)
+    assert generator.require_indicator_values is True
