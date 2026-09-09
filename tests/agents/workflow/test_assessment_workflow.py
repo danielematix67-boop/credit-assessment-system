@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock
 
+import pytest
+
 from src.agents.analysis.analysis_agent import AnalysisAgent
 from src.agents.base.agent import Agent
 from src.agents.reporting.deterministic_report_generator import (
@@ -237,3 +239,33 @@ def test_assessment_workflow_propagates_fallback_reporting_status():
     assert result.report_generator_used == (reporting_agent.last_generator_used)
 
     assert result.report_generation_error == (reporting_agent.last_error)
+
+
+def test_assessment_workflow_propagates_terminal_reporting_failure():
+    reporting_agent = MagicMock()
+    reporting_agent.run.side_effect = RuntimeError("fallback report generation failed")
+
+    assessment_service = MagicMock()
+    analysis_agent = MagicMock()
+
+    assessment = MagicMock(spec=Assessment)
+    analysis = MagicMock(spec=AssessmentAnalysis)
+
+    assessment_service.assess.return_value = assessment
+    analysis_agent.run.return_value = analysis
+
+    workflow = AssessmentWorkflow(
+        assessment_service=assessment_service,
+        analysis_agent=analysis_agent,
+        reporting_agent=reporting_agent,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="fallback report generation failed",
+    ):
+        workflow.run(make_position())
+
+    assessment_service.assess.assert_called_once()
+    analysis_agent.run.assert_called_once_with(assessment)
+    reporting_agent.run.assert_called_once_with(analysis)
