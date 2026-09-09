@@ -230,6 +230,35 @@ def test_reporting_agent_propagates_primary_error_without_fallback(
     generator.generate.assert_called_once_with(analysis)
 
 
+def test_reporting_agent_propagates_fallback_error_when_primary_and_fallback_fail(
+    analysis,
+):
+    primary = MagicMock(spec=ReportGenerator)
+    fallback = MagicMock(spec=ReportGenerator)
+
+    primary_error = RuntimeError("primary generation failed")
+    fallback_error = RuntimeError("fallback generation failed")
+    primary.generate.side_effect = primary_error
+    fallback.generate.side_effect = fallback_error
+
+    agent = ReportingAgent(
+        report_generator=primary,
+        fallback_generator=fallback,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="fallback generation failed",
+    ):
+        agent.run(analysis)
+
+    primary.generate.assert_called_once_with(analysis)
+    fallback.generate.assert_called_once_with(analysis)
+    assert agent.last_generator_used is None
+    assert agent.last_error == "LLM report generation failed: primary generation failed"
+    assert agent.last_error_category == "GENERATION_ERROR"
+
+
 # ============================================================
 # Fallback input contract
 # ============================================================
