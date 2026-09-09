@@ -8,46 +8,41 @@ import streamlit as st
 # ============================================================
 
 
-def render_rule_assessment_summary(
-    result: Any,
-) -> None:
-    """
-    Render a visual summary of the deterministic rule engine.
-
-    The chart uses the actual RuleResult status values produced by
-    the assessment engine. No additional business logic is applied
-    in the presentation layer.
-    """
-
+def _get_rule_results(result: Any) -> list[Any]:
     assessment = getattr(result, "assessment", None)
+    return list(getattr(assessment, "rule_results", []) or [])
 
-    if assessment is None:
-        return
 
-    rule_results = getattr(
-        assessment,
-        "rule_results",
-        [],
-    )
-
-    if not rule_results:
-        return
-
-    status_counts = {
+def _rule_status_counts(result: Any) -> dict[str, int]:
+    """Count actual RuleResult statuses without applying business logic."""
+    counts = {
         "TRIGGERED": 0,
         "NOT_TRIGGERED": 0,
         "NOT_EVALUABLE": 0,
     }
 
-    for rule_result in rule_results:
-        status = getattr(
-            getattr(rule_result, "status", None),
-            "value",
-            str(getattr(rule_result, "status", "")),
-        )
+    for rule_result in _get_rule_results(result):
+        status = getattr(getattr(rule_result, "status", None), "value", "")
+        if status in counts:
+            counts[status] += 1
 
-        if status in status_counts:
-            status_counts[status] += 1
+    return counts
+
+
+def render_rule_assessment_summary(result: Any) -> None:
+    """
+    Render a visual summary of the deterministic rule engine.
+
+    The component uses only the RuleResult objects produced by the
+    assessment engine. No assessment or threshold logic is recalculated.
+    """
+    rule_results = _get_rule_results(result)
+
+    if not rule_results:
+        return
+
+    status_counts = _rule_status_counts(result)
+    total_rules = sum(status_counts.values())
 
     labels = {
         "TRIGGERED": "Triggered",
@@ -55,19 +50,10 @@ def render_rule_assessment_summary(
         "NOT_EVALUABLE": "Not evaluable",
     }
 
-    chart_data = {
-        "Status": [
-            labels[status]
-            for status in status_counts
-        ],
-        "Rules": list(status_counts.values()),
-    }
-
-    st.subheader("Rule Assessment Summary")
-
+    st.subheader("Assessment Evidence")
     st.caption(
-        "Distribution of the rules evaluated by the deterministic "
-        "Rule Engine."
+        f"The Rule Engine evaluated {total_rules} rules. "
+        "The distribution below shows the factual rule outcomes behind the assessment."
     )
 
     metric_cols = st.columns(3)
@@ -78,15 +64,14 @@ def render_rule_assessment_summary(
         ("Not evaluable", "NOT_EVALUABLE"),
     ]
 
-    for column, (label, status) in zip(
-        metric_cols,
-        metric_definitions,
-    ):
+    for column, (label, status) in zip(metric_cols, metric_definitions):
         with column:
-            st.metric(
-                label,
-                status_counts[status],
-            )
+            st.metric(label, status_counts[status])
+
+    chart_data = {
+        "Status": [labels[status] for status in status_counts],
+        "Rules": list(status_counts.values()),
+    }
 
     st.bar_chart(
         chart_data,
@@ -104,9 +89,7 @@ def render_rule_assessment_summary(
 # ============================================================
 
 
-def render_rule_indicator_detail(
-    result: Any,
-) -> None:
+def render_rule_indicator_detail(result: Any) -> None:
     """
     Render the quantitative detail behind an individual rule result.
 
@@ -114,23 +97,15 @@ def render_rule_indicator_detail(
     already produced by the deterministic rule engine. It does not
     recalculate or alter any assessment logic.
     """
-
-    assessment = getattr(result, "assessment", None)
-
-    if assessment is None:
-        return
-
-    rule_results = list(
-        getattr(assessment, "rule_results", []) or []
-    )
+    rule_results = _get_rule_results(result)
 
     if not rule_results:
         return
 
-    st.subheader("Rule → Indicator → Value → Threshold")
+    st.markdown("#### Rule → Indicator → Value → Threshold")
     st.caption(
-        "Select a rule to see the quantitative indicator used by the "
-        "deterministic Rule Engine, together with its configured threshold."
+        "Select a rule to inspect the quantitative indicator, configured threshold "
+        "and rationale used by the deterministic Rule Engine."
     )
 
     rule_labels = []
@@ -140,9 +115,18 @@ def render_rule_indicator_detail(
         label = f"{rule_id} — {rule_name}" if rule_name else rule_id
         rule_labels.append(label)
 
+    triggered_indices = [
+        index
+        for index, rule_result in enumerate(rule_results)
+        if getattr(getattr(rule_result, "status", None), "value", "") == "TRIGGERED"
+    ]
+
+    default_index = triggered_indices[0] if triggered_indices else 0
+
     selected_label = st.selectbox(
         "Rule",
         rule_labels,
+        index=default_index,
         key="rule_indicator_detail",
     )
 
@@ -157,11 +141,7 @@ def render_rule_indicator_detail(
     status = getattr(status_obj, "value", str(status_obj or "—"))
 
     severity_obj = getattr(selected_rule, "severity", None)
-    severity = getattr(
-        severity_obj,
-        "value",
-        str(severity_obj or "—"),
-    )
+    severity = getattr(severity_obj, "value", str(severity_obj or "—"))
 
     value = getattr(selected_rule, "value", None)
     threshold = getattr(selected_rule, "threshold", None)
@@ -214,5 +194,5 @@ def render_rule_indicator_detail(
             st.metric("Threshold", f"{threshold_float:g}")
 
     if reason:
-        st.markdown("**Why?**")
+        st.markdown("**Why did this rule produce this result?**")
         st.info(reason)
