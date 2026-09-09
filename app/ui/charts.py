@@ -96,6 +96,8 @@ def render_rule_assessment_summary(
         height=220,
     )
 
+    render_rule_indicator_detail(result)
+
 
 # ============================================================
 # Rule Indicator Detail
