@@ -137,8 +137,9 @@ def render_audit_trail(result: Any, assessment_position: Any) -> None:
         st.markdown("### Methodology")
         st.write(
             "The Rule Engine is the sole authority for assessment status, rule outcomes, severity and thresholds. "
-            "The Analysis layer organises the resulting findings. The Reporting layer converts the structured result "
-            "into the Executive Report. Gemini and Ollama can generate narrative text, but cannot change the credit judgement."
+            "The Analysis layer organises the resulting findings. "
+            "The Reporting layer converts the structured result into the Executive Report. "
+            "Gemini and Ollama can generate narrative text, but cannot change the credit judgement."
         )
 
         metadata = getattr(result, "execution_metadata", None)
