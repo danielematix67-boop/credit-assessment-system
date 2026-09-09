@@ -1,10 +1,10 @@
 # Credit Assessment System
 
-> A production-oriented credit risk assessment prototype combining a deterministic Rule Engine, explainable assessment evidence, and LLM-assisted narrative reporting.
+> A production-oriented credit risk assessment prototype combining a deterministic Rule Engine, explainable assessment evidence, resilient LLM-assisted reporting, and execution-level observability.
 
 [![Python](https://img.shields.io/badge/Python-3.13+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/UI-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
-[![Testing](https://img.shields.io/badge/Tested_with-pytest-0A9EDC?logo=pytest&logoColor=white)](https://pytest.org/)
+[![Testing](https://img.shields.io/badge/Tested_with-pytest-0A9EDC?logo=pytest)](https://pytest.org/)
 [![Linting](https://img.shields.io/badge/Linting-ruff-D7FF64)](https://docs.astral.sh/ruff/)
 
 ## Overview
@@ -16,9 +16,10 @@ The system deliberately separates **decision-making from AI-generated communicat
 - the **Rule Engine** evaluates the credit position and determines the assessment outcome;
 - the **Analysis Layer** organizes the rule findings into structured evidence;
 - the **Reporting Layer** generates a human-readable narrative using either deterministic templates, Google Gemini, or a local Ollama model;
-- an automatic **fallback mechanism** ensures that an LLM failure does not prevent the assessment workflow from completing.
+- an automatic **fallback mechanism** ensures that an LLM failure does not prevent reporting from completing;
+- **Execution Metadata** records provenance, generator selection, error classification, and workflow timings.
 
-The project is designed as a technical prototype demonstrating how **Credit Risk, Python software engineering, configurable rule systems, explainability, and LLM integration** can be combined in a controlled architecture.
+The project is designed as a technical prototype demonstrating how **Credit Risk, Python software engineering, configurable rule systems, explainability, LLM integration, resilience, and auditability** can be combined in a controlled architecture.
 
 ---
 
@@ -29,7 +30,7 @@ Credit assessment systems need to be more than a final risk label. A useful syst
 1. **What is the assessment result?**
 2. **Why was this result produced?**
 3. **Which rules and quantitative values provide the evidence?**
-4. **How can the result be communicated clearly to a human analyst?**
+4. **How was the result generated and communicated?**
 
 This project addresses these requirements through an explicit separation between the **deterministic decision layer** and the **AI-assisted reporting layer**.
 
@@ -74,7 +75,23 @@ AI-generated reporting is therefore an **augmentation layer**, not the decision 
 
 ### Resilient LLM integration
 
-If an LLM is unavailable because of a timeout, connection error, authentication problem, rate limit, missing model, or service outage, the system automatically falls back to deterministic reporting.
+If an LLM is unavailable because of a timeout, connection error, authentication problem, rate limit, missing model, or service outage, the system classifies the failure and can switch to deterministic reporting.
+
+If both the primary generator and fallback fail, the terminal error is propagated rather than silently masked.
+
+### Execution observability
+
+Each successful workflow execution can expose immutable execution metadata including:
+
+- unique execution ID;
+- UTC start timestamp;
+- reporting mode;
+- generator ultimately used;
+- fallback status;
+- classified error category;
+- assessment, analysis, reporting, and total execution times.
+
+This provides execution-level provenance without making observability part of the credit decision.
 
 ### Streamlit application
 
@@ -90,7 +107,7 @@ This makes the assessment easier to inspect and communicate to a human user.
 
 ### Automated testing and code quality
 
-The repository includes automated tests covering the main domain components, rule engine, services, agents, orchestration, LLM clients, and integration flows, together with static type checking and linting.
+The repository includes automated tests covering the main domain components, rule engine, services, agents, orchestration, LLM clients, reporting fallback behavior, and workflow execution metadata, together with strict type checking and linting.
 
 ---
 
@@ -137,6 +154,14 @@ The application follows a layered, agent-based architecture:
                               │
                               ▼
                            REPORT
+                              │
+                              ▼
+                 ┌─────────────────────────┐
+                 │   EXECUTION METADATA    │
+                 │ ID · timestamp · mode    │
+                 │ generator · errors      │
+                 │ phase timings            │
+                 └─────────────────────────┘
 ```
 
 ### Decision Layer vs Reporting Layer
@@ -176,6 +201,47 @@ This separation limits the role of generative AI in a credit-risk context: the L
 
 ---
 
+## Reliability & Failure Handling
+
+The reporting path is explicitly designed around failure containment:
+
+```text
+                 PRIMARY GENERATOR
+                        │
+                 ┌──────┴──────┐
+                 │             │
+              SUCCESS        FAILURE
+                 │             │
+                 ▼             ▼
+               REPORT     ERROR CLASSIFICATION
+                               │
+                               ▼
+                    DETERMINISTIC FALLBACK
+                               │
+                         ┌─────┴─────┐
+                         │           │
+                      SUCCESS      FAILURE
+                         │           │
+                         ▼           ▼
+                       REPORT    PROPAGATE ERROR
+```
+
+Typical failure categories include `RATE_LIMIT`, `SERVICE_UNAVAILABLE`, `CONNECTION_ERROR`, `AUTHENTICATION`, `AUTHORIZATION`, `MODEL_UNAVAILABLE`, `TIMEOUT`, and `GENERATION_ERROR`.
+
+The underlying deterministic assessment is not dependent on the availability of Gemini or Ollama. This is an intentional architectural property rather than an accidental error-handling behavior.
+
+---
+
+## Observability & Auditability
+
+Execution provenance is kept separate from the assessment decision. The workflow records immutable metadata after successful reporting, while generator diagnostics provide information about the reporting path.
+
+The combination of **execution ID + timestamp + reporting mode + generator + fallback status + error category + phase timings** allows an analyst or developer to understand how a result was produced without exposing technical details in the primary assessment view.
+
+The Streamlit interface exposes these details in a dedicated **Execution & Audit Metadata** section.
+
+---
+
 ## Assessment Decision Flow
 
 The end-to-end decision path is:
@@ -201,9 +267,12 @@ The end-to-end decision path is:
        │
        ▼
 6. Executive Report
+       │
+       ▼
+7. Execution Provenance
 ```
 
-The UI mirrors this flow so that a user can move from the final outcome back to the underlying quantitative evidence.
+The UI mirrors this flow so that a user can move from the final outcome back to the underlying quantitative evidence and execution details.
 
 ---
 
@@ -366,7 +435,7 @@ git clone <repository-url>
 cd credit-assessment-system
 python -m venv .venv
 source .venv/bin/activate       # Linux / macOS
-# .venv\Scripts\activate       # Windows
+# .venv\\Scripts\\activate       # Windows
 pip install -r requirements.txt
 ```
 
@@ -437,27 +506,6 @@ The application allows the user to:
 6. Inspect the assessed credit data and workflow trace.
 7. Read the executive report and its generation provenance.
 
-### Run programmatically
-
-```python
-from src.orchestration.orchestrator_factory import create_default_orchestrator
-from src.models.position import CreditPosition
-
-orchestrator = create_default_orchestrator()
-
-position = CreditPosition(
-    position_id="ACME-2025",
-    revenue=1_000_000,
-    ebitda=80_000,
-    ebitda_margin=0.08,
-    nfp_to_ebitda=6.2,
-    # ... other financial fields
-)
-
-report = orchestrator.run(position)
-print(report)
-```
-
 ---
 
 ## Testing & Code Quality
@@ -470,31 +518,31 @@ The test suite covers the main components of the application, including:
 - analysis and reporting agents;
 - orchestration;
 - LLM clients;
-- integration workflows.
+- reporting fallback and error-classification paths;
+- terminal reporting failures;
+- execution metadata and workflow propagation.
 
-Run the tests with:
+The CI pipeline runs linting, strict type checking, and the test suite with a coverage threshold.
+
+Run locally with:
 
 ```bash
 pytest
-```
-
-Coverage:
-
-```bash
 pytest --cov=src
-```
-
-Static type checking:
-
-```bash
 mypy src
-```
-
-Linting:
-
-```bash
 ruff check .
 ```
+
+---
+
+## Documentation
+
+The repository includes dedicated technical documentation:
+
+- [`Architecture`](docs/architecture.md) — system structure and component responsibilities.
+- [`Architecture Decisions`](docs/architecture-decisions.md) — key architectural decisions and rationale.
+- [`Validation`](docs/validation.md) — validation strategy, invariants, fallback behavior, and CI gates.
+- [`Security & Data Handling`](docs/security-data-handling.md) — trust boundaries, data minimization, LLM handling, secrets, logging, and production considerations.
 
 ---
 
@@ -519,9 +567,10 @@ The project follows a few principles that are particularly relevant to credit-ri
 
 - **Deterministic decision logic** — the credit assessment is based on explicit rules rather than an opaque generative model.
 - **Explainability by design** — rule outcomes, thresholds, values and findings are exposed to the user.
-- **Separation of concerns** — domain logic, orchestration, LLM integration and UI presentation are kept in distinct layers.
+- **Separation of concerns** — domain logic, orchestration, LLM integration, observability, and UI presentation are kept in distinct layers.
 - **Configuration over hard-coding** — rule thresholds are maintained declaratively.
-- **Resilience** — LLM failures do not invalidate the underlying assessment workflow.
+- **Resilience** — LLM failures do not invalidate the underlying deterministic assessment.
+- **Auditability** — execution metadata provides provenance and timing information for successful workflow executions.
 - **Testability** — the core components can be tested independently from the Streamlit interface.
 - **Replaceable AI layer** — Gemini, Ollama and deterministic reporting share the same reporting role.
 
@@ -539,6 +588,8 @@ The project follows a few principles that are particularly relevant to credit-ri
 - [x] Deterministic LLM fallback
 - [x] Streamlit assessment interface
 - [x] Results evidence and risk-driver visualization
+- [x] Execution observability and audit metadata
+- [x] LLM error classification and failure-path testing
 - [ ] Persistent assessment history
 - [ ] Expanded monitoring and evaluation metrics
 - [ ] Additional rule families and data sources
