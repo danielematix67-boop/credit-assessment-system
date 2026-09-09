@@ -10,19 +10,9 @@ from src.rules.base.severity_direction import SeverityDirection
 RULES_CONFIG_PATH = Path("config/rules.yaml")
 
 
-# ============================================================
-# Fixtures
-# ============================================================
-
-
 @pytest.fixture
 def loader():
     return RuleConfigLoader()
-
-
-# ============================================================
-# Valid configuration
-# ============================================================
 
 
 def test_rule_config_loader_returns_rule_configs(loader):
@@ -34,9 +24,7 @@ def test_rule_config_loader_returns_rule_configs(loader):
 
 def test_rule_config_loader_returns_unique_rule_ids(loader):
     configs = loader.load(RULES_CONFIG_PATH)
-
     rule_ids = [config.rule_id for config in configs]
-
     assert len(rule_ids) == len(set(rule_ids))
 
 
@@ -49,55 +37,43 @@ def test_rule_config_loader_returns_complete_configurations(loader):
         assert config.category
         assert isinstance(config.threshold, (int, float))
         assert isinstance(config.severity, RuleSeverity)
-        assert isinstance(
-            config.severity_direction,
-            SeverityDirection,
-        )
+        assert isinstance(config.severity_direction, SeverityDirection)
+
+
+def test_rule_config_loader_loads_explicit_indicators(loader):
+    configs = loader.load(RULES_CONFIG_PATH)
+
+    indicators = {config.rule_id: config.indicator for config in configs}
+
+    assert indicators == {
+        "R001": "Revenue growth",
+        "R002": "EBITDA",
+        "R003": "EBITDA margin",
+        "R004": "NFP / EBITDA",
+        "R005": "Interest expense / EBITDA",
+        "R006": "EBITDA / finished goods inventory increase",
+        "R007": "Interest coverage ratio",
+    }
 
 
 def test_rule_config_loader_returns_valid_severity_thresholds(loader):
     configs = loader.load(RULES_CONFIG_PATH)
 
     for config in configs:
-        assert isinstance(
-            config.severity_thresholds,
-            tuple,
-        )
-
+        assert isinstance(config.severity_thresholds, tuple)
         for severity_threshold in config.severity_thresholds:
-            assert isinstance(
-                severity_threshold,
-                SeverityThreshold,
-            )
-            assert isinstance(
-                severity_threshold.threshold,
-                (int, float),
-            )
-            assert isinstance(
-                severity_threshold.severity,
-                RuleSeverity,
-            )
+            assert isinstance(severity_threshold, SeverityThreshold)
+            assert isinstance(severity_threshold.threshold, (int, float))
+            assert isinstance(severity_threshold.severity, RuleSeverity)
 
 
-def test_rule_config_loader_preserves_number_of_configured_rules(
-    loader,
-):
+def test_rule_config_loader_preserves_number_of_configured_rules(loader):
     configs = loader.load(RULES_CONFIG_PATH)
-
     assert len(configs) > 0
 
 
-# ============================================================
-# Input order
-# ============================================================
-
-
-def test_rule_config_loader_preserves_input_order(
-    loader,
-    tmp_path,
-):
+def test_rule_config_loader_preserves_input_order(loader, tmp_path):
     config_path = tmp_path / "rules.yaml"
-
     config_path.write_text(
         """
         rules:
@@ -107,14 +83,12 @@ def test_rule_config_loader_preserves_input_order(
             threshold: 1.0
             severity: LOW
             severity_direction: LOWER_IS_WORSE
-
           - rule_id: second
             rule_name: Second rule
             category: test
             threshold: 2.0
             severity: MEDIUM
             severity_direction: HIGHER_IS_WORSE
-
           - rule_id: third
             rule_name: Third rule
             category: test
@@ -126,25 +100,11 @@ def test_rule_config_loader_preserves_input_order(
     )
 
     configs = loader.load(config_path)
-
-    assert [config.rule_id for config in configs] == [
-        "first",
-        "second",
-        "third",
-    ]
+    assert [config.rule_id for config in configs] == ["first", "second", "third"]
 
 
-# ============================================================
-# Configuration values
-# ============================================================
-
-
-def test_rule_config_loader_preserves_configuration_values(
-    loader,
-    tmp_path,
-):
+def test_rule_config_loader_preserves_configuration_values(loader, tmp_path):
     config_path = tmp_path / "rules.yaml"
-
     config_path.write_text(
         """
         rules:
@@ -159,11 +119,8 @@ def test_rule_config_loader_preserves_configuration_values(
     )
 
     configs = loader.load(config_path)
-
     assert len(configs) == 1
-
     config = configs[0]
-
     assert config.rule_id == "test_rule"
     assert config.rule_name == "Test rule"
     assert config.category == "test_category"
@@ -173,17 +130,13 @@ def test_rule_config_loader_preserves_configuration_values(
     assert config.severity_thresholds == ()
 
 
-@pytest.mark.parametrize(
-    "direction",
-    list(SeverityDirection),
-)
+@pytest.mark.parametrize("direction", list(SeverityDirection))
 def test_rule_config_loader_supports_valid_severity_directions(
     loader,
     tmp_path,
     direction,
 ):
     config_path = tmp_path / "rules.yaml"
-
     config_path.write_text(
         f"""
         rules:
@@ -198,22 +151,12 @@ def test_rule_config_loader_supports_valid_severity_directions(
     )
 
     configs = loader.load(config_path)
-
     assert len(configs) == 1
     assert configs[0].severity_direction == direction
 
 
-# ============================================================
-# Severity thresholds
-# ============================================================
-
-
-def test_rule_config_loader_loads_severity_thresholds(
-    loader,
-    tmp_path,
-):
+def test_rule_config_loader_loads_severity_thresholds(loader, tmp_path):
     config_path = tmp_path / "rules.yaml"
-
     config_path.write_text(
         """
         rules:
@@ -235,21 +178,14 @@ def test_rule_config_loader_loads_severity_thresholds(
     )
 
     configs = loader.load(config_path)
-
     assert len(configs) == 1
-
     thresholds = configs[0].severity_thresholds
-
     assert len(thresholds) == 3
     assert all(isinstance(item, SeverityThreshold) for item in thresholds)
 
 
-def test_rule_config_loader_preserves_severity_threshold_order(
-    loader,
-    tmp_path,
-):
+def test_rule_config_loader_preserves_severity_threshold_order(loader, tmp_path):
     config_path = tmp_path / "rules.yaml"
-
     config_path.write_text(
         """
         rules:
@@ -271,15 +207,8 @@ def test_rule_config_loader_preserves_severity_threshold_order(
     )
 
     configs = loader.load(config_path)
-
     thresholds = configs[0].severity_thresholds
-
-    assert [item.threshold for item in thresholds] == [
-        10.0,
-        5.0,
-        2.0,
-    ]
-
+    assert [item.threshold for item in thresholds] == [10.0, 5.0, 2.0]
     assert [item.severity for item in thresholds] == [
         RuleSeverity.HIGH,
         RuleSeverity.MEDIUM,
@@ -292,7 +221,6 @@ def test_rule_config_loader_accepts_configuration_without_thresholds(
     tmp_path,
 ):
     config_path = tmp_path / "rules.yaml"
-
     config_path.write_text(
         """
         rules:
@@ -307,32 +235,17 @@ def test_rule_config_loader_accepts_configuration_without_thresholds(
     )
 
     configs = loader.load(config_path)
-
     assert len(configs) == 1
     assert configs[0].severity_thresholds == ()
 
 
-# ============================================================
-# File errors
-# ============================================================
-
-
-def test_rule_config_loader_raises_for_missing_file(
-    loader,
-    tmp_path,
-):
-    missing_path = tmp_path / "missing.yaml"
-
+def test_rule_config_loader_raises_for_missing_file(loader, tmp_path):
     with pytest.raises(FileNotFoundError):
-        loader.load(missing_path)
+        loader.load(tmp_path / "missing.yaml")
 
 
-def test_rule_config_loader_raises_for_invalid_yaml(
-    loader,
-    tmp_path,
-):
+def test_rule_config_loader_raises_for_invalid_yaml(loader, tmp_path):
     config_path = tmp_path / "invalid.yaml"
-
     config_path.write_text(
         """
         rules:
@@ -351,16 +264,9 @@ def test_rule_config_loader_raises_for_invalid_yaml(
         loader.load(config_path)
 
 
-def test_rule_config_loader_raises_for_empty_file(
-    loader,
-    tmp_path,
-):
+def test_rule_config_loader_raises_for_empty_file(loader, tmp_path):
     config_path = tmp_path / "empty.yaml"
-
-    config_path.write_text(
-        "",
-        encoding="utf-8",
-    )
+    config_path.write_text("", encoding="utf-8")
 
     with pytest.raises(ValueError):
         loader.load(config_path)
@@ -371,7 +277,6 @@ def test_rule_config_loader_raises_when_rules_section_is_missing(
     tmp_path,
 ):
     config_path = tmp_path / "missing_rules.yaml"
-
     config_path.write_text(
         """
         configuration:
@@ -384,17 +289,8 @@ def test_rule_config_loader_raises_when_rules_section_is_missing(
         loader.load(config_path)
 
 
-# ============================================================
-# Validation errors
-# ============================================================
-
-
-def test_rule_config_loader_rejects_missing_required_field(
-    loader,
-    tmp_path,
-):
+def test_rule_config_loader_rejects_missing_required_field(loader, tmp_path):
     config_path = tmp_path / "missing_field.yaml"
-
     config_path.write_text(
         """
         rules:
@@ -411,12 +307,8 @@ def test_rule_config_loader_rejects_missing_required_field(
         loader.load(config_path)
 
 
-def test_rule_config_loader_rejects_invalid_severity(
-    loader,
-    tmp_path,
-):
+def test_rule_config_loader_rejects_invalid_severity(loader, tmp_path):
     config_path = tmp_path / "invalid_severity.yaml"
-
     config_path.write_text(
         """
         rules:
@@ -434,12 +326,8 @@ def test_rule_config_loader_rejects_invalid_severity(
         loader.load(config_path)
 
 
-def test_rule_config_loader_rejects_non_numeric_threshold(
-    loader,
-    tmp_path,
-):
+def test_rule_config_loader_rejects_non_numeric_threshold(loader, tmp_path):
     config_path = tmp_path / "invalid_threshold.yaml"
-
     config_path.write_text(
         """
         rules:
@@ -457,12 +345,8 @@ def test_rule_config_loader_rejects_non_numeric_threshold(
         loader.load(config_path)
 
 
-def test_rule_config_loader_rejects_duplicate_rule_ids(
-    loader,
-    tmp_path,
-):
+def test_rule_config_loader_rejects_duplicate_rule_ids(loader, tmp_path):
     config_path = tmp_path / "duplicate_rules.yaml"
-
     config_path.write_text(
         """
         rules:
@@ -472,7 +356,6 @@ def test_rule_config_loader_rejects_duplicate_rule_ids(
             threshold: 1.0
             severity: MEDIUM
             severity_direction: LOWER_IS_WORSE
-
           - rule_id: duplicate
             rule_name: Second rule
             category: test
@@ -492,7 +375,6 @@ def test_rule_config_loader_rejects_invalid_severity_direction(
     tmp_path,
 ):
     config_path = tmp_path / "invalid_direction.yaml"
-
     config_path.write_text(
         """
         rules:
@@ -515,7 +397,6 @@ def test_rule_config_loader_rejects_invalid_severity_threshold(
     tmp_path,
 ):
     config_path = tmp_path / "invalid_severity_threshold.yaml"
-
     config_path.write_text(
         """
         rules:
@@ -541,7 +422,6 @@ def test_rule_config_loader_rejects_invalid_threshold_severity(
     tmp_path,
 ):
     config_path = tmp_path / "invalid_threshold_severity.yaml"
-
     config_path.write_text(
         """
         rules:
