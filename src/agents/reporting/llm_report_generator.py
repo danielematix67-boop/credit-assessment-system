@@ -268,7 +268,7 @@ class LLMReportGenerator(ReportGenerator):
 
     @classmethod
     def _remove_repeated_indicator_mentions(cls, narrative: str) -> str:
-        """Keep the first sentence containing each indicator value only."""
+        """Keep the first sentence containing an indicator value."""
         paragraphs = [part.strip() for part in narrative.split("\n\n") if part.strip()]
         cleaned_paragraphs: list[str] = []
         seen_values: set[str] = set()
@@ -277,7 +277,7 @@ class LLMReportGenerator(ReportGenerator):
             kept: list[str] = []
             for sentence in cls._SENTENCE_PATTERN.findall(paragraph):
                 values = cls._extract_indicator_values_from_text(sentence)
-                repeated = bool(values) and all(
+                repeated = bool(values) and any(
                     value in seen_values for value in values
                 )
                 if repeated:
