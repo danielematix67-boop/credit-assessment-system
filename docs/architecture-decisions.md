@@ -1,8 +1,6 @@
 # Architecture Decision Records
 
-This document captures the main architectural decisions behind the Credit Assessment System.
-
-The purpose of these records is to document **why** the system is designed in its current form, not only how individual components are implemented.
+This document captures the main architectural decisions behind the Credit Assessment System and explains **why** the system is structured as it is.
 
 ## Decision Status
 
@@ -17,6 +15,8 @@ The purpose of these records is to document **why** the system is designed in it
 | ADR-007 | Immutable Domain Models | Accepted |
 | ADR-008 | Thin Presentation Layer | Accepted |
 | ADR-009 | Execution Observability and Provenance | Accepted |
+| ADR-010 | Grounded LLM Narrative Contract | Accepted |
+| ADR-011 | Evidence-Oriented Results UI | Accepted |
 
 ---
 
@@ -36,48 +36,15 @@ An LLM is probabilistic and is therefore not an appropriate source of truth for 
 
 The **deterministic Rule Engine is the sole decision authority**.
 
-It is responsible for:
+It evaluates rules, produces `RuleResult` objects, resolves severity and provides the inputs used to calculate the overall assessment status.
 
-- evaluating credit rules;
-- producing rule-level results;
-- determining whether a rule is triggered, not triggered, or not evaluable;
-- applying severity policies;
-- providing the inputs used to calculate the overall assessment status.
-
-LLM components must not modify, override, or reinterpret the assessment results.
+LLM components must not modify, override or reinterpret the assessment results.
 
 ## Rationale
 
-This provides deterministic execution, reproducibility, traceability, and a clear separation between business logic and generative AI.
-
-The architecture therefore follows the principle:
+This provides deterministic execution, reproducibility, traceability and a clear separation between business logic and generative AI.
 
 > **The system decides; the AI explains.**
-
-## Consequences
-
-### Positive
-
-- Assessment results are reproducible.
-- Business rules remain explicit and testable.
-- Rule-level evidence can be exposed to users.
-- LLM failures do not change the underlying assessment.
-- The boundary of AI responsibility is clearly defined.
-
-### Trade-offs
-
-- New risk signals must be implemented as explicit rules or deterministic logic.
-- The system does not use an LLM as a flexible end-to-end scoring mechanism.
-
-## Alternatives Considered
-
-### End-to-end LLM assessment
-
-Rejected because the decision would be probabilistic and harder to reproduce, validate, and audit.
-
-### LLM-assisted scoring
-
-Rejected for the current scope because allowing generated output to influence the assessment would weaken the separation between decision logic and narrative generation.
 
 ---
 
@@ -89,62 +56,29 @@ Accepted
 
 ## Context
 
-The system has two distinct responsibilities:
-
-1. determine the credit assessment;
-2. communicate the assessment in a human-readable form.
-
-Combining these responsibilities would make the business logic harder to test and would allow presentation concerns to influence the decision process.
+The system has two distinct responsibilities: determining the credit assessment and communicating it in human-readable form.
 
 ## Decision
 
-The application separates the workflow into distinct layers:
+The workflow separates:
 
 ```text
 AssessmentService
-      |
-      v
-   Assessment
-      |
-      v
- AnalysisAgent
-      |
-      v
+      ↓
+Assessment
+      ↓
+AnalysisAgent
+      ↓
 AssessmentAnalysis
-      |
-      v
- ReportingAgent
-      |
-      +----> DeterministicReportGenerator
-      |
-      +----> LLMReportGenerator
+      ↓
+ReportingAgent
 ```
 
-`AssessmentService` owns the deterministic assessment. `AnalysisAgent` structures the assessment findings into an analysis object. `ReportingAgent` transforms that analysis into a user-facing report.
+Reporting implementations consume deterministic analysis objects rather than accessing the rule engine directly.
 
 ## Rationale
 
 Each component has a focused responsibility and can be tested independently.
-
-## Consequences
-
-### Positive
-
-- Clear separation of concerns.
-- Easier unit testing.
-- Reporting implementations can evolve independently from assessment logic.
-- Different reporting strategies can consume the same deterministic assessment.
-
-### Trade-offs
-
-- The workflow contains more components than a monolithic implementation.
-- Domain objects and interfaces are required to connect the layers.
-
-## Alternatives Considered
-
-### Monolithic assessment-and-reporting service
-
-Rejected because it would couple business rules, analysis, and presentation logic.
 
 ---
 
@@ -154,47 +88,13 @@ Rejected because it would couple business rules, analysis, and presentation logi
 
 Accepted
 
-## Context
-
-Credit rules contain parameters such as thresholds, severity levels, and severity directions. These values may change independently from the implementation of the rule itself.
-
-Hard-coding all parameters inside Python classes would increase maintenance cost and make configuration changes unnecessarily invasive.
-
 ## Decision
 
-Rule parameters are externalized in `config/rules.yaml` and loaded through a dedicated configuration layer.
-
-The configuration is validated and converted into immutable `RuleConfig` objects before being consumed by the Rule Engine.
+Rule parameters such as thresholds, severity and severity direction are defined in `config/rules.yaml` and loaded through a dedicated configuration layer.
 
 ## Rationale
 
-This separates **rule implementation** from **rule parameters**.
-
-A developer can modify a threshold or severity configuration without rewriting the evaluation algorithm, while validation prevents malformed configurations from silently entering the assessment workflow.
-
-## Consequences
-
-### Positive
-
-- Business parameters are centralized.
-- Configuration changes are easier to review.
-- Rule implementations remain reusable.
-- Configuration validation provides an additional safety boundary.
-
-### Trade-offs
-
-- YAML becomes an additional artifact that must be versioned and validated.
-- Configuration errors must be handled explicitly.
-
-## Alternatives Considered
-
-### Hard-coded thresholds
-
-Rejected because changes to business parameters would require code modifications.
-
-### Database-only configuration
-
-Not selected for the current scope because version-controlled configuration is simpler and easier to reproduce locally.
+This separates **rule implementation** from **rule parameters**, making business-policy changes easier to review and reproduce.
 
 ---
 
@@ -204,43 +104,13 @@ Not selected for the current scope because version-controlled configuration is s
 
 Accepted
 
-## Context
-
-A credit assessment system is expected to evolve by adding new indicators and rules. The core assessment workflow should not need to be rewritten every time a new rule is introduced.
-
 ## Decision
 
 Rules follow a common abstraction and are resolved through a registry/discovery mechanism using their configured `rule_id`.
 
-The rule registry is responsible for connecting configuration entries with their corresponding rule implementations.
-
 ## Rationale
 
-This follows an extensibility-oriented design: new rules can be added without introducing rule-specific branching into the central assessment service.
-
-## Consequences
-
-### Positive
-
-- New rules can be introduced independently.
-- The central workflow remains stable.
-- Rule implementations can be tested in isolation.
-- Configuration and implementation remain loosely coupled.
-
-### Trade-offs
-
-- Registration/discovery conventions must be maintained.
-- Debugging an incorrectly registered rule can be less direct than calling a class explicitly.
-
-## Alternatives Considered
-
-### Central `if/elif` rule dispatcher
-
-Rejected because it would create a growing central dependency on every individual rule.
-
-### Hard-coded rule list
-
-Rejected because it reduces extensibility and couples the orchestration layer to concrete rule implementations.
+New indicators can be introduced without adding rule-specific branches to the central assessment service.
 
 ---
 
@@ -250,43 +120,13 @@ Rejected because it reduces extensibility and couples the orchestration layer to
 
 Accepted
 
-## Context
-
-The reporting layer may use different LLM providers depending on deployment requirements, cost, privacy considerations, or local development needs.
-
-The application should not depend directly on one specific provider implementation.
-
 ## Decision
 
-LLM access is defined through the `LLMClient` abstraction, with provider-specific implementations such as Gemini and Ollama behind that interface.
-
-The reporting workflow depends on the abstraction rather than on a concrete provider.
+LLM access is defined through the `LLMClient` abstraction, with provider-specific implementations such as Gemini, Ollama and a mock client.
 
 ## Rationale
 
-This provides provider portability and keeps infrastructure concerns outside the reporting domain logic.
-
-It also allows local models to be used during development while retaining the option of an external provider.
-
-## Consequences
-
-### Positive
-
-- Providers can be replaced with limited impact on the application layer.
-- Local and external LLM implementations can coexist.
-- Provider integrations can be tested independently.
-- Vendor lock-in is reduced at the application boundary.
-
-### Trade-offs
-
-- Provider-specific capabilities may need to be abstracted or intentionally excluded.
-- Multiple implementations require additional integration testing.
-
-## Alternatives Considered
-
-### Direct provider calls from the ReportingAgent
-
-Rejected because it would couple application logic to a specific LLM provider.
+This provides provider portability and keeps infrastructure concerns outside reporting-domain logic.
 
 ---
 
@@ -296,40 +136,15 @@ Rejected because it would couple application logic to a specific LLM provider.
 
 Accepted
 
-## Context
-
-LLM services can be unavailable because of network failures, provider errors, authentication problems, local model failures, or configuration issues.
-
-A reporting failure should not prevent the system from producing a useful assessment report when the deterministic assessment has already succeeded.
-
 ## Decision
 
-LLM-based reporting uses a **deterministic report generator as a fallback**.
+LLM-based reporting uses a **deterministic report generator as fallback** when the primary reporting path fails or, when strict grounding is enabled, when the generated narrative does not contain required indicator evidence.
 
-The fallback affects only report generation. It does not alter the underlying assessment or findings.
+The fallback changes only the report-generation path. It does not alter the assessment or findings.
 
 ## Rationale
 
-The architecture treats AI as an enhancement to the reporting experience rather than as a mandatory dependency of the credit assessment process.
-
-## Consequences
-
-### Positive
-
-- The application remains usable when an LLM provider is unavailable.
-- Deterministic reporting provides a stable baseline.
-- Operational failures are isolated from the assessment engine.
-
-### Trade-offs
-
-- The fallback report may be less natural or detailed than an LLM-generated report.
-- Both deterministic and LLM reporting paths must be maintained and tested.
-
-## Alternatives Considered
-
-### Fail the complete workflow when the LLM is unavailable
-
-Rejected because reporting availability should not determine whether the deterministic assessment can be delivered.
+AI is treated as an enhancement to reporting rather than a mandatory dependency of the credit assessment.
 
 ---
 
@@ -339,37 +154,13 @@ Rejected because reporting availability should not determine whether the determi
 
 Accepted
 
-## Context
-
-Assessment results are passed through multiple layers. Accidental mutation of structured assessment data could create inconsistencies between the decision, analysis, and report.
-
 ## Decision
 
-Core domain and analysis/reporting objects that represent assessment state use immutable data structures where appropriate, including frozen dataclasses.
+Core assessment, analysis, report and execution-state objects use immutable data structures where appropriate, including frozen dataclasses.
 
 ## Rationale
 
-Immutability makes data flow easier to reason about and reduces the risk that downstream components silently modify facts produced by upstream components.
-
-## Consequences
-
-### Positive
-
-- Safer data flow between layers.
-- Reduced risk of accidental state mutation.
-- Easier reasoning about component boundaries.
-- Better alignment with deterministic processing.
-
-### Trade-offs
-
-- Transformations require creation of new objects rather than in-place mutation.
-- Developers must be deliberate when constructing updated domain state.
-
-## Alternatives Considered
-
-### Mutable shared domain objects
-
-Rejected because they increase the possibility of hidden state changes across workflow stages.
+Immutability reduces the risk that downstream components silently modify facts produced by upstream deterministic processing.
 
 ---
 
@@ -379,41 +170,15 @@ Rejected because they increase the possibility of hidden state changes across wo
 
 Accepted
 
-## Context
-
-The project uses Streamlit as its presentation layer. Streamlit is useful for interactive exploration and demonstration, but business logic should remain independent from the UI framework.
-
 ## Decision
 
-The `app/` layer is responsible for presentation, interaction, and workflow composition, while the core assessment logic remains in `src/`.
+`app/` is responsible for presentation, interaction and workflow composition. Business rules, assessment calculations, domain models and LLM abstractions remain in `src/`.
 
-Business rules, assessment calculations, domain models, and LLM abstractions must not depend on Streamlit.
+The UI consumes structured domain objects and does not reproduce decision logic.
 
 ## Rationale
 
-This keeps the core system reusable and testable outside the web interface.
-
-The same assessment workflow can therefore be invoked independently of the presentation layer.
-
-## Consequences
-
-### Positive
-
-- Business logic remains framework-independent.
-- Testing does not require a Streamlit runtime.
-- The application can evolve toward alternative interfaces in the future.
-- The UI remains focused on communicating results and collecting user input.
-
-### Trade-offs
-
-- Presentation code requires explicit adapters between UI state and domain objects.
-- Some UI-specific convenience logic cannot be placed directly in the domain layer.
-
-## Alternatives Considered
-
-### Business logic directly inside Streamlit pages
-
-Rejected because it would tightly couple the assessment engine to the presentation framework.
+This keeps the core system reusable and testable outside Streamlit.
 
 ---
 
@@ -423,91 +188,169 @@ Rejected because it would tightly couple the assessment engine to the presentati
 
 Accepted
 
-## Context
-
-The workflow can use different reporting modes and may encounter recoverable or terminal reporting failures. For troubleshooting, auditability, and operational analysis, it is useful to identify a workflow execution and understand how it completed.
-
-The observability mechanism must not become part of the credit decision itself and must not require persistence or a logging platform for the current scope.
-
 ## Decision
 
-Each successfully completed workflow execution exposes immutable `ExecutionMetadata` through `AssessmentWorkflowResult`.
+Successfully completed workflow executions expose immutable `ExecutionMetadata` containing execution identity, timestamp, reporting mode, generator used, fallback state, error category and phase timings.
 
-The metadata records:
-
-- unique execution identifier;
-- UTC start timestamp;
-- selected reporting mode;
-- generator used;
-- whether deterministic fallback was used;
-- classified reporting error category, when applicable;
-- assessment, analysis, reporting, and total elapsed times.
-
-The Streamlit presentation layer exposes these values in an **Execution & Audit Metadata** section.
-
-Reporting failures are classified into operational categories such as rate limit, service unavailable, connection error, authentication, authorization, model unavailable, timeout, and generic generation error.
-
-Terminal failure of both the primary and fallback generators remains an explicit error and is propagated rather than silently converted into a successful workflow result.
+Observability is exposed in the Streamlit audit area but does not participate in the credit decision.
 
 ## Rationale
 
-This provides execution-level traceability without coupling the current application to a persistent observability infrastructure.
+This provides execution-level traceability without coupling the current application to persistent observability infrastructure.
 
-Immutable metadata also reduces the risk that downstream presentation code changes the provenance of an execution.
+> **Observability describes the workflow; it does not decide the credit outcome.**
 
-The design preserves the architectural boundary:
+---
 
-> **Observability describes the decision workflow; it does not participate in the decision.**
+# ADR-010 — Grounded LLM Narrative Contract
+
+## Status
+
+Accepted
+
+## Context
+
+The Executive Report can use an LLM to transform deterministic findings into natural language. In a credit-risk context, a fluent response is not sufficient: the narrative must remain faithful to the supplied evidence.
+
+The system therefore needs an explicit contract controlling what the LLM may say and how it should represent deterministic numerical indicators.
+
+## Decision
+
+The LLM reporting prompt establishes a constrained narrative contract:
+
+- all supplied material findings must be represented;
+- supplied numerical indicators and units must be preserved exactly;
+- values must not be rounded, recalculated or converted;
+- unsupported facts and causal explanations must not be invented;
+- specific unsupported areas such as sales volume, pricing, demand, costs, liquidity, cash flow, debt service capacity and financial stability must not be inferred unless provided;
+- categories are discussed in source order and at most once;
+- category headings, bullets and numbered lists are not used in the executive narrative;
+- each material indicator value is mentioned once;
+- repeated findings and conclusions are avoided;
+- the LLM does not generate the assessment status.
+
+When strict indicator grounding is enabled, the generated narrative is checked against deterministic indicator values. Missing required values cause deterministic fallback.
+
+## Rationale
+
+This creates a practical control between deterministic evidence and generative language without attempting to solve full semantic verification of arbitrary natural-language output.
+
+The architecture therefore protects the two most important properties:
+
+1. the credit judgement remains deterministic;
+2. the narrative remains anchored to the evidence supplied to the model.
 
 ## Consequences
 
 ### Positive
 
-- Workflow executions can be identified and traced.
-- Primary versus fallback reporting is explicit.
-- Common LLM failure modes are classified consistently.
-- Phase-level and total timings support performance diagnostics.
-- Observability remains independent from the deterministic assessment result.
+- Numerical evidence is less likely to disappear from the narrative.
+- Unsupported causal reasoning is explicitly discouraged.
+- The deterministic status remains outside model authority.
+- Missing required indicator evidence can activate deterministic fallback.
+- Narrative style is consistent across providers.
 
 ### Trade-offs
 
-- Current metadata is execution-level and in-memory; it is not a persistent audit store.
-- Terminal failures do not produce a completed `AssessmentWorkflowResult`, so completed execution metadata is not available through the result object for those cases.
-- Future production deployments may require centralized structured logging, retention, access control, and correlation with infrastructure telemetry.
+- String-based grounding validation is intentionally narrower than semantic verification.
+- Provider outputs can still differ in wording and fluency.
+- Prompt and validation contracts require regression tests when changed.
 
 ## Alternatives Considered
 
-### No execution metadata
+### Unconstrained LLM narrative
 
-Rejected because it makes reporting provenance and workflow timing harder to inspect and diagnose.
+Rejected because it increases the risk of omissions, unsupported inferences and inconsistent numerical representation.
 
-### Persistent audit database
+### Full semantic fact-checking pipeline
 
-Deferred because persistence is outside the current portfolio/demo scope and would introduce additional infrastructure and data-governance requirements.
+Deferred because it would introduce additional model dependencies and complexity beyond the current prototype scope.
 
-### Full distributed tracing platform
+---
 
-Deferred because the current application is a single-process prototype and does not yet justify the operational complexity of distributed tracing.
+# ADR-011 — Evidence-Oriented Results UI
+
+## Status
+
+Accepted
+
+## Context
+
+A credit assessment interface should explain not only the final status but also how the deterministic rule engine produced it. A single label is insufficient for an operator or academic demonstration of explainability.
+
+The UI therefore needs visual evidence connecting financial data, indicators, rule outcomes, risk drivers and final assessment.
+
+## Decision
+
+The Streamlit Results view follows an operator-oriented hierarchy:
+
+```text
+Executive Credit Assessment
+        ↓
+Decision Evidence
+        ↓
+Audit trail & methodology
+```
+
+The audit area provides deterministic visual evidence through:
+
+- decision-path cards;
+- rule-status distribution;
+- risk-indicator dashboard;
+- filterable rule catalogue;
+- risk-driver map by category;
+- rule/indicator/value/threshold detail;
+- assessed credit data;
+- methodology and execution metadata.
+
+UI components read `RuleResult` and workflow domain objects. They do not recompute business rules.
+
+## Rationale
+
+This makes the assessment mechanism inspectable and demonstrates the link between deterministic evidence and the final judgement. It also keeps the primary user flow concise while preserving detailed diagnostics for users who need them.
+
+## Consequences
+
+### Positive
+
+- The final status can be traced back to quantitative evidence.
+- Triggered rules become visible risk drivers rather than opaque exceptions.
+- The UI scales better as the rule catalogue grows through filtering and prioritisation.
+- Presentation logic remains downstream of the decision layer.
+
+### Trade-offs
+
+- The results page contains more visual components than a minimal dashboard.
+- The audit area must remain synchronized with domain models and workflow behavior.
+
+## Alternatives Considered
+
+### Display only the final assessment status
+
+Rejected because it provides insufficient explainability.
+
+### Reimplement rule calculations in the UI
+
+Rejected because it would duplicate business logic and risk divergence from the deterministic Rule Engine.
 
 ---
 
 # Architecture Principles
 
-The decisions above imply the following principles for future development:
+The decisions above imply the following principles:
 
 1. **Deterministic logic owns the decision.**
-2. **AI is bounded to narrative generation and summarisation.**
-3. **Business rules should be explicit, testable, and configurable.**
-4. **Components communicate through well-defined domain objects.**
-5. **Infrastructure and LLM providers should remain replaceable.**
-6. **Failure of an optional AI component must not invalidate the deterministic assessment.**
-7. **Presentation code should not own business logic.**
-8. **Architectural changes should preserve reproducibility and explainability.**
+2. **AI is bounded to narrative generation.**
+3. **Material narrative evidence must remain grounded in deterministic findings.**
+4. **Business rules should be explicit, testable and configurable.**
+5. **Components communicate through well-defined domain objects.**
+6. **Infrastructure and LLM providers should remain replaceable.**
+7. **Failure of an optional AI component must not invalidate the deterministic assessment.**
+8. **Presentation code should not own business logic.**
 9. **Execution provenance should remain immutable and separate from decision data.**
+10. **The UI should explain the decision path without reproducing it.**
 
 # Current Architecture
-
-At a high level, the current system follows this flow:
 
 ```mermaid
 flowchart LR
@@ -525,26 +368,15 @@ flowchart LR
     LLMG --> LC[LLM Client]
     LC --> GEM[Gemini]
     LC --> OLL[Ollama]
-    RP -. fallback .-> DRG
+    LLMG --> VAL[Indicator Grounding Validation]
+    VAL -. invalid .-> DRG
+    RP -. provider failure .-> DRG
     WF --> META[Execution Metadata]
     META --> TRACE[Provenance / Timing / Error Classification]
     CFG[config/rules.yaml] --> RCL[Rule Config Loader]
     RCL --> RE
+    UI --> EVID[Decision Evidence / Risk Visualisations]
+    EVID --> RR
 ```
 
-The architecture intentionally keeps the **assessment path deterministic**, makes the **LLM path optional and replaceable**, and treats **execution metadata as observability rather than decision data**.
-
-# Future Decisions
-
-Future ADRs may cover topics such as:
-
-- persistence and database architecture;
-- API exposure;
-- authentication and authorisation;
-- automated model/rule validation;
-- deployment architecture;
-- CI/CD and release strategy;
-- centralized structured logging and production telemetry;
-- distributed tracing if the system evolves into a multi-service deployment.
-
-These decisions should be documented when the corresponding architectural concerns become part of the system scope.
+The architecture intentionally keeps the **assessment path deterministic**, the **LLM path optional and bounded**, the **fallback path deterministic**, and **execution metadata observational rather than decisional**.
