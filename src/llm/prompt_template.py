@@ -49,10 +49,12 @@ class ReportPromptTemplate:
         "- Cover EVERY supplied finding. A finding may be expressed by paraphrasing its wording, "
         "provided that its meaning and numerical values are preserved.\n"
         "- Connect related findings naturally within the same paragraph using professional credit-analysis language.\n"
+        "- Group related findings into a coherent passage where this improves readability.\n"
         "- Do not create one isolated sentence per metric merely to enumerate the inputs.\n"
         "- Use one narrative paragraph for each category that contains findings.\n"
         "- Keep those paragraphs in the exact category order provided.\n"
-        "- Discuss each category at most once and never return to an earlier category.\n"
+        "- Discuss each category at most once.\n"
+        "- Never return to a category after moving to the next category.\n"
         "- Do not print category names as headings or labels.\n"
         "- Within each category, discuss higher-severity findings before lower-severity findings.\n"
         "- Combine related findings where this improves readability, but do not lose any finding.\n"
@@ -70,6 +72,7 @@ class ReportPromptTemplate:
 
     OUTPUT_CONTRACT = (
         "OUTPUT REQUIREMENTS:\n"
+        "- Return only the executive narrative.\n"
         "- Return only the narrative paragraphs.\n"
         "- Use plain prose paragraphs separated by a blank line.\n"
         "- Do not generate the assessment status.\n"
