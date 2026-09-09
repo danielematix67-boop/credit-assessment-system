@@ -6,14 +6,6 @@ from src.models.report import Report, ReportFindingGroup
 
 
 class DeterministicReportGenerator(ReportGenerator):
-    _STATUS_DESCRIPTIONS = {
-        AssessmentStatus.NORMAL: "No significant credit-risk factors identified",
-        AssessmentStatus.ATTENTION: "Credit-risk factors requiring monitoring identified",
-        AssessmentStatus.CRITICAL: (
-            "Significant credit-risk factors affecting the credit profile identified"
-        ),
-    }
-
     def generate(
         self,
         analysis: AssessmentAnalysis,
@@ -30,35 +22,25 @@ class DeterministicReportGenerator(ReportGenerator):
             limitations=analysis.limitations,
         )
 
-    @classmethod
+    @staticmethod
     def _generate_summary(
-        cls,
         analysis: AssessmentAnalysis,
     ) -> str:
-        status = analysis.assessment_status
-        description = cls._STATUS_DESCRIPTIONS.get(
-            status,
-            "Assessment status could not be determined",
+        """Build the deterministic fallback in the same format as the LLM report."""
+        status_value = getattr(
+            analysis.assessment_status,
+            "value",
+            str(analysis.assessment_status),
         )
-        status_value = getattr(status, "value", str(status))
+        status_label = str(status_value).capitalize()
+        summary = f"Assessment Status: {status_label}"
 
-        summary = (
-            f"Assessment status: {status_value} — {description}.\n"
-            "The credit assessment identifies the following relevant findings."
-        )
-
-        if analysis.risk_factors:
-            summary += "\n"
-            summary += " ".join(
-                risk_factor.text.rstrip(".") + "."
-                for risk_factor in analysis.risk_factors
-            )
-
-        elif analysis.key_findings:
-            summary += "\n"
-            summary += " ".join(
+        findings = analysis.risk_factors or analysis.key_findings
+        if findings:
+            summary += "\n\n"
+            summary += "\n\n".join(
                 finding.text.rstrip(".") + "."
-                for finding in analysis.key_findings
+                for finding in findings
             )
 
         return summary
