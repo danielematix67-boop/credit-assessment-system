@@ -1,9 +1,10 @@
 from typing import Any
 
+import pandas as pd
 import streamlit as st
 
 # ============================================================
-# Rule Assessment Summary
+# Shared Rule Result Helpers
 # ============================================================
 
 
@@ -28,13 +29,157 @@ def _rule_status_counts(result: Any) -> dict[str, int]:
     return counts
 
 
-def render_rule_assessment_summary(result: Any) -> None:
-    """
-    Render a visual summary of the deterministic rule engine.
+def _rule_status(rule_result: Any) -> str:
+    status_obj = getattr(rule_result, "status", None)
+    return str(getattr(status_obj, "value", str(status_obj or "—")))
 
-    The component uses only the RuleResult objects produced by the
-    assessment engine. No assessment or threshold logic is recalculated.
-    """
+
+def _rule_severity(rule_result: Any) -> str:
+    severity_obj = getattr(rule_result, "severity", None)
+    return str(getattr(severity_obj, "value", str(severity_obj or "—")))
+
+
+# ============================================================
+# Decision Path
+# ============================================================
+
+
+def render_decision_path(result: Any) -> None:
+    """Explain visually how deterministic rule outcomes lead to the assessment."""
+    rule_results = _get_rule_results(result)
+    if not rule_results:
+        return
+
+    assessment = getattr(result, "assessment", None)
+    status_obj = getattr(assessment, "status", None)
+    assessment_status = str(getattr(status_obj, "value", str(status_obj or "Unknown")))
+
+    counts = _rule_status_counts(result)
+    triggered = counts["TRIGGERED"]
+
+    st.subheader("How the Decision Is Produced")
+    st.caption(
+        "The final assessment is produced from the deterministic rule outcomes. "
+        "The path below shows the evidence flow without recalculating any business logic."
+    )
+
+    cols = st.columns(5)
+    steps = [
+        ("01", "Financial Data", "Credit position", "det"),
+        ("02", "Indicators", f"{len(rule_results)} rules evaluated", "det"),
+        ("03", "Rule Outcomes", f"{triggered} triggered", "det"),
+        ("04", "Risk Drivers", "Severity & category", "det"),
+        ("05", "Assessment", assessment_status, "result"),
+    ]
+
+    for column, (number, title, description, kind) in zip(cols, steps):
+        with column:
+            st.markdown(
+                f'<div class="decision-path-step {kind}">'
+                f'<div class="decision-path-number">{number}</div>'
+                f'<div class="decision-path-title">{title}</div>'
+                f'<div class="decision-path-description">{description}</div>'
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+
+    st.caption(
+        "Interpretation: input data are evaluated against configured thresholds; "
+        "triggered rules identify the risk drivers that support the final assessment."
+    )
+
+
+# ============================================================
+# Risk Indicator Dashboard
+# ============================================================
+
+
+def render_risk_indicator_dashboard(result: Any) -> None:
+    """Render a compact dashboard of rule indicators and risk categories."""
+    rule_results = _get_rule_results(result)
+    if not rule_results:
+        return
+
+    st.subheader("Risk Indicator Dashboard")
+    st.caption(
+        "Quantitative evidence behind the assessment: actual values, thresholds, "
+        "rule outcomes and risk categories produced by the Rule Engine."
+    )
+
+    rows: list[dict[str, Any]] = []
+    for rule_result in rule_results:
+        value = getattr(rule_result, "value", None)
+        threshold = getattr(rule_result, "threshold", None)
+
+        rows.append(
+            {
+                "Rule": str(getattr(rule_result, "rule_id", "—")),
+                "Indicator": str(getattr(rule_result, "rule_name", "—")),
+                "Actual": value,
+                "Threshold": threshold,
+                "Status": _rule_status(rule_result),
+                "Severity": _rule_severity(rule_result),
+                "Category": str(getattr(rule_result, "category", "—")),
+            }
+        )
+
+    dataframe = pd.DataFrame(rows)
+
+    status_counts = _rule_status_counts(result)
+    metric_cols = st.columns(4)
+    with metric_cols[0]:
+        st.metric("Rules evaluated", len(rule_results))
+    with metric_cols[1]:
+        st.metric("Triggered", status_counts["TRIGGERED"])
+    with metric_cols[2]:
+        st.metric("Not triggered", status_counts["NOT_TRIGGERED"])
+    with metric_cols[3]:
+        st.metric("Not evaluable", status_counts["NOT_EVALUABLE"])
+
+    display_columns = [
+        "Rule",
+        "Indicator",
+        "Actual",
+        "Threshold",
+        "Status",
+        "Severity",
+        "Category",
+    ]
+    st.dataframe(
+        dataframe[display_columns],
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    triggered = dataframe[dataframe["Status"] == "TRIGGERED"]
+    if triggered.empty:
+        st.success("No risk indicators breached their configured thresholds.")
+        return
+
+    st.markdown("#### Triggered Risk Drivers by Category")
+    category_counts = (
+        triggered.groupby("Category", dropna=False)
+        .size()
+        .reset_index(name="Triggered rules")
+        .sort_values("Triggered rules", ascending=True)
+    )
+
+    st.bar_chart(
+        category_counts,
+        x="Category",
+        y="Triggered rules",
+        horizontal=True,
+        height=max(180, 55 * len(category_counts)),
+    )
+
+
+# ============================================================
+# Rule Assessment Summary
+# ============================================================
+
+
+def render_rule_assessment_summary(result: Any) -> None:
+    """Render a visual summary of the deterministic rule engine."""
     rule_results = _get_rule_results(result)
 
     if not rule_results:
@@ -89,13 +234,7 @@ def render_rule_assessment_summary(result: Any) -> None:
 
 
 def render_rule_indicator_detail(result: Any) -> None:
-    """
-    Render the quantitative detail behind an individual rule result.
-
-    The component exposes the actual value and configured threshold
-    already produced by the deterministic rule engine. It does not
-    recalculate or alter any assessment logic.
-    """
+    """Render the quantitative detail behind an individual rule result."""
     rule_results = _get_rule_results(result)
 
     if not rule_results:
@@ -117,7 +256,7 @@ def render_rule_indicator_detail(result: Any) -> None:
     triggered_indices = [
         index
         for index, rule_result in enumerate(rule_results)
-        if getattr(getattr(rule_result, "status", None), "value", "") == "TRIGGERED"
+        if _rule_status(rule_result) == "TRIGGERED"
     ]
 
     default_index = triggered_indices[0] if triggered_indices else 0
@@ -135,13 +274,8 @@ def render_rule_indicator_detail(result: Any) -> None:
     rule_id = getattr(selected_rule, "rule_id", "—")
     rule_name = getattr(selected_rule, "rule_name", "—")
     category = getattr(selected_rule, "category", "—")
-
-    status_obj = getattr(selected_rule, "status", None)
-    status = getattr(status_obj, "value", str(status_obj or "—"))
-
-    severity_obj = getattr(selected_rule, "severity", None)
-    severity = getattr(severity_obj, "value", str(severity_obj or "—"))
-
+    status = _rule_status(selected_rule)
+    severity = _rule_severity(selected_rule)
     value = getattr(selected_rule, "value", None)
     threshold = getattr(selected_rule, "threshold", None)
     reason = getattr(selected_rule, "reason", None)
