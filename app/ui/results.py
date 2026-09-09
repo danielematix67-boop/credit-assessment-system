@@ -50,42 +50,16 @@ def _format_value(value: Any) -> str:
     return str(value)
 
 
-def render_monitoring_outcome(result: Any) -> None:
-    """Present the assessment as the operator's first decision point."""
-    assessment = getattr(result, "assessment", None)
-    status_obj = getattr(assessment, "status", None)
-    status = str(getattr(status_obj, "value", status_obj or "Unknown"))
-    rules = _rule_results(result)
-
-    triggered = [rule for rule in rules if _status(rule) == "TRIGGERED"]
-    not_evaluable = [rule for rule in rules if _status(rule) == "NOT_EVALUABLE"]
-    critical = [rule for rule in triggered if _severity(rule).upper() == "CRITICAL"]
-
-    st.markdown("## Monitoring Outcome")
-    st.caption("Start with the credit judgement, then review the evidence supporting it.")
-
-    with st.container(border=True):
-        columns = st.columns([1.5, 1, 1, 1, 1])
-        with columns[0]:
-            st.caption("Credit assessment")
-            st.markdown(f"### {status.replace('_', ' ').title()}")
-        with columns[1]:
-            st.metric("Risk drivers", len(triggered))
-        with columns[2]:
-            st.metric("Critical", len(critical))
-        with columns[3]:
-            st.metric("Rules evaluated", len(rules) - len(not_evaluable))
-        with columns[4]:
-            st.metric("Data gaps", len(not_evaluable))
-
-
 def render_decision_evidence(result: Any) -> None:
     """Show the deterministic evidence an operator needs to validate the judgement."""
     rules = _rule_results(result)
     triggered = [rule for rule in rules if _status(rule) == "TRIGGERED"]
 
     st.markdown("## Decision Evidence")
-    st.caption("Triggered rules explain the credit judgement. The full rule set is available in the audit trail.")
+    st.caption(
+        "Triggered rules explain the credit judgement. "
+        "The full rule set is available in the audit trail."
+    )
 
     if not triggered:
         st.success("No risk rules were triggered by the available financial information.")
@@ -177,10 +151,7 @@ def render_results(
         configured_model=configured_model,
     )
 
-    # 1. First decision point: what is the monitoring outcome?
-    render_monitoring_outcome(result)
-
-    # 2. Primary deliverable: the Executive Report.
+    # 1. Primary output: the Executive Report.
     with st.container(border=True):
         render_report_tab(
             result=result,
@@ -190,8 +161,8 @@ def render_results(
             configured_model=configured_model,
         )
 
-    # 3. Evidence: why did the Rule Engine reach this outcome?
+    # 2. Evidence: why did the Rule Engine reach this outcome?
     render_decision_evidence(result)
 
-    # 4. Technical information is secondary and collapsible.
+    # 3. Technical information is secondary and collapsible.
     render_audit_trail(result, assessment_position)
