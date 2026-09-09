@@ -68,7 +68,8 @@ class ReportPromptTemplate:
         "- Do not create a final summary paragraph that repeats previous categories.\n"
         "- Narrative length should scale with the number of supplied findings: cover all material findings "
         "naturally, without padding or unnecessary repetition.\n"
-        "- Use professional, concise credit-monitoring language rather than generic corporate language."
+        "- Use professional, concise credit-monitoring language rather than generic corporate language.\n"
+        "- Do not repeat an indicator value or indicator statement after it has already been stated."
     )
 
     OUTPUT_CONTRACT = (
