@@ -8,7 +8,7 @@ The system is a deterministic, rule-based credit assessment application with an 
 
 > **The deterministic assessment is the source of truth. The LLM can generate narrative content, but it cannot determine, modify, or override the structured credit assessment.**
 
-The validation strategy does not evaluate the predictive performance of a statistical or machine-learning model. It validates the behavior of the implemented rule engine, assessment workflow, reporting layer, configuration, and LLM integration.
+The validation strategy does not evaluate the predictive performance of a statistical or machine-learning model. It validates the behavior of the implemented rule engine, assessment workflow, reporting layer, configuration, LLM integration, fallback behavior, and execution metadata.
 
 ---
 
@@ -108,6 +108,28 @@ Different reporting strategies may produce different natural-language summaries,
 
 The assessment status and structured findings remain application-controlled.
 
+### 3.5 Execution metadata integrity
+
+Completed workflow executions expose immutable execution metadata without changing the deterministic assessment.
+
+```text
+Workflow
+   │
+   ├── Assessment
+   ├── Analysis
+   ├── Report
+   │
+   └── ExecutionMetadata
+         ├── execution_id
+         ├── reporting_mode
+         ├── generator_used
+         ├── fallback_used
+         ├── error_category
+         └── timings
+```
+
+The metadata is provenance and diagnostic information, not decision data.
+
 ---
 
 # 4. Unit Testing
@@ -133,6 +155,7 @@ The main areas include:
 - mock LLM client;
 - reporting agent;
 - workflow components;
+- execution metadata;
 - orchestration components.
 
 For deterministic rules, the fundamental property is:
@@ -442,13 +465,27 @@ Validation covers failures such as:
 - invalid/empty generated responses;
 - exceptions raised by the primary generator;
 - successful fallback execution;
-- fallback failure handling.
+- fallback failure handling;
+- terminal propagation when both primary and fallback generation fail.
+
+The primary reporting error is classified into categories including:
+
+```text
+RATE_LIMIT
+SERVICE_UNAVAILABLE
+CONNECTION_ERROR
+AUTHENTICATION
+AUTHORIZATION
+MODEL_UNAVAILABLE
+TIMEOUT
+GENERATION_ERROR
+```
 
 The key resilience property is:
 
 > **Failure of the optional LLM reporting path must not invalidate the deterministic assessment.**
 
-The reporting agent also records the generator used and the latest reporting error, supporting execution traceability.
+The reporting agent records the generator used, the latest reporting error, and the classified error category, supporting execution traceability.
 
 ---
 
@@ -508,9 +545,53 @@ Report.assessment_status
 
 The structured assessment information remains independent of the selected reporting strategy.
 
+## 15.1 Terminal reporting failure
+
+When the primary reporting generator fails and the deterministic fallback also fails, the workflow does not silently convert the failure into a successful result.
+
+The fallback error is propagated to the caller, while the reporting agent retains the primary error classification for diagnostics.
+
+This behavior is explicitly tested at both reporting-agent and workflow level.
+
 ---
 
-# 16. Test Isolation
+# 16. Execution Metadata Validation
+
+`ExecutionMetadata` provides immutable provenance and timing information for successfully completed workflow executions.
+
+Validation verifies:
+
+- a unique execution ID is generated;
+- the start timestamp is timezone-aware and represented in UTC;
+- the selected reporting mode is preserved;
+- primary versus fallback generator state is correctly recorded;
+- `fallback_used` reflects whether deterministic fallback was used;
+- the primary reporting error category is preserved when fallback is activated;
+- phase timings are non-negative;
+- total execution time is consistent with the workflow execution.
+
+Conceptually:
+
+```text
+Workflow Execution
+        ↓
+ExecutionMetadata
+        ├── Identity
+        ├── Timestamp
+        ├── Reporting Mode
+        ├── Generator
+        ├── Fallback State
+        ├── Error Category
+        └── Timings
+```
+
+The metadata is validated as provenance information and does not participate in assessment-status calculation.
+
+A terminal workflow failure does not return an `AssessmentWorkflowResult`; therefore completed execution metadata is not expected to be available through the result object in that case.
+
+---
+
+# 17. Test Isolation
 
 External LLM availability is not required for the standard automated test suite.
 
@@ -530,7 +611,7 @@ This keeps CI deterministic while allowing provider-specific integration tests t
 
 ---
 
-# 17. CI Quality Gates
+# 18. CI Quality Gates
 
 The GitHub Actions pipeline enforces the main engineering validation gates.
 
@@ -554,7 +635,7 @@ These checks provide a repeatable baseline for pushes to `main` and pull request
 
 ---
 
-# 18. Validation Matrix
+# 19. Validation Matrix
 
 | Area | Validation mechanism | Expected property |
 |---|---|---|
@@ -569,7 +650,10 @@ These checks provide a repeatable baseline for pushes to `main` and pull request
 | Deterministic reporting | Generator tests | Report is produced without external LLM dependency |
 | LLM reporting | Generator/client tests | Narrative is generated from controlled analysis data |
 | LLM response validation | Generator tests | Empty/whitespace output is rejected |
+| Error classification | Reporting-agent tests | Primary failures map to stable operational categories |
 | Fallback | Reporting-agent tests | Primary failure can fall back to deterministic reporting |
+| Terminal reporting failure | Reporting-agent/workflow tests | Fallback failure is propagated without masking |
+| Execution metadata | Workflow tests | Provenance and timing metadata are generated consistently |
 | Workflow | Integration/E2E tests | Data is propagated through the full pipeline |
 | Type safety | MyPy strict | Source code satisfies static typing constraints |
 | Code quality | Ruff | Configured lint rules pass |
@@ -577,7 +661,7 @@ These checks provide a repeatable baseline for pushes to `main` and pull request
 
 ---
 
-# 19. Validation Boundaries and Limitations
+# 20. Validation Boundaries and Limitations
 
 The automated validation strategy does not prove that an external LLM will always produce factually correct or semantically perfect prose.
 
@@ -589,11 +673,13 @@ The current response validator is intentionally limited to basic response usabil
 
 This is preferable to introducing brittle string-matching logic into the decision boundary.
 
-Future enhancements may include stronger observability, structured LLM outputs, additional schema validation, and provider-specific integration testing, provided that these enhancements preserve the deterministic assessment boundary.
+Execution metadata provides in-memory execution provenance for completed workflows, but it is not a persistent audit trail. A production implementation would require additional controls for durable storage, retention, access, correlation, and monitoring.
+
+Future enhancements may include structured LLM outputs, additional schema validation, provider-specific integration testing, persistent observability, and centralized telemetry, provided that these enhancements preserve the deterministic assessment boundary.
 
 ---
 
-# 20. Summary
+# 21. Summary
 
 The validation strategy is built around a simple architectural principle:
 
@@ -621,5 +707,7 @@ Deterministic  LLM
 The deterministic rule engine remains responsible for assessment logic, status calculation, and structured findings.
 
 The LLM is an optional reporting component. Its failure does not invalidate the assessment, and its generated narrative does not become the source of truth for structured credit information.
+
+Execution metadata provides additional provenance around successfully completed workflow executions without becoming part of the decision logic.
 
 This separation is the principal architectural property validated by the project's automated tests and CI quality gates.
