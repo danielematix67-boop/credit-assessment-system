@@ -13,8 +13,9 @@ def render_credit_data_source() -> tuple[
     str,
     str | None,
 ]:
-    """Render the credit data source used by the assessment."""
-    st.subheader("Credit Data")
+    """Render the credit position and information source used for monitoring."""
+    st.subheader("Credit Position")
+    st.caption("Select the position to be reviewed by the monitoring assessment.")
 
     input_mode = st.radio(
         "Input mode",
@@ -51,6 +52,7 @@ def _render_demo_scenario() -> tuple[
         st.exception(error)
         st.stop()
 
+    st.markdown("**Financial information available for review**")
     st.dataframe(
         build_scenario_data_table(position),
         width="stretch",
@@ -66,7 +68,7 @@ def _render_manual_input() -> tuple[
     str,
     str | None,
 ]:
-    st.caption("Enter the financial information to be assessed.")
+    st.caption("Enter the financial information available for the credit review.")
 
     position_data = build_credit_position_from_ui()
     provided_fields = sum(value is not None for value in position_data.values())
@@ -76,7 +78,7 @@ def _render_manual_input() -> tuple[
     with columns[0]:
         st.metric("Fields", total_fields)
     with columns[1]:
-        st.metric("Provided", provided_fields)
+        st.metric("Available", provided_fields)
     with columns[2]:
         st.metric("Missing", total_fields - provided_fields)
 
