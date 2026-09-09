@@ -17,13 +17,16 @@ class LLMReportGenerator(ReportGenerator):
         re.compile(r"-?\d[\d,.]*\s*%"),
         re.compile(r"-?\d[\d,.]*\s*x\b", re.IGNORECASE),
     )
+    _INDICATOR_PATTERN = re.compile(
+        r"€\s*-?\d(?:[\d,.]*\d)?|-?\d[\d,.]*\s*%|-?\d[\d,.]*\s*x\b",
+        re.IGNORECASE,
+    )
 
     _STATUS_PREFIX_PATTERN = re.compile(
         r"^\s*Assessment status:\s*[^.\n]+\.?(?:\s*\n)?",
         re.IGNORECASE,
     )
-
-    _NUMERIC_SPACING_PATTERN = re.compile(r"(?<=\d)\s+\.\s*(?=\d)")
+    _NUMERIC_SPACING_PATTERN = re.compile(r"(?<=\d)\s*\.\s*(?=\d)")
     _SENTENCE_PATTERN = re.compile(r"[^.!?]+[.!?]+")
 
     _STATUS_DESCRIPTIONS = {
@@ -96,20 +99,22 @@ class LLMReportGenerator(ReportGenerator):
 
     @classmethod
     def _extract_indicator_values(cls, findings: list[AnalysisFinding]) -> list[str]:
-        """Extract supplied numerical indicator values from findings."""
+        """Extract supplied numerical indicator values in source order."""
         return cls._extract_indicator_values_from_text(
             " ".join(finding.text for finding in findings)
         )
 
     @classmethod
     def _extract_indicator_values_from_text(cls, text: str) -> list[str]:
-        """Extract and normalise numerical indicator values from arbitrary text."""
+        """Extract and normalise numerical indicator values in text order."""
         values: list[str] = []
-        for pattern in cls._INDICATOR_PATTERNS:
-            for match in pattern.findall(text):
-                normalized = " ".join(match.split()).rstrip(".,;:")
-                if normalized not in values:
-                    values.append(normalized)
+        normalized_text = cls._NUMERIC_SPACING_PATTERN.sub(".", text)
+
+        for match in cls._INDICATOR_PATTERN.finditer(normalized_text):
+            value = " ".join(match.group(0).split()).rstrip(".,;:")
+            if value not in values:
+                values.append(value)
+
         return values
 
     @classmethod
@@ -126,6 +131,7 @@ class LLMReportGenerator(ReportGenerator):
         rejected so the reporting layer can use its deterministic fallback
         rather than append an artificial list of values to the report.
         """
+        narrative = cls._NUMERIC_SPACING_PATTERN.sub(".", narrative)
         required_values = cls._extract_indicator_values(findings)
         missing_values = [value for value in required_values if value not in narrative]
         if not missing_values:
@@ -268,26 +274,25 @@ class LLMReportGenerator(ReportGenerator):
 
     @classmethod
     def _remove_repeated_indicator_mentions(cls, narrative: str) -> str:
-        """Keep the first sentence containing an indicator value."""
+        """Remove sentences whose indicator values have all appeared already."""
         paragraphs = [part.strip() for part in narrative.split("\n\n") if part.strip()]
         cleaned_paragraphs: list[str] = []
         seen_values: set[str] = set()
 
         for paragraph in paragraphs:
             kept: list[str] = []
-            for sentence in cls._SENTENCE_PATTERN.findall(paragraph):
+            sentences = cls._SENTENCE_PATTERN.findall(paragraph)
+
+            for sentence in sentences:
                 values = cls._extract_indicator_values_from_text(sentence)
-                repeated = bool(values) and any(
-                    value in seen_values for value in values
-                )
-                if repeated:
+                if values and all(value in seen_values for value in values):
                     continue
                 kept.append(" ".join(sentence.split()).strip())
                 seen_values.update(values)
 
             if kept:
                 cleaned_paragraphs.append(" ".join(kept).strip())
-            elif not cls._SENTENCE_PATTERN.findall(paragraph):
+            elif not sentences:
                 cleaned_paragraphs.append(paragraph)
 
         return "\n\n".join(cleaned_paragraphs).strip()
