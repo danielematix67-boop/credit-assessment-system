@@ -158,7 +158,8 @@ def render_assessment_overview(result: Any) -> None:
         st.success("No deterministic risk rules were triggered by the available information.")
 
     st.caption(
-        "The chart shows the evidence produced by the Rule Engine. It does not calculate or modify the final assessment."
+        "The chart shows the evidence produced by the Rule Engine. "
+        "It does not calculate or modify the final assessment."
     )
 
 
