@@ -33,10 +33,12 @@ def _status(rule: Any) -> str:
 
 
 def _section_header(title: str, description: str) -> None:
-    st.markdown(
-        f'''<div class="ui-section-header"><div class="ui-section-title">{title}</div><div class="ui-section-description">{description}</div></div>''',
-        unsafe_allow_html=True,
+    header = (
+        '<div class="ui-section-header"><div class="ui-section-title">'
+        f'{title}</div><div class="ui-section-description">{description}'
+        "</div></div>"
     )
+    st.markdown(header, unsafe_allow_html=True)
 
 
 def _status_class(status: str) -> str:
