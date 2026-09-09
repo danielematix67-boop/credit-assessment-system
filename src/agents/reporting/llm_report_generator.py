@@ -12,16 +12,10 @@ from src.models.report import Report, ReportFindingGroup
 class LLMReportGenerator(ReportGenerator):
     """Generate the executive narrative from deterministic findings."""
 
-    _INDICATOR_PATTERNS = (
-        re.compile(r"€\s*-?\d(?:[\d,.]*\d)?"),
-        re.compile(r"-?\d[\d,.]*\s*%"),
-        re.compile(r"-?\d[\d,.]*\s*x\b", re.IGNORECASE),
-    )
     _INDICATOR_PATTERN = re.compile(
         r"€\s*-?\d(?:[\d,.]*\d)?|-?\d[\d,.]*\s*%|-?\d[\d,.]*\s*x\b",
         re.IGNORECASE,
     )
-
     _STATUS_PREFIX_PATTERN = re.compile(
         r"^\s*Assessment status:\s*[^.\n]+\.?(?:\s*\n)?",
         re.IGNORECASE,
@@ -31,13 +25,12 @@ class LLMReportGenerator(ReportGenerator):
         re.IGNORECASE,
     )
     _NUMERIC_SPACING_PATTERN = re.compile(r"(?<=\d)\s*\.\s*(?=\d)")
-    _SENTENCE_PATTERN = re.compile(r"[^.!?]+[.!?]+")
 
     def __init__(
         self,
         llm_client: LLMClient,
         prompt_builder: ReportPromptBuilder | None = None,
-        require_indicator_values: bool = False,
+        require_indicator_values: bool = True,
     ) -> None:
         self.llm_client = llm_client
         self.prompt_builder = (
@@ -89,10 +82,6 @@ class LLMReportGenerator(ReportGenerator):
         status_label = str(status_value).capitalize()
         return f"Assessment Status: {status_label}\n\n{narrative}"
 
-    # ============================================================
-    # Indicator grounding
-    # ============================================================
-
     @classmethod
     def _extract_indicator_values(cls, findings: list[AnalysisFinding]) -> list[str]:
         """Extract supplied numerical indicator values in source order."""
@@ -119,7 +108,7 @@ class LLMReportGenerator(ReportGenerator):
         narrative: str,
         findings: list[AnalysisFinding],
     ) -> str:
-        """Accept the LLM narrative only when every supplied indicator is present exactly once."""
+        """Accept the LLM narrative only when supplied indicators are preserved once."""
         narrative = cls._NUMERIC_SPACING_PATTERN.sub(".", narrative)
         required_values = cls._extract_indicator_values(findings)
 
@@ -142,10 +131,6 @@ class LLMReportGenerator(ReportGenerator):
         """Backward-compatible alias for strict indicator validation."""
         return cls._validate_indicator_grounding(narrative, findings)
 
-    # ============================================================
-    # Finding grouping
-    # ============================================================
-
     @staticmethod
     def _group_findings_by_category(
         findings: list[AnalysisFinding],
@@ -159,13 +144,9 @@ class LLMReportGenerator(ReportGenerator):
             for category, category_findings in grouped.items()
         ]
 
-    # ============================================================
-    # LLM response validation
-    # ============================================================
-
     @classmethod
     def _validate_response(cls, response: str) -> str:
-        """Normalise the LLM narrative and remove prohibited duplication."""
+        """Normalise the LLM narrative without deleting valid findings."""
         if not response or not response.strip():
             raise ValueError("LLM returned an empty response")
 
@@ -173,8 +154,6 @@ class LLMReportGenerator(ReportGenerator):
         narrative = cls._STATUS_PREFIX_PATTERN.sub("", narrative, count=1).strip()
         narrative = cls._NUMERIC_SPACING_PATTERN.sub(".", narrative)
         narrative = cls._remove_category_prefixes(narrative)
-        narrative = cls._remove_duplicate_sentences(narrative)
-        narrative = cls._remove_repeated_indicator_mentions(narrative)
 
         if not narrative:
             raise ValueError("LLM returned an empty narrative")
@@ -182,69 +161,18 @@ class LLMReportGenerator(ReportGenerator):
 
     @classmethod
     def _remove_category_prefixes(cls, narrative: str) -> str:
-        """Remove accidental category labels from the beginning of narrative paragraphs."""
-        paragraphs = [part.strip() for part in narrative.split("\n\n") if part.strip()]
-        cleaned = [cls._CATEGORY_PREFIX_PATTERN.sub("", paragraph, count=1).strip() for paragraph in paragraphs]
+        """Remove accidental category labels without altering narrative content."""
+        paragraphs = [
+            part.strip()
+            for part in narrative.split("\n\n")
+            if part.strip()
+        ]
+        cleaned = [
+            cls._CATEGORY_PREFIX_PATTERN.sub(
+                "",
+                paragraph,
+                count=1,
+            ).strip()
+            for paragraph in paragraphs
+        ]
         return "\n\n".join(part for part in cleaned if part)
-
-    @classmethod
-    def _remove_duplicate_sentences(cls, narrative: str) -> str:
-        """Remove exact repeated sentences while preserving paragraphs and order."""
-        paragraphs = [part.strip() for part in narrative.split("\n\n") if part.strip()]
-        cleaned_paragraphs: list[str] = []
-        seen: set[str] = set()
-
-        for paragraph in paragraphs:
-            sentences = cls._SENTENCE_PATTERN.findall(paragraph)
-            if not sentences:
-                key = " ".join(paragraph.split()).casefold()
-                if key not in seen:
-                    seen.add(key)
-                    cleaned_paragraphs.append(paragraph)
-                continue
-
-            unique_sentences: list[str] = []
-            for sentence in sentences:
-                cleaned = " ".join(sentence.split()).strip()
-                key = cleaned.casefold()
-                if key in seen:
-                    continue
-                seen.add(key)
-                unique_sentences.append(cleaned)
-
-            remainder = paragraph
-            for sentence in sentences:
-                remainder = remainder.replace(sentence, "", 1)
-            remainder = " ".join(remainder.split()).strip()
-            if remainder:
-                unique_sentences.append(remainder)
-
-            if unique_sentences:
-                cleaned_paragraphs.append(" ".join(unique_sentences).strip())
-
-        return "\n\n".join(cleaned_paragraphs).strip()
-
-    @classmethod
-    def _remove_repeated_indicator_mentions(cls, narrative: str) -> str:
-        """Remove sentences whose indicator values have all appeared already."""
-        paragraphs = [part.strip() for part in narrative.split("\n\n") if part.strip()]
-        cleaned_paragraphs: list[str] = []
-        seen_values: set[str] = set()
-
-        for paragraph in paragraphs:
-            kept: list[str] = []
-            sentences = cls._SENTENCE_PATTERN.findall(paragraph)
-
-            for sentence in sentences:
-                values = cls._extract_indicator_values_from_text(sentence)
-                if values and all(value in seen_values for value in values):
-                    continue
-                kept.append(" ".join(sentence.split()).strip())
-                seen_values.update(values)
-
-            if kept:
-                cleaned_paragraphs.append(" ".join(kept).strip())
-            elif not sentences:
-                cleaned_paragraphs.append(paragraph)
-
-        return "\n\n".join(cleaned_paragraphs).strip()
