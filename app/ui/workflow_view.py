@@ -32,5 +32,6 @@ def render_workflow_architecture() -> None:
         st.markdown(pipeline_html, unsafe_allow_html=True)
         st.caption(
             "The Rule Engine determines the credit judgement, rule outcomes, severity and thresholds. "
-            "The Analysis layer organises the findings. AI is used only for report narrative and cannot change the judgement."
+            "The Analysis layer organises the findings. "
+            "AI is used only for report narrative and cannot change the judgement."
         )
