@@ -39,6 +39,13 @@ def _rule_severity(rule_result: Any) -> str:
     return str(getattr(severity_obj, "value", str(severity_obj or "—")))
 
 
+def _severity_rank(severity: str) -> int:
+    """Return a display-only severity ranking."""
+    return {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}.get(
+        severity.upper(), 0
+    )
+
+
 # ============================================================
 # Decision Path
 # ============================================================
@@ -72,8 +79,7 @@ def render_decision_path(result: Any) -> None:
     ]
 
     cols = st.columns(len(steps))
-    for number, title, description in steps:
-        column = cols[len(cols) - len(steps) + steps.index((number, title, description))]
+    for column, (number, title, description) in zip(cols, steps):
         with column:
             with st.container(border=True):
                 st.caption(number)
@@ -165,6 +171,99 @@ def render_risk_indicator_dashboard(result: Any) -> None:
         y="Triggered rules",
         horizontal=True,
         height=max(180, 55 * len(category_counts)),
+    )
+
+
+# ============================================================
+# Risk Driver Map
+# ============================================================
+
+
+def render_risk_driver_map(result: Any) -> None:
+    """Show the linkage from triggered rules to risk categories and final assessment."""
+    rule_results = _get_rule_results(result)
+    triggered_rules = [
+        rule_result
+        for rule_result in rule_results
+        if _rule_status(rule_result) == "TRIGGERED"
+    ]
+
+    if not triggered_rules:
+        st.subheader("Risk Driver Map")
+        st.success("No triggered rules were identified, so no active risk drivers are present.")
+        return
+
+    assessment = getattr(result, "assessment", None)
+    assessment_status = str(
+        getattr(
+            getattr(assessment, "status", None),
+            "value",
+            "Unknown",
+        )
+    )
+
+    grouped: dict[str, list[Any]] = {}
+    for rule_result in triggered_rules:
+        category = str(getattr(rule_result, "category", "—"))
+        grouped.setdefault(category, []).append(rule_result)
+
+    st.subheader("Risk Driver Map")
+    st.caption(
+        "This view links each triggered rule to its risk category and shows how the "
+        "identified drivers support the final assessment outcome."
+    )
+
+    category_items = sorted(
+        grouped.items(),
+        key=lambda item: (
+            -max(_severity_rank(_rule_severity(rule)) for rule in item[1]),
+            -len(item[1]),
+            item[0],
+        ),
+    )
+
+    cols_per_row = 2
+    for start in range(0, len(category_items), cols_per_row):
+        row_items = category_items[start : start + cols_per_row]
+        columns = st.columns(len(row_items))
+
+        for column, (category, category_rules) in zip(columns, row_items):
+            with column:
+                with st.container(border=True):
+                    highest_severity = max(
+                        (_rule_severity(rule) for rule in category_rules),
+                        key=_severity_rank,
+                    )
+                    st.markdown(f"**{category.upper()}**")
+                    st.metric("Triggered rules", len(category_rules))
+                    st.caption(f"Highest severity: {highest_severity}")
+
+                    for rule_result in category_rules:
+                        rule_id = str(getattr(rule_result, "rule_id", "—"))
+                        rule_name = str(getattr(rule_result, "rule_name", "—"))
+                        value = getattr(rule_result, "value", None)
+                        threshold = getattr(rule_result, "threshold", None)
+
+                        st.markdown(f"**{rule_id}** · {rule_name}")
+                        if value is not None and threshold is not None:
+                            st.caption(
+                                f"Actual {float(value):g} vs threshold {float(threshold):g}"
+                            )
+                        st.caption(f"Severity: {_rule_severity(rule_result)}")
+
+    st.markdown("#### Risk Drivers → Assessment")
+    assessment_cols = st.columns(3)
+    with assessment_cols[0]:
+        st.metric("Active risk categories", len(grouped))
+    with assessment_cols[1]:
+        st.metric("Triggered rules", len(triggered_rules))
+    with assessment_cols[2]:
+        st.metric("Final assessment", assessment_status)
+
+    st.caption(
+        "Interpretation: each active category is supported by one or more triggered "
+        "deterministic rules; together these rule findings provide the evidence base "
+        "for the final assessment."
     )
 
 
