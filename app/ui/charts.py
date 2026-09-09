@@ -224,7 +224,11 @@ def render_decision_path(result: Any) -> None:
         for rule in triggered_rules
     )
     if not evidence_chips:
-        evidence_chips = '<span class="decision-chip decision-chip-muted">No triggered rules</span>'
+        evidence_chips = (
+            '<span class="decision-chip decision-chip-muted">'
+            "No triggered rules"
+            "</span>"
+        )
 
     status_class = "result" if assessment_status.upper() == "CRITICAL" else "det"
     decision_flow = f"""
@@ -233,14 +237,18 @@ def render_decision_path(result: Any) -> None:
                 <div class="decision-node-kicker">01 · Inputs</div>
                 <div class="decision-node-title">Financial Indicators</div>
                 <div class="decision-node-value">{len(rule_results)}</div>
-                <div class="decision-node-description">Deterministic indicators evaluated from the credit position.</div>
+                <div class="decision-node-description">
+                    Deterministic indicators evaluated from the credit position.
+                </div>
             </div>
             <div class="decision-arrow">→</div>
             <div class="decision-node det">
                 <div class="decision-node-kicker">02 · Evidence</div>
                 <div class="decision-node-title">Rule Engine Outcomes</div>
                 <div class="decision-node-value">{len(triggered_rules)} triggered</div>
-                <div class="decision-node-description">Triggered rules provide the factual risk evidence used by the assessment.</div>
+                <div class="decision-node-description">
+                    Triggered rules provide the factual risk evidence used by the assessment.
+                </div>
                 <div class="decision-evidence">{evidence_chips}</div>
             </div>
             <div class="decision-arrow">→</div>
@@ -248,7 +256,9 @@ def render_decision_path(result: Any) -> None:
                 <div class="decision-node-kicker">03 · Judgement</div>
                 <div class="decision-node-title">Monitoring Assessment</div>
                 <div class="decision-node-value">{_escape_html(assessment_status)}</div>
-                <div class="decision-node-description">Final status returned by the deterministic assessment engine.</div>
+                <div class="decision-node-description">
+                    Final status returned by the deterministic assessment engine.
+                </div>
             </div>
         </div>
         <div class="decision-legend">
