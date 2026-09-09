@@ -72,14 +72,13 @@ def render_decision_path(result: Any) -> None:
     ]
 
     cols = st.columns(len(steps))
-    for index, (column, (number, title, description)) in enumerate(zip(cols, steps)):
+    for number, title, description in steps:
+        column = cols[len(cols) - len(steps) + steps.index((number, title, description))]
         with column:
             with st.container(border=True):
                 st.caption(number)
                 st.markdown(f"**{title}**")
                 st.caption(description)
-        if index < len(steps) - 1:
-            pass
 
     st.caption(
         "Decision principle: actual financial indicators are compared with configured "
@@ -300,27 +299,45 @@ def render_rule_indicator_detail(result: Any) -> None:
     else:
         value_float = float(value)
         threshold_float = float(threshold)
+        gap = value_float - threshold_float
 
-        comparison_data = {
-            "Metric": ["Actual value", "Threshold"],
-            "Value": [value_float, threshold_float],
-        }
+        comparison_data = pd.DataFrame(
+            {
+                "Metric": ["Actual value", "Threshold"],
+                "Value": [value_float, threshold_float],
+            }
+        )
 
+        st.markdown("##### Actual vs Threshold")
         st.bar_chart(
             comparison_data,
             x="Metric",
             y="Value",
             horizontal=True,
-            height=180,
+            height=190,
         )
 
-        value_cols = st.columns(2)
+        value_cols = st.columns(3)
 
         with value_cols[0]:
             st.metric("Actual value", f"{value_float:g}")
 
         with value_cols[1]:
             st.metric("Threshold", f"{threshold_float:g}")
+
+        with value_cols[2]:
+            st.metric("Threshold gap", f"{gap:+g}")
+
+        if status == "TRIGGERED":
+            st.warning(
+                f"The actual value differs from the configured threshold by "
+                f"{gap:+g}. This rule is therefore recorded as TRIGGERED by the Rule Engine."
+            )
+        elif status == "NOT_TRIGGERED":
+            st.success(
+                f"The actual value differs from the configured threshold by "
+                f"{gap:+g}. This rule is recorded as NOT_TRIGGERED by the Rule Engine."
+            )
 
     if reason:
         st.markdown("**Why did this rule produce this result?**")
