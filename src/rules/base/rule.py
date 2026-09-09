@@ -87,7 +87,7 @@ class Rule(ABC):
         severity: RuleSeverity | None = None,
     ) -> RuleResult:
         """
-        Build a deterministic RuleResult.
+        Build a deterministic RuleResult with explainability metadata.
 
         If severity is explicitly provided, it is used.
 
@@ -96,6 +96,10 @@ class Rule(ABC):
 
         For results without a value, the rule-level default severity
         is used.
+
+        The result also carries the indicator and severity direction
+        used by the rule, so downstream consumers can explain the
+        deterministic evaluation without reconstructing rule logic.
 
         The reason is automatically enriched with the rule ID
         and rule name for traceability.
@@ -119,6 +123,8 @@ class Rule(ABC):
             threshold=self.config.threshold,
             severity=resolved_severity,
             reason=self._format_reason(reason),
+            indicator=self.config.indicator or self.config.rule_name,
+            direction=self.config.severity_direction,
         )
 
     def _not_evaluable(
