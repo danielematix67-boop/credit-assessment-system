@@ -105,9 +105,8 @@ def render_why_section(result: Any) -> None:
     """Explain the main risk drivers using existing findings and rule results."""
     st.markdown("### Why? — Main Risk Drivers")
     st.caption(
-        "These are the key findings identified by the deterministic analysis layer. "
-        "Each card connects the finding to the underlying rule and, when available, "
-        "shows the actual value against its configured threshold."
+        "Triggered rules are shown first because they are the rules whose conditions "
+        "were met. Key findings are then shown as supporting evidence."
     )
 
     findings = list(getattr(getattr(result, "analysis", None), "key_findings", []) or [])
@@ -123,15 +122,41 @@ def render_why_section(result: Any) -> None:
         st.success("No key findings were identified by the assessment.")
         return
 
+    enriched_findings = []
     for finding in findings:
+        rule_id = str(getattr(finding, "rule_id", "—"))
+        rule_result = rule_by_id.get(rule_id)
+        status_obj = getattr(rule_result, "status", None) if rule_result else None
+        rule_status = getattr(status_obj, "value", str(status_obj or "—"))
+        enriched_findings.append((rule_status == "TRIGGERED", finding, rule_result, rule_status))
+
+    enriched_findings.sort(key=lambda item: not item[0])
+    triggered_count = sum(item[0] for item in enriched_findings)
+
+    if triggered_count:
+        st.warning(
+            f"{triggered_count} key finding(s) are linked to triggered rules and "
+            "should be read as the primary risk drivers."
+        )
+
+    supporting_started = False
+    for is_triggered, finding, rule_result, rule_status in enriched_findings:
+        if not is_triggered and not supporting_started:
+            st.markdown("#### Supporting Findings")
+            supporting_started = True
+
         rule_id = str(getattr(finding, "rule_id", "—"))
         severity_obj = getattr(finding, "severity", None)
         severity = getattr(severity_obj, "value", str(severity_obj or "—"))
         category = str(getattr(finding, "category", "—"))
-        rule_result = rule_by_id.get(rule_id)
 
         with st.container(border=True):
-            header_cols = st.columns([1.5, 3.5, 1.5])
+            if is_triggered:
+                st.markdown("**PRIMARY RISK DRIVER**")
+            else:
+                st.markdown("**SUPPORTING FINDING**")
+
+            header_cols = st.columns([1.4, 3.2, 1.4])
 
             with header_cols[0]:
                 st.markdown(f"**{rule_id}**")
@@ -149,12 +174,6 @@ def render_why_section(result: Any) -> None:
                 indicator = str(getattr(rule_result, "rule_name", "—"))
                 value = getattr(rule_result, "value", None)
                 threshold = getattr(rule_result, "threshold", None)
-                status_obj = getattr(rule_result, "status", None)
-                rule_status = getattr(
-                    status_obj,
-                    "value",
-                    str(status_obj or "—"),
-                )
 
                 st.markdown(f"**Indicator:** {indicator}")
 
@@ -162,15 +181,15 @@ def render_why_section(result: Any) -> None:
                 with evidence_cols[0]:
                     st.metric("Rule status", str(rule_status))
                 with evidence_cols[1]:
-                    if value is None:
-                        st.metric("Actual value", "N/A")
-                    else:
-                        st.metric("Actual value", f"{float(value):g}")
+                    st.metric(
+                        "Actual value",
+                        "N/A" if value is None else f"{float(value):g}",
+                    )
                 with evidence_cols[2]:
-                    if threshold is None:
-                        st.metric("Threshold", "N/A")
-                    else:
-                        st.metric("Threshold", f"{float(threshold):g}")
+                    st.metric(
+                        "Threshold",
+                        "N/A" if threshold is None else f"{float(threshold):g}",
+                    )
 
             st.markdown("**Why it matters**")
             st.write(finding.text)
