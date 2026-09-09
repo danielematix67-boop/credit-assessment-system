@@ -289,7 +289,8 @@ def render_assessment_overview(result: Any) -> None:
 
     _section_header(
         "Assessment Overview",
-        "Concise summary of the deterministic assessment. Detailed rule findings are shown only in the Risk Indicator Dashboard.",
+        "Concise summary of the deterministic assessment. Detailed rule findings are shown only "
+        "in the Risk Indicator Dashboard.",
     )
     cols = st.columns(2)
     with cols[0]:
