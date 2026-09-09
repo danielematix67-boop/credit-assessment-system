@@ -43,6 +43,93 @@ def _section_header(title: str, description: str) -> None:
     )
 
 
+def _render_assessment_status(status: str) -> None:
+    """Render the assessment status with semantic visual emphasis."""
+    normalized = status.upper().replace(" ", "_")
+    palette = {
+        "CRITICAL": ("#b91c1c", "rgba(185, 28, 28, 0.10)"),
+        "ATTENTION": ("#b45309", "rgba(180, 83, 9, 0.10)"),
+        "NORMAL": ("#166534", "rgba(22, 101, 52, 0.10)"),
+    }
+    foreground, background = palette.get(
+        normalized,
+        ("#4b5563", "rgba(107, 114, 128, 0.10)"),
+    )
+    label = normalized.replace("_", " ").title()
+
+    st.markdown(
+        f"""
+        <span style="
+            display:inline-flex;
+            align-items:center;
+            padding:0.24rem 0.72rem;
+            border-radius:999px;
+            border:1px solid {foreground}55;
+            background:{background};
+            color:{foreground};
+            font-size:0.78rem;
+            font-weight:750;
+            letter-spacing:0.02em;
+        ">{label}</span>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_driver_highlights(result: Any) -> None:
+    """Highlight the first three triggered rules before the full evidence table."""
+    triggered = [r for r in _rule_results(result) if _status_value(r) == "TRIGGERED"]
+    if not triggered:
+        return
+
+    severity_rank = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+    triggered = sorted(
+        triggered,
+        key=lambda rule: severity_rank.get(_severity_value(rule).upper(), 99),
+    )
+
+    columns = st.columns(min(3, len(triggered)))
+    severity_styles = {
+        "CRITICAL": ("#b91c1c", "rgba(185, 28, 28, 0.08)"),
+        "HIGH": ("#c2410c", "rgba(194, 65, 12, 0.08)"),
+        "MEDIUM": ("#b45309", "rgba(180, 83, 9, 0.08)"),
+        "LOW": ("#4b5563", "rgba(107, 114, 128, 0.08)"),
+    }
+
+    for column, rule in zip(columns, triggered[:3]):
+        severity = _severity_value(rule).upper() or "UNKNOWN"
+        foreground, background = severity_styles.get(
+            severity,
+            ("#4b5563", "rgba(107, 114, 128, 0.08)"),
+        )
+        rule_id = str(getattr(rule, "rule_id", "—"))
+        rule_name = str(getattr(rule, "rule_name", "Risk driver"))
+        with column:
+            st.markdown(
+                f"""
+                <div style="
+                    min-height:112px;
+                    padding:0.85rem 0.95rem;
+                    border:1px solid {foreground}45;
+                    border-left:4px solid {foreground};
+                    border-radius:0.75rem;
+                    background:{background};
+                ">
+                    <div style="font-size:0.70rem;color:{foreground};font-weight:750;">
+                        {severity}
+                    </div>
+                    <div style="font-size:0.82rem;font-weight:700;margin-top:0.22rem;">
+                        {rule_id}
+                    </div>
+                    <div style="font-size:0.76rem;line-height:1.35;margin-top:0.18rem;">
+                        {rule_name}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+
 def render_report_source(
     generator_used: str | None,
     selected_reporting_mode: str,
@@ -95,7 +182,7 @@ def render_report_kpis(result: Any) -> None:
 
 
 def render_key_risk_drivers(result: Any) -> None:
-    """Render only the highest-priority deterministic risk drivers."""
+    """Render the highest-priority deterministic risk drivers."""
     triggered = [r for r in _rule_results(result) if _status_value(r) == "TRIGGERED"]
 
     _section_header(
@@ -106,6 +193,9 @@ def render_key_risk_drivers(result: Any) -> None:
         st.success("No risk rules were triggered by the available financial information.")
         return
 
+    _render_driver_highlights(result)
+    st.caption("Complete list of triggered rules")
+
     severity_rank = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
     triggered = sorted(
         triggered,
@@ -113,7 +203,7 @@ def render_key_risk_drivers(result: Any) -> None:
     )
 
     rows = []
-    for rule in triggered[:5]:
+    for rule in triggered:
         category = getattr(rule, "category", "—")
         category = getattr(category, "value", str(category))
         rows.append(
@@ -127,9 +217,8 @@ def render_key_risk_drivers(result: Any) -> None:
             }
         )
 
-    st.dataframe(rows, use_container_width=True, hide_index=True)
-    if len(triggered) > 5:
-        st.caption(f"Showing the 5 highest-priority drivers out of {len(triggered)} triggered rules.")
+    with st.expander("View all triggered rules", expanded=False):
+        st.dataframe(rows, use_container_width=True, hide_index=True)
 
 
 def render_report_findings(result: Any) -> None:
@@ -212,7 +301,7 @@ def render_report_tab(
 
         with header[0]:
             st.caption("Final assessment")
-            show_badge(status, "det")
+            _render_assessment_status(status)
         with header[1]:
             st.caption("Report generated by")
             render_report_source(
