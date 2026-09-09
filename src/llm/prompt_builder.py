@@ -11,7 +11,7 @@ class ReportPromptBuilder:
 
     The prompt builder prepares deterministic findings for the LLM
     by grouping them by financial category and ordering them by
-    deterministic severity.
+    deterministic category and severity.
 
     The deterministic assessment remains the sole source of truth.
     The LLM is responsible only for narrative generation.
@@ -36,8 +36,8 @@ class ReportPromptBuilder:
         """
         Build the complete prompt for executive narrative generation.
 
-        Findings are grouped by category and ordered by deterministic
-        severity before being passed to the LLM.
+        Findings are grouped by their deterministic category order and
+        ordered by severity before being passed to the LLM.
 
         Risk factors are not passed as a separate duplicated list,
         since they are already a subset of key findings.
@@ -46,11 +46,13 @@ class ReportPromptBuilder:
         grouped_findings = self._group_findings(
             analysis.key_findings,
         )
+        category_order = list(grouped_findings.keys())
 
         return self.template.render(
             findings=self._format_grouped_findings(
                 grouped_findings,
             ),
+            category_order=self._format_category_order(category_order),
         )
 
     # ============================================================
@@ -65,6 +67,7 @@ class ReportPromptBuilder:
         """
         Group findings by deterministic category.
 
+        Categories preserve their first deterministic occurrence.
         Findings within each category are ordered by severity.
         Original order is preserved for findings with equal severity.
         """
@@ -87,6 +90,16 @@ class ReportPromptBuilder:
     # ============================================================
     # Formatting
     # ============================================================
+
+    @staticmethod
+    def _format_category_order(categories: list[str]) -> str:
+        if not categories:
+            return "None."
+
+        return "\n".join(
+            f"{index}. {category}"
+            for index, category in enumerate(categories, start=1)
+        )
 
     @classmethod
     def _format_grouped_findings(
