@@ -5,6 +5,7 @@ import streamlit as st
 
 from app.ui.charts import render_decision_path, render_rule_assessment_summary
 from app.ui.credit_position import display_position_table
+from app.ui.explainability import render_evidence_chain
 from app.ui.report import render_report_tab
 
 
@@ -118,10 +119,11 @@ def render_decision_evidence(result: Any) -> None:
     for rule in triggered:
         category = getattr(rule, "category", "—")
         category = getattr(category, "value", str(category))
+        indicator = getattr(rule, "indicator", None) or getattr(rule, "rule_name", "—")
         rows.append(
             {
                 "Rule": str(getattr(rule, "rule_id", "—")),
-                "Indicator": str(getattr(rule, "rule_name", "—")),
+                "Indicator": str(indicator),
                 "Actual": _format_value(getattr(rule, "value", None)),
                 "Threshold": _format_value(getattr(rule, "threshold", None)),
                 "Severity": _severity(rule) or "—",
@@ -206,4 +208,5 @@ def render_results(
     )
 
     render_decision_evidence(result)
+    render_evidence_chain(result)
     render_audit_trail(result, assessment_position)
