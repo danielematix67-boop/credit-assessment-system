@@ -60,16 +60,15 @@ class ReportPromptTemplate:
         "- Within each category, discuss higher-severity findings before lower-severity findings.\n"
         "- Combine related findings where this improves readability, but do not lose any finding.\n"
         "- State the metric, its direction or level, and only the directly supported implication.\n"
-        "- Mention each distinct numerical indicator value once. If multiple findings share the same "
-        "value, the single occurrence must still support all relevant findings without inventing information.\n"
+        "- Mention each material indicator value once.\n"
+        "- Do not repeat an indicator value or indicator statement after it has already been stated.\n"
         "- Avoid formulaic repetition such as 'indicating', 'highlighting', 'suggesting' or "
         "'underscoring' in consecutive sentences.\n"
         "- Do not add generic concluding sentences that merely restate that the company is under pressure.\n"
         "- Do not create a final summary paragraph that repeats previous categories.\n"
         "- Narrative length should scale with the number of supplied findings: cover all material findings "
         "naturally, without padding or unnecessary repetition.\n"
-        "- Use professional, concise credit-monitoring language rather than generic corporate language.\n"
-        "- Do not repeat an indicator value or indicator statement after it has already been stated."
+        "- Use professional, concise credit-monitoring language rather than generic corporate language."
     )
 
     OUTPUT_CONTRACT = (
