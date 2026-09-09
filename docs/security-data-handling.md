@@ -164,29 +164,33 @@ The current implementation performs a basic output validation that rejects an em
 
 ## 7. Logging and Observability
 
-Operational logging should support troubleshooting without exposing sensitive credit information or credentials.
+Operational logging and execution metadata should support troubleshooting and traceability without exposing sensitive credit information or credentials.
 
-Recommended logging fields include:
+The application records execution-level metadata for successfully completed workflows, including:
 
-- assessment or workflow identifier;
-- execution timestamp;
+- unique execution identifier;
+- UTC execution timestamp;
 - reporting mode;
 - generator used;
 - fallback activation;
-- error category;
-- execution duration;
-- LLM latency where applicable.
+- classified reporting error category, when applicable;
+- phase and total execution duration.
 
-Avoid logging:
+These fields are intended as provenance and diagnostic information. They must not be used as a substitute for structured credit data and must not contain customer identifiers or unnecessary financial details.
+
+Avoid logging or exposing:
 
 - API keys;
 - authentication tokens;
 - complete customer records;
 - unnecessary financial details;
 - complete prompts containing sensitive information;
-- complete model responses when they may contain sensitive data.
+- complete model responses when they may contain sensitive data;
+- raw provider errors when they may contain credentials, tokens, or sensitive request data.
 
 Where detailed diagnostic data is required, logs should use controlled identifiers and appropriate access restrictions.
+
+Execution metadata is currently in-memory and attached to the workflow result; it is not a persistent audit trail. If durable observability is introduced, retention, access control, encryption, and data minimization requirements must be defined before implementation.
 
 ---
 
@@ -266,6 +270,16 @@ LLM Failure
 Deterministic Assessment remains valid
 ```
 
+### Observability isolation
+
+```text
+Execution Metadata
+    ≠
+Assessment Decision
+```
+
+Execution metadata describes how the workflow completed; it does not influence rule evaluation or assessment status.
+
 ---
 
 ## 11. Security Validation Checklist
@@ -279,10 +293,12 @@ Before a production deployment, verify:
 - [ ] Prompts contain only required assessment information.
 - [ ] LLM output is treated as untrusted text.
 - [ ] LLM output cannot modify structured assessment fields.
+- [ ] Execution metadata contains no unnecessary sensitive information.
 - [ ] Logs do not expose credentials or unnecessary sensitive data.
 - [ ] Access follows least-privilege principles.
 - [ ] Deterministic fallback remains available when required by the deployment.
 - [ ] Retention and deletion requirements are documented for production data.
+- [ ] Persistent audit/observability storage, if introduced, has explicit retention and access controls.
 
 ---
 
