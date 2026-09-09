@@ -37,6 +37,52 @@ def render_report_source(
     )
 
 
+def render_execution_metadata(result: Any) -> None:
+    """Render workflow execution metadata for traceability."""
+    metadata = getattr(result, "execution_metadata", None)
+    if metadata is None:
+        return
+
+    with st.expander("Execution & Audit Metadata", expanded=False):
+        st.caption("Technical provenance for this workflow execution.")
+
+        first_row = st.columns(4)
+        with first_row[0]:
+            st.markdown("**Execution ID**")
+            st.code(metadata.execution_id, language=None)
+        with first_row[1]:
+            st.markdown("**Started At**")
+            st.write(metadata.started_at.isoformat())
+        with first_row[2]:
+            st.markdown("**Reporting Mode**")
+            st.write(metadata.reporting_mode)
+        with first_row[3]:
+            st.markdown("**Generator**")
+            st.write(metadata.generator_used or "Not available")
+
+        second_row = st.columns(4)
+        with second_row[0]:
+            st.markdown("**Fallback Used**")
+            st.write("Yes" if metadata.fallback_used else "No")
+        with second_row[1]:
+            st.markdown("**Error Category**")
+            st.write(metadata.error_category or "None")
+        with second_row[2]:
+            st.markdown("**Assessment Time**")
+            st.write(f"{metadata.assessment_elapsed_time:.3f} s")
+        with second_row[3]:
+            st.markdown("**Analysis Time**")
+            st.write(f"{metadata.analysis_elapsed_time:.3f} s")
+
+        third_row = st.columns(2)
+        with third_row[0]:
+            st.markdown("**Reporting Time**")
+            st.write(f"{metadata.reporting_elapsed_time:.3f} s")
+        with third_row[1]:
+            st.markdown("**Total Execution Time**")
+            st.write(f"{metadata.total_elapsed_time:.3f} s")
+
+
 def render_report_tab(
     result: Any,
     selected_reporting_mode: str,
@@ -72,3 +118,5 @@ def render_report_tab(
         st.markdown("### Report Limitations")
         for limitation in result.report.limitations:
             st.write(f"• {limitation}")
+
+    render_execution_metadata(result)
