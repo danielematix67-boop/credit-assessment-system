@@ -23,7 +23,12 @@ def make_analysis_finding(
     severity: RuleSeverity = RuleSeverity.MEDIUM,
     text: str = "Test finding.",
 ) -> AnalysisFinding:
-    return AnalysisFinding(rule_id=rule_id, category=category, severity=severity, text=text)
+    return AnalysisFinding(
+        rule_id=rule_id,
+        category=category,
+        severity=severity,
+        text=text,
+    )
 
 
 def make_analysis(
@@ -116,6 +121,38 @@ def test_deterministic_report_generator_status_is_authoritative_and_separate(gen
         "EBITDA is negative at €-120,000."
     )
     assert report.executive_summary.count("Assessment Status:") == 1
+
+
+def test_deterministic_fallback_keeps_all_findings_in_category_paragraphs(generator):
+    findings = [
+        make_analysis_finding(
+            category="Revenue",
+            text="Revenue growth declined to -20.0%.",
+        ),
+        make_analysis_finding(
+            category="Profitability",
+            text="EBITDA is negative at €-120,000.",
+        ),
+        make_analysis_finding(
+            category="Profitability",
+            text="Interest coverage ratio is -0.2x.",
+        ),
+        make_analysis_finding(
+            category="Leverage",
+            text="NFP to EBITDA stands at 7.0x.",
+        ),
+    ]
+    analysis = make_analysis(
+        status=AssessmentStatus.CRITICAL,
+        key_findings=findings,
+    )
+    report = generator.generate(analysis)
+    assert report.executive_summary == (
+        "Assessment Status: Critical\n\n"
+        "Revenue growth declined to -20.0%.\n\n"
+        "EBITDA is negative at €-120,000. Interest coverage ratio is -0.2x.\n\n"
+        "NFP to EBITDA stands at 7.0x."
+    )
 
 
 def test_deterministic_report_generator_groups_findings_by_category(generator):
