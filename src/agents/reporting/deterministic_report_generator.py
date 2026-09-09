@@ -1,4 +1,5 @@
 from src.agents.reporting.report_generator import ReportGenerator
+from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.models.report import Report, ReportFindingGroup
@@ -68,9 +69,9 @@ class DeterministicReportGenerator(ReportGenerator):
 
     @staticmethod
     def _group_findings_by_category(
-        findings,
+        findings: list[AnalysisFinding],
     ) -> list[ReportFindingGroup]:
-        grouped: dict[str, list] = {}
+        grouped: dict[str, list[AnalysisFinding]] = {}
 
         for finding in findings:
             grouped.setdefault(
