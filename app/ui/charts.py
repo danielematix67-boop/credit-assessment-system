@@ -3,6 +3,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+
 # ============================================================
 # Shared Rule Result Helpers
 # ============================================================
@@ -46,6 +47,14 @@ def _severity_rank(severity: str) -> int:
     )
 
 
+def _rule_indicator(rule_result: Any) -> str:
+    """Return the explicit deterministic indicator, with legacy fallback."""
+    return str(
+        getattr(rule_result, "indicator", None)
+        or getattr(rule_result, "rule_name", "—")
+    )
+
+
 # ============================================================
 # Decision Path
 # ============================================================
@@ -59,7 +68,9 @@ def render_decision_path(result: Any) -> None:
 
     assessment = getattr(result, "assessment", None)
     status_obj = getattr(assessment, "status", None)
-    assessment_status = str(getattr(status_obj, "value", str(status_obj or "Unknown")))
+    assessment_status = str(
+        getattr(status_obj, "value", str(status_obj or "Unknown"))
+    )
 
     counts = _rule_status_counts(result)
     triggered = counts["TRIGGERED"]
@@ -114,10 +125,7 @@ def render_risk_indicator_dashboard(result: Any) -> None:
         rows.append(
             {
                 "Rule": str(getattr(rule_result, "rule_id", "—")),
-                "Indicator": str(
-                    getattr(rule_result, "indicator", None)
-                    or getattr(rule_result, "rule_name", "—")
-                ),
+                "Indicator": _rule_indicator(rule_result),
                 "Actual": getattr(rule_result, "value", None),
                 "Threshold": getattr(rule_result, "threshold", None),
                 "Status": _rule_status(rule_result),
@@ -129,7 +137,6 @@ def render_risk_indicator_dashboard(result: Any) -> None:
     dataframe = pd.DataFrame(rows)
     status_counts = _rule_status_counts(result)
 
-    # Executive summary: answer "how many rules and exceptions?" first.
     metric_cols = st.columns(4)
     with metric_cols[0]:
         st.metric("Rules evaluated", len(rule_results))
@@ -161,8 +168,6 @@ def render_risk_indicator_dashboard(result: Any) -> None:
             height=max(180, 55 * len(category_counts)),
         )
 
-    # Scalable catalogue: with hundreds of rules, exceptions should be the
-    # default investigation path rather than a long unfiltered table.
     st.markdown("#### Rule Catalogue")
     st.caption(
         "Filter the evaluated rules before opening the detailed table. "
@@ -334,10 +339,7 @@ def render_risk_driver_map(result: Any) -> None:
 
                     for rule_result in category_rules:
                         rule_id = str(getattr(rule_result, "rule_id", "—"))
-                        rule_name = str(getattr(rule_result, "rule_name", "—"))
-                        indicator = str(
-                            getattr(rule_result, "indicator", None) or rule_name
-                        )
+                        indicator = _rule_indicator(rule_result)
                         value = getattr(rule_result, "value", None)
                         threshold = getattr(rule_result, "threshold", None)
 
@@ -463,8 +465,7 @@ def render_rule_indicator_detail(result: Any) -> None:
     selected_rule = rule_results[selected_index]
 
     rule_id = getattr(selected_rule, "rule_id", "—")
-    rule_name = getattr(selected_rule, "rule_name", "—")
-    indicator = getattr(selected_rule, "indicator", None) or rule_name
+    indicator = _rule_indicator(selected_rule)
     category = getattr(selected_rule, "category", "—")
     status = _rule_status(selected_rule)
     severity = _rule_severity(selected_rule)
