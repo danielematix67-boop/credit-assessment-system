@@ -38,10 +38,10 @@ class LLMReportGenerator(ReportGenerator):
         re.IGNORECASE,
     )
 
+    _SENTENCE_PATTERN = re.compile(r"[^.!?]+[.!?]+")
+
     _STATUS_DESCRIPTIONS = {
-        AssessmentStatus.NORMAL: (
-            "No significant credit-risk factors identified"
-        ),
+        AssessmentStatus.NORMAL: "No significant credit-risk factors identified",
         AssessmentStatus.ATTENTION: (
             "Credit-risk factors requiring monitoring identified"
         ),
@@ -143,7 +143,8 @@ class LLMReportGenerator(ReportGenerator):
         Ensure local-LLM narratives retain deterministic indicator values.
 
         Only values absent from the generated narrative are supplemented.
-        The supplement is grounded directly in the deterministic findings.
+        The supplement is deliberately concise to avoid repeating the full
+        deterministic finding or introducing a second explanation.
         """
         missing_values = [
             value
@@ -154,27 +155,34 @@ class LLMReportGenerator(ReportGenerator):
         if not missing_values:
             return narrative
 
-        missing_findings = [
-            finding
-            for finding in findings
-            if any(value in finding.text for value in missing_values)
-        ]
+        supplements: list[str] = []
+        for finding in findings:
+            for value in missing_values:
+                if value not in finding.text:
+                    continue
 
-        grounded_findings = []
-        for finding in missing_findings:
-            if finding.text not in grounded_findings:
-                grounded_findings.append(finding.text)
+                label = cls._indicator_label(finding.text, value)
+                supplement = f"{label}: {value}"
+                if supplement not in supplements:
+                    supplements.append(supplement)
 
-        if grounded_findings:
-            supplement = "The assessment also reflects: " + "; ".join(
-                grounded_findings
-            )
-        else:
-            supplement = "The assessment also reflects indicator values: " + ", ".join(
-                missing_values
-            )
+        if not supplements:
+            supplements = [f"Indicator value: {value}" for value in missing_values]
 
-        return f"{narrative.rstrip()} {supplement}."
+        return f"{narrative.rstrip('. ')}. " + "; ".join(supplements) + "."
+
+    @staticmethod
+    def _indicator_label(text: str, value: str) -> str:
+        """Derive a concise indicator label from a deterministic finding."""
+        prefix = text.split(value, 1)[0].strip(" ,:;.-")
+        prefix = re.sub(
+            r"\b(?:declined|increased|decreased|stands|is|was|remains|reached|at|to)\b.*$",
+            "",
+            prefix,
+            flags=re.IGNORECASE,
+        ).strip(" ,:;.-")
+
+        return prefix or "Indicator value"
 
     # ============================================================
     # Finding grouping
@@ -212,7 +220,8 @@ class LLMReportGenerator(ReportGenerator):
 
         The assessment status is owned by the deterministic engine, so a
         status line produced by the LLM is removed before the application
-        adds its authoritative status line.
+        adds its authoritative status line. Exact duplicate sentences are
+        also removed to keep the executive narrative concise.
         """
         if not response or not response.strip():
             raise ValueError("LLM returned an empty response")
@@ -223,4 +232,34 @@ class LLMReportGenerator(ReportGenerator):
         if not narrative:
             raise ValueError("LLM returned an empty narrative")
 
+        narrative = cls._remove_duplicate_sentences(narrative)
+
+        if not narrative:
+            raise ValueError("LLM returned an empty narrative")
+
         return narrative
+
+    @classmethod
+    def _remove_duplicate_sentences(cls, narrative: str) -> str:
+        """Remove exact repeated sentences while preserving original order."""
+        sentences = cls._SENTENCE_PATTERN.findall(narrative)
+        if not sentences:
+            return narrative
+
+        seen: set[str] = set()
+        unique_sentences: list[str] = []
+
+        for sentence in sentences:
+            cleaned = " ".join(sentence.split()).strip()
+            key = cleaned.casefold()
+            if key in seen:
+                continue
+            seen.add(key)
+            unique_sentences.append(cleaned)
+
+        remainder = narrative[sum(len(sentence) for sentence in sentences) :].strip()
+        result = " ".join(unique_sentences)
+        if remainder:
+            result = f"{result} {remainder}".strip()
+
+        return result
