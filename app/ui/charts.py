@@ -339,21 +339,20 @@ def render_risk_indicator_dashboard(result: Any) -> None:
         ("Final assessment", assessment_status, "Deterministic judgement"),
     ]
 
-    for index, (label, value, description) in enumerate(bridge_items):
-        if index in (0, 2, 4):
-            column = bridge_cols[index]
-            with column:
-                with st.container(border=True):
-                    st.caption(label)
-                    st.markdown(f"### {value}")
-                    st.caption(description)
-        else:
-            with bridge_cols[index]:
-                st.markdown(
-                    "<div style='text-align:center; padding-top:2.1rem; "
-                    "font-size:1.3rem;'>→</div>",
-                    unsafe_allow_html=True,
-                )
+    for card_index, (label, value, description) in zip((0, 2, 4), bridge_items):
+        with bridge_cols[card_index]:
+            with st.container(border=True):
+                st.caption(label)
+                st.markdown(f"### {value}")
+                st.caption(description)
+
+    for arrow_index in (1, 3):
+        with bridge_cols[arrow_index]:
+            st.markdown(
+                "<div style='text-align:center; padding-top:2.1rem; "
+                "font-size:1.3rem;'>→</div>",
+                unsafe_allow_html=True,
+            )
 
     bridge_meta = st.columns(3)
     bridge_meta[0].caption(f"{len(rule_results)} indicators evaluated")
