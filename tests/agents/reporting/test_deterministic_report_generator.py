@@ -54,29 +54,19 @@ def findings_by_category_from_analysis(
     categories: dict[str, list[AnalysisFinding]] = {}
 
     for finding in analysis.key_findings:
-        categories.setdefault(
-            finding.category,
-            [],
-        ).append(finding)
+        categories.setdefault(finding.category, []).append(finding)
 
     return [
-        ReportFindingGroup(
-            category=category,
-            findings=findings,
-        )
+        ReportFindingGroup(category=category, findings=findings)
         for category, findings in categories.items()
     ]
 
 
-def test_deterministic_report_generator_implements_contract(
-    generator,
-):
+def test_deterministic_report_generator_implements_contract(generator):
     assert isinstance(generator, ReportGenerator)
 
 
-def test_deterministic_report_generator_preserves_analysis_data(
-    generator,
-):
+def test_deterministic_report_generator_preserves_analysis_data(generator):
     findings = [
         make_analysis_finding(
             rule_id=f"RULE_{index}",
@@ -84,10 +74,7 @@ def test_deterministic_report_generator_preserves_analysis_data(
             severity=severity,
             text=f"Finding {index}.",
         )
-        for index, severity in enumerate(
-            RuleSeverity,
-            start=1,
-        )
+        for index, severity in enumerate(RuleSeverity, start=1)
     ]
 
     limitations = [
@@ -97,10 +84,7 @@ def test_deterministic_report_generator_preserves_analysis_data(
             severity=severity,
             text=f"Limitation {index}.",
         )
-        for index, severity in enumerate(
-            RuleSeverity,
-            start=1,
-        )
+        for index, severity in enumerate(RuleSeverity, start=1)
     ]
 
     analysis = make_analysis(
@@ -114,14 +98,11 @@ def test_deterministic_report_generator_preserves_analysis_data(
 
     assert report.position_id == analysis.position_id
     assert report.assessment_status == analysis.assessment_status
-    assert report.findings_by_category == (findings_by_category_from_analysis(analysis))
+    assert report.findings_by_category == findings_by_category_from_analysis(analysis)
     assert report.limitations == analysis.limitations
 
 
-@pytest.mark.parametrize(
-    "status",
-    list(AssessmentStatus),
-)
+@pytest.mark.parametrize("status", list(AssessmentStatus))
 def test_deterministic_report_generator_generates_summary_for_each_status(
     generator,
     status,
@@ -137,13 +118,33 @@ def test_deterministic_report_generator_generates_summary_for_each_status(
     assert report.executive_summary
 
 
+def test_deterministic_report_generator_status_is_descriptive_and_on_one_line(
+    generator,
+):
+    analysis = make_analysis(
+        status=AssessmentStatus.CRITICAL,
+        key_findings=[
+            make_analysis_finding(text="EBITDA is negative at €-120,000."),
+        ],
+    )
+
+    report = generator.generate(analysis)
+    lines = report.executive_summary.splitlines()
+
+    assert lines[0] == (
+        "Assessment status: CRITICAL — "
+        "Significant credit-risk factors affecting the credit profile identified."
+    )
+    assert lines[1] == "The credit assessment identifies the following relevant findings."
+    assert lines[2] == "EBITDA is negative at €-120,000."
+    assert report.executive_summary.count("Assessment status:") == 1
+
+
 def test_deterministic_report_generator_generates_distinct_summary_per_status(
     generator,
 ):
     summaries = {
-        status: generator.generate(
-            make_analysis(status=status),
-        ).executive_summary
+        status: generator.generate(make_analysis(status=status)).executive_summary
         for status in AssessmentStatus
     }
 
@@ -151,9 +152,7 @@ def test_deterministic_report_generator_generates_distinct_summary_per_status(
     assert len(set(summaries.values())) == len(AssessmentStatus)
 
 
-def test_deterministic_report_generator_groups_findings_by_category(
-    generator,
-):
+def test_deterministic_report_generator_groups_findings_by_category(generator):
     findings = [
         make_analysis_finding(
             rule_id=f"RULE_{index}",
@@ -162,12 +161,7 @@ def test_deterministic_report_generator_groups_findings_by_category(
             text=f"Finding {index}.",
         )
         for index, category in enumerate(
-            (
-                "category_a",
-                "category_b",
-                "category_b",
-                "category_c",
-            ),
+            ("category_a", "category_b", "category_b", "category_c"),
             start=1,
         )
     ]
@@ -179,12 +173,10 @@ def test_deterministic_report_generator_groups_findings_by_category(
 
     report = generator.generate(analysis)
 
-    assert report.findings_by_category == (findings_by_category_from_analysis(analysis))
+    assert report.findings_by_category == findings_by_category_from_analysis(analysis)
 
 
-def test_deterministic_report_generator_preserves_arbitrary_content(
-    generator,
-):
+def test_deterministic_report_generator_preserves_arbitrary_content(generator):
     key_findings = [
         make_analysis_finding(
             rule_id="ARBITRARY_RULE_A",
@@ -230,5 +222,5 @@ def test_deterministic_report_generator_preserves_arbitrary_content(
 
     assert report.position_id == analysis.position_id
     assert report.assessment_status == analysis.assessment_status
-    assert report.findings_by_category == (findings_by_category_from_analysis(analysis))
+    assert report.findings_by_category == findings_by_category_from_analysis(analysis)
     assert report.limitations == analysis.limitations
