@@ -10,7 +10,6 @@ class DeterministicReportGenerator(ReportGenerator):
         analysis: AssessmentAnalysis,
     ) -> Report:
         summary = self._generate_summary(analysis)
-
         findings_by_category = self._group_findings_by_category(analysis.key_findings)
 
         return Report(
@@ -25,7 +24,7 @@ class DeterministicReportGenerator(ReportGenerator):
     def _generate_summary(
         analysis: AssessmentAnalysis,
     ) -> str:
-        """Build the deterministic fallback in the same format as the LLM report."""
+        """Build a complete, category-ordered fallback narrative."""
         status_value = getattr(
             analysis.assessment_status,
             "value",
@@ -34,15 +33,19 @@ class DeterministicReportGenerator(ReportGenerator):
         status_label = str(status_value).capitalize()
         summary = f"Assessment Status: {status_label}"
 
-        findings = analysis.risk_factors or analysis.key_findings
-        if findings:
-            summary += "\n\n"
-            summary += "\n\n".join(
-                finding.text.rstrip(".") + "."
-                for finding in findings
-            )
+        findings = analysis.key_findings
+        if not findings:
+            return summary
 
-        return summary
+        grouped: dict[str, list[AnalysisFinding]] = {}
+        for finding in findings:
+            grouped.setdefault(finding.category, []).append(finding)
+
+        paragraphs = [
+            " ".join(finding.text.rstrip(".") + "." for finding in category_findings)
+            for category_findings in grouped.values()
+        ]
+        return summary + "\n\n" + "\n\n".join(paragraphs)
 
     @staticmethod
     def _group_findings_by_category(
