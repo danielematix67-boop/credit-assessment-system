@@ -16,6 +16,7 @@ The purpose of these records is to document **why** the system is designed in it
 | ADR-006 | Deterministic Fallback for AI Reporting | Accepted |
 | ADR-007 | Immutable Domain Models | Accepted |
 | ADR-008 | Thin Presentation Layer | Accepted |
+| ADR-009 | Execution Observability and Provenance | Accepted |
 
 ---
 
@@ -416,6 +417,80 @@ Rejected because it would tightly couple the assessment engine to the presentati
 
 ---
 
+# ADR-009 — Execution Observability and Provenance
+
+## Status
+
+Accepted
+
+## Context
+
+The workflow can use different reporting modes and may encounter recoverable or terminal reporting failures. For troubleshooting, auditability, and operational analysis, it is useful to identify a workflow execution and understand how it completed.
+
+The observability mechanism must not become part of the credit decision itself and must not require persistence or a logging platform for the current scope.
+
+## Decision
+
+Each successfully completed workflow execution exposes immutable `ExecutionMetadata` through `AssessmentWorkflowResult`.
+
+The metadata records:
+
+- unique execution identifier;
+- UTC start timestamp;
+- selected reporting mode;
+- generator used;
+- whether deterministic fallback was used;
+- classified reporting error category, when applicable;
+- assessment, analysis, reporting, and total elapsed times.
+
+The Streamlit presentation layer exposes these values in an **Execution & Audit Metadata** section.
+
+Reporting failures are classified into operational categories such as rate limit, service unavailable, connection error, authentication, authorization, model unavailable, timeout, and generic generation error.
+
+Terminal failure of both the primary and fallback generators remains an explicit error and is propagated rather than silently converted into a successful workflow result.
+
+## Rationale
+
+This provides execution-level traceability without coupling the current application to a persistent observability infrastructure.
+
+Immutable metadata also reduces the risk that downstream presentation code changes the provenance of an execution.
+
+The design preserves the architectural boundary:
+
+> **Observability describes the decision workflow; it does not participate in the decision.**
+
+## Consequences
+
+### Positive
+
+- Workflow executions can be identified and traced.
+- Primary versus fallback reporting is explicit.
+- Common LLM failure modes are classified consistently.
+- Phase-level and total timings support performance diagnostics.
+- Observability remains independent from the deterministic assessment result.
+
+### Trade-offs
+
+- Current metadata is execution-level and in-memory; it is not a persistent audit store.
+- Terminal failures do not produce a completed `AssessmentWorkflowResult`, so completed execution metadata is not available through the result object for those cases.
+- Future production deployments may require centralized structured logging, retention, access control, and correlation with infrastructure telemetry.
+
+## Alternatives Considered
+
+### No execution metadata
+
+Rejected because it makes reporting provenance and workflow timing harder to inspect and diagnose.
+
+### Persistent audit database
+
+Deferred because persistence is outside the current portfolio/demo scope and would introduce additional infrastructure and data-governance requirements.
+
+### Full distributed tracing platform
+
+Deferred because the current application is a single-process prototype and does not yet justify the operational complexity of distributed tracing.
+
+---
+
 # Architecture Principles
 
 The decisions above imply the following principles for future development:
@@ -428,6 +503,7 @@ The decisions above imply the following principles for future development:
 6. **Failure of an optional AI component must not invalidate the deterministic assessment.**
 7. **Presentation code should not own business logic.**
 8. **Architectural changes should preserve reproducibility and explainability.**
+9. **Execution provenance should remain immutable and separate from decision data.**
 
 # Current Architecture
 
@@ -450,22 +526,25 @@ flowchart LR
     LC --> GEM[Gemini]
     LC --> OLL[Ollama]
     RP -. fallback .-> DRG
+    WF --> META[Execution Metadata]
+    META --> TRACE[Provenance / Timing / Error Classification]
     CFG[config/rules.yaml] --> RCL[Rule Config Loader]
     RCL --> RE
 ```
 
-The architecture intentionally keeps the **assessment path deterministic** and makes the **LLM path optional and replaceable**.
+The architecture intentionally keeps the **assessment path deterministic**, makes the **LLM path optional and replaceable**, and treats **execution metadata as observability rather than decision data**.
 
-## Future Decisions
+# Future Decisions
 
 Future ADRs may cover topics such as:
 
 - persistence and database architecture;
 - API exposure;
 - authentication and authorisation;
-- observability and structured logging;
 - automated model/rule validation;
 - deployment architecture;
-- CI/CD and release strategy.
+- CI/CD and release strategy;
+- centralized structured logging and production telemetry;
+- distributed tracing if the system evolves into a multi-service deployment.
 
 These decisions should be documented when the corresponding architectural concerns become part of the system scope.
