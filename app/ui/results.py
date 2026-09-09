@@ -4,6 +4,7 @@ import streamlit as st
 
 from app.ui.charts import (
     render_decision_path,
+    render_risk_driver_map,
     render_risk_indicator_dashboard,
     render_rule_assessment_summary,
 )
@@ -459,11 +460,12 @@ def render_results(
     )
 
     # ========================================================
-    # Primary user journey: RESULT -> DECISION PATH -> WHY -> EVIDENCE -> DATA
+    # Primary user journey: RESULT -> DECISION PATH -> RISK MAP -> WHY -> EVIDENCE -> DATA
     # ========================================================
     render_result_hero(result)
     render_decision_path(result)
     render_risk_indicator_dashboard(result)
+    render_risk_driver_map(result)
     render_why_section(result)
     render_assessment_evidence(result)
     render_assessed_position(assessment_position)
@@ -511,10 +513,4 @@ def render_results(
         render_analysis_tab(result)
 
     with report_tab:
-        render_report_tab(
-            result=result,
-            selected_reporting_mode=selected_reporting_mode,
-            report_badge_kind=report_badge_kind,
-            report_badge_label=report_badge_label,
-            configured_model=configured_model,
-        )
+        render_report_tab(result, report_badge_kind, report_badge_label)
