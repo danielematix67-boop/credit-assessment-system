@@ -2,20 +2,7 @@ from typing import Any
 
 import streamlit as st
 
-from app.ui.components import show_badge
-
-
-def _section_header(title: str, description: str) -> None:
-    """Render a consistent visual section header."""
-    st.markdown(
-        f"""
-        <div class="ui-section-header">
-            <div class="ui-section-title">{title}</div>
-            <div class="ui-section-description">{description}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+from app.ui.components import render_section_header, show_badge
 
 
 def _render_assessment_status(status: str) -> None:
@@ -85,7 +72,7 @@ def render_report_limitations(result: Any) -> None:
     if not limitations:
         return
 
-    _section_header(
+    render_section_header(
         "Data Limitations",
         "Information gaps that may affect the completeness of the assessment.",
     )
@@ -129,7 +116,7 @@ def render_report_tab(
     generator_used = getattr(result, "report_generator_used", None)
     generation_error = getattr(result, "report_generation_error", None)
 
-    _section_header(
+    render_section_header(
         "Executive Credit Assessment",
         "Final credit judgement and management summary.",
     )
@@ -153,7 +140,7 @@ def render_report_tab(
             st.caption("Position")
             st.write(str(getattr(report, "position_id", "Not available")))
 
-    _section_header(
+    render_section_header(
         "Executive Conclusion",
         "Management-level interpretation of the assessment and its main implications.",
     )
