@@ -102,28 +102,78 @@ def render_result_hero(result: Any) -> None:
 
 
 def render_why_section(result: Any) -> None:
-    """Explain the main drivers of the assessment using existing findings."""
+    """Explain the main risk drivers using existing findings and rule results."""
     st.markdown("### Why? — Main Risk Drivers")
     st.caption(
-        "These findings explain which rules contributed to the assessment. "
-        "They are produced by the deterministic analysis layer."
+        "These are the key findings identified by the deterministic analysis layer. "
+        "Each card connects the finding to the underlying rule and, when available, "
+        "shows the actual value against its configured threshold."
     )
 
     findings = list(getattr(getattr(result, "analysis", None), "key_findings", []) or [])
+    rule_results = list(
+        getattr(getattr(result, "assessment", None), "rule_results", []) or []
+    )
+    rule_by_id = {
+        str(getattr(rule_result, "rule_id", "")): rule_result
+        for rule_result in rule_results
+    }
 
     if not findings:
         st.success("No key findings were identified by the assessment.")
         return
 
     for finding in findings:
+        rule_id = str(getattr(finding, "rule_id", "—"))
+        severity_obj = getattr(finding, "severity", None)
+        severity = getattr(severity_obj, "value", str(severity_obj or "—"))
+        category = str(getattr(finding, "category", "—"))
+        rule_result = rule_by_id.get(rule_id)
+
         with st.container(border=True):
-            col1, col2 = st.columns([1.1, 4.9])
-            with col1:
-                st.markdown(f"**{finding.rule_id}**")
-                st.caption(str(finding.severity.value))
-            with col2:
-                st.markdown(f"**{str(finding.category).upper()}**")
-                st.write(finding.text)
+            header_cols = st.columns([1.5, 3.5, 1.5])
+
+            with header_cols[0]:
+                st.markdown(f"**{rule_id}**")
+                st.caption("Rule")
+
+            with header_cols[1]:
+                st.markdown(f"**{category.upper()}**")
+                st.caption("Category")
+
+            with header_cols[2]:
+                show_badge(str(severity), "fallback")
+                st.caption("Severity")
+
+            if rule_result is not None:
+                indicator = str(getattr(rule_result, "rule_name", "—"))
+                value = getattr(rule_result, "value", None)
+                threshold = getattr(rule_result, "threshold", None)
+                status_obj = getattr(rule_result, "status", None)
+                rule_status = getattr(
+                    status_obj,
+                    "value",
+                    str(status_obj or "—"),
+                )
+
+                st.markdown(f"**Indicator:** {indicator}")
+
+                evidence_cols = st.columns(3)
+                with evidence_cols[0]:
+                    st.metric("Rule status", str(rule_status))
+                with evidence_cols[1]:
+                    if value is None:
+                        st.metric("Actual value", "N/A")
+                    else:
+                        st.metric("Actual value", f"{float(value):g}")
+                with evidence_cols[2]:
+                    if threshold is None:
+                        st.metric("Threshold", "N/A")
+                    else:
+                        st.metric("Threshold", f"{float(threshold):g}")
+
+            st.markdown("**Why it matters**")
+            st.write(finding.text)
 
 
 def render_assessment_evidence(result: Any) -> None:
