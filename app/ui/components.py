@@ -1,5 +1,12 @@
 import streamlit as st
 
+from app.ui.design_tokens import (
+    AI_COLOR,
+    DET_COLOR,
+    FALLBACK_BG,
+    FALLBACK_COLOR,
+)
+
 # ============================================================
 # Shared UI Components
 # ============================================================
@@ -27,8 +34,8 @@ def render_assessment_status(status: str) -> None:
     """Render the deterministic assessment status as a reusable badge."""
     normalized = status.upper().replace(" ", "_")
     palette = {
-        "CRITICAL": ("#b91c1c", "rgba(185, 28, 28, 0.10)"),
-        "ATTENTION": ("#b45309", "rgba(180, 83, 9, 0.10)"),
+        "CRITICAL": (FALLBACK_COLOR, FALLBACK_BG),
+        "ATTENTION": (FALLBACK_COLOR, FALLBACK_BG),
         "NORMAL": ("#166534", "rgba(22, 101, 52, 0.10)"),
     }
     foreground, background = palette.get(
