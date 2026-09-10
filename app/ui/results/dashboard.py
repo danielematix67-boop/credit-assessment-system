@@ -7,33 +7,16 @@ import streamlit as st
 
 from app.ui.results.evidence import render_rule_evidence_matrix
 from app.ui.results.helpers import (
+    build_rule_dataframe,
+    build_severity_overview,
+    build_status_overview,
     get_rule_results,
-    rule_indicator,
     rule_severity,
-    rule_status,
     rule_status_counts,
     severity_counts,
     severity_rank,
 )
 from app.ui.results.rule_detail import render_rule_indicator_detail
-
-
-def _build_rule_dataframe(rule_results: list[Any]) -> pd.DataFrame:
-    """Build presentation data from existing RuleResult objects only."""
-    rows: list[dict[str, Any]] = []
-    for rule_result in rule_results:
-        rows.append(
-            {
-                "Rule": str(getattr(rule_result, "rule_id", "—")),
-                "Indicator": rule_indicator(rule_result),
-                "Actual": getattr(rule_result, "value", None),
-                "Threshold": getattr(rule_result, "threshold", None),
-                "Status": rule_status(rule_result),
-                "Severity": rule_severity(rule_result),
-                "Category": str(getattr(rule_result, "category", "—")),
-            }
-        )
-    return pd.DataFrame(rows)
 
 
 def _render_kpis(
@@ -117,29 +100,24 @@ def _render_signal_overview(
     st.markdown("#### Risk Signal Overview")
     overview_cols = st.columns(2)
     with overview_cols[0]:
-        labels = {
-            "TRIGGERED": "Triggered",
-            "NOT_TRIGGERED": "Not triggered",
-            "NOT_EVALUABLE": "Not evaluable",
-        }
-        status_data = pd.DataFrame(
-            {
-                "Status": [labels[key] for key in status_counts],
-                "Rules": list(status_counts.values()),
-            }
-        )
         st.caption("Rule outcomes")
-        st.bar_chart(status_data, x="Status", y="Rules", horizontal=True, height=190)
+        st.bar_chart(
+            build_status_overview(status_counts),
+            x="Status",
+            y="Rules",
+            horizontal=True,
+            height=190,
+        )
 
     with overview_cols[1]:
-        severity_data = pd.DataFrame(
-            {
-                "Severity": list(severity_counts_data.keys()),
-                "Rules": list(severity_counts_data.values()),
-            }
-        )
         st.caption("Severity profile")
-        st.bar_chart(severity_data, x="Severity", y="Rules", horizontal=True, height=190)
+        st.bar_chart(
+            build_severity_overview(severity_counts_data),
+            x="Severity",
+            y="Rules",
+            horizontal=True,
+            height=190,
+        )
 
     st.caption(
         "Both views describe the factual Rule Engine output; they do not recalculate the assessment."
@@ -257,7 +235,7 @@ def render_risk_indicator_dashboard(result: Any) -> None:
         "A structured view of the deterministic indicators, rule outcomes and risk severity."
     )
 
-    dataframe = _build_rule_dataframe(rule_results)
+    dataframe = build_rule_dataframe(rule_results)
     status_counts = rule_status_counts(result)
     severity_counts_data = severity_counts(rule_results)
 
