@@ -1,5 +1,7 @@
+from src.comments.comment import Comment
 from src.models.assessment_section import AssessmentSection, SectionStatus
 from src.models.debt_sustainability_data import DebtSustainabilityData
+from src.models.rule_finding import RuleFinding
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_direction import SeverityDirection
 from src.rules.base.status import RuleStatus
@@ -27,6 +29,14 @@ class DebtSustainabilityAssessmentService:
             self._cash_flow_buffer_result(data),
         ]
         status = self.status_calculator.calculate(results)
+        findings = [
+            RuleFinding(
+                result=result,
+                comment=Comment(result.rule_id, result.reason or ""),
+            )
+            for result in results
+            if result.status == RuleStatus.TRIGGERED
+        ]
         limitations = (
             ["Debt-service and cash-flow data are not available."]
             if all(result.status == RuleStatus.NOT_EVALUABLE for result in results)
@@ -36,7 +46,7 @@ class DebtSustainabilityAssessmentService:
         return AssessmentSection(
             name="Debt Sustainability",
             status=SectionStatus(status.value),
-            findings=[],
+            findings=findings,
             evidence=results,
             limitations=limitations,
         )
