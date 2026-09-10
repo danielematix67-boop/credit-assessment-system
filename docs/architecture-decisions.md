@@ -17,6 +17,8 @@ This document captures the main architectural decisions behind the Credit Assess
 | ADR-009 | Execution Observability and Provenance | Accepted |
 | ADR-010 | Grounded LLM Narrative Contract | Accepted |
 | ADR-011 | Evidence-Oriented Results UI | Accepted |
+| ADR-012 | Structural Input Validation Before Assessment | Accepted |
+| ADR-013 | Explicit Handling of All-`NOT_EVALUABLE` Assessments | Accepted |
 
 ---
 
@@ -26,17 +28,9 @@ This document captures the main architectural decisions behind the Credit Assess
 
 Accepted
 
-## Context
-
-Credit assessment requires reproducible and explainable outcomes. The system evaluates financial indicators against explicit business rules and produces structured findings and an overall assessment status.
-
-An LLM is probabilistic and is therefore not an appropriate source of truth for the underlying credit assessment.
-
 ## Decision
 
-The **deterministic Rule Engine is the sole decision authority**.
-
-It evaluates rules, produces `RuleResult` objects, resolves severity and provides the inputs used to calculate the overall assessment status.
+The **deterministic Rule Engine is the sole decision authority**. It evaluates rules, produces `RuleResult` objects, resolves severity and provides the inputs used to calculate the overall assessment status.
 
 LLM components must not modify, override or reinterpret the assessment results.
 
@@ -53,10 +47,6 @@ This provides deterministic execution, reproducibility, traceability and a clear
 ## Status
 
 Accepted
-
-## Context
-
-The system has two distinct responsibilities: determining the credit assessment and communicating it in human-readable form.
 
 ## Decision
 
@@ -208,63 +198,15 @@ This provides execution-level traceability without coupling the current applicat
 
 Accepted
 
-## Context
-
-The Executive Report can use an LLM to transform deterministic findings into natural language. In a credit-risk context, a fluent response is not sufficient: the narrative must remain faithful to the supplied evidence.
-
-The system therefore needs an explicit contract controlling what the LLM may say and how it should represent deterministic numerical indicators.
-
 ## Decision
 
-The LLM reporting prompt establishes a constrained narrative contract:
+The LLM reporting prompt establishes a constrained narrative contract. Supplied material findings and numerical indicators must remain represented; values must not be rounded, recalculated or converted; unsupported facts and causal explanations must not be invented; category order and repetition are controlled; and the LLM does not generate the assessment status.
 
-- all supplied material findings must be represented;
-- supplied numerical indicators and units must be preserved exactly;
-- values must not be rounded, recalculated or converted;
-- unsupported facts and causal explanations must not be invented;
-- specific unsupported areas such as sales volume, pricing, demand, costs, liquidity, cash flow, debt service capacity and financial stability must not be inferred unless provided;
-- categories are discussed in source order and at most once;
-- category headings, bullets and numbered lists are not used in the executive narrative;
-- each material indicator value is mentioned once;
-- repeated findings and conclusions are avoided;
-- the LLM does not generate the assessment status.
-
-When strict indicator grounding is enabled, the generated narrative is checked against deterministic indicator values. Missing required values cause deterministic fallback.
+When strict indicator grounding is enabled, generated narrative is checked against deterministic indicator values. Missing required values cause deterministic fallback.
 
 ## Rationale
 
-This creates a practical control between deterministic evidence and generative language without attempting to solve full semantic verification of arbitrary natural-language output.
-
-The architecture therefore protects the two most important properties:
-
-1. the credit judgement remains deterministic;
-2. the narrative remains anchored to the evidence supplied to the model.
-
-## Consequences
-
-### Positive
-
-- Numerical evidence is less likely to disappear from the narrative.
-- Unsupported causal reasoning is explicitly discouraged.
-- The deterministic status remains outside model authority.
-- Missing required indicator evidence can activate deterministic fallback.
-- Narrative style is consistent across providers.
-
-### Trade-offs
-
-- String-based grounding validation is intentionally narrower than semantic verification.
-- Provider outputs can still differ in wording and fluency.
-- Prompt and validation contracts require regression tests when changed.
-
-## Alternatives Considered
-
-### Unconstrained LLM narrative
-
-Rejected because it increases the risk of omissions, unsupported inferences and inconsistent numerical representation.
-
-### Full semantic fact-checking pipeline
-
-Deferred because it would introduce additional model dependencies and complexity beyond the current prototype scope.
+This creates a practical control between deterministic evidence and generative language without attempting full semantic verification of arbitrary natural-language output.
 
 ---
 
@@ -274,12 +216,6 @@ Deferred because it would introduce additional model dependencies and complexity
 
 Accepted
 
-## Context
-
-A credit assessment interface should explain not only the final status but also how the deterministic Rule Engine produced it. A single label is insufficient for an operator or academic demonstration of explainability.
-
-The UI therefore needs a clear visual hierarchy connecting the final assessment to the quantitative rule evidence without duplicating the underlying business logic.
-
 ## Decision
 
 The Streamlit Results view follows this hierarchy:
@@ -287,91 +223,124 @@ The Streamlit Results view follows this hierarchy:
 ```text
 Executive Credit Assessment
           ↓
-Assessment Overview
-          ↓
 Risk Indicator Dashboard
           ↓
 Audit Trail & Methodology
 ```
 
-The **Executive Credit Assessment** is the primary output. The **Assessment Overview** provides concise KPIs and context. The **Risk Indicator Dashboard** is the single detailed rule-evidence surface, while the **Audit Trail & Methodology** contains workflow, credit-data and execution-level traceability.
+The **Executive Credit Assessment** is the primary output. The **Risk Indicator Dashboard** is the single detailed rule-evidence surface, while the **Audit Trail & Methodology** contains workflow, credit-data and execution-level traceability.
 
-The dashboard provides:
+The Results view also includes a graphical **Decision Path** connecting financial indicators, Rule Engine outcomes and the monitoring assessment.
 
-- rule-outcome distribution;
-- severity profile;
-- KPI counts for indicators, triggered rules, high/critical severity and non-evaluable rules;
-- filtering by status, severity and category;
-- priority-oriented sorting;
-- individual rule inspection.
+All visualizations consume deterministic workflow outputs. They do not recalculate thresholds, severity or assessment status.
 
-The individual rule detail exposes:
-
-```text
-Rule ID / Category
-        ↓
-Indicator
-        ↓
-Observed Value vs Configured Threshold
-        ↓
-Status / Severity / Direction
-        ↓
-Rationale
-```
-
-The Results view also includes a compact graphical **Decision Path**:
-
-```text
-Financial Indicators
-        ↓
-Rule Engine Outcomes
-        ↓
-Monitoring Assessment
-```
-
-The Decision Path dynamically summarizes evaluated rules, triggered rules, non-evaluable rules and the final assessment status.
-
-All these visualizations consume deterministic workflow outputs. They do not recalculate thresholds, severity or assessment status.
-
-Legacy overlapping evidence surfaces such as a separate Evidence Chain, Rule Logic/Decision Boundaries and Risk Driver Map are intentionally not part of the current Results hierarchy. Detailed rule evidence is centralized in the Risk Indicator Dashboard, reducing repetition and keeping the operator path coherent.
+Legacy overlapping evidence surfaces are intentionally not part of the current Results hierarchy. Detailed rule evidence is centralized in the Risk Indicator Dashboard.
 
 ## Rationale
 
-This structure makes the assessment mechanism inspectable while keeping the main result concise. It also scales better as the rule catalogue grows because the dashboard provides filtering, sorting and focused individual-rule inspection rather than requiring a separate UI component for each rule family.
+This structure makes the assessment mechanism inspectable while keeping the main result concise. Centralizing rule evidence also reduces repetition and scales better as the rule catalogue grows.
 
-The visual Decision Path explains the mechanism at a glance, while the dashboard provides the underlying quantitative evidence.
+---
+
+# ADR-012 — Structural Input Validation Before Assessment
+
+## Status
+
+Accepted
+
+## Context
+
+The deterministic Rule Engine assumes that the incoming `CreditPosition` has the expected structure. Without an explicit validation boundary, malformed objects, non-numeric values or non-finite numbers could enter the assessment path and produce unsafe or misleading outcomes.
+
+At the same time, generic validation should not encode credit-policy assumptions that belong to individual rules.
+
+## Decision
+
+Introduce `CreditPositionValidator` as a dedicated structural validation service invoked by `AssessmentService` before Rule Engine evaluation.
+
+The validator checks:
+
+- the input is a `CreditPosition` instance;
+- `position_id` is non-empty;
+- financial fields are numeric or `None`;
+- booleans are rejected where numeric values are expected;
+- `NaN` and positive/negative infinity are rejected.
+
+`None` is accepted because missing information is a valid domain condition and can result in `NOT_EVALUABLE` at rule level.
+
+The validator does **not** enforce generic sign constraints on financial values. Economic semantics remain the responsibility of the corresponding rule.
+
+## Rationale
+
+This establishes a clean separation between input integrity and credit-risk business semantics. It also makes malformed-input behavior independently testable.
 
 ## Consequences
 
 ### Positive
 
-- The final status can be traced back to quantitative evidence.
-- The main result remains concise and operator-oriented.
-- Detailed rule evidence has a single dedicated surface.
-- Triggered rules, severity and non-evaluable states are visible without exposing implementation details.
-- The UI scales better as the rule catalogue grows through filtering and prioritisation.
-- Presentation logic remains downstream of the decision layer.
-- Removing overlapping legacy views reduces visual repetition.
+- Invalid structural input is rejected before assessment.
+- Non-finite numerical values cannot silently propagate.
+- Business rules remain responsible for business semantics.
+- Validation can be tested independently and injected into the assessment service.
 
 ### Trade-offs
 
-- The Results page contains more visual components than a minimal dashboard.
-- The audit area must remain synchronized with domain models and workflow behavior.
-- The UI depends on stable `RuleResult` fields for presentation and explainability.
+- Validation introduces an additional service boundary.
+- Domain-specific validation remains distributed across individual rules by design.
 
-## Alternatives Considered
+---
 
-### Display only the final assessment status
+# ADR-013 — Explicit Handling of All-`NOT_EVALUABLE` Assessments
 
-Rejected because it provides insufficient explainability.
+## Status
 
-### Reimplement rule calculations in the UI
+Accepted
 
-Rejected because it would duplicate business logic and risk divergence from the deterministic Rule Engine.
+## Context
 
-### Multiple overlapping evidence panels
+The rule engine distinguishes `NOT_TRIGGERED` from `NOT_EVALUABLE`. If every configured rule is `NOT_EVALUABLE`, interpreting the result as `NORMAL` would incorrectly equate absence of evidence with evidence of normal credit quality.
 
-Rejected because repeating the same rule information across separate sections reduces clarity. The current design centralizes detailed rule evidence in the Risk Indicator Dashboard.
+## Decision
+
+Keep the existing three assessment statuses and classify an assessment with results where **all rules are `NOT_EVALUABLE`** as `ATTENTION`.
+
+The current status precedence is:
+
+```text
+2+ TRIGGERED
+      ↓
+   CRITICAL
+
+1 TRIGGERED
+      ↓
+  ATTENTION
+
+0 TRIGGERED + ALL NOT_EVALUABLE
+      ↓
+  ATTENTION
+
+0 TRIGGERED + at least one evaluable rule
+      ↓
+   NORMAL
+```
+
+An empty rule-result collection remains `NORMAL` for backward-compatible service behavior; it is distinct from an actual evaluation in which every configured rule is non-evaluable.
+
+## Rationale
+
+This preserves the distinction between **no detected risk signal** and **insufficient evaluable evidence** without introducing a fourth assessment status.
+
+## Consequences
+
+### Positive
+
+- Data-availability problems are no longer silently interpreted as normal credit quality.
+- The rule-level `NOT_EVALUABLE` semantics are reflected at assessment level.
+- The existing three-status model remains unchanged.
+
+### Trade-offs
+
+- `ATTENTION` can represent either a single triggered rule or insufficient evaluable evidence; downstream explanations must therefore expose rule-level evidence.
 
 ---
 
@@ -380,15 +349,17 @@ Rejected because repeating the same rule information across separate sections re
 The decisions above imply the following principles:
 
 1. **Deterministic logic owns the decision.**
-2. **AI is bounded to narrative generation.**
-3. **Material narrative evidence must remain grounded in deterministic findings.**
-4. **Business rules should be explicit, testable and configurable.**
-5. **Components communicate through well-defined domain objects.**
-6. **Infrastructure and LLM providers should remain replaceable.**
-7. **Failure of an optional AI component must not invalidate the deterministic assessment.**
-8. **Presentation code should not own business logic.**
-9. **Execution provenance should remain immutable and separate from decision data.**
-10. **The UI should explain the decision path without reproducing it.**
+2. **Input integrity is validated before rule evaluation.**
+3. **AI is bounded to narrative generation.**
+4. **Material narrative evidence must remain grounded in deterministic findings.**
+5. **`NOT_EVALUABLE` is distinct from `NOT_TRIGGERED`.**
+6. **Business rules should be explicit, testable and configurable.**
+7. **Components communicate through well-defined domain objects.**
+8. **Infrastructure and LLM providers should remain replaceable.**
+9. **Failure of an optional AI component must not invalidate the deterministic assessment.**
+10. **Presentation code should not own business logic.**
+11. **Execution provenance should remain immutable and separate from decision data.**
+12. **The UI should explain the decision path without reproducing it.**
 
 # Current Architecture
 
@@ -396,10 +367,12 @@ The decisions above imply the following principles:
 flowchart LR
     UI[Streamlit UI] --> ORCH[Assessment Orchestrator]
     ORCH --> WF[Assessment Workflow]
-    WF --> AS[Assessment Service]
+    WF --> VAL[CreditPosition Validator]
+    VAL --> AS[Assessment Service]
     AS --> RE[Rule Engine]
     RE --> RR[Rule Results]
     AS --> SC[Status Calculator]
+    SC --> STATUS[Assessment Status]
     WF --> AA[Analysis Agent]
     AA --> ANA[Assessment Analysis]
     WF --> RP[Reporting Agent]
@@ -408,15 +381,14 @@ flowchart LR
     LLMG --> LC[LLM Client]
     LC --> GEM[Gemini]
     LC --> OLL[Ollama]
-    LLMG --> VAL[Indicator Grounding Validation]
-    VAL -. invalid .-> DRG
+    LLMG --> GROUND[Indicator Grounding Validation]
+    GROUND -. invalid .-> DRG
     RP -. provider failure .-> DRG
     WF --> META[Execution Metadata]
-    META --> TRACE[Provenance / Timing / Error Classification]
     CFG[config/rules.yaml] --> RCL[Rule Config Loader]
     RCL --> RE
     UI --> EVID[Decision Path / Risk Indicator Dashboard]
     EVID --> RR
 ```
 
-The architecture intentionally keeps the **assessment path deterministic**, the **LLM path optional and bounded**, the **fallback path deterministic**, and **execution metadata observational rather than decisional**.
+The architecture intentionally keeps the **assessment path structurally validated and deterministic**, the **LLM path optional and bounded**, the **fallback path deterministic**, and **execution metadata observational rather than decisional**.
