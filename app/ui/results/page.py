@@ -9,7 +9,6 @@ from app.ui.results.executive_synthesis import render_executive_synthesis
 from app.ui.results.final_assessment import render_final_assessment
 from app.ui.results.helpers import get_rule_results, rule_status
 from app.ui.results.risk_drivers import render_risk_driver_overview
-from app.ui.results.scenario_comparison import render_scenario_comparison
 
 
 def _status_class(status: str) -> str:
@@ -234,11 +233,7 @@ def render_results(
         render_risk_driver_overview(credit_case)
         render_final_assessment(credit_case)
 
-        # Scenario analysis is a descriptive benchmark and therefore sits after
-        # the deterministic conclusion, but before the technical rule drill-down.
-        render_scenario_comparison(
-            st.session_state.get("assessment_scenario")
-        )
+        # Technical drill-down comes after the deterministic conclusion.
         render_risk_indicator_dashboard(result)
 
         # The narrative is deliberately last: it interprets the evidence and
