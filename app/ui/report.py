@@ -72,7 +72,7 @@ def render_report_tab(
     selected_reporting_mode: str,
     configured_model: str | None,
 ) -> None:
-    """Render only the executive narrative; detailed evidence lives in dedicated UI sections."""
+    """Render the executive narrative; detailed evidence lives in dedicated UI sections."""
     report = getattr(result, "report", None)
     if report is None:
         st.error("The Executive Report is not available for this assessment.")
