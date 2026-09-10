@@ -15,4 +15,11 @@ class AssessmentStatusCalculator:
         if triggered_count == 1:
             return AssessmentStatus.ATTENTION
 
+        # No triggered rule is not equivalent to a normal assessment when
+        # none of the indicators could actually be evaluated.
+        if results and all(
+            result.status == RuleStatus.NOT_EVALUABLE for result in results
+        ):
+            return AssessmentStatus.ATTENTION
+
         return AssessmentStatus.NORMAL
