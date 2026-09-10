@@ -14,6 +14,10 @@ NORMAL_COLOR = "#166534"
 NORMAL_BG = "rgba(22, 101, 52, 0.10)"
 MUTED_COLOR = "#6b7280"
 MUTED_BG = "rgba(107, 114, 128, 0.10)"
+BORDER = "rgba(128, 128, 128, 0.20)"
+CARD_BG = "rgba(128, 128, 128, 0.025)"
+RADIUS = "0.75rem"
+INPUT_RADIUS = "0.55rem"
 
 
 def css_variables() -> str:
@@ -26,6 +30,13 @@ def css_variables() -> str:
             --ai-bg: {AI_BG};
             --fallback-color: {FALLBACK_COLOR};
             --fallback-bg: {FALLBACK_BG};
+            --normal-color: {NORMAL_COLOR};
+            --normal-bg: {NORMAL_BG};
             --muted: {MUTED_COLOR};
+            --muted-bg: {MUTED_BG};
+            --border: {BORDER};
+            --card-bg: {CARD_BG};
+            --radius: {RADIUS};
+            --input-radius: {INPUT_RADIUS};
         }}
     """
