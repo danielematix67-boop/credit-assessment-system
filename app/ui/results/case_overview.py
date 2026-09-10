@@ -1,7 +1,15 @@
+"""Credit assessment case overview presentation."""
+
 from typing import Any
 
 import pandas as pd
 import streamlit as st
+
+from app.ui.results.financial_analysis import (
+    render_behavioural_analysis,
+    render_debt_analysis,
+    render_financial_analysis,
+)
 
 
 def _status_value(status: Any) -> str:
@@ -21,200 +29,6 @@ def _rule_status(rule: Any) -> str:
     return str(
         getattr(getattr(rule, "status", None), "value", getattr(rule, "status", ""))
     ).upper()
-
-
-def _indicator_frame(section: Any) -> pd.DataFrame:
-    """Build a comparable indicator table without changing deterministic results."""
-    rows = []
-    for rule in section.evidence:
-        value = getattr(rule, "value", None)
-        threshold = getattr(rule, "threshold", None)
-        if value is None or threshold is None:
-            continue
-        rows.append(
-            {
-                "Indicator": getattr(
-                    rule, "indicator", getattr(rule, "rule_name", "Indicator")
-                ),
-                "Value": float(value),
-                "Threshold": float(threshold),
-                "Status": _rule_status(rule),
-                "Rule": getattr(rule, "rule_id", ""),
-            }
-        )
-    return pd.DataFrame(rows)
-
-
-def _threshold_distance_frame(section: Any) -> pd.DataFrame:
-    """Build a direction-aware distance from threshold for non-zero thresholds."""
-    frame = _indicator_frame(section)
-    if frame.empty:
-        return frame
-
-    rows = []
-    for rule in section.evidence:
-        value = getattr(rule, "value", None)
-        threshold = getattr(rule, "threshold", None)
-        direction = getattr(
-            getattr(rule, "direction", None),
-            "value",
-            getattr(rule, "direction", ""),
-        )
-        if value is None or threshold is None or float(threshold) == 0:
-            continue
-
-        value = float(value)
-        threshold = float(threshold)
-        scale = abs(threshold)
-        if direction == "LOWER_IS_WORSE":
-            distance = (threshold - value) / scale
-        else:
-            distance = (value - threshold) / scale
-
-        rows.append(
-            {
-                "Indicator": getattr(
-                    rule, "indicator", getattr(rule, "rule_name", "Indicator")
-                ),
-                "Threshold distance": distance,
-            }
-        )
-
-    if not rows:
-        return pd.DataFrame()
-    return pd.DataFrame(rows).set_index("Indicator")
-
-
-def _render_threshold_distance_chart(section: Any, title: str) -> None:
-    frame = _threshold_distance_frame(section)
-    if frame.empty:
-        return
-    st.markdown(f"**{title}**")
-    st.caption(
-        "0.0 = configured threshold; positive values are on the worse side of the threshold, "
-        "negative values on the better side. Zero-threshold indicators remain in the evidence table."
-    )
-    st.bar_chart(frame, horizontal=True)
-
-
-def _render_financial_dimensions(section: Any) -> None:
-    """Make the deterministic analyst chain visible: dimension -> indicator -> evidence -> finding."""
-    dimensions = getattr(section, "dimensions", {}) or {}
-    if not dimensions:
-        return
-
-    findings_by_rule = {}
-    for finding in getattr(section, "findings", []):
-        result = getattr(finding, "result", None)
-        rule_id = getattr(result, "rule_id", "")
-        if rule_id:
-            findings_by_rule[rule_id] = finding
-
-    st.markdown("**Analytical Dimensions**")
-    st.caption(
-        "Financial indicators are grouped into analytical dimensions to make the analyst reasoning visible. "
-        "The dimension view is descriptive only and does not introduce a new risk score or "
-        "alter the assessment decision."
-    )
-
-    rows = []
-    for dimension, rules in dimensions.items():
-        rule_list = list(rules or [])
-        statuses = [_rule_status(rule) for rule in rule_list]
-        triggered = sum(status == "TRIGGERED" for status in statuses)
-        evaluable = sum(status != "NOT_EVALUABLE" for status in statuses)
-        if "TRIGGERED" in statuses:
-            dimension_status = "TRIGGERED"
-        elif evaluable:
-            dimension_status = "NOT_TRIGGERED"
-        else:
-            dimension_status = "NOT_EVALUABLE"
-
-        rows.append(
-            {
-                "Analytical dimension": dimension,
-                "Indicators": len(rule_list),
-                "Triggered": triggered,
-                "Evaluable": evaluable,
-                "Status": dimension_status,
-            }
-        )
-
-    dimension_frame = pd.DataFrame(rows)
-    if dimension_frame.empty:
-        return
-
-    chart_frame = dimension_frame.set_index("Analytical dimension")[["Triggered"]]
-    st.bar_chart(chart_frame, horizontal=True)
-    st.dataframe(dimension_frame, use_container_width=True, hide_index=True)
-
-    for dimension, rules in dimensions.items():
-        rule_list = list(rules or [])
-        if not rule_list:
-            continue
-
-        st.markdown(f"**{dimension}**")
-        detail_rows = []
-        for rule in rule_list:
-            rule_id = getattr(rule, "rule_id", "")
-            detail_rows.append(
-                {
-                    "Rule": rule_id,
-                    "Indicator": getattr(
-                        rule, "indicator", getattr(rule, "rule_name", "Indicator")
-                    ),
-                    "Value": getattr(rule, "value", None),
-                    "Threshold": getattr(rule, "threshold", None),
-                    "Status": _rule_status(rule),
-                }
-            )
-
-        st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
-
-        for rule in rule_list:
-            rule_id = getattr(rule, "rule_id", "")
-            if _rule_status(rule) != "TRIGGERED":
-                continue
-            finding = findings_by_rule.get(rule_id)
-            if finding is None:
-                continue
-            result = getattr(finding, "result", None)
-            reason = getattr(result, "reason", None) or getattr(finding, "comment", "")
-            if reason:
-                indicator = getattr(
-                    rule, "indicator", getattr(rule, "rule_name", rule_id)
-                )
-                st.info(f"**Finding · {indicator} ({rule_id})**\n\n{reason}")
-
-
-def _render_financial_chart(section: Any) -> None:
-    _render_financial_dimensions(section)
-    _render_threshold_distance_chart(section, "Indicator position vs threshold")
-
-
-def _render_behavioural_chart(section: Any) -> None:
-    _render_threshold_distance_chart(section, "Behavioural indicators vs threshold")
-
-
-def _render_debt_chart(section: Any) -> None:
-    _render_threshold_distance_chart(section, "Debt-service indicators vs threshold")
-
-    buffer_rule = next(
-        (rule for rule in section.evidence if getattr(rule, "rule_id", "") == "DS003"),
-        None,
-    )
-    if buffer_rule is not None and getattr(buffer_rule, "value", None) is not None:
-        value = float(buffer_rule.value)
-        st.metric("Cash Flow Debt-Service Buffer", f"{value:,.2f}")
-
-
-def _render_final_chart(credit_case: Any) -> None:
-    statuses = [_status_value(section.status) for section in credit_case.sections]
-    counts = pd.Series(statuses).value_counts().reindex(
-        ["NORMAL", "ATTENTION", "CRITICAL", "NOT_EVALUABLE"], fill_value=0
-    )
-    st.markdown("**Macro-area status distribution**")
-    st.bar_chart(counts, horizontal=True)
 
 
 def _profile_value(data: Any, field: str, default: str = "Not available") -> str:
@@ -242,8 +56,7 @@ def _profile_completeness(data: Any) -> tuple[int, int]:
         "previous_restructuring",
     )
     available = sum(
-        _profile_value(data, field, "") != ""
-        and _profile_value(data, field, "") != "Not available"
+        _profile_value(data, field, "") not in {"", "Not available"}
         for field in fields
     )
     return available, len(fields)
@@ -258,7 +71,7 @@ def _profile_list(data: Any, field: str) -> list[Any]:
 
 
 def _render_customer_profile(section: Any) -> None:
-    """Render descriptive customer context without introducing a synthetic risk score."""
+    """Render customer context without introducing a synthetic risk score."""
     context = getattr(section, "context", {}) or {}
     if not context:
         st.info("Customer profile information is not available.")
@@ -318,7 +131,9 @@ def _render_customer_profile(section: Any) -> None:
             st.caption("Ownership and management information not available.")
 
     st.markdown("**Risk-context signals**")
-    evidence_by_rule = {getattr(rule, "rule_id", ""): rule for rule in section.evidence}
+    evidence_by_rule = {
+        getattr(rule, "rule_id", ""): rule for rule in section.evidence
+    }
     signal_frame = pd.DataFrame(
         [
             {
@@ -339,18 +154,16 @@ def _render_customer_profile(section: Any) -> None:
 
 
 def _render_section_details(section: Any) -> None:
-    """Show evidence and limitations while keeping the decision source deterministic."""
-    frame = _indicator_frame(section)
-    if not frame.empty:
-        display_frame = frame[["Indicator", "Value", "Threshold", "Status", "Rule"]].copy()
-        st.dataframe(display_frame, use_container_width=True, hide_index=True)
-
+    """Show findings and limitations without changing deterministic results."""
     if section.findings:
         with st.expander("Triggered findings", expanded=True):
             for finding in section.findings:
                 result = getattr(finding, "result", None)
-                reason = getattr(result, "reason", None) or getattr(finding, "comment", "")
-                st.write(f"• {reason}")
+                reason = getattr(result, "reason", None) or getattr(
+                    finding, "comment", ""
+                )
+                if reason:
+                    st.write(f"• {reason}")
 
     if section.limitations:
         with st.expander("Limitations", expanded=False):
@@ -428,8 +241,17 @@ def _render_data_quality_overview(credit_case: Any) -> None:
         )
 
 
+def _render_final_chart(credit_case: Any) -> None:
+    statuses = [_status_value(section.status) for section in credit_case.sections]
+    counts = pd.Series(statuses).value_counts().reindex(
+        ["NORMAL", "ATTENTION", "CRITICAL", "NOT_EVALUABLE"], fill_value=0
+    )
+    st.markdown("**Macro-area status distribution**")
+    st.bar_chart(counts, horizontal=True)
+
+
 def render_credit_analysis_case(result: Any) -> None:
-    """Render the analyst-style macro-area view produced by the domain layer."""
+    """Render the high-level analyst view of the credit assessment case."""
     credit_case = getattr(result, "credit_case", None)
     if credit_case is None:
         return
@@ -442,8 +264,7 @@ def render_credit_analysis_case(result: Any) -> None:
 
     _render_data_quality_overview(credit_case)
 
-    sections = credit_case.sections
-    for section in sections:
+    for section in credit_case.sections:
         status = _status_value(section.status)
         status_class = _status_class(status)
         st.markdown(
@@ -453,11 +274,11 @@ def render_credit_analysis_case(result: Any) -> None:
         )
 
         if section.name == "Financial Analysis":
-            _render_financial_chart(section)
+            render_financial_analysis(section)
         elif section.name == "Behavioural Analysis":
-            _render_behavioural_chart(section)
+            render_behavioural_analysis(section)
         elif section.name == "Debt Sustainability":
-            _render_debt_chart(section)
+            render_debt_analysis(section)
         elif section.name == "Customer Profile":
             _render_customer_profile(section)
 
