@@ -121,6 +121,103 @@ def _render_final_chart(credit_case: Any) -> None:
     st.bar_chart(counts, horizontal=True)
 
 
+def _profile_value(data: Any, field: str, default: str = "Not available") -> str:
+    value = getattr(data, field, None)
+    if value is None or value == "":
+        return default
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    return str(value)
+
+
+def _profile_completeness(data: Any) -> tuple[int, int]:
+    fields = (
+        "company_name",
+        "legal_form",
+        "sector",
+        "size_class",
+        "geography",
+        "relationship_years",
+        "active_ews",
+        "previous_restructuring",
+    )
+    available = sum(getattr(data, field, None) not in (None, "") for field in fields)
+    return available, len(fields)
+
+
+def _render_customer_profile(section: Any) -> None:
+    """Render descriptive customer context without introducing a synthetic risk score."""
+    context = getattr(section, "context", {}) or {}
+    data = context.get("customer_profile")
+    if data is None:
+        st.info("Customer profile information is not available.")
+        return
+
+    available, total = _profile_completeness(data)
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Profile information", f"{available}/{total}")
+    with col2:
+        st.metric("Banking relationship", _profile_value(data, "relationship_years", "—"), "years")
+    with col3:
+        st.metric("Historical facilities", len(getattr(data, "historical_facilities", []) or []))
+
+    st.markdown("**Company & anagraphic profile**")
+    profile_frame = pd.DataFrame(
+        [
+            {
+                "Company": _profile_value(data, "company_name"),
+                "Legal form": _profile_value(data, "legal_form"),
+                "Sector": _profile_value(data, "sector"),
+                "Size class": _profile_value(data, "size_class"),
+                "Geography": _profile_value(data, "geography"),
+            }
+        ]
+    )
+    st.dataframe(profile_frame, use_container_width=True, hide_index=True)
+
+    relationship_col, ownership_col = st.columns(2)
+    with relationship_col:
+        st.markdown("**Banking relationship**")
+        facilities = getattr(data, "historical_facilities", []) or []
+        if facilities:
+            st.write("Historical facilities")
+            for facility in facilities:
+                st.write(f"• {facility}")
+        else:
+            st.caption("No historical facility information available.")
+
+    with ownership_col:
+        st.markdown("**Ownership & management**")
+        shareholders = getattr(data, "shareholders", []) or []
+        management = getattr(data, "management_members", []) or []
+        if shareholders:
+            st.write("Shareholders")
+            for shareholder in shareholders:
+                st.write(f"• {shareholder}")
+        if management:
+            st.write("Management")
+            for member in management:
+                st.write(f"• {member}")
+        if not shareholders and not management:
+            st.caption("Ownership and management information not available.")
+
+    st.markdown("**Risk-context signals**")
+    signal_frame = pd.DataFrame(
+        [
+            {
+                "Signal": "Active EWS",
+                "Value": _profile_value(data, "active_ews"),
+            },
+            {
+                "Signal": "Previous restructuring",
+                "Value": _profile_value(data, "previous_restructuring"),
+            },
+        ]
+    )
+    st.dataframe(signal_frame, use_container_width=True, hide_index=True)
+
+
 def _render_section_details(section: Any) -> None:
     """Show evidence and limitations while keeping the decision source deterministic."""
     frame = _indicator_frame(section)
@@ -238,21 +335,25 @@ def render_credit_analysis_case(result: Any) -> None:
         unsafe_allow_html=True,
     )
 
-    with st.expander("01 · Financial Analysis", expanded=True):
+    with st.expander("01 · Customer Profile", expanded=True):
+        _render_customer_profile(credit_case.customer_profile)
+        _render_section_details(credit_case.customer_profile)
+
+    with st.expander("02 · Financial Analysis", expanded=True):
         _render_financial_chart(credit_case.financial_analysis)
         _render_section_details(credit_case.financial_analysis)
 
-    with st.expander("02 · Behavioural Analysis", expanded=True):
+    with st.expander("03 · Behavioural Analysis", expanded=True):
         _render_behavioural_chart(credit_case.behavioural_analysis)
         _render_section_details(credit_case.behavioural_analysis)
 
-    with st.expander("03 · Debt Sustainability", expanded=True):
+    with st.expander("04 · Debt Sustainability", expanded=True):
         _render_debt_chart(credit_case.debt_sustainability)
         _render_section_details(credit_case.debt_sustainability)
 
     final_assessment = getattr(credit_case, "final_assessment", None)
     if final_assessment is not None:
-        with st.expander("04 · Final Assessment", expanded=True):
+        with st.expander("05 · Final Assessment", expanded=True):
             final_status = _status_value(getattr(final_assessment, "status", None))
             st.info(
                 f"Final deterministic aggregation: {final_status}. "
