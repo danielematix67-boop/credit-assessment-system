@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+import pandas as pd
 import pytest
 
 from app.ui.results.financial_analysis import (
@@ -83,7 +84,7 @@ def test_indicator_analysis_frame_exposes_evidence_and_relation() -> None:
     assert list(frame["Rule"]) == ["R001", "R002", "R003"]
     assert frame.loc[0, "Distance"] == pytest.approx(1.0)
     assert frame.loc[0, "Relation"] == "Worse than threshold"
-    assert frame.loc[1, "Distance"] is None
+    assert pd.isna(frame.loc[1, "Distance"])
     assert frame.loc[1, "Relation"] == "Threshold = 0"
     assert frame.loc[2, "Distance"] == pytest.approx(-0.4)
     assert frame.loc[2, "Relation"] == "Better than threshold"
