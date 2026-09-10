@@ -33,7 +33,7 @@ def test_demo_scenario_builders_produce_valid_inputs(scenario_name: str) -> None
 
 
 def test_demo_scenarios_have_expected_final_statuses(assessment_service) -> None:
-    case_service = CreditAssessmentCaseService(assessment_service=assessment_service)
+    case_service = CreditAssessmentCaseService(financial_assessment_service=assessment_service)
 
     for scenario_name, expected_status in EXPECTED_FINAL_STATUS.items():
         position = build_demo_position(scenario_name)
@@ -51,7 +51,7 @@ def test_demo_scenarios_have_expected_final_statuses(assessment_service) -> None
 
 
 def test_demo_case_analysis_agent_preserves_final_assessment_status(assessment_service) -> None:
-    case_service = CreditAssessmentCaseService(assessment_service=assessment_service)
+    case_service = CreditAssessmentCaseService(financial_assessment_service=assessment_service)
 
     for scenario_name, expected_status in EXPECTED_FINAL_STATUS.items():
         position = build_demo_position(scenario_name)
@@ -72,7 +72,9 @@ def test_missing_information_preserves_explicit_limitations(assessment_service) 
     position = build_demo_position("Missing Information")
     profile, behavioural, debt = build_demo_case_data("Missing Information")
 
-    case = CreditAssessmentCaseService(assessment_service=assessment_service).assess(
+    case = CreditAssessmentCaseService(
+        financial_assessment_service=assessment_service
+    ).assess(
         position,
         customer_profile_data=profile,
         behavioural_data=behavioural,
