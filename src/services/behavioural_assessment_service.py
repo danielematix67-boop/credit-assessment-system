@@ -28,17 +28,23 @@ class BehaviouralAssessmentService:
             for rule, value in zip(self._RULES, self._values(data), strict=True)
         ]
         findings = [
-            RuleFinding(result=result, comment=Comment(result.rule_id, result.reason or ""))
+            RuleFinding(
+                result=result,
+                comment=Comment(result.rule_id, result.reason or ""),
+            )
             for result in results
             if result.status == RuleStatus.TRIGGERED
         ]
+        limitations = []
+        if all(result.status == RuleStatus.NOT_EVALUABLE for result in results):
+            limitations.append("Behavioural banking indicators are not available.")
 
         return AssessmentSection(
             name="Behavioural Analysis",
             status=SectionStatus(self.status_calculator.calculate(results).value),
             findings=findings,
             evidence=results,
-            limitations=[],
+            limitations=limitations,
         )
 
     @staticmethod
