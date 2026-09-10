@@ -1,4 +1,4 @@
-"""Risk indicator dashboard orchestration."""
+"""Rule Engine evidence visualization."""
 
 from typing import Any
 
@@ -6,7 +6,6 @@ import pandas as pd
 import streamlit as st
 
 from app.ui.components import render_section_header
-from app.ui.results.evidence import render_rule_evidence_matrix
 from app.ui.results.helpers import (
     build_rule_dataframe,
     build_severity_overview,
@@ -19,85 +18,12 @@ from app.ui.results.helpers import (
 from app.ui.results.rule_detail import render_rule_indicator_detail
 
 
-def _render_kpis(
-    rule_results: list[Any],
-    status_counts: dict[str, int],
-    severity_counts_data: dict[str, int],
-) -> None:
-    metric_cols = st.columns(4)
-    metrics = [
-        ("Indicators", len(rule_results)),
-        ("Triggered", status_counts["TRIGGERED"]),
-        (
-            "High / critical",
-            severity_counts_data["HIGH"] + severity_counts_data["CRITICAL"],
-        ),
-        ("Not evaluable", status_counts["NOT_EVALUABLE"]),
-    ]
-    for column, (label, value) in zip(metric_cols, metrics):
-        with column:
-            st.metric(label, value)
-
-
-def _render_decision_bridge(
-    rule_results: list[Any],
-    status_counts: dict[str, int],
-    severity_counts_data: dict[str, int],
-    result: Any,
-) -> None:
-    """Render a presentation-only bridge from rule outputs to assessment status."""
-    st.markdown("### Assessment Decision Bridge")
-    st.caption(
-        "A compact visual bridge between evaluated indicators, rule outcomes and the "
-        "final deterministic monitoring assessment."
-    )
-
-    bridge_cols = st.columns([1, 0.22, 1, 0.22, 1])
-    assessment = getattr(result, "assessment", None)
-    assessment_status = str(
-        getattr(getattr(assessment, "status", None), "value", "Unknown")
-    )
-    bridge_items = [
-        ("Indicators evaluated", str(len(rule_results)), "Financial evidence"),
-        ("Rules triggered", str(status_counts["TRIGGERED"]), "Risk evidence"),
-        ("Final assessment", assessment_status, "Deterministic judgement"),
-    ]
-
-    for card_index, (label, value, description) in zip((0, 2, 4), bridge_items):
-        with bridge_cols[card_index]:
-            with st.container(border=True):
-                st.caption(label)
-                st.markdown(f"### {value}")
-                st.caption(description)
-
-    for arrow_index in (1, 3):
-        with bridge_cols[arrow_index]:
-            st.markdown(
-                "<div style='text-align:center; padding-top:2.1rem; "
-                "font-size:1.3rem;'>→</div>",
-                unsafe_allow_html=True,
-            )
-
-    bridge_meta = st.columns(3)
-    bridge_meta[0].caption(f"{len(rule_results)} indicators evaluated")
-    bridge_meta[1].caption(
-        f"{status_counts['TRIGGERED']} of {len(rule_results)} rules triggered"
-    )
-    bridge_meta[2].caption(
-        f"{severity_counts_data['HIGH'] + severity_counts_data['CRITICAL']} "
-        "high/critical severity outcomes"
-    )
-    st.caption(
-        "This bridge is explanatory only. It does not recalculate thresholds, severity "
-        "or assessment status."
-    )
-
-
 def _render_signal_overview(
     status_counts: dict[str, int],
     severity_counts_data: dict[str, int],
 ) -> None:
-    st.markdown("### Risk Signal Overview")
+    """Show the factual distribution of deterministic rule outcomes."""
+    st.markdown("### Rule Outcome Overview")
     overview_cols = st.columns(2)
     with overview_cols[0]:
         st.caption("Rule outcomes")
@@ -125,7 +51,8 @@ def _render_signal_overview(
 
 
 def _render_rule_catalogue(dataframe: pd.DataFrame, status_counts: dict[str, int]) -> None:
-    st.markdown("### Rule Catalogue")
+    """Show filterable deterministic rule evidence."""
+    st.markdown("### Rule Evidence")
     st.caption("Filter the complete rule set before inspecting individual rule evidence.")
 
     filter_cols = st.columns([1.2, 1.2, 1.6, 1.4])
@@ -213,7 +140,7 @@ def _render_rule_catalogue(dataframe: pd.DataFrame, status_counts: dict[str, int
         "Category",
     ]
 
-    with st.expander("View filtered rule results", expanded=total_filtered <= 20):
+    with st.container(border=True):
         if filtered.empty:
             st.info("No rules match the selected filters.")
         else:
@@ -225,29 +152,21 @@ def _render_rule_catalogue(dataframe: pd.DataFrame, status_counts: dict[str, int
 
 
 def render_risk_indicator_dashboard(result: Any) -> None:
-    """Render the complete rule-outcome and indicator diagnostic dashboard."""
+    """Render deterministic Rule Engine evidence for analyst inspection."""
     rule_results = get_rule_results(result)
     if not rule_results:
         return
 
     render_section_header(
-        "Risk Indicator Dashboard",
-        "Structured view of deterministic indicators, rule outcomes and risk severity.",
+        "Rule Engine Evidence",
+        "Technical drill-down into deterministic indicators, rule outcomes and severity.",
     )
 
     dataframe = build_rule_dataframe(rule_results)
     status_counts = rule_status_counts(result)
     severity_counts_data = severity_counts(rule_results)
 
-    _render_kpis(rule_results, status_counts, severity_counts_data)
-    _render_decision_bridge(
-        rule_results,
-        status_counts,
-        severity_counts_data,
-        result,
-    )
     _render_signal_overview(status_counts, severity_counts_data)
-    render_rule_evidence_matrix(result)
     _render_rule_catalogue(dataframe, status_counts)
 
     with st.expander("Inspect individual rule detail", expanded=True):
