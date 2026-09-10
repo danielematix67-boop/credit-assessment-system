@@ -88,23 +88,34 @@ def _render_threshold_distance_chart(section: Any, title: str) -> None:
 
 
 def _render_financial_dimensions(section: Any) -> None:
-    """Show the analytical dimensions already produced by the deterministic domain layer."""
+    """Make the deterministic analyst chain visible: dimension -> indicator -> evidence -> finding."""
     dimensions = getattr(section, "dimensions", {}) or {}
     if not dimensions:
         return
+
+    findings_by_rule = {}
+    for finding in getattr(section, "findings", []):
+        result = getattr(finding, "result", None)
+        rule_id = getattr(result, "rule_id", "")
+        if rule_id:
+            findings_by_rule[rule_id] = finding
+
+    st.markdown("**Analytical Dimensions**")
+    st.caption(
+        "Financial indicators are grouped into analytical dimensions to make the analyst reasoning visible. "
+        "The dimension view is descriptive only and does not introduce a new risk score or alter the assessment decision."
+    )
 
     rows = []
     for dimension, rules in dimensions.items():
         rule_list = list(rules or [])
         statuses = [_rule_status(rule) for rule in rule_list]
-        triggered = sum(status in {"ATTENTION", "CRITICAL"} for status in statuses)
+        triggered = sum(status == "TRIGGERED" for status in statuses)
         evaluable = sum(status != "NOT_EVALUABLE" for status in statuses)
-        if "CRITICAL" in statuses:
-            dimension_status = "CRITICAL"
-        elif "ATTENTION" in statuses:
-            dimension_status = "ATTENTION"
+        if "TRIGGERED" in statuses:
+            dimension_status = "TRIGGERED"
         elif evaluable:
-            dimension_status = "NORMAL"
+            dimension_status = "NOT_TRIGGERED"
         else:
             dimension_status = "NOT_EVALUABLE"
 
@@ -122,31 +133,43 @@ def _render_financial_dimensions(section: Any) -> None:
     if dimension_frame.empty:
         return
 
-    st.markdown("**Analytical Dimensions**")
-    st.caption(
-        "Financial indicators are grouped into analytical dimensions to make the analyst reasoning visible. "
-        "The dimension view is descriptive only and does not introduce a new risk score or alter the assessment decision."
-    )
-
     chart_frame = dimension_frame.set_index("Analytical dimension")[["Triggered"]]
     st.bar_chart(chart_frame, horizontal=True)
     st.dataframe(dimension_frame, use_container_width=True, hide_index=True)
 
-    with st.expander("Dimension evidence", expanded=False):
-        for dimension, rules in dimensions.items():
-            rule_list = list(rules or [])
-            if not rule_list:
-                continue
-            st.markdown(f"**{dimension}**")
-            detail_rows = [
+    for dimension, rules in dimensions.items():
+        rule_list = list(rules or [])
+        if not rule_list:
+            continue
+
+        st.markdown(f"**{dimension}**")
+        detail_rows = []
+        for rule in rule_list:
+            rule_id = getattr(rule, "rule_id", "")
+            detail_rows.append(
                 {
-                    "Rule": getattr(rule, "rule_id", ""),
+                    "Rule": rule_id,
                     "Indicator": getattr(rule, "indicator", getattr(rule, "rule_name", "Indicator")),
+                    "Value": getattr(rule, "value", None),
+                    "Threshold": getattr(rule, "threshold", None),
                     "Status": _rule_status(rule),
                 }
-                for rule in rule_list
-            ]
-            st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
+            )
+
+        st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
+
+        for rule in rule_list:
+            rule_id = getattr(rule, "rule_id", "")
+            if _rule_status(rule) != "TRIGGERED":
+                continue
+            finding = findings_by_rule.get(rule_id)
+            if finding is None:
+                continue
+            result = getattr(finding, "result", None)
+            reason = getattr(result, "reason", None) or getattr(finding, "comment", "")
+            if reason:
+                indicator = getattr(rule, "indicator", getattr(rule, "rule_name", rule_id))
+                st.info(f"**Finding · {indicator} ({rule_id})**\n\n{reason}")
 
 
 def _render_financial_chart(section: Any) -> None:
