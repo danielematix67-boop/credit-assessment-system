@@ -13,9 +13,8 @@ def render_credit_data_source() -> tuple[
     str,
     str | None,
 ]:
-    """Render the credit position and information source used for monitoring."""
+    """Render the credit position and its information source."""
     st.subheader("Credit Position")
-    st.caption("Select the position to be reviewed by the monitoring assessment.")
 
     input_mode = st.radio(
         "Input mode",
@@ -26,7 +25,6 @@ def render_credit_data_source() -> tuple[
 
     if input_mode == "Demo Scenario":
         return _render_demo_scenario()
-
     return _render_manual_input()
 
 
@@ -37,12 +35,9 @@ def _render_demo_scenario() -> tuple[
     str | None,
 ]:
     scenario_name = st.selectbox(
-        "Scenario",
-        options=list(DEMO_SCENARIOS.keys()),
-        index=0,
+        "Scenario", options=list(DEMO_SCENARIOS.keys()), index=0
     )
     scenario = DEMO_SCENARIOS[scenario_name]
-
     st.caption(scenario["description"])
 
     try:
@@ -52,8 +47,8 @@ def _render_demo_scenario() -> tuple[
         st.exception(error)
         st.stop()
 
-    st.markdown("**Financial information available for review**")
-    display_position_table(position)
+    with st.expander("Review input data", expanded=False):
+        display_position_table(position)
 
     return position, None, "Demo Scenario", scenario_name
 
@@ -65,7 +60,6 @@ def _render_manual_input() -> tuple[
     str | None,
 ]:
     st.caption("Enter the financial information available for the credit review.")
-
     position_data = build_credit_position_from_ui()
     provided_fields = sum(value is not None for value in position_data.values())
     total_fields = len(position_data)
