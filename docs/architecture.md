@@ -45,7 +45,10 @@ FinalAssessmentService
 FinalAssessment
       │
       ▼
-Case-level analysis / executive synthesis
+Case Analysis / Executive Synthesis
+      │
+      ▼
+Reporting Layer
       │
       ▼
 Report
@@ -163,14 +166,16 @@ The implementation deliberately avoids duplicating the existing financial indica
 `FinalAssessmentService` combines section-level statuses using an explicit deterministic policy:
 
 ```text
-Any CRITICAL section → CRITICAL
-2+ ATTENTION sections → CRITICAL
-1 ATTENTION section  → ATTENTION
+Any CRITICAL section       → CRITICAL
+2+ core ATTENTION sections → CRITICAL
+1 ATTENTION section        → ATTENTION
 All evaluable sections NORMAL → NORMAL
-No evaluable sections → ATTENTION
+No evaluable sections      → ATTENTION
 ```
 
 `NOT_EVALUABLE` sections are excluded from the positive/negative count but are reported as limitations. No averaging, weighted score or LLM judgement is used.
+
+Customer Profile is contextual for the two-area escalation rule: its `ATTENTION` status does not count as a core-area attention, while a `CRITICAL` profile can still produce a `CRITICAL` final assessment.
 
 ---
 
@@ -191,13 +196,13 @@ No LLM participates in this decision path.
 
 ## 10. Analysis and Reporting Boundary
 
-The existing reporting path remains compatible with the original financial assessment:
+The financial reporting path is:
 
 ```text
 Assessment → AnalysisAgent → AssessmentAnalysis → ReportingAgent → Report
 ```
 
-The case-oriented layer is now also built during workflow execution and exposed through `AssessmentWorkflowResult.credit_case`:
+The case-oriented layer is also built during workflow execution:
 
 ```text
 CreditAssessmentCase
@@ -206,7 +211,7 @@ Deterministic section evidence
         ↓
 FinalAssessment
         ↓
-UI case overview / future case-level synthesis
+Case analysis / UI presentation
 ```
 
 The current LLM reporting path remains bounded: it may transform deterministic findings into prose but must not change status, thresholds, severity, evidence or limitations.
@@ -217,25 +222,49 @@ The current LLM reporting path remains bounded: it may transform deterministic f
 
 The Streamlit UI remains responsible for presentation and user interaction. It does not own credit-risk calculations.
 
-The Results hierarchy is now:
+The current Results hierarchy is deliberately progressive:
 
 ```text
 Executive Credit Assessment
           ↓
-Credit Analysis Case
-  ├── Customer Profile
-  ├── Financial Analysis
-  ├── Behavioural Analysis
-  └── Debt Sustainability
+Final Assessment
           ↓
-Final Deterministic Aggregation
+Risk Drivers
           ↓
-Risk Indicator Dashboard
+Rule Engine Evidence
           ↓
-Audit Trail & Methodology
+Executive Narrative
+          ↓
+Detailed Analysis by Macro-area
 ```
 
-The four macro-area cards are intentionally descriptive at this stage. Areas without supplied data are shown as `NOT_EVALUABLE`; the UI does not fabricate inputs to make them appear assessed.
+The first screen is focused on the final judgement and its principal drivers. Technical evidence is progressively available through compact, closed-by-default drill-downs.
+
+### Executive Credit Assessment
+
+The header presents the deterministic final status together with compact KPI information such as rules evaluated, triggered rules, non-evaluable rules and decision source.
+
+### Final Assessment
+
+The final-assessment view presents the deterministic status of each macro-area and any explicit assessment limitations. It does not repeat the executive KPI summary.
+
+### Risk Drivers
+
+The Risk Drivers view ranks triggered deterministic indicators across macro-areas using normalized distance from their configured thresholds. The ranking is descriptive and does not introduce a new score. The chart is visible by default; the full triggered-indicator table is available on demand.
+
+### Rule Engine Evidence
+
+The Rule Engine Evidence view provides compact rule-outcome and severity distributions. The filterable rule catalogue and individual-rule inspection are closed by default.
+
+### Executive Narrative
+
+The Executive Narrative presents the generated executive summary. Material risk findings are available on demand rather than being repeated immediately after the Risk Drivers section.
+
+### Detailed Analysis
+
+Detailed macro-area analysis remains available as a final drill-down and includes evidence quality, financial analysis, behavioural analysis, debt sustainability and customer profile information.
+
+All visualizations consume deterministic workflow outputs. The UI does not recalculate thresholds, severity or assessment status.
 
 ---
 
@@ -260,7 +289,7 @@ The four macro-area cards are intentionally descriptive at this stage. Areas wit
 **Completed.** Added explicit cross-section aggregation rules through `FinalAssessmentService`.
 
 ### Phase 7 — Executive Synthesis
-**In progress.** The case is now exposed by the workflow and presented in the UI. The remaining work is to make `CaseAnalysisAgent` the formal downstream analysis contract for the complete case, then adapt the reporting prompts/generators to consume section-level evidence and `FinalAssessment`.
+**In progress.** The case is exposed by the workflow and presented through the analyst-oriented Results hierarchy. The remaining architectural work is to make `CaseAnalysisAgent` the formal downstream analysis contract for the complete case and then adapt reporting prompts/generators to consume section-level evidence and `FinalAssessment` consistently.
 
 ---
 
