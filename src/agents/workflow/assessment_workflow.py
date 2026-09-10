@@ -2,9 +2,11 @@ import time
 from datetime import datetime, timezone
 from uuid import uuid4
 
+from src.agents.analysis.case_analysis_agent import CaseAnalysisAgent
 from src.agents.base.agent import Agent
 from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
+from src.models.assessment_status import AssessmentStatus
 from src.models.assessment_workflow import AssessmentWorkflowResult
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.execution_metadata import ExecutionMetadata
@@ -22,12 +24,14 @@ class AssessmentWorkflow:
         reporting_agent: Agent[AssessmentAnalysis, Report],
         reporting_mode: str = "Unknown",
         credit_case_service: CreditAssessmentCaseService | None = None,
+        case_analysis_agent: CaseAnalysisAgent | None = None,
     ) -> None:
         self.assessment_service = assessment_service
         self.analysis_agent = analysis_agent
         self.reporting_agent = reporting_agent
         self.reporting_mode = reporting_mode
         self.credit_case_service = credit_case_service
+        self.case_analysis_agent = case_analysis_agent
 
     def run(self, position: CreditPosition) -> AssessmentWorkflowResult:
         execution_id = str(uuid4())
@@ -35,15 +39,21 @@ class AssessmentWorkflow:
         workflow_start = time.perf_counter()
 
         assessment_start = time.perf_counter()
-        assessment = self.assessment_service.assess(position)
+        credit_case: CreditAssessmentCase | None = None
+
+        if self.credit_case_service is not None and self.case_analysis_agent is not None:
+            credit_case = self.credit_case_service.assess(position)
+            assessment = self._legacy_assessment_from_case(credit_case)
+        else:
+            assessment = self.assessment_service.assess(position)
+
         assessment_elapsed_time = time.perf_counter() - assessment_start
 
-        credit_case: CreditAssessmentCase | None = None
-        if self.credit_case_service is not None:
-            credit_case = self.credit_case_service.assess(position)
-
         analysis_start = time.perf_counter()
-        analysis = self.analysis_agent.run(assessment)
+        if credit_case is not None and self.case_analysis_agent is not None:
+            analysis = self.case_analysis_agent.run(credit_case)
+        else:
+            analysis = self.analysis_agent.run(assessment)
         analysis_elapsed_time = time.perf_counter() - analysis_start
 
         reporting_start = time.perf_counter()
@@ -80,4 +90,14 @@ class AssessmentWorkflow:
             analysis_elapsed_time=analysis_elapsed_time,
             reporting_elapsed_time=reporting_elapsed_time,
             total_elapsed_time=total_elapsed_time,
+        )
+
+    @staticmethod
+    def _legacy_assessment_from_case(case: CreditAssessmentCase) -> Assessment:
+        financial_section = case.financial_analysis
+        return Assessment(
+            position_id=case.position.position_id,
+            rule_results=financial_section.evidence,
+            findings=financial_section.findings,
+            status=AssessmentStatus(financial_section.status.value),
         )
