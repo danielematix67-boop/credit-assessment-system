@@ -8,7 +8,10 @@ from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.models.assessment_workflow import AssessmentWorkflowResult
+from src.models.behavioural_data import BehaviouralData
 from src.models.credit_assessment_case import CreditAssessmentCase
+from src.models.customer_profile_data import CustomerProfileData
+from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.models.execution_metadata import ExecutionMetadata
 from src.models.position import CreditPosition
 from src.models.report import Report
@@ -33,7 +36,14 @@ class AssessmentWorkflow:
         self.credit_case_service = credit_case_service
         self.case_analysis_agent = case_analysis_agent
 
-    def run(self, position: CreditPosition) -> AssessmentWorkflowResult:
+    def run(
+        self,
+        position: CreditPosition,
+        *,
+        behavioural_data: BehaviouralData | None = None,
+        debt_sustainability_data: DebtSustainabilityData | None = None,
+        customer_profile_data: CustomerProfileData | None = None,
+    ) -> AssessmentWorkflowResult:
         execution_id = str(uuid4())
         started_at = datetime.now(timezone.utc)
         workflow_start = time.perf_counter()
@@ -42,7 +52,12 @@ class AssessmentWorkflow:
         credit_case: CreditAssessmentCase | None = None
 
         if self.credit_case_service is not None and self.case_analysis_agent is not None:
-            credit_case = self.credit_case_service.assess(position)
+            credit_case = self.credit_case_service.assess(
+                position,
+                behavioural_data=behavioural_data,
+                debt_sustainability_data=debt_sustainability_data,
+                customer_profile_data=customer_profile_data,
+            )
             assessment = self._legacy_assessment_from_case(credit_case)
         else:
             assessment = self.assessment_service.assess(position)
