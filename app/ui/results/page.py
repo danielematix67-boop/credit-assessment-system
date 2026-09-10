@@ -1,3 +1,4 @@
+from dataclasses import replace
 from typing import Any
 
 import streamlit as st
@@ -219,10 +220,16 @@ def render_results(
     _apply_results_styles()
     st.markdown('<div class="results-divider"></div>', unsafe_allow_html=True)
     render_results_header(result)
-    render_credit_analysis_case(result)
+
     credit_case = getattr(result, "credit_case", None)
     if credit_case is not None:
+        # The macro-area renderer keeps the original case structure, while the
+        # dedicated final view below owns the detailed final-assessment display.
+        case_without_final = replace(credit_case, final_assessment=None)
+        case_result = type("CaseResult", (), {"credit_case": case_without_final})()
+        render_credit_analysis_case(case_result)
         render_final_assessment(credit_case)
+
     render_report_tab(
         result=result,
         selected_reporting_mode=selected_reporting_mode,
