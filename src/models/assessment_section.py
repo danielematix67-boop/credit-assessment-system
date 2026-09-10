@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 from src.models.rule_finding import RuleFinding
@@ -21,6 +21,7 @@ class AssessmentSection:
     findings: list[RuleFinding]
     evidence: list[RuleResult]
     limitations: list[str]
+    dimensions: dict[str, list[RuleResult]] = field(default_factory=dict)
 
     @property
     def is_evaluable(self) -> bool:
