@@ -5,11 +5,11 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from app.ui.results.helpers import rule_direction, rule_status, threshold_distance, threshold_relation
+from app.ui.results.helpers import rule_status
 
 
 def build_risk_driver_frame(credit_case: Any) -> pd.DataFrame:
-    """Build a cross-area ranking from deterministic triggered RuleResult data."""
+    """Build a cross-area view of deterministic triggered RuleResult evidence."""
     rows = []
     for section in getattr(credit_case, "sections", []) or []:
         for rule in getattr(section, "evidence", []) or []:
@@ -18,15 +18,10 @@ def build_risk_driver_frame(credit_case: Any) -> pd.DataFrame:
 
             value = getattr(rule, "value", None)
             threshold = getattr(rule, "threshold", None)
-            distance = None
-            relation = "Not evaluable"
-            if value is not None and threshold is not None:
+            if value is not None:
                 value = float(value)
+            if threshold is not None:
                 threshold = float(threshold)
-                distance = threshold_distance(
-                    value, threshold, rule_direction(rule).upper()
-                )
-                relation = threshold_relation(distance)
 
             rows.append(
                 {
@@ -37,6 +32,7 @@ def build_risk_driver_frame(credit_case: Any) -> pd.DataFrame:
                     ),
                     "Value": value,
                     "Threshold": threshold,
+                    "Status": "TRIGGERED",
                     "Severity": str(
                         getattr(
                             getattr(rule, "severity", None),
@@ -44,8 +40,6 @@ def build_risk_driver_frame(credit_case: Any) -> pd.DataFrame:
                             getattr(rule, "severity", ""),
                         )
                     ).upper(),
-                    "Distance": distance,
-                    "Relation": relation,
                 }
             )
 
@@ -54,31 +48,20 @@ def build_risk_driver_frame(credit_case: Any) -> pd.DataFrame:
         return frame
 
     return frame.sort_values(
-        "Distance", ascending=False, na_position="last", kind="stable"
+        ["Macro-area", "Rule"], ascending=True, kind="stable"
     ).reset_index(drop=True)
 
 
 def render_risk_driver_overview(credit_case: Any) -> None:
-    """Render the highest-priority deterministic risk drivers across macro-areas."""
+    """Render deterministic indicators that actually generated risk findings."""
     frame = build_risk_driver_frame(credit_case)
     if frame.empty:
         return
 
     st.markdown("### Risk Driver Overview")
     st.caption(
-        "Triggered indicators are ranked across macro-areas by their normalized distance "
-        "from the configured threshold. This view is descriptive and does not create a new score."
+        "Indicators shown here are deterministic rules that triggered a risk finding. "
+        "The view reports the observed value, configured threshold and severity without introducing an additional score."
     )
 
-    chart_frame = frame.dropna(subset=["Distance"]).head(10)
-    if not chart_frame.empty:
-        chart_frame = chart_frame.set_index("Indicator")[["Distance"]].rename(
-            columns={"Distance": "Threshold distance"}
-        )
-        st.bar_chart(chart_frame, horizontal=True)
-
-    display_frame = frame.copy()
-    display_frame["Distance"] = display_frame["Distance"].map(
-        lambda value: "—" if pd.isna(value) else f"{value:+.0%}"
-    )
-    st.dataframe(display_frame, use_container_width=True, hide_index=True)
+    st.dataframe(frame, use_container_width=True, hide_index=True)
