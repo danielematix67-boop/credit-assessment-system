@@ -222,20 +222,17 @@ def render_results(
 
     credit_case = getattr(result, "credit_case", None)
     if credit_case is not None:
+        # Keep the first screen focused on the decision and its main drivers.
+        # Detailed macro-area evidence remains available below as an optional
+        # drill-down, reducing the default page length without changing logic.
+        render_final_assessment(credit_case)
+        render_risk_driver_overview(credit_case)
+        render_risk_indicator_dashboard(result)
+        render_executive_synthesis(result)
+
         case_without_final = replace(credit_case, final_assessment=None)
         case_result = type("CaseResult", (), {"credit_case": case_without_final})()
-
-        # Keep the page aligned with the analyst reasoning chain:
-        # input -> data quality -> indicator/rule -> finding -> area -> decision.
-        render_credit_analysis_case(case_result)
-        render_risk_driver_overview(credit_case)
-        render_final_assessment(credit_case)
-
-        # Technical drill-down comes after the deterministic conclusion.
-        render_risk_indicator_dashboard(result)
-
-        # The narrative is deliberately last: it interprets the evidence and
-        # deterministic conclusion rather than competing with them.
-        render_executive_synthesis(result)
+        with st.expander("Detailed analysis by macro-area", expanded=False):
+            render_credit_analysis_case(case_result)
     else:
         render_risk_indicator_dashboard(result)
