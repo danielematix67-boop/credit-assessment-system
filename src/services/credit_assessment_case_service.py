@@ -2,6 +2,7 @@ from src.models.assessment import Assessment
 from src.models.assessment_section import AssessmentSection, SectionStatus
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.position import CreditPosition
+from src.rules.result import RuleResult
 from src.services.assessment_service import AssessmentService
 
 
@@ -48,7 +49,7 @@ class CreditAssessmentCaseService:
 
     @classmethod
     def _financial_section(cls, assessment: Assessment) -> AssessmentSection:
-        dimensions: dict[str, list] = {}
+        dimensions: dict[str, list[RuleResult]] = {}
         for result in assessment.rule_results:
             dimension = cls._FINANCIAL_DIMENSIONS.get(
                 result.rule_id,
