@@ -117,11 +117,7 @@ class CreditAssessmentCaseService:
             result.status == RuleStatus.NOT_EVALUABLE
             for result in assessment.rule_results
         )
-        status = (
-            SectionStatus.NORMAL
-            if all_not_evaluable
-            else SectionStatus(assessment.status.value)
-        )
+        status = SectionStatus(assessment.status.value)
         limitations = (
             ["Financial indicators are not available for this case."]
             if all_not_evaluable
