@@ -42,12 +42,7 @@ def _indicator_frame(section: Any) -> pd.DataFrame:
 
 
 def _threshold_distance_frame(section: Any) -> pd.DataFrame:
-    """Build a direction-aware distance from threshold for non-zero thresholds.
-
-    Positive values mean the indicator is on the worse side of its threshold;
-    negative values mean it is on the better side. This avoids the misleading
-    value/threshold ratio when thresholds can be negative or directions differ.
-    """
+    """Build a direction-aware distance from threshold for non-zero thresholds."""
     frame = _indicator_frame(section)
     if frame.empty:
         return frame
@@ -122,7 +117,10 @@ def _render_final_chart(credit_case: Any) -> None:
 
 
 def _profile_value(data: Any, field: str, default: str = "Not available") -> str:
-    value = getattr(data, field, None)
+    if isinstance(data, dict):
+        value = data.get(field)
+    else:
+        value = getattr(data, field, None)
     if value is None or value == "":
         return default
     if isinstance(value, bool):
@@ -138,39 +136,52 @@ def _profile_completeness(data: Any) -> tuple[int, int]:
         "size_class",
         "geography",
         "relationship_years",
+        "historical_facilities",
         "active_ews",
         "previous_restructuring",
     )
-    available = sum(getattr(data, field, None) not in (None, "") for field in fields)
+    available = sum(
+        _profile_value(data, field, "") != ""
+        and _profile_value(data, field, "") != "Not available"
+        for field in fields
+    )
     return available, len(fields)
+
+
+def _profile_list(data: Any, field: str) -> list[Any]:
+    if isinstance(data, dict):
+        value = data.get(field, [])
+    else:
+        value = getattr(data, field, [])
+    return list(value or [])
 
 
 def _render_customer_profile(section: Any) -> None:
     """Render descriptive customer context without introducing a synthetic risk score."""
     context = getattr(section, "context", {}) or {}
-    data = context.get("customer_profile")
-    if data is None:
+    if not context:
         st.info("Customer profile information is not available.")
         return
 
-    available, total = _profile_completeness(data)
+    available, total = _profile_completeness(context)
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Profile information", f"{available}/{total}")
     with col2:
-        st.metric("Banking relationship", _profile_value(data, "relationship_years", "—"), "years")
+        relationship_years = _profile_value(context, "relationship_years", "—")
+        st.metric("Banking relationship", f"{relationship_years} years")
     with col3:
-        st.metric("Historical facilities", len(getattr(data, "historical_facilities", []) or []))
+        st.metric("Historical facilities", len(_profile_list(context, "historical_facilities")))
 
     st.markdown("**Company & anagraphic profile**")
     profile_frame = pd.DataFrame(
         [
             {
-                "Company": _profile_value(data, "company_name"),
-                "Legal form": _profile_value(data, "legal_form"),
-                "Sector": _profile_value(data, "sector"),
-                "Size class": _profile_value(data, "size_class"),
-                "Geography": _profile_value(data, "geography"),
+                "Company": _profile_value(context, "company_name"),
+                "Legal form": _profile_value(context, "legal_form"),
+                "Sector": _profile_value(context, "sector"),
+                "Size class": _profile_value(context, "size_class"),
+                "Geography": _profile_value(context, "geography"),
             }
         ]
     )
@@ -179,7 +190,7 @@ def _render_customer_profile(section: Any) -> None:
     relationship_col, ownership_col = st.columns(2)
     with relationship_col:
         st.markdown("**Banking relationship**")
-        facilities = getattr(data, "historical_facilities", []) or []
+        facilities = _profile_list(context, "historical_facilities")
         if facilities:
             st.write("Historical facilities")
             for facility in facilities:
@@ -189,8 +200,8 @@ def _render_customer_profile(section: Any) -> None:
 
     with ownership_col:
         st.markdown("**Ownership & management**")
-        shareholders = getattr(data, "shareholders", []) or []
-        management = getattr(data, "management_members", []) or []
+        shareholders = _profile_list(context, "shareholders")
+        management = _profile_list(context, "management_members")
         if shareholders:
             st.write("Shareholders")
             for shareholder in shareholders:
@@ -203,15 +214,16 @@ def _render_customer_profile(section: Any) -> None:
             st.caption("Ownership and management information not available.")
 
     st.markdown("**Risk-context signals**")
+    evidence_by_rule = {getattr(rule, "rule_id", ""): rule for rule in section.evidence}
     signal_frame = pd.DataFrame(
         [
             {
                 "Signal": "Active EWS",
-                "Value": _profile_value(data, "active_ews"),
+                "Value": _rule_status(evidence_by_rule["CP001"]) if "CP001" in evidence_by_rule else "NOT_EVALUABLE",
             },
             {
                 "Signal": "Previous restructuring",
-                "Value": _profile_value(data, "previous_restructuring"),
+                "Value": _rule_status(evidence_by_rule["CP002"]) if "CP002" in evidence_by_rule else "NOT_EVALUABLE",
             },
         ]
     )
