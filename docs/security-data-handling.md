@@ -4,18 +4,39 @@
 
 This document defines the security and data-handling principles for the `credit-assessment-system`.
 
-The system processes credit-related financial information and can optionally use external generative AI services for narrative reporting. Security controls therefore focus on two distinct trust boundaries:
+The system processes credit-related financial information and can optionally use external generative AI services for narrative reporting. Security controls therefore focus on three distinct boundaries:
 
-1. **Deterministic application layer** — processes structured credit information and performs the authoritative assessment.
-2. **External LLM boundary** — may receive selected assessment information when LLM reporting is enabled.
+1. **Input boundary** — structured credit positions must satisfy basic integrity requirements before entering the assessment pipeline.
+2. **Deterministic application layer** — processes structured credit information and performs the authoritative assessment.
+3. **External LLM boundary** — may receive selected assessment information when LLM reporting is enabled.
 
 The core principle is:
 
-> **Sensitive data must be minimized before crossing an external service boundary, and the deterministic assessment must never depend on the external LLM.**
+> **Sensitive data must be minimized before crossing an external service boundary, malformed input must be rejected before assessment, and the deterministic assessment must never depend on the external LLM.**
 
 ---
 
-## 2. Secrets Management
+## 2. Input Integrity
+
+The application validates the structural integrity of `CreditPosition` before deterministic rule evaluation.
+
+The `CreditPositionValidator` rejects:
+
+- invalid object types;
+- empty `position_id` values;
+- non-numeric values in numeric fields;
+- boolean values where numeric values are expected;
+- `NaN` and positive/negative infinity.
+
+`None` is accepted because missing financial information can be a legitimate domain condition and is subsequently handled by rules through `NOT_EVALUABLE` where appropriate.
+
+The generic validator intentionally does not enforce business-specific sign constraints. Such semantics remain under the control of the relevant credit-risk rule.
+
+This boundary is structural rather than a substitute for full domain or business-policy validation.
+
+---
+
+## 3. Secrets Management
 
 API credentials must never be hard-coded in source code, committed to Git, or embedded in configuration files tracked by the repository.
 
@@ -50,7 +71,7 @@ Credentials should also not be written to application logs, exception messages, 
 
 ---
 
-## 3. Data Minimization
+## 4. Data Minimization
 
 Only information required for the selected processing step should cross a system boundary.
 
@@ -71,6 +92,9 @@ The preferred flow is:
 Credit Data
     │
     ▼
+Input Validation
+    │
+    ▼
 Deterministic Assessment
     │
     ▼
@@ -82,7 +106,7 @@ LLM Reporting Boundary
 
 ---
 
-## 4. External LLM Boundary
+## 5. External LLM Boundary
 
 External LLM providers represent a separate trust boundary from the deterministic credit-assessment engine.
 
@@ -118,21 +142,13 @@ This limits the impact of model hallucinations or unexpected model behavior.
 
 ---
 
-## 5. Local vs External LLM Execution
+## 6. Local vs External LLM Execution
 
 The project supports both external Gemini reporting and local Ollama reporting.
 
 ### Gemini
 
-Gemini is an external service. Production use therefore requires an explicit data-governance decision concerning:
-
-- which data may leave the controlled environment;
-- applicable contractual and regulatory requirements;
-- provider data-processing terms;
-- retention and logging policies;
-- geographical or jurisdictional constraints.
-
-The application should not assume that data is safe to transmit externally merely because the LLM is used only for reporting.
+Gemini is an external service. Production use therefore requires an explicit data-governance decision concerning which data may leave the controlled environment, applicable contractual and regulatory requirements, provider data-processing terms, retention/logging policies and geographical or jurisdictional constraints.
 
 ### Ollama
 
@@ -142,7 +158,7 @@ Local execution does not automatically make a deployment secure: host access, ne
 
 ---
 
-## 6. Prompt and Output Safety
+## 7. Prompt and Output Safety
 
 Prompts should contain only controlled information from the deterministic assessment and should explicitly define the model's role as a reporting component.
 
@@ -158,11 +174,11 @@ The application must not execute model output as:
 
 Generated text should remain presentation content.
 
-The current implementation performs a basic output validation that rejects an empty or whitespace-only response. More advanced semantic validation may be added in the future, but it must not transfer decision authority to the model.
+The reporting path performs basic response/grounding validation where configured. More advanced semantic validation may be added in the future, but it must not transfer decision authority to the model.
 
 ---
 
-## 7. Logging and Observability
+## 8. Logging and Observability
 
 Operational logging and execution metadata should support troubleshooting and traceability without exposing sensitive credit information or credentials.
 
@@ -194,7 +210,7 @@ Execution metadata is currently in-memory and attached to the workflow result; i
 
 ---
 
-## 8. Data Retention
+## 9. Data Retention
 
 The application should follow a data-retention policy appropriate to the deployment environment.
 
@@ -206,7 +222,7 @@ If persistent storage is introduced in a future version, retention and deletion 
 
 ---
 
-## 9. Access Control
+## 10. Access Control
 
 Access to the application, repository, secrets, and operational infrastructure should follow least-privilege principles.
 
@@ -226,9 +242,17 @@ LLM credentials should have the minimum permissions necessary for model invocati
 
 ---
 
-## 10. Security Invariants
+## 11. Security Invariants
 
-The following properties are architectural security invariants:
+### Input isolation
+
+```text
+Malformed CreditPosition
+        ↓
+     Rejected
+        ↓
+Rule Engine is not invoked
+```
 
 ### Secret isolation
 
@@ -282,13 +306,14 @@ Execution metadata describes how the workflow completed; it does not influence r
 
 ---
 
-## 11. Security Validation Checklist
+## 12. Security Validation Checklist
 
 Before a production deployment, verify:
 
 - [ ] No API keys or credentials are committed to the repository.
 - [ ] `.streamlit/secrets.toml` and local environment files are excluded from version control.
 - [ ] Demonstration data is synthetic or appropriately anonymized.
+- [ ] Input validation rejects malformed and non-finite numeric data.
 - [ ] External LLM transmission is explicitly approved for the intended data class.
 - [ ] Prompts contain only required assessment information.
 - [ ] LLM output is treated as untrusted text.
@@ -302,7 +327,7 @@ Before a production deployment, verify:
 
 ---
 
-## 12. Scope and Limitations
+## 13. Scope and Limitations
 
 This document describes application-level security and data-handling principles. It is not a substitute for an organisation's information-security framework, data-classification policy, regulatory assessment, vendor due diligence, or production threat model.
 
