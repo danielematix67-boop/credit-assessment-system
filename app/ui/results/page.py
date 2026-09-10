@@ -9,7 +9,6 @@ from app.ui.results.executive_synthesis import render_executive_synthesis
 from app.ui.results.final_assessment import render_final_assessment
 from app.ui.results.helpers import get_rule_results, rule_status
 from app.ui.results.risk_drivers import render_risk_driver_overview
-from app.ui.results.scenario_comparison import render_scenario_comparison
 
 
 def _status_class(status: str) -> str:
@@ -223,17 +222,20 @@ def render_results(
 
     credit_case = getattr(result, "credit_case", None)
     if credit_case is not None:
-        # The macro-area renderer keeps the original case structure, while the
-        # dedicated final view below owns the detailed final-assessment display.
         case_without_final = replace(credit_case, final_assessment=None)
         case_result = type("CaseResult", (), {"credit_case": case_without_final})()
+
+        # Keep the page aligned with the analyst reasoning chain:
+        # input -> data quality -> indicator/rule -> finding -> area -> decision.
         render_credit_analysis_case(case_result)
         render_risk_driver_overview(credit_case)
         render_final_assessment(credit_case)
+
+        # Technical drill-down comes after the deterministic conclusion.
+        render_risk_indicator_dashboard(result)
+
+        # The narrative is deliberately last: it interprets the evidence and
+        # deterministic conclusion rather than competing with them.
         render_executive_synthesis(result)
-
-        render_scenario_comparison(
-            st.session_state.get("assessment_scenario")
-        )
-
-    render_risk_indicator_dashboard(result)
+    else:
+        render_risk_indicator_dashboard(result)
