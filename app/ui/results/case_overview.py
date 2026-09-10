@@ -41,43 +41,67 @@ def _indicator_frame(section: Any) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _threshold_multiple_frame(section: Any) -> pd.DataFrame:
-    """Return value/threshold only where a zero threshold would be meaningful to avoid division errors."""
+def _threshold_distance_frame(section: Any) -> pd.DataFrame:
+    """Build a direction-aware distance from threshold for non-zero thresholds.
+
+    Positive values mean the indicator is on the worse side of its threshold;
+    negative values mean it is on the better side. This avoids the misleading
+    value/threshold ratio when thresholds can be negative or directions differ.
+    """
     frame = _indicator_frame(section)
     if frame.empty:
         return frame
-    frame = frame[frame["Threshold"] != 0].copy()
+
+    rows = []
+    for rule in section.evidence:
+        value = getattr(rule, "value", None)
+        threshold = getattr(rule, "threshold", None)
+        direction = getattr(getattr(rule, "direction", None), "value", getattr(rule, "direction", ""))
+        if value is None or threshold is None or float(threshold) == 0:
+            continue
+
+        value = float(value)
+        threshold = float(threshold)
+        scale = abs(threshold)
+        if direction == "LOWER_IS_WORSE":
+            distance = (threshold - value) / scale
+        else:
+            distance = (value - threshold) / scale
+
+        rows.append(
+            {
+                "Indicator": getattr(rule, "indicator", getattr(rule, "rule_name", "Indicator")),
+                "Threshold distance": distance,
+            }
+        )
+
+    if not rows:
+        return pd.DataFrame()
+    return pd.DataFrame(rows).set_index("Indicator")
+
+
+def _render_threshold_distance_chart(section: Any, title: str) -> None:
+    frame = _threshold_distance_frame(section)
     if frame.empty:
-        return frame
-    frame["Threshold multiple"] = frame["Value"] / frame["Threshold"]
-    return frame.set_index("Indicator")[["Threshold multiple"]]
+        return
+    st.markdown(f"**{title}**")
+    st.caption(
+        "0.0 = configured threshold; positive values are on the worse side of the threshold, "
+        "negative values on the better side. Zero-threshold indicators remain in the evidence table."
+    )
+    st.bar_chart(frame, horizontal=True)
 
 
 def _render_financial_chart(section: Any) -> None:
-    frame = _threshold_multiple_frame(section)
-    if frame.empty:
-        return
-    st.markdown("**Indicator position vs threshold**")
-    st.caption("1.0 = threshold. Values above 1.0 indicate a higher-than-threshold level for these indicators.")
-    st.bar_chart(frame, horizontal=True)
+    _render_threshold_distance_chart(section, "Indicator position vs threshold")
 
 
 def _render_behavioural_chart(section: Any) -> None:
-    frame = _threshold_multiple_frame(section)
-    if frame.empty:
-        return
-    st.markdown("**Behavioural indicators vs threshold**")
-    st.caption("1.0 = configured threshold; higher values indicate greater behavioural pressure.")
-    st.bar_chart(frame, horizontal=True)
+    _render_threshold_distance_chart(section, "Behavioural indicators vs threshold")
 
 
 def _render_debt_chart(section: Any) -> None:
-    frame = _threshold_multiple_frame(section)
-    if frame.empty:
-        return
-    st.markdown("**Debt-service indicators vs threshold**")
-    st.caption("1.0 = configured threshold. The cash-flow buffer is shown separately because its threshold is zero.")
-    st.bar_chart(frame, horizontal=True)
+    _render_threshold_distance_chart(section, "Debt-service indicators vs threshold")
 
     buffer_rule = next(
         (rule for rule in section.evidence if getattr(rule, "rule_id", "") == "DS003"),
