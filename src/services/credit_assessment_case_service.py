@@ -1,18 +1,15 @@
 from src.models.assessment import Assessment
 from src.models.assessment_section import AssessmentSection, SectionStatus
+from src.models.behavioural_data import BehaviouralData
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.position import CreditPosition
 from src.rules.result import RuleResult
 from src.services.assessment_service import AssessmentService
+from src.services.behavioural_assessment_service import BehaviouralAssessmentService
 
 
 class CreditAssessmentCaseService:
-    """Build the higher-level credit analysis case from deterministic assessments.
-
-    Phase 1 intentionally implements only the financial-analysis section. The
-    remaining macro-areas are explicit NOT_EVALUABLE placeholders so that future
-    functionality can be added without changing the case contract.
-    """
+    """Build the higher-level credit analysis case from deterministic assessments."""
 
     _FINANCIAL_DIMENSIONS = {
         "R001": "Revenue & Growth",
@@ -24,11 +21,30 @@ class CreditAssessmentCaseService:
         "R007": "Debt Service Burden",
     }
 
-    def __init__(self, financial_assessment_service: AssessmentService):
+    def __init__(
+        self,
+        financial_assessment_service: AssessmentService,
+        behavioural_assessment_service: BehaviouralAssessmentService | None = None,
+    ):
         self.financial_assessment_service = financial_assessment_service
+        self.behavioural_assessment_service = (
+            behavioural_assessment_service or BehaviouralAssessmentService()
+        )
 
-    def assess(self, position: CreditPosition) -> CreditAssessmentCase:
+    def assess(
+        self,
+        position: CreditPosition,
+        behavioural_data: BehaviouralData | None = None,
+    ) -> CreditAssessmentCase:
         financial_assessment = self.financial_assessment_service.assess(position)
+        behavioural_section = (
+            self.behavioural_assessment_service.assess(behavioural_data)
+            if behavioural_data is not None
+            else self._not_evaluable_section(
+                "Behavioural Analysis",
+                "Behavioural banking data are not available for this case.",
+            )
+        )
 
         return CreditAssessmentCase(
             position=position,
@@ -37,10 +53,7 @@ class CreditAssessmentCaseService:
                 "Customer profile data are not implemented in phase 1.",
             ),
             financial_analysis=self._financial_section(financial_assessment),
-            behavioural_analysis=self._not_evaluable_section(
-                "Behavioural Analysis",
-                "Behavioural banking data are not implemented in phase 1.",
-            ),
+            behavioural_analysis=behavioural_section,
             debt_sustainability=self._not_evaluable_section(
                 "Debt Sustainability",
                 "Debt-service and cash-flow analysis are not implemented in phase 1.",
