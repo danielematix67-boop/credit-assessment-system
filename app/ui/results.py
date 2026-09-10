@@ -5,6 +5,7 @@ import streamlit as st
 from app.ui.charts import render_risk_indicator_dashboard
 from app.ui.components import render_section_header
 from app.ui.report import render_report_tab
+from app.ui.risk_drivers import render_triggered_risk_drivers
 
 
 def resolve_report_badge(
@@ -206,6 +207,120 @@ def _apply_results_styles() -> None:
             color: #15803d;
         }
 
+        .risk-driver-card {
+            margin: .65rem 0;
+            padding: 1rem 1.05rem;
+            border: 1px solid rgba(128,128,128,.20);
+            border-left: 4px solid #6b7280;
+            border-radius: .85rem;
+            background: rgba(128,128,128,.025);
+        }
+
+        .risk-driver-card.critical,
+        .risk-driver-card.high {
+            border-left-color: #b91c1c;
+            background: rgba(185,28,28,.035);
+        }
+
+        .risk-driver-card.medium {
+            border-left-color: #b45309;
+            background: rgba(180,83,9,.035);
+        }
+
+        .risk-driver-card.low {
+            border-left-color: #15803d;
+            background: rgba(21,128,61,.035);
+        }
+
+        .risk-driver-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .risk-driver-kicker {
+            color: rgba(128,128,128,.95);
+            font-size: .68rem;
+            font-weight: 750;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+        }
+
+        .risk-driver-title {
+            margin-top: .2rem;
+            font-size: 1rem;
+            font-weight: 730;
+            line-height: 1.3;
+        }
+
+        .risk-driver-severity {
+            padding: .28rem .58rem;
+            border-radius: 999px;
+            color: #b91c1c;
+            background: rgba(185,28,28,.08);
+            border: 1px solid rgba(185,28,28,.18);
+            font-size: .68rem;
+            font-weight: 760;
+            letter-spacing: .05em;
+        }
+
+        .risk-driver-card.medium .risk-driver-severity {
+            color: #b45309;
+            background: rgba(180,83,9,.08);
+            border-color: rgba(180,83,9,.18);
+        }
+
+        .risk-driver-card.low .risk-driver-severity {
+            color: #15803d;
+            background: rgba(21,128,61,.08);
+            border-color: rgba(21,128,61,.18);
+        }
+
+        .risk-driver-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: .6rem;
+            margin-top: .85rem;
+        }
+
+        .risk-driver-metrics > div {
+            padding: .65rem .72rem;
+            border: 1px solid rgba(128,128,128,.14);
+            border-radius: .65rem;
+            background: rgba(128,128,128,.02);
+        }
+
+        .risk-driver-metrics span,
+        .risk-driver-rationale span {
+            display: block;
+            color: rgba(128,128,128,.90);
+            font-size: .68rem;
+            font-weight: 650;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+
+        .risk-driver-metrics strong {
+            display: block;
+            margin-top: .18rem;
+            font-size: .9rem;
+            font-weight: 720;
+        }
+
+        .risk-driver-rationale {
+            margin-top: .75rem;
+            padding-top: .7rem;
+            border-top: 1px solid rgba(128,128,128,.14);
+        }
+
+        .risk-driver-rationale p {
+            margin: .25rem 0 0 0;
+            color: rgba(128,128,128,.96);
+            font-size: .80rem;
+            line-height: 1.5;
+        }
+
         @media (max-width: 760px) {
             .assessment-hero-top {
                 flex-direction: column;
@@ -213,6 +328,14 @@ def _apply_results_styles() -> None:
 
             .results-kpi-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .risk-driver-metrics {
+                grid-template-columns: 1fr;
+            }
+
+            .risk-driver-top {
+                flex-direction: column;
             }
         }
         </style>
@@ -321,3 +444,4 @@ def render_results(
     )
     render_assessment_overview(result)
     render_risk_indicator_dashboard(result)
+    render_triggered_risk_drivers(result)
