@@ -32,6 +32,10 @@ class FinalAssessmentService:
             status = SectionStatus.CRITICAL
         elif attention:
             status = SectionStatus.ATTENTION
+        elif not_evaluable:
+            # Missing macro-areas are an explicit data-quality limitation and
+            # therefore prevent a clean NORMAL final assessment.
+            status = SectionStatus.ATTENTION
         elif evaluable:
             status = SectionStatus.NORMAL
         else:
