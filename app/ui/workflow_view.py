@@ -2,21 +2,17 @@ import streamlit as st
 
 
 def render_workflow_architecture() -> None:
-    """Show the credit-monitoring workflow in one compact view."""
-    with st.expander("How the monitoring assessment works", expanded=False):
+    """Show the monitoring workflow only when the user asks for methodology."""
+    with st.expander("How the assessment works", expanded=False):
         st.caption(
-            "The workflow shows how raw credit information becomes a documented "
-            "monitoring judgement and executive report."
+            "Credit data → deterministic Rule Engine → monitoring judgement → executive report."
         )
-
         workflow_steps = [
-            ("01", "Credit Position", "Data & information", "det"),
-            ("02", "Financial Indicators", "Actual values", "det"),
-            ("03", "Rule Engine", "Thresholds & outcomes", "det"),
-            ("04", "Monitoring Judgement", "Risk & severity", "det"),
-            ("05", "Executive Report", "Decision & rationale", "ai"),
+            ("01", "Credit data", "Input", "det"),
+            ("02", "Rule Engine", "Thresholds & outcomes", "det"),
+            ("03", "Judgement", "Risk & severity", "det"),
+            ("04", "Report", "Narrative", "ai"),
         ]
-
         pipeline_html = '<div class="pipeline-wrap">'
         for index, (number, title, description, kind) in enumerate(workflow_steps):
             pipeline_html += (
@@ -29,10 +25,8 @@ def render_workflow_architecture() -> None:
             if index < len(workflow_steps) - 1:
                 pipeline_html += '<div class="pipeline-arrow">→</div>'
         pipeline_html += "</div>"
-
         st.markdown(pipeline_html, unsafe_allow_html=True)
         st.caption(
-            "The Rule Engine owns the deterministic judgement, rule outcomes, "
-            "severity and thresholds. The Analysis layer organises the findings. "
-            "AI is used only for report narrative and cannot change the judgement."
+            "The Rule Engine is the sole source of the deterministic assessment. "
+            "AI only supports narrative generation and cannot change the judgement."
         )
