@@ -26,26 +26,6 @@ def _apply_results_styles() -> None:
             background: linear-gradient(90deg, transparent, rgba(128,128,128,.28), transparent);
         }
 
-        .ui-section-header {
-            margin: 1.8rem 0 .8rem 0;
-            padding-bottom: .65rem;
-            border-bottom: 1px solid rgba(128,128,128,.18);
-        }
-
-        .ui-section-title {
-            font-size: 1.18rem;
-            font-weight: 720;
-            letter-spacing: -.015em;
-            line-height: 1.3;
-        }
-
-        .ui-section-description {
-            margin-top: .22rem;
-            color: rgba(128,128,128,.95);
-            font-size: .82rem;
-            line-height: 1.45;
-        }
-
         .assessment-hero {
             position: relative;
             overflow: hidden;
