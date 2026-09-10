@@ -1,0 +1,86 @@
+"""Presentation helpers for deterministic rule results.
+
+These helpers intentionally read existing RuleResult data only. They do not
+recalculate indicators, thresholds, severity, rule status, or assessment status.
+"""
+
+from typing import Any
+
+
+def get_rule_results(result: Any) -> list[Any]:
+    assessment = getattr(result, "assessment", None)
+    return list(getattr(assessment, "rule_results", []) or [])
+
+
+def rule_status_counts(result: Any) -> dict[str, int]:
+    """Count actual RuleResult statuses without applying business logic."""
+    counts = {"TRIGGERED": 0, "NOT_TRIGGERED": 0, "NOT_EVALUABLE": 0}
+    for rule_result in get_rule_results(result):
+        status = rule_status(rule_result)
+        if status in counts:
+            counts[status] += 1
+    return counts
+
+
+def rule_status(rule_result: Any) -> str:
+    status_obj = getattr(rule_result, "status", None)
+    return str(getattr(status_obj, "value", str(status_obj or "—")))
+
+
+def rule_severity(rule_result: Any) -> str:
+    severity_obj = getattr(rule_result, "severity", None)
+    return str(getattr(severity_obj, "value", str(severity_obj or "—")))
+
+
+def rule_direction(rule_result: Any) -> str:
+    direction_obj = getattr(rule_result, "direction", None)
+    return str(getattr(direction_obj, "value", str(direction_obj or "—")))
+
+
+def severity_rank(severity: str) -> int:
+    """Return a display-only severity ranking."""
+    return {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}.get(
+        severity.upper(), 0
+    )
+
+
+def rule_indicator(rule_result: Any) -> str:
+    """Return the explicit deterministic indicator, with legacy fallback."""
+    return str(
+        getattr(rule_result, "indicator", None)
+        or getattr(rule_result, "rule_name", "—")
+    )
+
+
+def severity_counts(rule_results: list[Any]) -> dict[str, int]:
+    counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+    for rule_result in rule_results:
+        severity = rule_severity(rule_result).upper()
+        if severity in counts:
+            counts[severity] += 1
+    return counts
+
+
+def format_indicator_value(value: Any) -> str:
+    """Format an already-computed indicator for display only."""
+    if value is None:
+        return "—"
+    try:
+        return f"{float(value):g}"
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def status_label(status: str) -> str:
+    return {
+        "TRIGGERED": "TRIGGERED",
+        "NOT_TRIGGERED": "NOT TRIGGERED",
+        "NOT_EVALUABLE": "NOT EVALUABLE",
+    }.get(status, status.replace("_", " "))
+
+
+def escape_html(value: Any) -> str:
+    """Escape display values before inserting them into presentation HTML."""
+    import html
+
+    return html.escape(str(value))
