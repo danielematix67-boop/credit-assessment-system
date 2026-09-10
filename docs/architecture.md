@@ -24,6 +24,7 @@ The repository keeps framework-independent logic under `src/` and the Streamlit 
 | Structural input validation | `CreditPositionValidator` rejects malformed positions before rule evaluation. |
 | Deterministic decision authority | Rule results and assessment status are calculated without an LLM. |
 | Macro-area separation | `CreditAssessmentCase` separates customer profile, financial, behavioural and debt-sustainability analysis. |
+| Financial dimension grouping | Existing rules are organized into analyst-oriented financial dimensions without duplicating rule logic. |
 | Explicit non-evaluability | Unimplemented or unavailable macro-areas are represented as `NOT_EVALUABLE`, not silently treated as normal. |
 | Separation of concerns | Validation, assessment, case composition, analysis and reporting are separate responsibilities. |
 | Configuration-driven rules | Thresholds and severity parameters are externalized in `config/rules.yaml`. |
@@ -72,7 +73,7 @@ AssessmentService
                               Report
 ```
 
-**Phase 1 status:** the financial-analysis section is backed by the existing deterministic rule engine. Customer profile, behavioural analysis and debt sustainability are explicit `NOT_EVALUABLE` placeholders. A final cross-section aggregator is intentionally deferred until at least one additional macro-area has deterministic logic.
+**Current status:** the financial-analysis section is backed by the existing deterministic rule engine and is now organized into analyst-oriented dimensions. Customer profile, behavioural analysis and debt sustainability remain explicit `NOT_EVALUABLE` placeholders. A final cross-section aggregator is intentionally deferred until additional macro-areas have deterministic logic.
 
 The existing `AssessmentWorkflow` remains compatible with the current financial assessment/reporting path. `CreditAssessmentCaseService` is an additive domain layer for the thesis evolution.
 
@@ -111,7 +112,8 @@ Each macro-area is represented by an `AssessmentSection` containing:
 - deterministic status;
 - findings;
 - evidence;
-- limitations.
+- limitations;
+- optional analyst-oriented dimensions.
 
 `SectionStatus` supports:
 
@@ -140,12 +142,43 @@ The sections are ordered according to the intended analyst reasoning flow:
 
 The final judgement/aggregation policy is not implemented yet. This prevents the system from producing a misleading overall decision while most macro-areas are still unavailable.
 
+### Financial Analysis dimensions
+
+The seven existing deterministic rules are grouped without changing their evaluation logic:
+
+```text
+Financial Analysis
+│
+├── Revenue & Growth
+│   └── R001 Revenue growth deterioration
+│
+├── Profitability
+│   ├── R002 Negative EBITDA
+│   └── R003 EBITDA margin deterioration
+│
+├── Financial Structure
+│   └── R004 NFP / EBITDA leverage
+│
+├── Debt Service Burden
+│   ├── R005 Interest expense / EBITDA
+│   └── R007 Interest coverage ratio
+│
+└── Profitability Quality
+    └── R006 EBITDA materially supported by finished goods inventory increase
+```
+
+These dimensions are an organizational layer over `RuleResult[]`. The deterministic rules remain the single source of truth and are not duplicated inside the case model.
+
 ### Phase 1 mapping
 
-The current seven deterministic rules remain the foundation of `Financial Analysis`. No rules were duplicated or moved into the new case model.
+The current seven deterministic rules remain the foundation of `Financial Analysis`:
 
 ```text
 Existing AssessmentService
+          ↓
+RuleResult[]
+          ↓
+Financial dimension mapping
           ↓
 Financial Analysis section
           ↓
@@ -332,7 +365,7 @@ Completed. Introduce the macro-area contract while keeping only financial analys
 
 ### Phase 2 — Financial Analysis formalization
 
-Group the existing rules into financial subdomains such as profitability, financial structure, leverage and coverage, without duplicating their deterministic logic.
+Completed. Existing rules are grouped into analyst-oriented financial dimensions without duplicating or changing deterministic rule logic.
 
 ### Phase 3 — Behavioural Analysis
 
