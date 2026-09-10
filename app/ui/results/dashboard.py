@@ -5,6 +5,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from app.ui.components import render_section_header
 from app.ui.results.evidence import render_rule_evidence_matrix
 from app.ui.results.helpers import (
     build_rule_dataframe,
@@ -45,7 +46,7 @@ def _render_decision_bridge(
     result: Any,
 ) -> None:
     """Render a presentation-only bridge from rule outputs to assessment status."""
-    st.markdown("#### Assessment Decision Bridge")
+    st.markdown("### Assessment Decision Bridge")
     st.caption(
         "A compact visual bridge between evaluated indicators, rule outcomes and the "
         "final deterministic monitoring assessment."
@@ -96,7 +97,7 @@ def _render_signal_overview(
     status_counts: dict[str, int],
     severity_counts_data: dict[str, int],
 ) -> None:
-    st.markdown("#### Risk Signal Overview")
+    st.markdown("### Risk Signal Overview")
     overview_cols = st.columns(2)
     with overview_cols[0]:
         st.caption("Rule outcomes")
@@ -124,7 +125,7 @@ def _render_signal_overview(
 
 
 def _render_rule_catalogue(dataframe: pd.DataFrame, status_counts: dict[str, int]) -> None:
-    st.markdown("#### Rule Catalogue")
+    st.markdown("### Rule Catalogue")
     st.caption("Filter the complete rule set before inspecting individual rule evidence.")
 
     filter_cols = st.columns([1.2, 1.2, 1.6, 1.4])
@@ -229,9 +230,9 @@ def render_risk_indicator_dashboard(result: Any) -> None:
     if not rule_results:
         return
 
-    st.subheader("Risk Indicator Dashboard")
-    st.caption(
-        "A structured view of the deterministic indicators, rule outcomes and risk severity."
+    render_section_header(
+        "Risk Indicator Dashboard",
+        "Structured view of deterministic indicators, rule outcomes and risk severity.",
     )
 
     dataframe = build_rule_dataframe(rule_results)
