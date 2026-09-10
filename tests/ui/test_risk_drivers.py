@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+import pandas as pd
 import pytest
 
 from app.ui.results.risk_drivers import (
@@ -108,4 +109,4 @@ def test_build_risk_driver_frame_keeps_zero_threshold_triggered_rules() -> None:
 
     assert len(frame) == 1
     assert frame.loc[0, "Relation"] == "Threshold = 0"
-    assert frame.loc[0, "Distance"] != frame.loc[0, "Distance"]
+    assert pd.isna(frame.loc[0, "Distance"])
