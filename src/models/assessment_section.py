@@ -22,6 +22,7 @@ class AssessmentSection:
     evidence: list[RuleResult]
     limitations: list[str]
     dimensions: dict[str, list[RuleResult]] = field(default_factory=dict)
+    context: dict[str, object] = field(default_factory=dict)
 
     @property
     def is_evaluable(self) -> bool:
