@@ -8,6 +8,7 @@ from app.ui.results.dashboard import render_risk_indicator_dashboard
 from app.ui.results.executive_synthesis import render_executive_synthesis
 from app.ui.results.final_assessment import render_final_assessment
 from app.ui.results.helpers import get_rule_results, rule_status
+from app.ui.results.risk_drivers import render_risk_driver_overview
 from app.ui.results.scenario_comparison import render_scenario_comparison
 
 
@@ -227,6 +228,7 @@ def render_results(
         case_without_final = replace(credit_case, final_assessment=None)
         case_result = type("CaseResult", (), {"credit_case": case_without_final})()
         render_credit_analysis_case(case_result)
+        render_risk_driver_overview(credit_case)
         render_final_assessment(credit_case)
         render_executive_synthesis(result)
 
