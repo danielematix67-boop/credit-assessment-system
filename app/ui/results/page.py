@@ -5,6 +5,7 @@ import streamlit as st
 from app.ui.report import render_report_tab
 from app.ui.results.case_overview import render_credit_analysis_case
 from app.ui.results.dashboard import render_risk_indicator_dashboard
+from app.ui.results.final_assessment import render_final_assessment
 from app.ui.results.helpers import get_rule_results, rule_status
 
 
@@ -219,6 +220,9 @@ def render_results(
     st.markdown('<div class="results-divider"></div>', unsafe_allow_html=True)
     render_results_header(result)
     render_credit_analysis_case(result)
+    credit_case = getattr(result, "credit_case", None)
+    if credit_case is not None:
+        render_final_assessment(credit_case)
     render_report_tab(
         result=result,
         selected_reporting_mode=selected_reporting_mode,
