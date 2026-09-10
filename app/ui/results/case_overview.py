@@ -103,7 +103,8 @@ def _render_financial_dimensions(section: Any) -> None:
     st.markdown("**Analytical Dimensions**")
     st.caption(
         "Financial indicators are grouped into analytical dimensions to make the analyst reasoning visible. "
-        "The dimension view is descriptive only and does not introduce a new risk score or alter the assessment decision."
+        "The dimension view is descriptive only and does not introduce a new risk score or "
+        "alter the assessment decision."
     )
 
     rows = []
