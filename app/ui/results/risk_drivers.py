@@ -1,4 +1,4 @@
-"""Cross-area risk driver presentation for the credit assessment case."""
+"""Compact cross-area risk driver presentation for the credit assessment case."""
 
 from typing import Any
 
@@ -64,21 +64,18 @@ def render_risk_driver_overview(credit_case: Any) -> None:
     if frame.empty:
         return
 
-    st.markdown("### Risk Driver Overview")
-    st.caption(
-        "Triggered indicators are ranked across macro-areas by their normalized distance "
-        "from the configured threshold. This view is descriptive and does not create a new score."
-    )
+    st.markdown("### Risk Drivers")
 
     chart_frame = frame.dropna(subset=["Distance"]).head(10)
     if not chart_frame.empty:
         chart_frame = chart_frame.set_index("Indicator")[["Distance"]].rename(
             columns={"Distance": "Threshold distance"}
         )
-        st.bar_chart(chart_frame, horizontal=True)
+        st.bar_chart(chart_frame, horizontal=True, height=240)
 
     display_frame = frame.copy()
     display_frame["Distance"] = display_frame["Distance"].map(
         lambda value: "—" if pd.isna(value) else f"{value:+.0%}"
     )
-    st.dataframe(display_frame, use_container_width=True, hide_index=True)
+    with st.expander("View triggered indicators", expanded=False):
+        st.dataframe(display_frame, use_container_width=True, hide_index=True)
