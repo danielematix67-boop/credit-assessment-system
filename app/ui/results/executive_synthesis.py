@@ -10,7 +10,7 @@ def _finding_text(finding: Any) -> str:
 
 
 def render_executive_synthesis(result: Any) -> None:
-    """Render narrative synthesis without duplicating the deterministic conclusion."""
+    """Render the executive narrative without duplicating the deterministic conclusion."""
     credit_case = getattr(result, "credit_case", None)
     report = getattr(result, "report", None)
     if credit_case is None or report is None:
@@ -20,7 +20,7 @@ def render_executive_synthesis(result: Any) -> None:
         return
 
     render_section_header(
-        "06 · Executive Synthesis",
+        "06 · Executive Narrative",
         "Management-level narrative generated from the deterministic assessment and its supporting evidence.",
     )
 
@@ -33,10 +33,6 @@ def render_executive_synthesis(result: Any) -> None:
                 if text:
                     st.write(f"• {text}")
 
-    render_section_header(
-        "Executive Narrative",
-        "Narrative generated from deterministic findings; it does not create or alter the credit decision.",
-    )
     with st.container(border=True):
         narrative = str(getattr(report, "executive_summary", "No executive summary available."))
         lines = narrative.split("\n\n", 1)
