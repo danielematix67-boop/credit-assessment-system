@@ -24,63 +24,32 @@ def make_result(status: RuleStatus) -> RuleResult:
 @pytest.mark.parametrize(
     "rule_statuses, expected_status",
     [
+        ([], AssessmentStatus.NORMAL),
+        ([RuleStatus.NOT_TRIGGERED], AssessmentStatus.NORMAL),
         (
-            [],
+            [RuleStatus.NOT_TRIGGERED, RuleStatus.NOT_TRIGGERED],
             AssessmentStatus.NORMAL,
         ),
+        ([RuleStatus.NOT_EVALUABLE], AssessmentStatus.ATTENTION),
         (
-            [RuleStatus.NOT_TRIGGERED],
-            AssessmentStatus.NORMAL,
+            [RuleStatus.NOT_EVALUABLE, RuleStatus.NOT_EVALUABLE],
+            AssessmentStatus.ATTENTION,
         ),
+        ([RuleStatus.TRIGGERED], AssessmentStatus.ATTENTION),
         (
-            [
-                RuleStatus.NOT_TRIGGERED,
-                RuleStatus.NOT_TRIGGERED,
-            ],
-            AssessmentStatus.NORMAL,
-        ),
-        (
-            [RuleStatus.NOT_EVALUABLE],
-            AssessmentStatus.NORMAL,
-        ),
-        (
-            [
-                RuleStatus.NOT_EVALUABLE,
-                RuleStatus.NOT_EVALUABLE,
-            ],
-            AssessmentStatus.NORMAL,
-        ),
-        (
-            [RuleStatus.TRIGGERED],
+            [RuleStatus.TRIGGERED, RuleStatus.NOT_EVALUABLE],
             AssessmentStatus.ATTENTION,
         ),
         (
-            [
-                RuleStatus.TRIGGERED,
-                RuleStatus.NOT_EVALUABLE,
-            ],
+            [RuleStatus.TRIGGERED, RuleStatus.NOT_TRIGGERED],
             AssessmentStatus.ATTENTION,
         ),
         (
-            [
-                RuleStatus.TRIGGERED,
-                RuleStatus.NOT_TRIGGERED,
-            ],
-            AssessmentStatus.ATTENTION,
-        ),
-        (
-            [
-                RuleStatus.TRIGGERED,
-                RuleStatus.TRIGGERED,
-            ],
+            [RuleStatus.TRIGGERED, RuleStatus.TRIGGERED],
             AssessmentStatus.CRITICAL,
         ),
         (
-            [
-                RuleStatus.TRIGGERED,
-                RuleStatus.TRIGGERED,
-                RuleStatus.NOT_EVALUABLE,
-            ],
+            [RuleStatus.TRIGGERED, RuleStatus.TRIGGERED, RuleStatus.NOT_EVALUABLE],
             AssessmentStatus.CRITICAL,
         ),
     ],
@@ -122,10 +91,7 @@ def test_non_triggered_rules_do_not_affect_attention_status(
         [],
         [RuleStatus.NOT_TRIGGERED],
         [RuleStatus.NOT_EVALUABLE],
-        [
-            RuleStatus.NOT_TRIGGERED,
-            RuleStatus.NOT_EVALUABLE,
-        ],
+        [RuleStatus.NOT_TRIGGERED, RuleStatus.NOT_EVALUABLE],
     ],
 )
 def test_multiple_triggered_rules_remain_critical(
