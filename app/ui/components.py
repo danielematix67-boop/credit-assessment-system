@@ -15,11 +15,37 @@ from app.ui.design_tokens import (
 
 
 def render_section_header(title: str, description: str) -> None:
-    """Render a consistent visual section header."""
+    """Render a consistent semantic section header."""
+    st.markdown(
+        """
+        <style>
+        .ui-section-header {
+            margin: 1.55rem 0 0.85rem 0;
+        }
+
+        .ui-section-title {
+            margin: 0;
+            font-size: 1.35rem;
+            font-weight: 700;
+            line-height: 1.25;
+            letter-spacing: -0.015em;
+        }
+
+        .ui-section-description {
+            margin-top: 0.25rem;
+            color: var(--muted, #6b7280);
+            font-size: 0.86rem;
+            line-height: 1.45;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.markdown(
         f"""
         <div class="ui-section-header">
-            <div class="ui-section-title">{title}</div>
+            <h2 class="ui-section-title">{title}</h2>
             <div class="ui-section-description">{description}</div>
         </div>
         """,
