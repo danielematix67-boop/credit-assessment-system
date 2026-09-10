@@ -58,6 +58,39 @@ def test_case_service_preserves_financial_evidence() -> None:
     assert case.financial_analysis.status == SectionStatus.ATTENTION
 
 
+def test_case_service_preserves_attention_for_all_not_evaluable_financial_rules() -> None:
+    position = CreditPosition(position_id="TEST-002-NE")
+    results = [
+        RuleResult(
+            rule_id=rule_id,
+            rule_name=f"Rule {rule_id}",
+            category="test",
+            status=RuleStatus.NOT_EVALUABLE,
+            value=None,
+            threshold=0.0,
+            severity=RuleSeverity.MEDIUM,
+            indicator="Test indicator",
+            direction=SeverityDirection.HIGHER_IS_WORSE,
+        )
+        for rule_id in ["R001", "R002", "R003", "R004", "R005", "R006", "R007"]
+    ]
+    assessment = Assessment(
+        position_id=position.position_id,
+        rule_results=results,
+        findings=[],
+        status=AssessmentStatus.ATTENTION,
+    )
+    assessment_service = Mock()
+    assessment_service.assess.return_value = assessment
+
+    case = CreditAssessmentCaseService(assessment_service).assess(position)
+
+    assert case.financial_analysis.status == SectionStatus.ATTENTION
+    assert case.financial_analysis.limitations == [
+        "Financial indicators are not available for this case."
+    ]
+
+
 def _rule_result(rule_id: str) -> RuleResult:
     return RuleResult(
         rule_id=rule_id,
