@@ -227,13 +227,22 @@ def render_results(
         # dedicated final view below owns the detailed final-assessment display.
         case_without_final = replace(credit_case, final_assessment=None)
         case_result = type("CaseResult", (), {"credit_case": case_without_final})()
+
+        # Keep the page aligned with the analyst reasoning chain:
+        # input -> data quality -> indicator/rule -> finding -> area -> decision.
         render_credit_analysis_case(case_result)
         render_risk_driver_overview(credit_case)
         render_final_assessment(credit_case)
-        render_executive_synthesis(result)
 
+        # Scenario analysis is a descriptive benchmark and therefore sits after
+        # the deterministic conclusion, but before the technical rule drill-down.
         render_scenario_comparison(
             st.session_state.get("assessment_scenario")
         )
+        render_risk_indicator_dashboard(result)
 
-    render_risk_indicator_dashboard(result)
+        # The narrative is deliberately last: it interprets the evidence and
+        # deterministic conclusion rather than competing with them.
+        render_executive_synthesis(result)
+    else:
+        render_risk_indicator_dashboard(result)
