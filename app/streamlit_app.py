@@ -30,6 +30,7 @@ from app.ui.assessment import (
 from app.ui.assessment_configuration import (
     render_assessment_configuration,
 )
+from app.ui.design_tokens import css_variables
 from app.ui.input_source import (
     render_credit_data_source,
 )
@@ -67,6 +68,13 @@ st.set_page_config(
 # ============================================================
 
 apply_styles()
+
+# Apply the canonical design tokens after the global stylesheet so
+# every component resolves the same semantic values.
+st.markdown(
+    f"<style>{css_variables()}</style>",
+    unsafe_allow_html=True,
+)
 
 
 # ============================================================
