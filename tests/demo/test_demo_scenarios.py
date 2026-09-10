@@ -1,10 +1,6 @@
 import pytest
 
-from app.demo_scenarios import (
-    DEMO_SCENARIOS,
-    build_demo_case_data,
-    build_demo_position,
-)
+from app.demo_scenarios import DEMO_SCENARIOS, build_demo_case_data, build_demo_position
 from src.agents.analysis.case_analysis_agent import CaseAnalysisAgent
 from src.services.credit_assessment_case_service import CreditAssessmentCaseService
 
