@@ -3,7 +3,7 @@ from typing import Any
 import streamlit as st
 
 from app.demo_scenarios import DEMO_SCENARIOS, build_demo_position
-from app.ui.credit_position import build_credit_position_from_ui, build_scenario_data_table
+from app.ui.input import build_credit_position_from_ui, build_scenario_data_table
 from src.models.position import CreditPosition
 
 
