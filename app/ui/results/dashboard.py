@@ -11,7 +11,6 @@ from app.ui.results.helpers import (
     build_severity_overview,
     build_status_overview,
     get_rule_results,
-    rule_severity,
     rule_status_counts,
     severity_counts,
     severity_rank,
