@@ -8,8 +8,10 @@ from src.agents.base.agent import Agent
 from src.agents.reporting.deterministic_report_generator import (
     DeterministicReportGenerator,
 )
+from src.agents.reporting.llm_report_generator import LLMReportGenerator
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.agents.workflow.assessment_workflow import AssessmentWorkflow
+from src.llm.mock_client import MockLLMClient
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
@@ -118,6 +120,40 @@ def test_assessment_workflow_integrates_credit_case_pipeline(
 
     assert result.analysis.assessment_status.value == result.credit_case.final_assessment.status.value
     assert result.report.assessment_status == result.analysis.assessment_status
+
+
+def test_assessment_workflow_llm_cannot_override_deterministic_status(
+    assessment_service,
+):
+    """An adversarial LLM status must never replace the deterministic status."""
+    position = make_position()
+    deterministic_assessment = assessment_service.assess(position)
+
+    client = MockLLMClient(
+        response=(
+            "Assessment status: CRITICAL.\n"
+            "The model claims a critical assessment despite the supplied evidence."
+        )
+    )
+    llm_generator = LLMReportGenerator(client)
+
+    workflow = AssessmentWorkflow(
+        assessment_service=assessment_service,
+        analysis_agent=AnalysisAgent(),
+        reporting_agent=ReportingAgent(
+            report_generator=llm_generator,
+            fallback_generator=DeterministicReportGenerator(),
+        ),
+    )
+
+    result = workflow.run(position)
+
+    assert deterministic_assessment.status.value == "NORMAL"
+    assert result.assessment.status == deterministic_assessment.status
+    assert result.analysis.assessment_status == deterministic_assessment.status
+    assert result.report.assessment_status == deterministic_assessment.status
+    assert "Assessment Status: Critical" not in result.report.executive_summary
+    assert "Assessment Status: Normal" in result.report.executive_summary
 
 
 # ============================================================
