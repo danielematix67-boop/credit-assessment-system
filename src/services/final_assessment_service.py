@@ -8,11 +8,7 @@ class FinalAssessmentService:
 
     def assess(self, case: CreditAssessmentCase) -> FinalAssessment:
         sections = case.sections
-        evaluable = [
-            section
-            for section in sections
-            if section.status != SectionStatus.NOT_EVALUABLE
-        ]
+        evaluable = [section for section in sections if section.is_evaluable]
         critical = [
             section for section in evaluable if section.status == SectionStatus.CRITICAL
         ]
@@ -22,21 +18,23 @@ class FinalAssessmentService:
         normal = [
             section for section in evaluable if section.status == SectionStatus.NORMAL
         ]
-        not_evaluable = [
-            section
-            for section in sections
-            if section.status == SectionStatus.NOT_EVALUABLE
+        not_evaluable = [section for section in sections if not section.is_evaluable]
+
+        # Customer Profile flags are retained as explicit findings, but they
+        # do not independently turn a second macro-area attention into CRITICAL.
+        # This avoids double-counting contextual risk signals with core
+        # financial/behavioural/debt-risk assessments.
+        core_attention = [
+            section for section in attention if section.name != "Customer Profile"
         ]
 
-        if critical or len(attention) >= 2:
+        if critical:
+            status = SectionStatus.CRITICAL
+        elif len(core_attention) >= 2:
             status = SectionStatus.CRITICAL
         elif attention:
             status = SectionStatus.ATTENTION
-        elif not_evaluable:
-            # Missing macro-areas are an explicit data-quality limitation and
-            # therefore prevent a clean NORMAL final assessment.
-            status = SectionStatus.ATTENTION
-        elif evaluable:
+        elif len(evaluable) >= 2:
             status = SectionStatus.NORMAL
         else:
             status = SectionStatus.ATTENTION
