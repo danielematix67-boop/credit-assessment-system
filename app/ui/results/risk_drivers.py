@@ -5,33 +5,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-
-def _rule_status(rule: Any) -> str:
-    return str(
-        getattr(getattr(rule, "status", None), "value", getattr(rule, "status", ""))
-    ).upper()
-
-
-def _rule_direction(rule: Any) -> str:
-    return str(
-        getattr(
-            getattr(rule, "direction", None),
-            "value",
-            getattr(rule, "direction", ""),
-        )
-    ).upper()
-
-
-def _threshold_distance(
-    value: float, threshold: float, direction: str
-) -> float | None:
-    """Return normalized distance from threshold; positive means worse."""
-    if threshold == 0:
-        return None
-    scale = abs(threshold)
-    if direction == "LOWER_IS_WORSE":
-        return (threshold - value) / scale
-    return (value - threshold) / scale
+from app.ui.results.helpers import rule_direction, rule_status, threshold_distance, threshold_relation
 
 
 def build_risk_driver_frame(credit_case: Any) -> pd.DataFrame:
@@ -39,7 +13,7 @@ def build_risk_driver_frame(credit_case: Any) -> pd.DataFrame:
     rows = []
     for section in getattr(credit_case, "sections", []) or []:
         for rule in getattr(section, "evidence", []) or []:
-            if _rule_status(rule) != "TRIGGERED":
+            if rule_status(rule).upper() != "TRIGGERED":
                 continue
 
             value = getattr(rule, "value", None)
@@ -49,16 +23,10 @@ def build_risk_driver_frame(credit_case: Any) -> pd.DataFrame:
             if value is not None and threshold is not None:
                 value = float(value)
                 threshold = float(threshold)
-                distance = _threshold_distance(
-                    value, threshold, _rule_direction(rule)
+                distance = threshold_distance(
+                    value, threshold, rule_direction(rule).upper()
                 )
-                relation = (
-                    "Threshold = 0"
-                    if distance is None
-                    else "Worse than threshold"
-                    if distance > 0
-                    else "At threshold"
-                )
+                relation = threshold_relation(distance)
 
             rows.append(
                 {

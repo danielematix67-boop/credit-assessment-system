@@ -3,10 +3,8 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from app.ui.results.risk_drivers import (
-    _threshold_distance,
-    build_risk_driver_frame,
-)
+from app.ui.results.helpers import threshold_distance, threshold_relation
+from app.ui.results.risk_drivers import build_risk_driver_frame
 
 
 def _rule(
@@ -30,8 +28,15 @@ def _rule(
 
 
 def test_threshold_distance_positive_means_worse() -> None:
-    assert _threshold_distance(-0.20, -0.10, "LOWER_IS_WORSE") == pytest.approx(1.0)
-    assert _threshold_distance(7.0, 5.0, "HIGHER_IS_WORSE") == pytest.approx(0.4)
+    assert threshold_distance(-0.20, -0.10, "LOWER_IS_WORSE") == pytest.approx(1.0)
+    assert threshold_distance(7.0, 5.0, "HIGHER_IS_WORSE") == pytest.approx(0.4)
+
+
+def test_threshold_relation_covers_threshold_positions() -> None:
+    assert threshold_relation(None) == "Threshold = 0"
+    assert threshold_relation(0.2) == "Worse than threshold"
+    assert threshold_relation(-0.2) == "Better than threshold"
+    assert threshold_relation(0.0) == "At threshold"
 
 
 def test_build_risk_driver_frame_ranks_triggered_rules_across_sections() -> None:

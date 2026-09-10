@@ -3,10 +3,8 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from app.ui.results.financial_analysis import (
-    _threshold_distance,
-    build_indicator_analysis_frame,
-)
+from app.ui.results.financial_analysis import build_indicator_analysis_frame
+from app.ui.results.helpers import threshold_distance
 
 
 def _rule(
@@ -28,17 +26,17 @@ def _rule(
 
 
 def test_threshold_distance_positive_means_worse_for_lower_is_worse() -> None:
-    assert _threshold_distance(0.0, 2.0, "LOWER_IS_WORSE") == pytest.approx(1.0)
-    assert _threshold_distance(3.0, 2.0, "LOWER_IS_WORSE") == pytest.approx(-0.5)
+    assert threshold_distance(0.0, 2.0, "LOWER_IS_WORSE") == pytest.approx(1.0)
+    assert threshold_distance(3.0, 2.0, "LOWER_IS_WORSE") == pytest.approx(-0.5)
 
 
 def test_threshold_distance_positive_means_worse_for_higher_is_worse() -> None:
-    assert _threshold_distance(7.0, 5.0, "HIGHER_IS_WORSE") == pytest.approx(0.4)
-    assert _threshold_distance(4.0, 5.0, "HIGHER_IS_WORSE") == pytest.approx(-0.2)
+    assert threshold_distance(7.0, 5.0, "HIGHER_IS_WORSE") == pytest.approx(0.4)
+    assert threshold_distance(4.0, 5.0, "HIGHER_IS_WORSE") == pytest.approx(-0.2)
 
 
 def test_threshold_distance_is_not_normalized_when_threshold_is_zero() -> None:
-    assert _threshold_distance(-0.1, 0.0, "LOWER_IS_WORSE") is None
+    assert threshold_distance(-0.1, 0.0, "LOWER_IS_WORSE") is None
 
 
 def test_indicator_analysis_frame_exposes_evidence_and_relation() -> None:
