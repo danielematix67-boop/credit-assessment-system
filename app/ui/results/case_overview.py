@@ -241,25 +241,16 @@ def _render_data_quality_overview(credit_case: Any) -> None:
         )
 
 
-def _render_final_chart(credit_case: Any) -> None:
-    statuses = [_status_value(section.status) for section in credit_case.sections]
-    counts = pd.Series(statuses).value_counts().reindex(
-        ["NORMAL", "ATTENTION", "CRITICAL", "NOT_EVALUABLE"], fill_value=0
-    )
-    st.markdown("**Macro-area status distribution**")
-    st.bar_chart(counts, horizontal=True)
-
-
 def render_credit_analysis_case(result: Any) -> None:
-    """Render the high-level analyst view of the credit assessment case."""
+    """Render the macro-area risk analysis and its supporting evidence."""
     credit_case = getattr(result, "credit_case", None)
     if credit_case is None:
         return
 
-    st.markdown("### Credit Analysis Case")
+    st.markdown("### Risk Analysis by Area")
     st.caption(
-        "The assessment is organised into the main analytical areas used in a credit review. "
-        "Only implemented areas contribute deterministic evidence; unavailable areas remain explicitly not evaluable."
+        "Review data quality first, then inspect the evidence and findings for each macro-area. "
+        "The deterministic Rule Engine remains the source of the assessment outcome."
     )
 
     _render_data_quality_overview(credit_case)
@@ -283,5 +274,3 @@ def render_credit_analysis_case(result: Any) -> None:
             _render_customer_profile(section)
 
         _render_section_details(section)
-
-    _render_final_chart(credit_case)
