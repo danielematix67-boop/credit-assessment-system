@@ -4,11 +4,12 @@
 
 The **Credit Assessment System** is a deterministic, rule-based credit assessment application with an optional AI-assisted reporting layer.
 
-The architecture separates three responsibilities:
+The architecture separates four responsibilities:
 
-1. **Assessment** — deterministic evaluation of financial indicators and business rules.
-2. **Analysis** — structured organization of deterministic findings.
-3. **Reporting** — generation of a human-readable Executive Report, optionally using an LLM.
+1. **Input Validation** — structural validation of the incoming credit position.
+2. **Assessment** — deterministic evaluation of financial indicators and business rules.
+3. **Analysis** — structured organization of deterministic findings.
+4. **Reporting** — generation of a human-readable Executive Report, optionally using an LLM.
 
 The central boundary is:
 
@@ -22,8 +23,9 @@ The repository keeps framework-independent logic under `src/` and the Streamlit 
 
 | Principle | Implementation |
 |---|---|
+| Structural input validation | `CreditPositionValidator` rejects malformed positions before rule evaluation. |
 | Deterministic decision authority | Rule results and assessment status are calculated without an LLM. |
-| Separation of concerns | Assessment, analysis and reporting are separate workflow stages. |
+| Separation of concerns | Validation, assessment, analysis and reporting are separate responsibilities. |
 | Configuration-driven rules | Thresholds and severity parameters are externalized in `config/rules.yaml`. |
 | Pluggable rules | Rules are discovered and resolved through a registry using `rule_id`. |
 | Provider independence | Gemini and Ollama are accessed through the `LLMClient` abstraction. |
@@ -39,6 +41,9 @@ The repository keeps framework-independent logic under `src/` and the Streamlit 
 
 ```text
 CreditPosition
+      │
+      ▼
+CreditPositionValidator
       │
       ▼
 AssessmentService
@@ -84,19 +89,48 @@ The core library does not depend on Streamlit.
 
 ---
 
-## 4. Presentation Layer — `app/`
+## 4. Input Validation Layer
+
+`CreditPositionValidator` performs structural validation before deterministic assessment begins.
+
+The validator checks:
+
+- the object is a `CreditPosition`;
+- `position_id` is non-empty;
+- numeric financial fields contain numeric values or `None`;
+- boolean values are not accepted as numeric inputs;
+- numeric values are finite, rejecting `NaN` and positive/negative infinity.
+
+`None` is intentionally accepted because unavailable financial information is a valid domain condition and can subsequently produce `NOT_EVALUABLE` rule outcomes.
+
+The validator does not impose business-specific sign constraints. For example, whether a negative value is economically meaningful is the responsibility of the corresponding deterministic rule, not of the generic structural validator.
+
+```text
+CreditPosition
+      ↓
+Structural validation
+   /          \\
+valid        invalid
+  ↓              ↓
+Rule Engine   ValueError / TypeError
+```
+
+This establishes a clear boundary between **input integrity** and **credit-risk business semantics**.
+
+---
+
+## 5. Presentation Layer — `app/`
 
 The Streamlit application is responsible for input collection, reporting-mode selection, workflow execution and presentation of domain results.
 
 Key components include:
 
 - `app/streamlit_app.py` — entry point;
-- `app/ui/input_source.py` — credit-position input;
-- `app/ui/assessment_configuration.py` — assessment configuration and run action;
-- `app/ui/results.py` — operator-oriented results composition;
+- `app/ui/components.py` — shared UI components and semantic section headers;
 - `app/ui/report.py` — Executive Report presentation;
-- `app/ui/charts.py` — decision-path and risk-indicator visualisations;
-- `app/ui/workflow_view.py` — compact workflow explanation;
+- `app/ui/results/page.py` — Results page composition;
+- `app/ui/results/dashboard.py` — Risk Indicator Dashboard;
+- `app/ui/results/helpers.py` — deterministic rule-result helpers;
 - `app/workflow/` — application-level workflow composition and execution wrapper.
 
 The UI consumes `AssessmentWorkflowResult` and `RuleResult` objects rather than reimplementing business logic.
@@ -108,8 +142,6 @@ The Results view is intentionally organized from the executive outcome toward de
 ```text
 Executive Credit Assessment
           ↓
-Assessment Overview
-          ↓
 Risk Indicator Dashboard
           ↓
 Audit Trail & Methodology
@@ -119,7 +151,7 @@ The hierarchy keeps the primary report concise while making deterministic eviden
 
 ### Decision Path
 
-The Results UI includes a graphical three-stage decision path:
+The Results UI includes a graphical decision path:
 
 ```text
 Financial Indicators
@@ -129,9 +161,7 @@ Rule Engine Outcomes
 Monitoring Assessment
 ```
 
-The visualization dynamically shows the number of rules evaluated, triggered rules and non-evaluable rules, together with the final assessment status and the relevant triggered-rule chips.
-
-The Decision Path is explanatory only. It consumes the outputs of the deterministic assessment and does not recalculate thresholds, severity or status.
+The visualization summarizes evaluated rules, triggered rules and non-evaluable rules together with the final assessment status. It consumes deterministic outputs and does not recalculate thresholds, severity or status.
 
 ### Risk Indicator Dashboard
 
@@ -145,7 +175,7 @@ The Decision Path is explanatory only. It consumes the outputs of the determinis
 - priority-oriented sorting;
 - individual rule inspection.
 
-The individual rule detail view presents:
+The individual rule detail presents:
 
 ```text
 Rule ID / Category
@@ -163,24 +193,18 @@ The dashboard is presentation-only and reads deterministic `RuleResult` fields d
 
 ### Audit Trail
 
-The audit area contains broader traceability information:
-
-- Decision Path;
-- complete rule evidence;
-- credit data used;
-- methodology;
-- execution metadata.
-
-This replaces the need for multiple overlapping evidence surfaces and keeps detailed diagnostics in one coherent area.
+The audit area contains broader traceability information, including the Decision Path, credit data used, methodology and execution metadata. Detailed rule evidence remains centralized in the Risk Indicator Dashboard rather than duplicated across multiple panels.
 
 ---
 
-## 5. Assessment Layer
+## 6. Assessment Layer
 
 `AssessmentService` owns the deterministic assessment stage:
 
 ```text
 CreditPosition
+      ↓
+CreditPositionValidator
       ↓
 RuleEngine.evaluate()
       ↓
@@ -195,7 +219,23 @@ AssessmentStatusCalculator
 Assessment
 ```
 
-The service determines rule outcomes, findings and the overall assessment status. No LLM is involved in this path.
+No LLM is involved in this path.
+
+### Status calculation
+
+The current status logic is:
+
+| Rule outcome condition | Assessment |
+|---|---|
+| 2+ `TRIGGERED` | `CRITICAL` |
+| Exactly 1 `TRIGGERED` | `ATTENTION` |
+| 0 triggered and at least one evaluable rule | `NORMAL` |
+| All rules `NOT_EVALUABLE` | `ATTENTION` |
+| Empty result set | `NORMAL` |
+
+The all-`NOT_EVALUABLE` case is intentionally conservative: the absence of evaluable evidence is not treated as equivalent to a normal assessment.
+
+### Domain model
 
 The domain model `Assessment` contains:
 
@@ -206,7 +246,7 @@ The domain model `Assessment` contains:
 
 ---
 
-## 6. Rule Engine
+## 7. Rule Engine
 
 Rules implement a common abstraction and are resolved through the rule registry.
 
@@ -215,6 +255,18 @@ Rule.evaluate(position) → RuleResult
 ```
 
 The current configured rule catalogue contains revenue, profitability, leverage and interest-coverage indicators.
+
+### Rule outcomes
+
+Each rule can produce:
+
+```text
+TRIGGERED
+NOT_TRIGGERED
+NOT_EVALUABLE
+```
+
+`NOT_EVALUABLE` is used when a rule cannot safely assess its indicator because the required domain data is unavailable or unsuitable. This state is distinct from `NOT_TRIGGERED`.
 
 ### Configuration
 
@@ -232,7 +284,7 @@ The registry/discovery mechanism connects configured `rule_id` values to concret
 
 ---
 
-## 7. Analysis Layer
+## 8. Analysis Layer
 
 `AnalysisAgent` converts `Assessment` into `AssessmentAnalysis`.
 
@@ -261,7 +313,7 @@ AssessmentAnalysis.assessment_status
 
 ---
 
-## 8. Reporting Layer
+## 9. Reporting Layer
 
 `ReportingAgent` converts `AssessmentAnalysis` into a `Report`.
 
@@ -275,21 +327,11 @@ LLMReportGenerator
 
 The report model contains the deterministic assessment status, executive summary, grouped findings and limitations.
 
-### Executive Report contract
-
-The Streamlit report presentation exposes the deterministic status first and then the narrative. For LLM-assisted reporting the conceptual output is:
-
-```text
-Assessment Status: Critical
-
-LLM-generated executive narrative
-```
-
-The status is constructed from application-controlled assessment data. The LLM does not generate or determine it.
+For LLM-assisted reporting, the deterministic status remains application-controlled and is presented separately from generated prose.
 
 ---
 
-## 9. LLM Architecture
+## 10. LLM Architecture
 
 ### Provider abstraction
 
@@ -306,29 +348,11 @@ The reporting domain therefore remains independent from a concrete provider SDK.
 
 ### Prompt contract
 
-The prompt builder receives deterministic findings and explicitly constrains the model to narrative generation.
-
-The current reporting contract requires the model to:
-
-- represent all supplied material findings;
-- preserve numerical indicator values and units exactly;
-- avoid unsupported facts and causal explanations;
-- avoid inventing sales volume, pricing, demand, costs, liquidity, cash flow, debt service capacity or financial stability unless provided;
-- preserve category order;
-- discuss each category at most once;
-- avoid category headings and list-like output;
-- mention each material indicator value once;
-- avoid repeating findings or conclusions;
-- end after the final material finding;
-- never generate the assessment status.
+The prompt builder receives deterministic findings and explicitly constrains the model to narrative generation. The current contract requires supplied material findings and numerical indicators to remain represented, prohibits unsupported causal explanations, controls category ordering and repetition, and prevents the model from generating the assessment status.
 
 ### Indicator grounding validation
 
-`LLMReportGenerator` can run in strict indicator-grounding mode. In that mode, deterministic indicator values extracted from the supplied findings must be represented in the generated narrative.
-
-If a required indicator is missing, the generator falls back to `DeterministicReportGenerator`.
-
-This creates an additional safety boundary between deterministic evidence and generated prose:
+`LLMReportGenerator` can run in strict indicator-grounding mode. Deterministic indicator values extracted from supplied findings must be represented in the generated narrative. Missing required values cause deterministic fallback.
 
 ```text
 Deterministic findings
@@ -344,11 +368,11 @@ Grounding validation
   Narrative  Deterministic fallback
 ```
 
-The validation is deliberately narrow: it protects required numerical evidence but does not attempt to perform full semantic verification of arbitrary natural language.
+The validation is deliberately narrow: it protects required numerical evidence but does not attempt full semantic verification of arbitrary natural language.
 
 ---
 
-## 10. Reliability and Failure Handling
+## 11. Reliability and Failure Handling
 
 ```text
 Primary Generator
@@ -375,7 +399,7 @@ If both primary and fallback generation fail, the terminal error is propagated.
 
 ---
 
-## 11. Execution Observability
+## 12. Execution Observability
 
 `AssessmentWorkflowResult` exposes immutable execution information alongside the assessment, analysis and report.
 
@@ -389,24 +413,11 @@ The execution metadata includes:
 - classified reporting error category when applicable;
 - assessment, analysis, reporting and total elapsed time.
 
-Conceptually:
-
-```text
-Workflow Execution
-        ↓
-ExecutionMetadata
- ├── Identity
- ├── Timestamp
- ├── Reporting provenance
- ├── Error classification
- └── Phase timings
-```
-
 The UI exposes this information in the audit area rather than mixing it into the primary credit judgement.
 
 ---
 
-## 12. Domain Model
+## 13. Domain Model
 
 The main workflow objects are:
 
@@ -422,17 +433,21 @@ The main workflow objects are:
 | `ExecutionMetadata` | Immutable execution provenance and timings. |
 | `AssessmentWorkflowResult` | Complete workflow output. |
 
-The use of explicit domain objects prevents downstream presentation or reporting components from silently mutating decision data.
-
 ---
 
-## 13. Repository Structure
+## 14. Repository Structure
 
 ```text
 credit-assessment-system/
 ├── app/                         # Streamlit presentation layer
 │   ├── streamlit_app.py
 │   ├── ui/
+│   │   ├── components.py
+│   │   ├── report.py
+│   │   └── results/
+│   │       ├── page.py
+│   │       ├── dashboard.py
+│   │       └── helpers.py
 │   └── workflow/
 ├── config/
 │   └── rules.yaml
@@ -446,13 +461,16 @@ credit-assessment-system/
 │   ├── orchestration/
 │   ├── rules/
 │   └── services/
+│       ├── assessment_service.py
+│       ├── assessment_status_calculator.py
+│       └── position_validator.py
 ├── docs/
 └── tests/
 ```
 
 ---
 
-## 14. Extension Points
+## 15. Extension Points
 
 ### Add a new rule
 
@@ -473,12 +491,13 @@ Implement the report-generation abstraction and consume the existing `Assessment
 
 ---
 
-## 15. Architectural Boundary
-
-The complete system can be summarized as:
+## 16. Architectural Boundary
 
 ```text
                  DETERMINISTIC CORE
+                       │
+                       ▼
+              Input Validation
                        │
                        ▼
                  Rule Evaluation
