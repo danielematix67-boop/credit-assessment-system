@@ -5,6 +5,7 @@ import streamlit as st
 from app.ui.components import render_section_header
 from app.ui.report import render_report_tab
 from app.ui.results.dashboard import render_risk_indicator_dashboard
+from app.ui.results.helpers import get_rule_results, rule_status
 
 
 def resolve_report_badge(
@@ -20,16 +21,6 @@ def resolve_report_badge(
         if selected_reporting_mode == "Ollama + Fallback":
             return "ai", "AI-generated — Local LLM"
     return "det", "Deterministic — Rule Engine"
-
-
-def _rule_results(result: Any) -> list[Any]:
-    assessment = getattr(result, "assessment", None)
-    return list(getattr(assessment, "rule_results", []) or [])
-
-
-def _status(rule: Any) -> str:
-    value = getattr(rule, "status", None)
-    return str(getattr(value, "value", value or ""))
 
 
 def _status_class(status: str) -> str:
@@ -226,9 +217,9 @@ def render_results_header(result: Any) -> None:
     assessment = getattr(result, "assessment", None)
     status_obj = getattr(assessment, "status", None)
     status = str(getattr(status_obj, "value", status_obj or "Unknown"))
-    rules = _rule_results(result)
-    triggered = sum(_status(rule) == "TRIGGERED" for rule in rules)
-    not_evaluable = sum(_status(rule) == "NOT_EVALUABLE" for rule in rules)
+    rules = get_rule_results(result)
+    triggered = sum(rule_status(rule) == "TRIGGERED" for rule in rules)
+    not_evaluable = sum(rule_status(rule) == "NOT_EVALUABLE" for rule in rules)
     status_class = _status_class(status)
 
     st.markdown(
@@ -271,14 +262,14 @@ def render_results_header(result: Any) -> None:
 
 def render_assessment_overview(result: Any) -> None:
     """Show only a concise assessment summary without risk-category duplication."""
-    rules = _rule_results(result)
+    rules = get_rule_results(result)
     if not rules:
         return
 
     assessment = getattr(result, "assessment", None)
     status_obj = getattr(assessment, "status", None)
     status = str(getattr(status_obj, "value", status_obj or "Unknown"))
-    triggered = sum(_status(rule) == "TRIGGERED" for rule in rules)
+    triggered = sum(rule_status(rule) == "TRIGGERED" for rule in rules)
 
     render_section_header(
         "Assessment Overview",
