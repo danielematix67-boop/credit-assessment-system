@@ -3,6 +3,8 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+from app.demo_scenarios import DEMO_SCENARIOS
+
 
 def _status_value(status: Any) -> str:
     return str(getattr(status, "value", status or "NOT_EVALUABLE")).upper()
@@ -18,7 +20,9 @@ def _status_class(status: str) -> str:
 
 
 def _rule_status(rule: Any) -> str:
-    return str(getattr(getattr(rule, "status", None), "value", getattr(rule, "status", ""))).upper()
+    return str(
+        getattr(getattr(rule, "status", None), "value", getattr(rule, "status", ""))
+    ).upper()
 
 
 def _indicator_frame(section: Any) -> pd.DataFrame:
@@ -31,7 +35,9 @@ def _indicator_frame(section: Any) -> pd.DataFrame:
             continue
         rows.append(
             {
-                "Indicator": getattr(rule, "indicator", getattr(rule, "rule_name", "Indicator")),
+                "Indicator": getattr(
+                    rule, "indicator", getattr(rule, "rule_name", "Indicator")
+                ),
                 "Value": float(value),
                 "Threshold": float(threshold),
                 "Status": _rule_status(rule),
@@ -51,7 +57,11 @@ def _threshold_distance_frame(section: Any) -> pd.DataFrame:
     for rule in section.evidence:
         value = getattr(rule, "value", None)
         threshold = getattr(rule, "threshold", None)
-        direction = getattr(getattr(rule, "direction", None), "value", getattr(rule, "direction", ""))
+        direction = getattr(
+            getattr(rule, "direction", None),
+            "value",
+            getattr(rule, "direction", ""),
+        )
         if value is None or threshold is None or float(threshold) == 0:
             continue
 
@@ -65,7 +75,9 @@ def _threshold_distance_frame(section: Any) -> pd.DataFrame:
 
         rows.append(
             {
-                "Indicator": getattr(rule, "indicator", getattr(rule, "rule_name", "Indicator")),
+                "Indicator": getattr(
+                    rule, "indicator", getattr(rule, "rule_name", "Indicator")
+                ),
                 "Threshold distance": distance,
             }
         )
@@ -150,7 +162,9 @@ def _render_financial_dimensions(section: Any) -> None:
             detail_rows.append(
                 {
                     "Rule": rule_id,
-                    "Indicator": getattr(rule, "indicator", getattr(rule, "rule_name", "Indicator")),
+                    "Indicator": getattr(
+                        rule, "indicator", getattr(rule, "rule_name", "Indicator")
+                    ),
                     "Value": getattr(rule, "value", None),
                     "Threshold": getattr(rule, "threshold", None),
                     "Status": _rule_status(rule),
@@ -169,7 +183,9 @@ def _render_financial_dimensions(section: Any) -> None:
             result = getattr(finding, "result", None)
             reason = getattr(result, "reason", None) or getattr(finding, "comment", "")
             if reason:
-                indicator = getattr(rule, "indicator", getattr(rule, "rule_name", rule_id))
+                indicator = getattr(
+                    rule, "indicator", getattr(rule, "rule_name", rule_id)
+                )
                 st.info(f"**Finding · {indicator} ({rule_id})**\n\n{reason}")
 
 
@@ -306,11 +322,15 @@ def _render_customer_profile(section: Any) -> None:
         [
             {
                 "Signal": "Active EWS",
-                "Value": _rule_status(evidence_by_rule["CP001"]) if "CP001" in evidence_by_rule else "NOT_EVALUABLE",
+                "Value": _rule_status(evidence_by_rule["CP001"])
+                if "CP001" in evidence_by_rule
+                else "NOT_EVALUABLE",
             },
             {
                 "Signal": "Previous restructuring",
-                "Value": _rule_status(evidence_by_rule["CP002"]) if "CP002" in evidence_by_rule else "NOT_EVALUABLE",
+                "Value": _rule_status(evidence_by_rule["CP002"])
+                if "CP002" in evidence_by_rule
+                else "NOT_EVALUABLE",
             },
         ]
     )
@@ -337,6 +357,71 @@ def _render_section_details(section: Any) -> None:
                 st.write(f"• {limitation}")
 
 
+def _render_data_quality_overview(credit_case: Any) -> None:
+    """Show evidence coverage and data limitations before interpreting risk."""
+    sections = list(getattr(credit_case, "sections", []) or [])
+    total_evidence = sum(len(getattr(section, "evidence", []) or []) for section in sections)
+    evaluable_evidence = sum(
+        sum(_rule_status(rule) != "NOT_EVALUABLE" for rule in getattr(section, "evidence", []))
+        for section in sections
+    )
+    not_evaluable_evidence = total_evidence - evaluable_evidence
+    sections_with_limitations = sum(
+        bool(getattr(section, "limitations", [])) for section in sections
+    )
+    coverage = evaluable_evidence / total_evidence if total_evidence else 0.0
+
+    st.markdown("### Data & Evidence Quality")
+    st.caption(
+        "Evidence coverage is shown separately from credit risk. Missing or unavailable data are "
+        "explicit limitations and do not become a synthetic risk score."
+    )
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Evidence items", total_evidence)
+    with col2:
+        st.metric("Evaluable", evaluable_evidence)
+    with col3:
+        st.metric("Not evaluable", not_evaluable_evidence)
+    with col4:
+        st.metric("Evidence coverage", f"{coverage:.0%}")
+
+    quality_rows = []
+    for section in sections:
+        evidence = list(getattr(section, "evidence", []) or [])
+        total = len(evidence)
+        evaluable = sum(_rule_status(rule) != "NOT_EVALUABLE" for rule in evidence)
+        quality_rows.append(
+            {
+                "Macro-area": section.name,
+                "Evidence": total,
+                "Evaluable": evaluable,
+                "Not evaluable": total - evaluable,
+                "Coverage": evaluable / total if total else 0.0,
+                "Limitations": len(getattr(section, "limitations", []) or []),
+            }
+        )
+
+    quality_frame = pd.DataFrame(quality_rows)
+    if quality_frame.empty:
+        st.info("No evidence items are available for this case.")
+        return
+
+    chart_frame = quality_frame.set_index("Macro-area")[["Evaluable", "Not evaluable"]]
+    st.bar_chart(chart_frame, horizontal=True)
+
+    display_frame = quality_frame.copy()
+    display_frame["Coverage"] = display_frame["Coverage"].map(lambda value: f"{value:.0%}")
+    st.dataframe(display_frame, use_container_width=True, hide_index=True)
+
+    if sections_with_limitations:
+        st.info(
+            f"{sections_with_limitations} of {len(sections)} macro-areas contain explicit data limitations. "
+            "Review these limitations before interpreting the final assessment."
+        )
+
+
 def render_credit_analysis_case(result: Any) -> None:
     """Render the analyst-style macro-area view produced by the domain layer."""
     credit_case = getattr(result, "credit_case", None)
@@ -348,6 +433,8 @@ def render_credit_analysis_case(result: Any) -> None:
         "The assessment is organised into the main analytical areas used in a credit review. "
         "Only implemented areas contribute deterministic evidence; unavailable areas remain explicitly not evaluable."
     )
+
+    _render_data_quality_overview(credit_case)
 
     sections = credit_case.sections
     cards = []
