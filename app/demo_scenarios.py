@@ -2,7 +2,6 @@ from dataclasses import fields
 from typing import Any
 
 from src.models.behavioural_data import BehaviouralData
-from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.customer_profile_data import CustomerProfileData
 from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.models.position import CreditPosition
@@ -225,7 +224,9 @@ DEMO_SCENARIOS = {
                 "shareholders": ["Industrial holding"],
                 "management_members": ["CEO", "CFO"],
                 "relationship_years": 10,
-                "historical_facilities": ["Term loan", "Leasing", "Revolving credit"],
+                "historical_facilities": [
+                    "Term loan", "Leasing", "Revolving credit"
+                ],
                 "active_ews": True,
                 "previous_restructuring": False,
             },
@@ -282,7 +283,9 @@ DEMO_SCENARIOS = {
                 "shareholders": ["Industrial holding"],
                 "management_members": ["CEO", "CFO"],
                 "relationship_years": 12,
-                "historical_facilities": ["Term loan", "Revolving credit", "Leasing"],
+                "historical_facilities": [
+                    "Term loan", "Revolving credit", "Leasing"
+                ],
                 "active_ews": True,
                 "previous_restructuring": True,
             },
