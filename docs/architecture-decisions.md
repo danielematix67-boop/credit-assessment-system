@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-This document captures the main architectural decisions behind the Credit Assessment System and explains **why** the system is structured as it is.
+This document captures the main architectural decisions behind the Credit Assessment System and explains why the system is structured as it is.
 
 ## Decision Status
 
@@ -30,9 +30,9 @@ Accepted
 
 ## Decision
 
-The **deterministic Rule Engine is the sole decision authority**. It evaluates rules, produces `RuleResult` objects, resolves severity and provides the inputs used to calculate the overall assessment status.
+The **deterministic Rule Engine is the decision authority for financial rule assessment**. It evaluates rules, produces `RuleResult` objects, resolves severity and provides the inputs used to calculate financial assessment status.
 
-LLM components must not modify, override or reinterpret the assessment results.
+The case-level `FinalAssessmentService` is likewise deterministic and consolidates macro-area section statuses. LLM components must not modify, override or reinterpret either structured decision.
 
 ## Rationale
 
@@ -130,7 +130,7 @@ Accepted
 
 LLM-based reporting uses a **deterministic report generator as fallback** when the primary reporting path fails or, when strict grounding is enabled, when the generated narrative does not contain required indicator evidence.
 
-The fallback changes only the report-generation path. It does not alter the assessment or findings.
+The fallback changes only the report-generation path. It does not alter the assessment, findings or final case decision.
 
 ## Rationale
 
@@ -218,27 +218,33 @@ Accepted
 
 ## Decision
 
-The Streamlit Results view follows this hierarchy:
+The Streamlit Results view follows a progressive analyst-oriented hierarchy:
 
 ```text
 Executive Credit Assessment
           ↓
-Risk Indicator Dashboard
+Final Assessment
           ↓
-Audit Trail & Methodology
+Risk Drivers
+          ↓
+Rule Engine Evidence
+          ↓
+Executive Narrative
+          ↓
+Detailed Analysis by Macro-area
 ```
 
-The **Executive Credit Assessment** is the primary output. The **Risk Indicator Dashboard** is the single detailed rule-evidence surface, while the **Audit Trail & Methodology** contains workflow, credit-data and execution-level traceability.
+The **Executive Credit Assessment** is the primary decision surface. **Final Assessment** shows deterministic macro-area consolidation. **Risk Drivers** highlights triggered indicators across areas. **Rule Engine Evidence** provides detailed rule distributions, filters and individual rule inspection. **Executive Narrative** provides management-level prose. The final drill-down contains detailed macro-area evidence and data-quality information.
 
-The Results view also includes a graphical **Decision Path** connecting financial indicators, Rule Engine outcomes and the monitoring assessment.
+Technical tables and detailed inspections are closed by default where appropriate. The UI therefore exposes evidence progressively rather than presenting every technical object at once.
 
 All visualizations consume deterministic workflow outputs. They do not recalculate thresholds, severity or assessment status.
 
-Legacy overlapping evidence surfaces are intentionally not part of the current Results hierarchy. Detailed rule evidence is centralized in the Risk Indicator Dashboard.
+The Risk Drivers ranking is descriptive and does not introduce a new score.
 
 ## Rationale
 
-This structure makes the assessment mechanism inspectable while keeping the main result concise. Centralizing rule evidence also reduces repetition and scales better as the rule catalogue grows.
+The hierarchy separates **decision, drivers, evidence, narrative and audit detail**. This makes the assessment easier to read for an analyst while preserving traceability and avoiding duplicate evidence surfaces.
 
 ---
 
@@ -360,6 +366,7 @@ The decisions above imply the following principles:
 10. **Presentation code should not own business logic.**
 11. **Execution provenance should remain immutable and separate from decision data.**
 12. **The UI should explain the decision path without reproducing it.**
+13. **Executive information should be visible first; technical evidence should be progressively disclosed.**
 
 # Current Architecture
 
@@ -373,6 +380,9 @@ flowchart LR
     RE --> RR[Rule Results]
     AS --> SC[Status Calculator]
     SC --> STATUS[Assessment Status]
+    WF --> CASE[Credit Assessment Case]
+    CASE --> SECTIONS[Macro-area Sections]
+    SECTIONS --> FINAL[Final Assessment]
     WF --> AA[Analysis Agent]
     AA --> ANA[Assessment Analysis]
     WF --> RP[Reporting Agent]
@@ -387,8 +397,9 @@ flowchart LR
     WF --> META[Execution Metadata]
     CFG[config/rules.yaml] --> RCL[Rule Config Loader]
     RCL --> RE
-    UI --> EVID[Decision Path / Risk Indicator Dashboard]
+    UI --> EVID[Results Evidence Views]
     EVID --> RR
+    EVID --> FINAL
 ```
 
-The architecture intentionally keeps the **assessment path structurally validated and deterministic**, the **LLM path optional and bounded**, the **fallback path deterministic**, and **execution metadata observational rather than decisional**.
+The architecture intentionally keeps the **assessment path structurally validated and deterministic**, the **case-level aggregation deterministic**, the **LLM path optional and bounded**, the **fallback path deterministic**, and **execution metadata observational rather than decisional**.
