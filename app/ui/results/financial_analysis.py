@@ -29,26 +29,44 @@ def build_indicator_analysis_frame(section: Any) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _findings_by_rule(section: Any) -> dict[str, Any]:
+    """Map deterministic findings to their originating rule."""
+    findings = {}
+    for finding in getattr(section, "findings", []) or []:
+        result = getattr(finding, "result", None)
+        rule_id = getattr(result, "rule_id", "")
+        if rule_id:
+            findings[rule_id] = finding
+    return findings
+
+
+def _finding_text(finding: Any) -> str:
+    """Return the deterministic finding text for display."""
+    if finding is None:
+        return ""
+    result = getattr(finding, "result", None)
+    return str(
+        getattr(result, "reason", None)
+        or getattr(finding, "comment", None)
+        or getattr(finding, "text", "")
+    ).strip()
+
+
 def _render_financial_dimensions(section: Any) -> None:
-    """Expose dimension -> indicator -> evidence -> finding for analysts."""
+    """Show financial dimensions and their underlying deterministic evidence."""
     dimensions = getattr(section, "dimensions", {}) or {}
     if not dimensions:
         return
 
-    findings_by_rule = {}
-    for finding in getattr(section, "findings", []):
-        result = getattr(finding, "result", None)
-        rule_id = getattr(result, "rule_id", "")
-        if rule_id:
-            findings_by_rule[rule_id] = finding
+    findings_by_rule = _findings_by_rule(section)
 
     st.markdown("**Analytical Dimensions**")
     st.caption(
-        "Financial indicators are grouped into analytical dimensions. This view is descriptive only "
-        "and does not introduce a new risk score or alter the assessment decision."
+        "Each dimension links the indicator to its configured threshold, rule status and deterministic finding. "
+        "This view does not introduce a new risk score or alter the assessment decision."
     )
 
-    rows = []
+    summary_rows = []
     for dimension, rules in dimensions.items():
         rule_list = list(rules or [])
         statuses = [rule_status(rule) for rule in rule_list]
@@ -61,23 +79,20 @@ def _render_financial_dimensions(section: Any) -> None:
         else:
             dimension_status = "NOT_EVALUABLE"
 
-        rows.append(
+        summary_rows.append(
             {
                 "Analytical dimension": dimension,
                 "Indicators": len(rule_list),
                 "Triggered": triggered,
-                "Evaluable": evaluable,
                 "Status": dimension_status,
             }
         )
 
-    dimension_frame = pd.DataFrame(rows)
-    if dimension_frame.empty:
+    summary_frame = pd.DataFrame(summary_rows)
+    if summary_frame.empty:
         return
 
-    chart_frame = dimension_frame.set_index("Analytical dimension")[["Triggered"]]
-    st.bar_chart(chart_frame, horizontal=True)
-    st.dataframe(dimension_frame, use_container_width=True, hide_index=True)
+    st.dataframe(summary_frame, use_container_width=True, hide_index=True)
 
     for dimension, rules in dimensions.items():
         rule_list = list(rules or [])
@@ -87,39 +102,23 @@ def _render_financial_dimensions(section: Any) -> None:
         st.markdown(f"**{dimension}**")
         detail_rows = []
         for rule in rule_list:
+            rule_id = getattr(rule, "rule_id", "")
             detail_rows.append(
                 {
-                    "Rule": getattr(rule, "rule_id", ""),
+                    "Rule": rule_id,
                     "Indicator": rule_indicator(rule),
                     "Value": getattr(rule, "value", None),
                     "Threshold": getattr(rule, "threshold", None),
                     "Status": rule_status(rule),
+                    "Finding": _finding_text(findings_by_rule.get(rule_id)),
                 }
             )
         st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
 
-        for rule in rule_list:
-            rule_id = getattr(rule, "rule_id", "")
-            if rule_status(rule) != "TRIGGERED":
-                continue
-            finding = findings_by_rule.get(rule_id)
-            if finding is None:
-                continue
-            result = getattr(finding, "result", None)
-            reason = getattr(result, "reason", None) or getattr(finding, "comment", "")
-            if reason:
-                indicator = rule_indicator(rule)
-                st.info(f"**Finding · {indicator} ({rule_id})**\n\n{reason}")
-
 
 def render_financial_analysis(section: Any) -> None:
-    """Render financial indicators and their deterministic threshold evidence."""
+    """Render financial dimensions and deterministic indicator evidence."""
     _render_financial_dimensions(section)
-
-    frame = build_indicator_analysis_frame(section)
-    if not frame.empty:
-        st.markdown("**Indicator evidence**")
-        st.dataframe(frame, use_container_width=True, hide_index=True)
 
 
 def render_behavioural_analysis(section: Any) -> None:
@@ -131,16 +130,8 @@ def render_behavioural_analysis(section: Any) -> None:
 
 
 def render_debt_analysis(section: Any) -> None:
-    """Render debt-service indicators and the deterministic cash-flow buffer."""
+    """Render debt-service indicators against their configured thresholds."""
     frame = build_indicator_analysis_frame(section)
     if not frame.empty:
         st.markdown("**Indicator evidence**")
         st.dataframe(frame, use_container_width=True, hide_index=True)
-
-    buffer_rule = next(
-        (rule for rule in section.evidence if getattr(rule, "rule_id", "") == "DS003"),
-        None,
-    )
-    if buffer_rule is not None and getattr(buffer_rule, "value", None) is not None:
-        value = float(buffer_rule.value)
-        st.metric("Cash Flow Debt-Service Buffer", f"{value:,.2f}")
