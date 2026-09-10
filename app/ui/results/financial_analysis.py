@@ -12,66 +12,82 @@ def _rule_status(rule: Any) -> str:
     ).upper()
 
 
-def _indicator_frame(section: Any) -> pd.DataFrame:
-    """Build a comparable indicator table from deterministic RuleResult data."""
+def _rule_direction(rule: Any) -> str:
+    return str(
+        getattr(
+            getattr(rule, "direction", None),
+            "value",
+            getattr(rule, "direction", ""),
+        )
+    ).upper()
+
+
+def _threshold_distance(value: float, threshold: float, direction: str) -> float | None:
+    """Return normalized distance from threshold; positive means worse."""
+    if threshold == 0:
+        return None
+    scale = abs(threshold)
+    if direction == "LOWER_IS_WORSE":
+        return (threshold - value) / scale
+    return (value - threshold) / scale
+
+
+def build_indicator_analysis_frame(section: Any) -> pd.DataFrame:
+    """Build analyst-facing indicator evidence without recalculating rule outcomes."""
     rows = []
     for rule in section.evidence:
         value = getattr(rule, "value", None)
         threshold = getattr(rule, "threshold", None)
         if value is None or threshold is None:
             continue
+
+        value = float(value)
+        threshold = float(threshold)
+        distance = _threshold_distance(value, threshold, _rule_direction(rule))
+        if distance is None:
+            relation = "Threshold = 0"
+        elif distance > 0:
+            relation = "Worse than threshold"
+        elif distance < 0:
+            relation = "Better than threshold"
+        else:
+            relation = "At threshold"
+
         rows.append(
             {
+                "Rule": getattr(rule, "rule_id", ""),
                 "Indicator": getattr(
                     rule, "indicator", getattr(rule, "rule_name", "Indicator")
                 ),
-                "Value": float(value),
-                "Threshold": float(threshold),
+                "Value": value,
+                "Threshold": threshold,
                 "Status": _rule_status(rule),
-                "Rule": getattr(rule, "rule_id", ""),
+                "Distance": distance,
+                "Relation": relation,
             }
         )
     return pd.DataFrame(rows)
 
 
-def _threshold_distance_frame(section: Any) -> pd.DataFrame:
-    """Build a direction-aware distance from threshold for non-zero thresholds."""
-    frame = _indicator_frame(section)
+def _indicator_frame(section: Any) -> pd.DataFrame:
+    """Build the compact indicator table used by threshold visualizations."""
+    frame = build_indicator_analysis_frame(section)
     if frame.empty:
         return frame
+    return frame[["Indicator", "Value", "Threshold", "Status", "Rule"]]
 
-    rows = []
-    for rule in section.evidence:
-        value = getattr(rule, "value", None)
-        threshold = getattr(rule, "threshold", None)
-        direction = getattr(
-            getattr(rule, "direction", None),
-            "value",
-            getattr(rule, "direction", ""),
-        )
-        if value is None or threshold is None or float(threshold) == 0:
-            continue
 
-        value = float(value)
-        threshold = float(threshold)
-        scale = abs(threshold)
-        if direction == "LOWER_IS_WORSE":
-            distance = (threshold - value) / scale
-        else:
-            distance = (value - threshold) / scale
-
-        rows.append(
-            {
-                "Indicator": getattr(
-                    rule, "indicator", getattr(rule, "rule_name", "Indicator")
-                ),
-                "Threshold distance": distance,
-            }
-        )
-
-    if not rows:
+def _threshold_distance_frame(section: Any) -> pd.DataFrame:
+    """Build a direction-aware distance from threshold for non-zero thresholds."""
+    frame = build_indicator_analysis_frame(section)
+    if frame.empty:
+        return frame
+    frame = frame.dropna(subset=["Distance"])
+    if frame.empty:
         return pd.DataFrame()
-    return pd.DataFrame(rows).set_index("Indicator")
+    return frame.set_index("Indicator")[["Distance"]].rename(
+        columns={"Distance": "Threshold distance"}
+    )
 
 
 def _render_threshold_distance_chart(section: Any, title: str) -> None:
@@ -84,6 +100,25 @@ def _render_threshold_distance_chart(section: Any, title: str) -> None:
         "negative values on the better side. Zero-threshold indicators remain in the evidence table."
     )
     st.bar_chart(frame, horizontal=True)
+
+
+def _render_risk_signal_ranking(section: Any) -> None:
+    """Rank triggered indicators by normalized distance from their thresholds."""
+    frame = build_indicator_analysis_frame(section)
+    if frame.empty:
+        return
+
+    signals = frame[(frame["Status"] == "TRIGGERED") & frame["Distance"].notna()]
+    if signals.empty:
+        return
+
+    signals = signals.sort_values("Distance", ascending=True).set_index("Indicator")
+    st.markdown("**Triggered risk signals**")
+    st.caption(
+        "Signals are ranked by normalized distance from the configured threshold. "
+        "Positive distance indicates the worse side of the threshold."
+    )
+    st.bar_chart(signals[["Distance"]].rename(columns={"Distance": "Threshold distance"}), horizontal=True)
 
 
 def _render_financial_dimensions(section: Any) -> None:
@@ -176,7 +211,17 @@ def _render_financial_dimensions(section: Any) -> None:
 def render_financial_analysis(section: Any) -> None:
     """Render financial indicators and their deterministic threshold evidence."""
     _render_financial_dimensions(section)
+    _render_risk_signal_ranking(section)
     _render_threshold_distance_chart(section, "Indicator position vs threshold")
+
+    frame = build_indicator_analysis_frame(section)
+    if not frame.empty:
+        st.markdown("**Indicator evidence**")
+        display_frame = frame.copy()
+        display_frame["Distance"] = display_frame["Distance"].map(
+            lambda value: "—" if pd.isna(value) else f"{value:+.0%}"
+        )
+        st.dataframe(display_frame, use_container_width=True, hide_index=True)
 
 
 def render_behavioural_analysis(section: Any) -> None:
