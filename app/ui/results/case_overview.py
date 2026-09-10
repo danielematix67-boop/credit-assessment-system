@@ -87,7 +87,70 @@ def _render_threshold_distance_chart(section: Any, title: str) -> None:
     st.bar_chart(frame, horizontal=True)
 
 
+def _render_financial_dimensions(section: Any) -> None:
+    """Show the analytical dimensions already produced by the deterministic domain layer."""
+    dimensions = getattr(section, "dimensions", {}) or {}
+    if not dimensions:
+        return
+
+    rows = []
+    for dimension, rules in dimensions.items():
+        rule_list = list(rules or [])
+        statuses = [_rule_status(rule) for rule in rule_list]
+        triggered = sum(status in {"ATTENTION", "CRITICAL"} for status in statuses)
+        evaluable = sum(status != "NOT_EVALUABLE" for status in statuses)
+        if "CRITICAL" in statuses:
+            dimension_status = "CRITICAL"
+        elif "ATTENTION" in statuses:
+            dimension_status = "ATTENTION"
+        elif evaluable:
+            dimension_status = "NORMAL"
+        else:
+            dimension_status = "NOT_EVALUABLE"
+
+        rows.append(
+            {
+                "Analytical dimension": dimension,
+                "Indicators": len(rule_list),
+                "Triggered": triggered,
+                "Evaluable": evaluable,
+                "Status": dimension_status,
+            }
+        )
+
+    dimension_frame = pd.DataFrame(rows)
+    if dimension_frame.empty:
+        return
+
+    st.markdown("**Analytical Dimensions**")
+    st.caption(
+        "Financial indicators are grouped into analytical dimensions to make the analyst reasoning visible. "
+        "The dimension view is descriptive only and does not introduce a new risk score or alter the assessment decision."
+    )
+
+    chart_frame = dimension_frame.set_index("Analytical dimension")[["Triggered"]]
+    st.bar_chart(chart_frame, horizontal=True)
+    st.dataframe(dimension_frame, use_container_width=True, hide_index=True)
+
+    with st.expander("Dimension evidence", expanded=False):
+        for dimension, rules in dimensions.items():
+            rule_list = list(rules or [])
+            if not rule_list:
+                continue
+            st.markdown(f"**{dimension}**")
+            detail_rows = [
+                {
+                    "Rule": getattr(rule, "rule_id", ""),
+                    "Indicator": getattr(rule, "indicator", getattr(rule, "rule_name", "Indicator")),
+                    "Status": _rule_status(rule),
+                }
+                for rule in rule_list
+            ]
+            st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
+
+
 def _render_financial_chart(section: Any) -> None:
+    _render_financial_dimensions(section)
     _render_threshold_distance_chart(section, "Indicator position vs threshold")
 
 
