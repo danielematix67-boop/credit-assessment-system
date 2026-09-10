@@ -2,6 +2,7 @@ from unittest.mock import Mock
 
 from src.models.assessment import Assessment
 from src.models.assessment_status import AssessmentStatus
+from src.models.behavioural_data import BehaviouralData
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.position import CreditPosition
 from src.rules.base.severity import RuleSeverity
@@ -73,7 +74,10 @@ def _rule_result(rule_id: str) -> RuleResult:
 
 def test_case_service_groups_financial_rules_by_analyst_dimension() -> None:
     position = CreditPosition(position_id="TEST-003")
-    results = [_rule_result(rule_id) for rule_id in ["R001", "R002", "R003", "R004", "R005", "R006", "R007"]]
+    results = [
+        _rule_result(rule_id)
+        for rule_id in ["R001", "R002", "R003", "R004", "R005", "R006", "R007"]
+    ]
     assessment = Assessment(
         position_id=position.position_id,
         rule_results=results,
@@ -99,3 +103,46 @@ def test_case_service_groups_financial_rules_by_analyst_dimension() -> None:
     assert [result.rule_id for result in dimensions["Financial Structure"]] == ["R004"]
     assert [result.rule_id for result in dimensions["Debt Service Burden"]] == ["R005", "R007"]
     assert [result.rule_id for result in dimensions["Profitability Quality"]] == ["R006"]
+
+
+def test_case_service_builds_behavioural_section_when_data_are_available() -> None:
+    position = CreditPosition(position_id="TEST-004")
+    assessment = Assessment(
+        position_id=position.position_id,
+        rule_results=[],
+        findings=[],
+        status=AssessmentStatus.NORMAL,
+    )
+    assessment_service = Mock()
+    assessment_service.assess.return_value = assessment
+
+    case = CreditAssessmentCaseService(assessment_service).assess(
+        position,
+        behavioural_data=BehaviouralData(average_utilization=0.95),
+    )
+
+    assert case.behavioural_analysis.status.value == "ATTENTION"
+    assert len(case.behavioural_analysis.evidence) == 4
+    assert case.behavioural_analysis.evidence[0].rule_id == "B001"
+    assert case.behavioural_analysis.evidence[0].status == RuleStatus.TRIGGERED
+
+
+def test_case_service_keeps_behavioural_data_out_of_financial_assessment() -> None:
+    position = CreditPosition(position_id="TEST-005")
+    assessment = Assessment(
+        position_id=position.position_id,
+        rule_results=[],
+        findings=[],
+        status=AssessmentStatus.NORMAL,
+    )
+    assessment_service = Mock()
+    assessment_service.assess.return_value = assessment
+
+    case = CreditAssessmentCaseService(assessment_service).assess(
+        position,
+        behavioural_data=BehaviouralData(overdraft_days=15),
+    )
+
+    assessment_service.assess.assert_called_once_with(position)
+    assert case.financial_analysis.evidence == []
+    assert case.behavioural_analysis.evidence[1].rule_id == "B002"
