@@ -19,6 +19,44 @@ def render_section_header(title: str, description: str) -> None:
 
 
 # ============================================================
+# Assessment Status
+# ============================================================
+
+
+def render_assessment_status(status: str) -> None:
+    """Render the deterministic assessment status as a reusable badge."""
+    normalized = status.upper().replace(" ", "_")
+    palette = {
+        "CRITICAL": ("#b91c1c", "rgba(185, 28, 28, 0.10)"),
+        "ATTENTION": ("#b45309", "rgba(180, 83, 9, 0.10)"),
+        "NORMAL": ("#166534", "rgba(22, 101, 52, 0.10)"),
+    }
+    foreground, background = palette.get(
+        normalized,
+        ("#4b5563", "rgba(107, 114, 128, 0.10)"),
+    )
+    label = normalized.replace("_", " ").title()
+
+    st.markdown(
+        f"""
+        <span style="
+            display:inline-flex;
+            align-items:center;
+            padding:0.24rem 0.72rem;
+            border-radius:999px;
+            border:1px solid {foreground}55;
+            background:{background};
+            color:{foreground};
+            font-size:0.78rem;
+            font-weight:750;
+            letter-spacing:0.02em;
+        ">{label}</span>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ============================================================
 # Badge / Provenance Helpers
 # ============================================================
 
@@ -64,10 +102,9 @@ def reporting_mode_badge_kind(
     reporting_mode: str,
 ) -> str:
     """
-    Map a reporting mode selection to its *intended* badge kind,
+    Map a reporting mode selection to its intended badge kind,
     before knowing whether a fallback actually occurred.
     """
-
     if reporting_mode == "Deterministic":
         return "det"
 
@@ -83,10 +120,7 @@ def render_scenario_card(
     scenario_name: str,
     description: str,
 ) -> None:
-    """
-    Render the selected demo scenario.
-    """
-
+    """Render the selected demo scenario."""
     st.markdown(
         f"""
         <div class="scenario-card">
