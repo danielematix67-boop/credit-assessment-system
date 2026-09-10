@@ -6,6 +6,8 @@ recalculate indicators, thresholds, severity, rule status, or assessment status.
 
 from typing import Any
 
+import pandas as pd
+
 
 def get_rule_results(result: Any) -> list[Any]:
     assessment = getattr(result, "assessment", None)
@@ -59,6 +61,49 @@ def severity_counts(rule_results: list[Any]) -> dict[str, int]:
         if severity in counts:
             counts[severity] += 1
     return counts
+
+
+def build_rule_dataframe(rule_results: list[Any]) -> pd.DataFrame:
+    """Build the dashboard's tabular presentation data from RuleResult objects."""
+    rows: list[dict[str, Any]] = []
+    for rule_result in rule_results:
+        rows.append(
+            {
+                "Rule": str(getattr(rule_result, "rule_id", "—")),
+                "Indicator": rule_indicator(rule_result),
+                "Actual": getattr(rule_result, "value", None),
+                "Threshold": getattr(rule_result, "threshold", None),
+                "Status": rule_status(rule_result),
+                "Severity": rule_severity(rule_result),
+                "Category": str(getattr(rule_result, "category", "—")),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def build_status_overview(status_counts: dict[str, int]) -> pd.DataFrame:
+    """Build chart-ready status data without changing the underlying counts."""
+    labels = {
+        "TRIGGERED": "Triggered",
+        "NOT_TRIGGERED": "Not triggered",
+        "NOT_EVALUABLE": "Not evaluable",
+    }
+    return pd.DataFrame(
+        {
+            "Status": [labels[key] for key in status_counts],
+            "Rules": list(status_counts.values()),
+        }
+    )
+
+
+def build_severity_overview(severity_counts_data: dict[str, int]) -> pd.DataFrame:
+    """Build chart-ready severity data without changing the underlying counts."""
+    return pd.DataFrame(
+        {
+            "Severity": list(severity_counts_data.keys()),
+            "Rules": list(severity_counts_data.values()),
+        }
+    )
 
 
 def format_indicator_value(value: Any) -> str:
