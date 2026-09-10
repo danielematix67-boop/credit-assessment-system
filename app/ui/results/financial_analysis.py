@@ -5,31 +5,13 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-
-def _rule_status(rule: Any) -> str:
-    return str(
-        getattr(getattr(rule, "status", None), "value", getattr(rule, "status", ""))
-    ).upper()
-
-
-def _rule_direction(rule: Any) -> str:
-    return str(
-        getattr(
-            getattr(rule, "direction", None),
-            "value",
-            getattr(rule, "direction", ""),
-        )
-    ).upper()
-
-
-def _threshold_distance(value: float, threshold: float, direction: str) -> float | None:
-    """Return normalized distance from threshold; positive means worse."""
-    if threshold == 0:
-        return None
-    scale = abs(threshold)
-    if direction == "LOWER_IS_WORSE":
-        return (threshold - value) / scale
-    return (value - threshold) / scale
+from app.ui.results.helpers import (
+    rule_direction,
+    rule_indicator,
+    rule_status,
+    threshold_distance,
+    threshold_relation,
+)
 
 
 def build_indicator_analysis_frame(section: Any) -> pd.DataFrame:
@@ -43,25 +25,16 @@ def build_indicator_analysis_frame(section: Any) -> pd.DataFrame:
 
         value = float(value)
         threshold = float(threshold)
-        distance = _threshold_distance(value, threshold, _rule_direction(rule))
-        if distance is None:
-            relation = "Threshold = 0"
-        elif distance > 0:
-            relation = "Worse than threshold"
-        elif distance < 0:
-            relation = "Better than threshold"
-        else:
-            relation = "At threshold"
+        distance = threshold_distance(value, threshold, rule_direction(rule))
+        relation = threshold_relation(distance)
 
         rows.append(
             {
                 "Rule": getattr(rule, "rule_id", ""),
-                "Indicator": getattr(
-                    rule, "indicator", getattr(rule, "rule_name", "Indicator")
-                ),
+                "Indicator": rule_indicator(rule),
                 "Value": value,
                 "Threshold": threshold,
-                "Status": _rule_status(rule),
+                "Status": rule_status(rule),
                 "Distance": distance,
                 "Relation": relation,
             }
@@ -118,7 +91,10 @@ def _render_risk_signal_ranking(section: Any) -> None:
         "Signals are ranked by normalized distance from the configured threshold. "
         "Positive distance indicates the worse side of the threshold."
     )
-    st.bar_chart(signals[["Distance"]].rename(columns={"Distance": "Threshold distance"}), horizontal=True)
+    st.bar_chart(
+        signals[["Distance"]].rename(columns={"Distance": "Threshold distance"}),
+        horizontal=True,
+    )
 
 
 def _render_financial_dimensions(section: Any) -> None:
@@ -143,7 +119,7 @@ def _render_financial_dimensions(section: Any) -> None:
     rows = []
     for dimension, rules in dimensions.items():
         rule_list = list(rules or [])
-        statuses = [_rule_status(rule) for rule in rule_list]
+        statuses = [rule_status(rule) for rule in rule_list]
         triggered = sum(status == "TRIGGERED" for status in statuses)
         evaluable = sum(status != "NOT_EVALUABLE" for status in statuses)
         if "TRIGGERED" in statuses:
@@ -182,19 +158,17 @@ def _render_financial_dimensions(section: Any) -> None:
             detail_rows.append(
                 {
                     "Rule": getattr(rule, "rule_id", ""),
-                    "Indicator": getattr(
-                        rule, "indicator", getattr(rule, "rule_name", "Indicator")
-                    ),
+                    "Indicator": rule_indicator(rule),
                     "Value": getattr(rule, "value", None),
                     "Threshold": getattr(rule, "threshold", None),
-                    "Status": _rule_status(rule),
+                    "Status": rule_status(rule),
                 }
             )
         st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
 
         for rule in rule_list:
             rule_id = getattr(rule, "rule_id", "")
-            if _rule_status(rule) != "TRIGGERED":
+            if rule_status(rule) != "TRIGGERED":
                 continue
             finding = findings_by_rule.get(rule_id)
             if finding is None:
@@ -202,9 +176,7 @@ def _render_financial_dimensions(section: Any) -> None:
             result = getattr(finding, "result", None)
             reason = getattr(result, "reason", None) or getattr(finding, "comment", "")
             if reason:
-                indicator = getattr(
-                    rule, "indicator", getattr(rule, "rule_name", rule_id)
-                )
+                indicator = rule_indicator(rule)
                 st.info(f"**Finding · {indicator} ({rule_id})**\n\n{reason}")
 
 
