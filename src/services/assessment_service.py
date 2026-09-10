@@ -4,6 +4,7 @@ from src.models.assessment import Assessment
 from src.models.position import CreditPosition
 from src.models.rule_finding import RuleFinding
 from src.services.assessment_status_calculator import AssessmentStatusCalculator
+from src.services.position_validator import CreditPositionValidator
 
 
 class AssessmentService:
@@ -12,12 +13,16 @@ class AssessmentService:
         rule_engine: RuleEngine,
         comment_engine: CommentEngine,
         status_calculator: AssessmentStatusCalculator,
+        position_validator: CreditPositionValidator | None = None,
     ):
         self.rule_engine = rule_engine
         self.comment_engine = comment_engine
         self.status_calculator = status_calculator
+        self.position_validator = position_validator or CreditPositionValidator()
 
     def assess(self, position: CreditPosition) -> Assessment:
+        self.position_validator.validate(position)
+
         results = self.rule_engine.evaluate(position)
 
         findings = []
