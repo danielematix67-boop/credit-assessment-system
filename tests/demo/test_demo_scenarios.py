@@ -56,7 +56,9 @@ def test_demo_scenarios_have_expected_final_statuses(assessment_service) -> None
         assert case.final_assessment.status.value == expected_status
 
 
-def test_demo_case_analysis_agent_preserves_final_assessment_status(assessment_service) -> None:
+def test_demo_case_analysis_agent_preserves_final_assessment_status(
+    assessment_service,
+) -> None:
     case_service = CreditAssessmentCaseService(
         financial_assessment_service=assessment_service
     )
