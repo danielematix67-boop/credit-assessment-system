@@ -1,6 +1,10 @@
 import pytest
 
-from app.demo_scenarios import DEMO_SCENARIOS, build_demo_case_data, build_demo_position
+from app.demo_scenarios import (
+    DEMO_SCENARIOS,
+    build_demo_case_data,
+    build_demo_position,
+)
 from src.agents.analysis.case_analysis_agent import CaseAnalysisAgent
 from src.services.credit_assessment_case_service import CreditAssessmentCaseService
 
@@ -33,7 +37,9 @@ def test_demo_scenario_builders_produce_valid_inputs(scenario_name: str) -> None
 
 
 def test_demo_scenarios_have_expected_final_statuses(assessment_service) -> None:
-    case_service = CreditAssessmentCaseService(financial_assessment_service=assessment_service)
+    case_service = CreditAssessmentCaseService(
+        financial_assessment_service=assessment_service
+    )
 
     for scenario_name, expected_status in EXPECTED_FINAL_STATUS.items():
         position = build_demo_position(scenario_name)
@@ -51,7 +57,9 @@ def test_demo_scenarios_have_expected_final_statuses(assessment_service) -> None
 
 
 def test_demo_case_analysis_agent_preserves_final_assessment_status(assessment_service) -> None:
-    case_service = CreditAssessmentCaseService(financial_assessment_service=assessment_service)
+    case_service = CreditAssessmentCaseService(
+        financial_assessment_service=assessment_service
+    )
 
     for scenario_name, expected_status in EXPECTED_FINAL_STATUS.items():
         position = build_demo_position(scenario_name)
