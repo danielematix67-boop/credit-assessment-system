@@ -4,7 +4,7 @@
 
 The **Credit Assessment System** is a deterministic, rule-based credit assessment application with an optional AI-assisted reporting layer.
 
-The architecture is now organized around a higher-level `CreditAssessmentCase` that mirrors the main stages of an analyst-style credit analysis:
+The architecture is organized around a higher-level `CreditAssessmentCase` that mirrors the main stages of an analyst-style credit analysis:
 
 1. Customer Profile
 2. Financial Analysis
@@ -83,23 +83,9 @@ CreditAssessmentCase
 └── Final Assessment
 ```
 
-Each macro-area is represented by `AssessmentSection` with:
+Each macro-area is represented by `AssessmentSection` with deterministic status, findings, evidence, limitations and optional analyst-oriented dimensions.
 
-- deterministic status;
-- rule findings;
-- evidence;
-- limitations;
-- optional analyst-oriented dimensions;
-- optional contextual profile data.
-
-`SectionStatus` supports:
-
-```text
-NORMAL
-ATTENTION
-CRITICAL
-NOT_EVALUABLE
-```
+`SectionStatus` supports `NORMAL`, `ATTENTION`, `CRITICAL` and `NOT_EVALUABLE`.
 
 `NOT_EVALUABLE` explicitly represents missing or insufficient evidence. It is not silently converted into `NORMAL`.
 
@@ -107,17 +93,9 @@ NOT_EVALUABLE
 
 ## 4. Customer Profile
 
-`CustomerProfileData` contains descriptive information normally collected during the initial customer presentation, including:
+`CustomerProfileData` contains descriptive information normally collected during the initial customer presentation, including company name and legal form, sector, size class, geography, shareholders, management, relationship duration, historical facilities, active EWS/EWI signal and previous restructuring.
 
-- company name and legal form;
-- sector, size class and geography;
-- shareholders and management;
-- relationship duration;
-- historical facilities;
-- active EWS/EWI signal;
-- previous restructuring.
-
-`CustomerProfileAssessmentService` keeps descriptive information in the section context and evaluates explicit risk flags deterministically:
+`CustomerProfileAssessmentService` evaluates explicit risk flags deterministically:
 
 ```text
 CP001 — Active EWS
@@ -137,18 +115,14 @@ Financial Analysis
 │
 ├── Revenue & Growth
 │   └── R001 Revenue growth deterioration
-│
 ├── Profitability
 │   ├── R002 Negative EBITDA
 │   └── R003 EBITDA margin deterioration
-│
 ├── Financial Structure
 │   └── R004 NFP / EBITDA leverage
-│
 ├── Debt Service Burden
 │   ├── R005 Interest expense / EBITDA
 │   └── R007 Interest coverage ratio
-│
 └── Profitability Quality
     └── R006 EBITDA materially supported by finished goods inventory increase
 ```
@@ -159,16 +133,7 @@ The case layer only groups the existing `RuleResult[]`; it does not duplicate th
 
 ## 6. Behavioural Analysis
 
-`BehaviouralData` provides synthetic banking-behaviour inputs. The deterministic service evaluates:
-
-```text
-B001 — High Credit Utilization
-B002 — Prolonged Overdraft
-B003 — Payment Delay
-B004 — Exposure Growth
-```
-
-The service uses the common section-status policy and explicitly exposes a limitation when all behavioural indicators are unavailable.
+`BehaviouralData` provides synthetic banking-behaviour inputs. The deterministic service evaluates B001–B004 for credit utilization, overdraft duration, payment delays and exposure growth.
 
 This layer is intentionally independent from the financial rules: behavioural data cannot modify the financial assessment.
 
@@ -176,9 +141,7 @@ This layer is intentionally independent from the financial rules: behavioural da
 
 ## 7. Debt Sustainability
 
-`DebtSustainabilityData` provides cash-flow and debt-service inputs.
-
-The deterministic service evaluates three complementary indicators:
+`DebtSustainabilityData` provides cash-flow and debt-service inputs. The deterministic service evaluates:
 
 ```text
 DS001 — Debt Service Coverage Ratio
@@ -191,42 +154,23 @@ DS003 — Cash Flow Debt-Service Buffer
         CFADS − Debt Service
 ```
 
-The implementation deliberately avoids duplicating the existing financial indicators R004, R005 and R007. For example, `Interest Expense / EBITDA` remains a Financial Analysis measure rather than being copied into Debt Sustainability.
-
-The section returns `NOT_EVALUABLE` evidence when the required inputs are unavailable and uses the same deterministic `AssessmentStatusCalculator` policy as the other rule-based sections.
+The implementation deliberately avoids duplicating the existing financial indicators R004, R005 and R007. The section uses the same deterministic status policy as the other rule-based sections.
 
 ---
 
 ## 8. Final Aggregation
 
-`FinalAssessmentService` combines section-level statuses using an explicit deterministic policy.
+`FinalAssessmentService` combines section-level statuses using an explicit deterministic policy:
 
 ```text
-Any CRITICAL section
-        → CRITICAL
-
-2+ ATTENTION sections
-        → CRITICAL
-
-1 ATTENTION section
-        → ATTENTION
-
-All evaluable sections NORMAL
-        → NORMAL
-
-No evaluable sections
-        → ATTENTION
+Any CRITICAL section → CRITICAL
+2+ ATTENTION sections → CRITICAL
+1 ATTENTION section  → ATTENTION
+All evaluable sections NORMAL → NORMAL
+No evaluable sections → ATTENTION
 ```
 
 `NOT_EVALUABLE` sections are excluded from the positive/negative count but are reported as limitations. No averaging, weighted score or LLM judgement is used.
-
-The resulting `FinalAssessment` records:
-
-- overall status;
-- number of evaluable sections;
-- risk sections;
-- normal sections;
-- aggregation limitations.
 
 ---
 
@@ -237,32 +181,9 @@ The resulting `FinalAssessment` records:
 The financial assessment flow is:
 
 ```text
-CreditPosition
-      ↓
-CreditPositionValidator
-      ↓
-RuleEngine
-      ↓
-RuleResult[]
-      ↓
-CommentEngine
-      ↓
-RuleFinding[]
-      ↓
-AssessmentStatusCalculator
-      ↓
-Assessment
+CreditPosition → CreditPositionValidator → RuleEngine → RuleResult[]
+              → CommentEngine → RuleFinding[] → StatusCalculator → Assessment
 ```
-
-The status policy is:
-
-| Condition | Status |
-|---|---|
-| 2+ triggered rules | CRITICAL |
-| 1 triggered rule | ATTENTION |
-| 0 triggered, at least one evaluable rule | NORMAL |
-| all rules NOT_EVALUABLE | ATTENTION |
-| empty result set | NORMAL |
 
 No LLM participates in this decision path.
 
@@ -273,18 +194,10 @@ No LLM participates in this decision path.
 The existing reporting path remains compatible with the original financial assessment:
 
 ```text
-Assessment
-   ↓
-AnalysisAgent
-   ↓
-AssessmentAnalysis
-   ↓
-ReportingAgent
-   ↓
-Report
+Assessment → AnalysisAgent → AssessmentAnalysis → ReportingAgent → Report
 ```
 
-The case-oriented evolution is:
+The case-oriented layer is now also built during workflow execution and exposed through `AssessmentWorkflowResult.credit_case`:
 
 ```text
 CreditAssessmentCase
@@ -293,18 +206,10 @@ Deterministic section evidence
         ↓
 FinalAssessment
         ↓
-Case-level analysis
-        ↓
-Executive synthesis
+UI case overview / future case-level synthesis
 ```
 
-The LLM may transform deterministic findings and contextual data into natural-language prose, but must not:
-
-- change section or overall status;
-- change thresholds or severity;
-- invent evidence;
-- suppress deterministic limitations;
-- replace the deterministic decision policy.
+The current LLM reporting path remains bounded: it may transform deterministic findings into prose but must not change status, thresholds, severity, evidence or limitations.
 
 ---
 
@@ -312,49 +217,50 @@ The LLM may transform deterministic findings and contextual data into natural-la
 
 The Streamlit UI remains responsible for presentation and user interaction. It does not own credit-risk calculations.
 
-The current Results hierarchy is:
+The Results hierarchy is now:
 
 ```text
 Executive Credit Assessment
+          ↓
+Credit Analysis Case
+  ├── Customer Profile
+  ├── Financial Analysis
+  ├── Behavioural Analysis
+  └── Debt Sustainability
+          ↓
+Final Deterministic Aggregation
           ↓
 Risk Indicator Dashboard
           ↓
 Audit Trail & Methodology
 ```
 
-The case layer is currently a domain extension. UI exposure of the four macro-areas can be added after the domain contract and tests are stable.
+The four macro-area cards are intentionally descriptive at this stage. Areas without supplied data are shown as `NOT_EVALUABLE`; the UI does not fabricate inputs to make them appear assessed.
 
 ---
 
 ## 12. Roadmap Status
 
 ### Phase 1 — Case structure
-
 **Completed.** Introduced `CreditAssessmentCase`, `AssessmentSection` and explicit macro-area boundaries.
 
 ### Phase 2 — Financial Analysis formalization
-
 **Completed.** Existing R001–R007 rules are grouped into analyst-oriented dimensions without changing deterministic logic.
 
 ### Phase 3 — Behavioural Analysis
-
 **Completed.** Added synthetic behavioural inputs and B001–B004 deterministic indicators, with case-level integration.
 
 ### Phase 4 — Debt Sustainability
-
 **Completed.** Added DS001–DS003 cash-flow/debt-service indicators, tests and case-level integration. The implementation avoids duplication with existing financial indicators.
 
 ### Phase 5 — Customer Profile
-
 **Completed.** Added structured customer/relationship context and deterministic EWS/restructuring flags.
 
 ### Phase 6 — Final Aggregation
-
 **Completed.** Added explicit cross-section aggregation rules through `FinalAssessmentService`.
 
 ### Phase 7 — Executive Synthesis
-
-**Next.** Adapt the analysis/reporting layer so that deterministic section evidence and `FinalAssessment` become the sole inputs to an analyst-style executive narrative. The LLM remains a bounded synthesis dependency.
+**In progress.** The case is now exposed by the workflow and presented in the UI. The remaining work is to make `CaseAnalysisAgent` the formal downstream analysis contract for the complete case, then adapt the reporting prompts/generators to consume section-level evidence and `FinalAssessment`.
 
 ---
 
