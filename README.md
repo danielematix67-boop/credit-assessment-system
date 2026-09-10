@@ -9,18 +9,47 @@
 
 ## Overview
 
-**Credit Assessment System** is a Python-based credit risk assessment application that evaluates a company's financial position against a configurable set of deterministic credit rules and produces an explainable assessment and Executive Report.
+**Credit Assessment System** is a Python-based credit risk assessment application that evaluates a company's credit position through configurable deterministic rules and produces explainable assessment evidence and an executive report.
 
-The architecture deliberately separates **decision-making from AI-generated communication**:
+The architecture deliberately separates **credit decision-making from AI-generated communication**:
 
-- the **input validation layer** checks the structural integrity of a `CreditPosition` before assessment;
-- the **Rule Engine** evaluates financial indicators and determines rule outcomes and assessment status;
-- the **Analysis Layer** organizes deterministic findings into structured evidence;
-- the **Reporting Layer** produces the Executive Report using deterministic templates, Google Gemini, or a local Ollama model;
-- LLM reporting is constrained to narrative generation and can fall back to deterministic reporting;
-- **Execution Metadata** records reporting provenance, fallback state, error classification, and workflow timings.
+- structural input validation checks a `CreditPosition` before assessment;
+- the deterministic Rule Engine evaluates indicators and determines rule outcomes;
+- assessment services consolidate deterministic evidence into macro-area and final statuses;
+- the Analysis Layer organizes deterministic findings;
+- the Reporting Layer generates deterministic, Gemini or local Ollama narratives;
+- LLM reporting is bounded by a grounding contract and can fall back to deterministic reporting;
+- immutable Execution Metadata records reporting provenance, fallback state, errors and timings.
 
-> **Core principle:** the system decides; AI explains. The LLM has no authority over the credit judgement.
+> **Core principle: the system decides; AI explains. The LLM has no authority over the credit judgement.**
+
+---
+
+## Architecture at a Glance
+
+```text
+Credit Position
+      ↓
+Structural Validation
+      ↓
+Deterministic Assessment
+      ├── Customer Profile
+      ├── Financial Analysis → R001–R007
+      ├── Behavioural Analysis → B001–B004
+      └── Debt Sustainability → DS001–DS003
+                    ↓
+             Final Assessment
+                    ↓
+             Deterministic Analysis
+                    ↓
+          Reporting / LLM Narrative
+                    ↓
+                  Report
+                    ↓
+           Execution Metadata
+```
+
+The deterministic core owns the assessment. The LLM receives already-produced evidence and can only transform that evidence into narrative.
 
 ---
 
@@ -28,211 +57,97 @@ The architecture deliberately separates **decision-making from AI-generated comm
 
 ### Structural Input Validation
 
-Every assessment validates the incoming `CreditPosition` before rule evaluation.
+`CreditPositionValidator` runs before financial rule evaluation and checks:
 
-The validator checks that:
+- valid `CreditPosition` type;
+- non-empty `position_id`;
+- numeric financial fields or `None`;
+- rejection of booleans where numeric values are expected;
+- rejection of `NaN` and positive/negative infinity.
 
-- the input is a valid `CreditPosition` instance;
-- `position_id` is non-empty;
-- financial fields are numeric or `None`;
-- boolean values are rejected where numeric values are expected;
-- `NaN`, positive infinity and negative infinity are rejected.
-
-`None` remains valid because missing financial information is a legitimate input condition and is handled by the rule layer through `NOT_EVALUABLE` where applicable.
-
-The validator intentionally performs **structural validation only**. It does not impose arbitrary business-sign constraints on financial values; business semantics remain owned by the individual rules.
+`None` remains valid because missing information is a legitimate domain condition and can produce `NOT_EVALUABLE`. The validator intentionally does not impose business-specific sign constraints; those belong to individual rules.
 
 ### Deterministic Rule Engine
 
-- Evaluates a `CreditPosition` against configurable indicators.
-- Produces structured `RuleResult` objects.
-- Supports `TRIGGERED`, `NOT_TRIGGERED`, and `NOT_EVALUABLE` outcomes.
-- Supports configurable severity and severity direction.
-- Keeps business rules independent from the Streamlit UI.
+The Rule Engine:
+
+- evaluates configurable credit indicators;
+- returns structured `RuleResult` objects;
+- supports `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE`;
+- applies configurable severity and severity direction;
+- remains independent from Streamlit presentation.
 
 ### Assessment Status
 
-The overall status is calculated deterministically from rule outcomes:
+The financial assessment status is deterministic:
 
-| Condition | Assessment Status |
+| Condition | Status |
 |---|---|
 | Two or more triggered rules | `CRITICAL` |
 | Exactly one triggered rule | `ATTENTION` |
-| No triggered rules and at least one evaluable rule | `NORMAL` |
-| All rules are `NOT_EVALUABLE` | `ATTENTION` |
-| No rule results | `NORMAL` |
+| No triggered rules + at least one evaluable rule | `NORMAL` |
+| All rules `NOT_EVALUABLE` | `ATTENTION` |
+| Empty rule-result set | `NORMAL` |
 
-The explicit all-`NOT_EVALUABLE` case avoids treating **absence of evaluable evidence** as equivalent to a normal credit assessment.
+### Analyst-Oriented Case Assessment
 
-### Explainable Assessment
+The case layer organizes the assessment into Customer Profile, Financial Analysis, Behavioural Analysis, Debt Sustainability, Final Assessment and Executive Synthesis.
 
-The Results interface exposes the evidence behind the judgement, including:
+The final consolidation is deterministic:
 
-- overall assessment status;
-- actual indicator values;
-- configured thresholds;
-- rule status and severity;
-- rule categories and rationale;
-- a graphical path from financial indicators to Rule Engine outcomes and final assessment.
+```text
+Any CRITICAL section       → CRITICAL
+2+ core ATTENTION sections → CRITICAL
+1 ATTENTION section        → ATTENTION
+All evaluable NORMAL       → NORMAL
+No evaluable sections      → ATTENTION
+```
 
-### Professional Results UI
+Customer Profile is contextual: its ATTENTION status does not count toward the two-core-area escalation, while a CRITICAL profile can still make the final assessment CRITICAL.
 
-The current Results view is organized around a clear operator-oriented hierarchy:
+### Explainable Results UI
+
+The current Results experience is intentionally progressive rather than a long technical page:
 
 ```text
 Executive Credit Assessment
           ↓
-Risk Indicator Dashboard
+Final Assessment
           ↓
-Audit Trail & Methodology
+Risk Drivers
+          ↓
+Rule Engine Evidence
+          ↓
+Executive Narrative
+          ↓
+Detailed Analysis by Macro-area
 ```
 
-The interface combines a concise executive result with progressively deeper deterministic evidence:
+The main screen emphasizes the decision and its principal drivers. Detailed tables, individual rule evidence, limitations and macro-area analysis are available on demand through compact expanders.
 
-- **Executive Credit Assessment** — primary outcome and narrative report;
-- **Risk Indicator Dashboard** — rule-outcome and severity distributions, filterable rule catalogue and priority-oriented inspection;
-- **Rule Detail** — individual rule card showing indicator, observed value, configured threshold, status, severity, direction, category and rationale;
-- **Audit Trail & Methodology** — decision path, credit data used, methodology, workflow path and execution metadata.
+The UI is presentation-only: it does not recalculate thresholds, severity or assessment status.
 
-The dashboard is the single detailed rule-evidence surface. The UI does not recalculate thresholds, severity or assessment status.
+### Risk Drivers
 
-### Decision Path
+The Risk Drivers view ranks deterministic triggered indicators across macro-areas using normalized distance from the configured threshold. The chart is immediately visible; the full triggered-indicator table is available through **View triggered indicators**.
 
-The Results UI provides a graphical explanation of the deterministic decision mechanism:
+This ranking is descriptive and does not create a new risk score.
 
-```text
-Financial Indicators
-        ↓
-Rule Engine Outcomes
-        ↓
-Monitoring Assessment
-```
+### Rule Engine Evidence
 
-The visualization summarizes evaluated rules, triggered rules, non-evaluable rules and the final assessment status. It consumes deterministic outputs and is presentation-only.
+The Rule Engine Evidence view provides rule-outcome distribution, severity profile, a filterable rule catalogue and individual rule inspection. The catalogue and detailed rule view are closed by default so the executive flow remains compact.
 
-### Risk Indicator Dashboard
+### Executive Reporting
 
-The dashboard provides:
+The primary report contains deterministic assessment status, executive narrative, material findings, data limitations and reporting provenance.
 
-- indicator/rule count KPIs;
-- triggered-rule count;
-- high/critical severity count;
-- `NOT_EVALUABLE` count;
-- rule-outcome distribution;
-- severity profile;
-- filterable Rule Catalogue;
-- filtering by status, severity and category;
-- priority-oriented sorting;
-- individual rule inspection.
-
-### Executive Report
-
-The primary output is the **Executive Credit Assessment**. It contains:
-
-- deterministic assessment status;
-- executive conclusion;
-- key risk drivers;
-- data limitations;
-- report-generation provenance.
-
-For AI-assisted modes, the deterministic status is displayed separately from the generated narrative. The LLM is not asked to determine the status.
-
-### AI-Assisted Reporting
-
-The reporting layer supports:
-
-| Mode | Description |
-|---|---|
-| **Deterministic** | Template-based report generated from deterministic findings |
-| **Gemini + Fallback** | Gemini narrative with deterministic fallback |
-| **Ollama + Fallback** | Local LLM narrative with deterministic fallback |
-
-The LLM prompt requires the narrative to remain grounded in supplied findings. Material numerical indicators must be preserved, findings must not be omitted, unsupported causes must not be invented, and the narrative should avoid repeated indicators or category headings.
-
-When strict indicator grounding is enabled, the generator validates that supplied indicator values are represented in the response. If validation fails, the deterministic report generator is used instead.
-
-### Resilient LLM Integration
-
-Provider failures such as timeouts, connection errors, authentication problems, rate limits, unavailable models, or service outages are classified and can activate deterministic fallback.
-
-If both the primary and fallback generators fail, the terminal error is propagated rather than silently converted into a successful report.
-
-### Execution Observability
-
-Successful workflow executions expose immutable metadata including:
-
-- execution ID;
-- UTC start timestamp;
-- reporting mode;
-- generator used;
-- fallback state;
-- error category when applicable;
-- assessment, analysis, reporting and total execution times.
-
-Observability describes the execution path; it does not participate in the credit decision.
+For AI-assisted modes, the deterministic status is displayed separately from generated prose. The LLM is never asked to determine the credit status.
 
 ---
 
-## System Architecture
+## Rule Catalogue
 
-```text
-Credit Position
-      │
-      ▼
-Input Validation
-      │
-      ▼
-Deterministic Assessment
-      │
-      ├── Rule Engine
-      │      └── RuleResult[]
-      │
-      ├── Findings / comments
-      │
-      └── Assessment Status
-              │
-              ▼
-       AssessmentAnalysis
-              │
-              ▼
-        Reporting Layer
-          /          \\
-         /            \\
- Deterministic       LLM
-    Report           Narrative
-         \\            /
-          \\          /
-              Report
-                 │
-                 ▼
-        Execution Metadata
-```
-
-The most important architectural boundary is:
-
-```text
-DECISION LAYER                         REPORTING LAYER
-──────────────────                    ──────────────────
-CreditPosition                        Structured findings
-      ↓                                      ↓
-Input Validator                       Deterministic / LLM
-      ↓                                      ↓
-Rule Engine                              Report
-      ↓
-Rule Results
-      ↓
-Assessment Status
-
-Deterministic / auditable             AI-assisted / non-decisional
-```
-
-The LLM consumes already-produced assessment evidence. It cannot change the underlying `Assessment` or its status.
-
----
-
-## Rule Engine
-
-Rules are defined in [`config/rules.yaml`](config/rules.yaml). The current rule catalogue contains seven indicators:
+Rules are defined in [`config/rules.yaml`](config/rules.yaml).
 
 | Rule | Indicator |
 |---|---|
@@ -244,131 +159,57 @@ Rules are defined in [`config/rules.yaml`](config/rules.yaml). The current rule 
 | `R006` | EBITDA materially supported by finished goods inventory increase |
 | `R007` | Interest coverage ratio |
 
-Rule configuration separates business parameters from Python implementation. Rule discovery and the registry keep the central engine independent from individual concrete rules.
+Additional case-level indicator families include:
 
-A `RuleResult` provides the downstream evidence needed for assessment and explanation, including rule identifier, category, status, value, threshold, severity and reason.
+| Family | Scope |
+|---|---|
+| `B001–B004` | Behavioural risk indicators |
+| `DS001–DS003` | Debt-service / cash-flow sustainability |
+| `CP001–CP002` | Active EWS and previous restructuring flags |
 
----
-
-## Assessment and `NOT_EVALUABLE` Handling
-
-The assessment pipeline distinguishes between a rule that did not trigger and a rule that could not be evaluated.
-
-```text
-TRIGGERED       → contributes to risk status
-NOT_TRIGGERED   → evaluated and no trigger detected
-NOT_EVALUABLE   → insufficient/invalid domain data for that rule
-```
-
-The status calculator therefore applies the following precedence:
-
-```text
-2+ TRIGGERED
-      ↓
-   CRITICAL
-
-1 TRIGGERED
-      ↓
-  ATTENTION
-
-0 TRIGGERED + ALL NOT_EVALUABLE
-      ↓
-  ATTENTION
-
-0 TRIGGERED + at least one evaluable rule
-      ↓
-   NORMAL
-```
-
-This prevents a data-availability problem from being silently interpreted as evidence of normal credit quality.
+Rule parameters are externalized from implementation and resolved through the rule registry.
 
 ---
 
-## Explainability
+## AI-Assisted Reporting
 
-For each evaluated rule the application can expose:
+The reporting layer supports:
 
-```text
-Rule
- ├── Status
- ├── Severity
- ├── Category
- ├── Indicator
- ├── Actual Value
- ├── Threshold
- └── Reason
-```
+| Mode | Description |
+|---|---|
+| **Deterministic** | Template-based report from deterministic findings |
+| **Gemini + Fallback** | Gemini narrative with deterministic fallback |
+| **Ollama + Fallback** | Local LLM narrative with deterministic fallback |
 
-The main operator path is:
+The LLM prompt requires generated prose to remain grounded in supplied evidence. It must preserve material numerical values, represent supplied findings, avoid unsupported causes and avoid inventing information about sales volume, pricing, demand, costs, liquidity, cash flow, debt-service capacity or financial stability.
 
-**Overall Result → Risk Indicator Dashboard → Rule Detail → Audit Trail**
+When strict indicator grounding is enabled, required deterministic indicator values must be present in the generated narrative. A grounding failure triggers deterministic fallback.
 
-The Decision Path provides the higher-level mechanism, while the Risk Indicator Dashboard provides detailed rule evidence. The UI does not reconstruct or duplicate rule calculations.
-
----
-
-## AI Reporting Grounding
-
-The reporting prompt establishes a strict boundary between deterministic evidence and generated language.
-
-The narrative must:
-
-- represent all supplied material findings;
-- preserve supplied numerical values and units exactly;
-- avoid rounding, recalculation or conversion;
-- avoid unsupported causal explanations;
-- avoid inventing information about sales volume, pricing, demand, costs, liquidity, cash flow, debt service capacity or financial stability unless supplied;
-- preserve the order of material categories;
-- mention each material indicator value once;
-- avoid category headings, bullets and duplicated conclusions;
-- end after the final material finding.
-
-The deterministic assessment status is constructed by application logic and is displayed as a separate status line. The generated prose is never the source of truth for the credit classification.
-
----
-
-## Reliability & Failure Handling
+### Reliability
 
 ```text
 Primary Generator
+      ↓
+ Success ─────────────→ Report
       │
- ┌────┴────┐
-Success   Failure
-   │         │
- Report   Error Classification
-             │
-             ▼
-   Deterministic Fallback
-          │
-     ┌────┴────┐
-  Success    Failure
-     │           │
-   Report     Propagate Error
+    Failure
+      ↓
+Error Classification
+      ↓
+Deterministic Fallback
+      ├── Success → Report
+      └── Failure → Propagate Error
 ```
 
-The fallback affects report generation only. It never changes the deterministic assessment.
+Failure of the optional AI path never changes the deterministic assessment.
 
 ---
 
-## Streamlit Application
+## Execution Observability
 
-The interface is organized around:
+Successful workflow executions expose immutable metadata including execution ID, UTC timestamp, reporting mode, generator used, fallback state, error category when applicable, and phase timings.
 
-**Credit Position → Assessment → Results**
-
-The current Results page follows:
-
-**Executive Credit Assessment → Risk Indicator Dashboard → Audit Trail & Methodology**
-
-The main result sections are:
-
-1. **Executive Credit Assessment** — primary output and narrative.
-2. **Risk Indicator Dashboard** — detailed deterministic rule evidence, distributions and filterable catalogue.
-3. **Audit Trail & Methodology** — decision path, credit data, methodology and execution metadata.
-
-The detailed dashboard supports filtering by rule status, severity and category, priority-oriented sorting, and inspection of an individual rule through its indicator, actual value, configured threshold and rationale.
-
-The UI deliberately avoids duplicating legacy evidence views. The Risk Indicator Dashboard is the single detailed rule-evidence surface, while the Audit Trail contains the broader workflow and traceability information.
+Observability describes execution provenance; it does not participate in the credit decision.
 
 ---
 
@@ -381,23 +222,21 @@ credit-assessment-system/
 │   ├── config.py
 │   ├── demo_scenarios.py
 │   ├── ui/
-│   │   ├── components.py
-│   │   ├── report.py
-│   │   ├── results/
-│   │   │   ├── page.py
-│   │   │   ├── dashboard.py
-│   │   │   └── helpers.py
-│   │   └── ...
+│   │   ├── workflow_view.py
+│   │   ├── input_source.py
+│   │   ├── assessment_configuration.py
+│   │   └── results/
+│   │       ├── page.py
+│   │       ├── case_overview.py
+│   │       ├── final_assessment.py
+│   │       ├── risk_drivers.py
+│   │       ├── dashboard.py
+│   │       └── executive_synthesis.py
 │   └── workflow/
-│
 ├── config/
 │   └── rules.yaml
-│
 ├── src/
 │   ├── agents/
-│   │   ├── analysis/
-│   │   ├── reporting/
-│   │   └── workflow/
 │   ├── comments/
 │   ├── config/
 │   ├── engine/
@@ -406,10 +245,6 @@ credit-assessment-system/
 │   ├── orchestration/
 │   ├── rules/
 │   └── services/
-│       ├── assessment_service.py
-│       ├── assessment_status_calculator.py
-│       └── position_validator.py
-│
 ├── docs/
 ├── tests/
 └── requirements.txt
@@ -441,7 +276,7 @@ streamlit run app/streamlit_app.py
 
 ### Gemini
 
-Set the API key through the environment or Streamlit secrets:
+Provide the API key through the environment or Streamlit secrets:
 
 ```bash
 export GEMINI_API_KEY="your-api-key"
@@ -460,13 +295,9 @@ export OLLAMA_MODEL="qwen3:0.6b"
 
 ## Testing & Code Quality
 
-The test suite covers rules, configuration, Rule Engine behavior, input validation, services, analysis, reporting, LLM clients, fallback/error classification, workflow orchestration, execution metadata and integration behavior.
+The test suite covers deterministic rules, configuration, validation, services, analysis, reporting, LLM clients, grounding, fallback/error classification, workflow orchestration, execution metadata and integration behavior.
 
-The validation layer is explicitly tested for malformed position IDs, non-numeric values, booleans in numeric fields, and non-finite values such as `NaN` and infinities.
-
-The assessment-status tests also protect the distinction between `NOT_EVALUABLE` and a normal assessment, including the all-`NOT_EVALUABLE` case.
-
-The CI workflow runs on Python **3.13 and 3.14** and enforces:
+The CI quality gates are:
 
 ```text
 Ruff
@@ -476,9 +307,9 @@ Mypy
 Pytest + coverage
 ```
 
-The configured coverage gate is **95% for `src`**.
+The supported CI matrix includes Python **3.13 and 3.14**, with a configured coverage gate of **95% for `src`**.
 
-Run locally with:
+Run locally:
 
 ```bash
 ruff check .
@@ -490,9 +321,9 @@ pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 
 ## Documentation
 
-- [`docs/architecture.md`](docs/architecture.md) — system architecture, component responsibilities, input validation and current Results UI structure.
+- [`docs/architecture.md`](docs/architecture.md) — current architecture, case structure, deterministic boundaries and Results UI.
 - [`docs/architecture-decisions.md`](docs/architecture-decisions.md) — architectural decisions and rationale.
-- [`docs/validation.md`](docs/validation.md) — validation strategy, structural input validation, `NOT_EVALUABLE` semantics, LLM grounding, fallback behavior and CI gates.
+- [`docs/validation.md`](docs/validation.md) — validation strategy, status semantics, LLM grounding, resilience and CI gates.
 - [`docs/security-data-handling.md`](docs/security-data-handling.md) — trust boundaries, data minimization, LLM handling and secrets.
 
 ---
@@ -502,15 +333,14 @@ pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 - **Deterministic decision logic** — explicit rules own the credit judgement.
 - **Structural input validation** — malformed positions are rejected before assessment.
 - **Explicit data-availability semantics** — `NOT_EVALUABLE` is distinct from `NOT_TRIGGERED`.
-- **Explainability by design** — quantitative evidence is visible and traceable.
-- **Separation of concerns** — assessment, analysis, reporting and UI remain distinct.
+- **Explainability by design** — quantitative evidence remains traceable.
+- **Separation of concerns** — domain, assessment, reporting and UI remain distinct.
 - **Configuration over hard-coding** — thresholds are externalized.
 - **AI as a bounded reporting layer** — LLMs generate narrative, not decisions.
-- **Grounded generation** — material findings and numerical indicators are protected by prompt and validation contracts.
-- **Resilience** — LLM failures can fall back to deterministic reporting.
-- **Auditability** — execution metadata records reporting provenance and timings.
-- **Testability** — deterministic core logic is independently testable.
-- **Professional evidence presentation** — the UI explains the deterministic mechanism without reproducing business logic.
+- **Grounded generation** — material findings and numerical indicators are protected by explicit contracts.
+- **Resilience** — AI reporting can fall back deterministically.
+- **Auditability** — execution provenance is recorded separately from decision data.
+- **Professional evidence presentation** — technical evidence is available without overwhelming the executive view.
 
 ---
 
@@ -527,9 +357,14 @@ pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 - [x] Gemini and local Ollama integration
 - [x] Deterministic LLM fallback
 - [x] Streamlit assessment interface
-- [x] Decision-path and risk-indicator visualisations
-- [x] Executive Report hierarchy
-- [x] Filterable rule catalogue and individual rule evidence
+- [x] Case-level macro-area assessment
+- [x] Behavioural analysis indicators
+- [x] Debt sustainability indicators
+- [x] Customer profile risk flags
+- [x] Final deterministic aggregation
+- [x] Decision-path and risk-driver visualisations
+- [x] Executive Results hierarchy
+- [x] Filterable Rule Engine evidence
 - [x] LLM narrative grounding and indicator validation
 - [x] Execution observability and audit metadata
 - [x] LLM error classification and failure-path testing
@@ -537,15 +372,15 @@ pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 - [ ] Persistent assessment history
 - [ ] Rule-set versioning and auditability
 - [ ] Expanded monitoring and evaluation metrics
-- [ ] Additional rule families and data sources
+- [ ] Additional rule families and external data sources
 
 ---
 
 ## Current Baseline
 
-The repository's current validated baseline is preserved by the **`v0.2.0`** release, which consolidates the improved Results UI, structural input validation, explicit `NOT_EVALUABLE` handling, expanded tests and CI validation.
+The current repository baseline reflects the completed deterministic case structure, explicit input validation and `NOT_EVALUABLE` semantics, bounded AI reporting, expanded testing, and the streamlined analyst-oriented Results experience.
 
-The deterministic Rule Engine remains the sole source of truth for credit assessment decisions. LLM components remain restricted to analysis and natural-language reporting.
+The deterministic Rule Engine and deterministic case aggregation remain the sole source of truth for credit decisions. LLM components remain optional and non-decisional.
 
 ---
 
