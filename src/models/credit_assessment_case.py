@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from src.models.assessment_section import AssessmentSection
+from src.models.final_assessment import FinalAssessment
 from src.models.position import CreditPosition
 
 
@@ -13,6 +14,7 @@ class CreditAssessmentCase:
     financial_analysis: AssessmentSection
     behavioural_analysis: AssessmentSection
     debt_sustainability: AssessmentSection
+    final_assessment: FinalAssessment | None = None
 
     @property
     def sections(self) -> list[AssessmentSection]:

@@ -10,6 +10,7 @@ from src.services.assessment_service import AssessmentService
 from src.services.behavioural_assessment_service import BehaviouralAssessmentService
 from src.services.customer_profile_assessment_service import CustomerProfileAssessmentService
 from src.services.debt_sustainability_assessment_service import DebtSustainabilityAssessmentService
+from src.services.final_assessment_service import FinalAssessmentService
 
 
 class CreditAssessmentCaseService:
@@ -27,11 +28,13 @@ class CreditAssessmentCaseService:
         behavioural_assessment_service: BehaviouralAssessmentService | None = None,
         debt_sustainability_assessment_service: DebtSustainabilityAssessmentService | None = None,
         customer_profile_assessment_service: CustomerProfileAssessmentService | None = None,
+        final_assessment_service: FinalAssessmentService | None = None,
     ):
         self.financial_assessment_service = financial_assessment_service
         self.behavioural_assessment_service = behavioural_assessment_service or BehaviouralAssessmentService()
         self.debt_sustainability_assessment_service = debt_sustainability_assessment_service or DebtSustainabilityAssessmentService()
         self.customer_profile_assessment_service = customer_profile_assessment_service or CustomerProfileAssessmentService()
+        self.final_assessment_service = final_assessment_service or FinalAssessmentService()
 
     def assess(
         self,
@@ -60,12 +63,21 @@ class CreditAssessmentCaseService:
             )
         )
 
-        return CreditAssessmentCase(
+        case = CreditAssessmentCase(
             position=position,
             customer_profile=customer_profile_section,
             financial_analysis=self._financial_section(financial_assessment),
             behavioural_analysis=behavioural_section,
             debt_sustainability=debt_sustainability_section,
+        )
+        final_assessment = self.final_assessment_service.assess(case)
+        return CreditAssessmentCase(
+            position=case.position,
+            customer_profile=case.customer_profile,
+            financial_analysis=case.financial_analysis,
+            behavioural_analysis=case.behavioural_analysis,
+            debt_sustainability=case.debt_sustainability,
+            final_assessment=final_assessment,
         )
 
     @classmethod
