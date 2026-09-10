@@ -1,11 +1,6 @@
 import streamlit as st
 
-from app.ui.design_tokens import (
-    AI_COLOR,
-    DET_COLOR,
-    FALLBACK_BG,
-    FALLBACK_COLOR,
-)
+from app.ui.design_tokens import FALLBACK_BG, FALLBACK_COLOR
 
 # ============================================================
 # Shared UI Components
