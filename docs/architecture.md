@@ -4,98 +4,74 @@
 
 The **Credit Assessment System** is a deterministic, rule-based credit assessment application with an optional AI-assisted reporting layer.
 
-The architecture now distinguishes two levels:
+The architecture is now organized around a higher-level `CreditAssessmentCase` that mirrors the main stages of an analyst-style credit analysis:
 
-1. **Deterministic financial assessment** — evaluates the existing indicator/rule catalogue.
-2. **Credit analysis case** — organizes the assessment into the macro-areas followed by a credit analyst: customer profile, financial analysis, behavioural analysis and debt sustainability.
+1. Customer Profile
+2. Financial Analysis
+3. Behavioural Analysis
+4. Debt Sustainability
+5. Final Assessment
+6. Executive Synthesis
 
 The central boundary remains:
 
-> **Deterministic evidence is the source of truth. The LLM is an optional reporting component and has no decision authority.**
+> **Deterministic evidence is the source of truth. The LLM is an optional synthesis component and has no decision authority.**
 
-The repository keeps framework-independent logic under `src/` and the Streamlit presentation layer under `app/`.
-
----
-
-## 2. Architectural Principles
-
-| Principle | Implementation |
-|---|---|
-| Structural input validation | `CreditPositionValidator` rejects malformed positions before rule evaluation. |
-| Deterministic decision authority | Rule results and assessment status are calculated without an LLM. |
-| Macro-area separation | `CreditAssessmentCase` separates customer profile, financial, behavioural and debt-sustainability analysis. |
-| Financial dimension grouping | Existing rules are organized into analyst-oriented financial dimensions without duplicating rule logic. |
-| Explicit non-evaluability | Unimplemented or unavailable macro-areas are represented as `NOT_EVALUABLE`, not silently treated as normal. |
-| Separation of concerns | Validation, assessment, case composition, analysis and reporting are separate responsibilities. |
-| Configuration-driven rules | Thresholds and severity parameters are externalized in `config/rules.yaml`. |
-| Provider independence | Gemini and Ollama are accessed through the `LLMClient` abstraction. |
-| Graceful degradation | LLM reporting can fall back to deterministic reporting. |
-| Grounded narrative generation | LLM prompts and optional response validation constrain narrative output to supplied evidence. |
-| Execution observability | Provenance, fallback state, error classification and timings are exposed separately from decision data. |
-| UI/domain decoupling | Streamlit presentation code does not own credit-risk business rules. |
+Framework-independent logic lives under `src/`; Streamlit presentation remains under `app/`.
 
 ---
 
-## 3. System Architecture
+## 2. System Architecture
 
 ```text
 CreditPosition
       │
       ▼
-CreditPositionValidator
+CreditAssessmentCaseService
+      │
+      ├── CustomerProfileAssessmentService
+      ├── AssessmentService
+      │      └── RuleEngine / CommentEngine / StatusCalculator
+      ├── BehaviouralAssessmentService
+      ├── DebtSustainabilityAssessmentService
       │
       ▼
-AssessmentService
+CreditAssessmentCase
       │
-      ├── RuleEngine → RuleResult[]
-      ├── CommentEngine → RuleFinding[]
-      └── StatusCalculator → Assessment
-                                  │
-                                  ▼
-                    CreditAssessmentCaseService
-                                  │
-          ┌──────────────────────┼──────────────────────┐
-          ▼                      ▼                      ▼
- Customer Profile       Financial Analysis      Behavioural Analysis
- NOT_EVALUABLE              evaluated             NOT_EVALUABLE
-                                  │
-                                  ▼
-                         Debt Sustainability
-                           NOT_EVALUABLE
-                                  │
-                                  ▼
-                       Future Case Aggregator
-                                  │
-                                  ▼
-                           Analysis / LLM
-                                  │
-                                  ▼
-                              Report
+      ▼
+FinalAssessmentService
+      │
+      ▼
+FinalAssessment
+      │
+      ▼
+Case-level analysis / executive synthesis
+      │
+      ▼
+Report
 ```
 
-**Current status:** the financial-analysis section is backed by the existing deterministic rule engine and is now organized into analyst-oriented dimensions. Customer profile, behavioural analysis and debt sustainability remain explicit `NOT_EVALUABLE` placeholders. A final cross-section aggregator is intentionally deferred until additional macro-areas have deterministic logic.
-
-The existing `AssessmentWorkflow` remains compatible with the current financial assessment/reporting path. `CreditAssessmentCaseService` is an additive domain layer for the thesis evolution.
+The existing `AssessmentService` remains the deterministic financial assessment engine. The case layer composes it with additional deterministic macro-area services.
 
 ### Dependency direction
 
 ```text
 Streamlit (`app/`)
        ↓
-Application / Orchestration
+Application / orchestration
        ↓
-Services / Agents
+Services / agents
        ↓
-Rules / Domain Models
+Rules / domain models
 ```
 
-The core library does not depend on Streamlit.
+The core domain does not depend on Streamlit.
 
 ---
 
-## 4. Credit Analysis Case Layer
+## 3. Credit Assessment Case
 
-`CreditAssessmentCase` is the higher-level domain representation of a complete credit-analysis process.
+`CreditAssessmentCase` is the domain container for the complete analyst-style assessment.
 
 ```text
 CreditAssessmentCase
@@ -103,17 +79,18 @@ CreditAssessmentCase
 ├── Customer Profile
 ├── Financial Analysis
 ├── Behavioural Analysis
-└── Debt Sustainability
+├── Debt Sustainability
+└── Final Assessment
 ```
 
-Each macro-area is represented by an `AssessmentSection` containing:
+Each macro-area is represented by `AssessmentSection` with:
 
-- section name;
 - deterministic status;
-- findings;
+- rule findings;
 - evidence;
 - limitations;
-- optional analyst-oriented dimensions.
+- optional analyst-oriented dimensions;
+- optional contextual profile data.
 
 `SectionStatus` supports:
 
@@ -124,27 +101,36 @@ CRITICAL
 NOT_EVALUABLE
 ```
 
-This is deliberately distinct from the existing `AssessmentStatus`: the latter remains the status of the current deterministic financial assessment, while `SectionStatus` can represent a macro-area that has not yet been implemented or cannot be evaluated.
+`NOT_EVALUABLE` explicitly represents missing or insufficient evidence. It is not silently converted into `NORMAL`.
 
-The sections are ordered according to the intended analyst reasoning flow:
+---
+
+## 4. Customer Profile
+
+`CustomerProfileData` contains descriptive information normally collected during the initial customer presentation, including:
+
+- company name and legal form;
+- sector, size class and geography;
+- shareholders and management;
+- relationship duration;
+- historical facilities;
+- active EWS/EWI signal;
+- previous restructuring.
+
+`CustomerProfileAssessmentService` keeps descriptive information in the section context and evaluates explicit risk flags deterministically:
 
 ```text
-1. Customer Profile
-        ↓
-2. Financial Analysis
-        ↓
-3. Behavioural Analysis
-        ↓
-4. Debt Sustainability
-        ↓
-5. Final Judgement
+CP001 — Active EWS
+CP002 — Previous Restructuring
 ```
 
-The final judgement/aggregation policy is not implemented yet. This prevents the system from producing a misleading overall decision while most macro-areas are still unavailable.
+The profile section does not manufacture a risk judgement when no profile data are available; it returns `NOT_EVALUABLE`.
 
-### Financial Analysis dimensions
+---
 
-The seven existing deterministic rules are grouped without changing their evaluation logic:
+## 5. Financial Analysis
+
+The seven existing deterministic rules remain the foundation of the financial section:
 
 ```text
 Financial Analysis
@@ -167,56 +153,95 @@ Financial Analysis
     └── R006 EBITDA materially supported by finished goods inventory increase
 ```
 
-These dimensions are an organizational layer over `RuleResult[]`. The deterministic rules remain the single source of truth and are not duplicated inside the case model.
+The case layer only groups the existing `RuleResult[]`; it does not duplicate their evaluation logic.
 
-### Phase 1 mapping
+---
 
-The current seven deterministic rules remain the foundation of `Financial Analysis`:
+## 6. Behavioural Analysis
+
+`BehaviouralData` provides synthetic banking-behaviour inputs. The deterministic service evaluates:
 
 ```text
-Existing AssessmentService
-          ↓
-RuleResult[]
-          ↓
-Financial dimension mapping
-          ↓
-Financial Analysis section
-          ↓
-CreditAssessmentCase
+B001 — High Credit Utilization
+B002 — Prolonged Overdraft
+B003 — Payment Delay
+B004 — Exposure Growth
 ```
 
-This preserves backward compatibility while establishing a stable extension point for behavioural and debt-sustainability modules.
+The service uses the common section-status policy and explicitly exposes a limitation when all behavioural indicators are unavailable.
+
+This layer is intentionally independent from the financial rules: behavioural data cannot modify the financial assessment.
 
 ---
 
-## 5. Input Validation Layer
+## 7. Debt Sustainability
 
-`CreditPositionValidator` performs structural validation before deterministic assessment begins.
+`DebtSustainabilityData` provides cash-flow and debt-service inputs.
 
-The validator checks:
+The deterministic service evaluates three complementary indicators:
 
-- the object is a `CreditPosition`;
-- `position_id` is non-empty;
-- numeric financial fields contain numeric values or `None`;
-- boolean values are not accepted as numeric inputs;
-- numeric values are finite, rejecting `NaN` and positive/negative infinity.
+```text
+DS001 — Debt Service Coverage Ratio
+        CFADS / Debt Service
 
-`None` is intentionally accepted because unavailable financial information is a valid domain condition and can subsequently produce `NOT_EVALUABLE` rule outcomes.
+DS002 — Debt Service / EBITDA
+        Debt Service / EBITDA
 
-The validator does not impose business-specific sign constraints. Whether a negative value is economically meaningful remains the responsibility of the corresponding deterministic rule.
+DS003 — Cash Flow Debt-Service Buffer
+        CFADS − Debt Service
+```
+
+The implementation deliberately avoids duplicating the existing financial indicators R004, R005 and R007. For example, `Interest Expense / EBITDA` remains a Financial Analysis measure rather than being copied into Debt Sustainability.
+
+The section returns `NOT_EVALUABLE` evidence when the required inputs are unavailable and uses the same deterministic `AssessmentStatusCalculator` policy as the other rule-based sections.
 
 ---
 
-## 6. Assessment Layer
+## 8. Final Aggregation
 
-`AssessmentService` owns the deterministic financial assessment stage:
+`FinalAssessmentService` combines section-level statuses using an explicit deterministic policy.
+
+```text
+Any CRITICAL section
+        → CRITICAL
+
+2+ ATTENTION sections
+        → CRITICAL
+
+1 ATTENTION section
+        → ATTENTION
+
+All evaluable sections NORMAL
+        → NORMAL
+
+No evaluable sections
+        → ATTENTION
+```
+
+`NOT_EVALUABLE` sections are excluded from the positive/negative count but are reported as limitations. No averaging, weighted score or LLM judgement is used.
+
+The resulting `FinalAssessment` records:
+
+- overall status;
+- number of evaluable sections;
+- risk sections;
+- normal sections;
+- aggregation limitations.
+
+---
+
+## 9. Validation and Deterministic Decision Boundary
+
+`CreditPositionValidator` performs structural validation before financial rule evaluation. It rejects malformed positions, non-numeric values, booleans used as numbers, `NaN` and infinities while allowing `None` for unavailable information.
+
+The financial assessment flow is:
 
 ```text
 CreditPosition
       ↓
 CreditPositionValidator
       ↓
-RuleEngine.evaluate()
+RuleEngine
       ↓
 RuleResult[]
       ↓
@@ -229,87 +254,65 @@ AssessmentStatusCalculator
 Assessment
 ```
 
-No LLM is involved in this path.
+The status policy is:
 
-### Status calculation
-
-The current status logic is:
-
-| Rule outcome condition | Assessment |
+| Condition | Status |
 |---|---|
-| 2+ `TRIGGERED` | `CRITICAL` |
-| Exactly 1 `TRIGGERED` | `ATTENTION` |
-| 0 triggered and at least one evaluable rule | `NORMAL` |
-| All rules `NOT_EVALUABLE` | `ATTENTION` |
-| Empty result set | `NORMAL` |
+| 2+ triggered rules | CRITICAL |
+| 1 triggered rule | ATTENTION |
+| 0 triggered, at least one evaluable rule | NORMAL |
+| all rules NOT_EVALUABLE | ATTENTION |
+| empty result set | NORMAL |
 
-The all-`NOT_EVALUABLE` case is intentionally conservative: the absence of evaluable evidence is not treated as equivalent to a normal assessment.
-
----
-
-## 7. Rule Engine
-
-Rules implement a common abstraction and are resolved through the rule registry.
-
-```text
-Rule.evaluate(position) → RuleResult
-```
-
-The current configured rule catalogue contains revenue, profitability, leverage and interest-coverage indicators.
-
-Each rule can produce:
-
-```text
-TRIGGERED
-NOT_TRIGGERED
-NOT_EVALUABLE
-```
-
-`NOT_EVALUABLE` is used when a rule cannot safely assess its indicator because the required domain data is unavailable or unsuitable. This state is distinct from `NOT_TRIGGERED`.
-
-Rule parameters are externalized in `config/rules.yaml`.
+No LLM participates in this decision path.
 
 ---
 
-## 8. Analysis and Reporting Layers
+## 10. Analysis and Reporting Boundary
 
-The existing downstream path remains:
+The existing reporting path remains compatible with the original financial assessment:
 
 ```text
 Assessment
-    ↓
+   ↓
 AnalysisAgent
-    ↓
+   ↓
 AssessmentAnalysis
-    ↓
+   ↓
 ReportingAgent
-    ↓
+   ↓
 Report
 ```
 
-The intended evolution is to feed the higher-level case into analysis only after its deterministic sections are available:
+The case-oriented evolution is:
 
 ```text
 CreditAssessmentCase
         ↓
 Deterministic section evidence
         ↓
-Final cross-section aggregation
+FinalAssessment
         ↓
-Analysis / Executive Synthesis
+Case-level analysis
         ↓
-Report
+Executive synthesis
 ```
 
-The LLM remains responsible only for natural-language synthesis. It must not infer a status from raw data or override deterministic findings.
+The LLM may transform deterministic findings and contextual data into natural-language prose, but must not:
+
+- change section or overall status;
+- change thresholds or severity;
+- invent evidence;
+- suppress deterministic limitations;
+- replace the deterministic decision policy.
 
 ---
 
-## 9. Presentation Layer — `app/`
+## 11. Presentation Layer
 
-The Streamlit application is responsible for input collection, reporting-mode selection, workflow execution and presentation of domain results.
+The Streamlit UI remains responsible for presentation and user interaction. It does not own credit-risk calculations.
 
-The current Results view is organized from executive outcome toward evidence:
+The current Results hierarchy is:
 
 ```text
 Executive Credit Assessment
@@ -319,99 +322,68 @@ Risk Indicator Dashboard
 Audit Trail & Methodology
 ```
 
-The Risk Indicator Dashboard consumes deterministic `RuleResult` fields directly and does not duplicate rule calculations.
+The case layer is currently a domain extension. UI exposure of the four macro-areas can be added after the domain contract and tests are stable.
 
 ---
 
-## 10. Repository Structure
-
-```text
-credit-assessment-system/
-├── app/                         # Streamlit presentation layer
-├── config/
-│   └── rules.yaml
-├── src/
-│   ├── agents/
-│   ├── comments/
-│   ├── config/
-│   ├── engine/
-│   ├── llm/
-│   ├── models/
-│   │   ├── assessment.py
-│   │   ├── assessment_section.py
-│   │   ├── assessment_status.py
-│   │   ├── credit_assessment_case.py
-│   │   └── position.py
-│   ├── orchestration/
-│   ├── rules/
-│   └── services/
-│       ├── assessment_service.py
-│       ├── assessment_status_calculator.py
-│       ├── credit_assessment_case_service.py
-│       └── position_validator.py
-├── docs/
-└── tests/
-```
-
----
-
-## 11. Extension Roadmap
-
-The case layer is intentionally incremental:
+## 12. Roadmap Status
 
 ### Phase 1 — Case structure
 
-Completed. Introduce the macro-area contract while keeping only financial analysis evaluable.
+**Completed.** Introduced `CreditAssessmentCase`, `AssessmentSection` and explicit macro-area boundaries.
 
 ### Phase 2 — Financial Analysis formalization
 
-Completed. Existing rules are grouped into analyst-oriented financial dimensions without duplicating or changing deterministic rule logic.
+**Completed.** Existing R001–R007 rules are grouped into analyst-oriented dimensions without changing deterministic logic.
 
 ### Phase 3 — Behavioural Analysis
 
-Introduce synthetic banking-behaviour inputs and deterministic indicators such as utilization, overdrafts, past-due positions, payment delays and exposure trends.
+**Completed.** Added synthetic behavioural inputs and B001–B004 deterministic indicators, with case-level integration.
 
 ### Phase 4 — Debt Sustainability
 
-Introduce deterministic cash-flow and debt-service indicators, including DSCR and related repayment-capacity measures.
+**Completed.** Added DS001–DS003 cash-flow/debt-service indicators, tests and case-level integration. The implementation avoids duplication with existing financial indicators.
 
 ### Phase 5 — Customer Profile
 
-Introduce structured company/relationship information, historical facilities and early-warning information.
+**Completed.** Added structured customer/relationship context and deterministic EWS/restructuring flags.
 
 ### Phase 6 — Final Aggregation
 
-Define and test an explicit cross-section aggregation policy. No implicit averaging should be used; criticality rules must be documented and deterministic.
+**Completed.** Added explicit cross-section aggregation rules through `FinalAssessmentService`.
 
 ### Phase 7 — Executive Synthesis
 
-Adapt the reporting layer so the LLM receives section-level deterministic evidence and produces a coherent analyst-style executive narrative.
+**Next.** Adapt the analysis/reporting layer so that deterministic section evidence and `FinalAssessment` become the sole inputs to an analyst-style executive narrative. The LLM remains a bounded synthesis dependency.
 
 ---
 
-## 12. Architectural Boundary
+## 13. Architectural Boundary
 
 ```text
                   DETERMINISTIC CORE
                          │
-                         ▼
-                Input Validation
-                         │
-                         ▼
-                  Financial Rules
-                         │
-                         ▼
-                 Macro-area Evidence
-                         │
               ┌──────────┴──────────┐
               ▼                     ▼
-       Deterministic            LLM-assisted
-       decision logic             synthesis
+       Customer Profile       Financial Analysis
               │                     │
               └──────────┬──────────┘
                          ▼
-                    Executive
-                      Report
+              Behavioural Analysis
+                         │
+                         ▼
+               Debt Sustainability
+                         │
+                         ▼
+                Final Assessment
+                         │
+              ┌──────────┴──────────┐
+              ▼                     ▼
+       Deterministic output   LLM synthesis
+              │                     │
+              └──────────┬──────────┘
+                         ▼
+                   Executive Report
 ```
 
-The LLM is an optional, replaceable and bounded synthesis dependency rather than part of the credit decision itself.
+The deterministic core owns credit-risk evidence and decisions. AI is optional, replaceable and limited to interpretation and natural-language synthesis.
