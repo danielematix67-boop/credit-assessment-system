@@ -20,19 +20,24 @@ class CustomerProfileAssessmentService:
             self._boolean_flag("CP001", "Active EWS", data.active_ews),
             self._boolean_flag("CP002", "Previous Restructuring", data.previous_restructuring),
         ]
-        evaluable_results = [result for result in results if result.status != RuleStatus.NOT_EVALUABLE]
-        status = (
-            SectionStatus.NOT_EVALUABLE
-            if not self._has_profile_data(data)
-            else SectionStatus(self.status_calculator.calculate(results).value)
-        )
+        evaluable_results = [
+            result for result in results if result.status != RuleStatus.NOT_EVALUABLE
+        ]
+        has_profile_data = self._has_profile_data(data)
+        if not has_profile_data:
+            status = SectionStatus.NOT_EVALUABLE
+        elif not evaluable_results:
+            status = SectionStatus.NORMAL
+        else:
+            status = SectionStatus(self.status_calculator.calculate(evaluable_results).value)
+
         findings = [
             RuleFinding(result=result, comment=Comment(result.rule_id, result.reason or ""))
             for result in results
             if result.status == RuleStatus.TRIGGERED
         ]
         limitations = []
-        if not self._has_profile_data(data):
+        if not has_profile_data:
             limitations.append("Customer profile data are not available.")
         elif not evaluable_results:
             limitations.append("No customer-profile risk flags could be evaluated.")
