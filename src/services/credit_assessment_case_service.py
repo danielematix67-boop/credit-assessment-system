@@ -2,10 +2,12 @@ from src.models.assessment import Assessment
 from src.models.assessment_section import AssessmentSection, SectionStatus
 from src.models.behavioural_data import BehaviouralData
 from src.models.credit_assessment_case import CreditAssessmentCase
+from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.models.position import CreditPosition
 from src.rules.result import RuleResult
 from src.services.assessment_service import AssessmentService
 from src.services.behavioural_assessment_service import BehaviouralAssessmentService
+from src.services.debt_sustainability_assessment_service import DebtSustainabilityAssessmentService
 
 
 class CreditAssessmentCaseService:
@@ -25,16 +27,21 @@ class CreditAssessmentCaseService:
         self,
         financial_assessment_service: AssessmentService,
         behavioural_assessment_service: BehaviouralAssessmentService | None = None,
+        debt_sustainability_assessment_service: DebtSustainabilityAssessmentService | None = None,
     ):
         self.financial_assessment_service = financial_assessment_service
         self.behavioural_assessment_service = (
             behavioural_assessment_service or BehaviouralAssessmentService()
+        )
+        self.debt_sustainability_assessment_service = (
+            debt_sustainability_assessment_service or DebtSustainabilityAssessmentService()
         )
 
     def assess(
         self,
         position: CreditPosition,
         behavioural_data: BehaviouralData | None = None,
+        debt_sustainability_data: DebtSustainabilityData | None = None,
     ) -> CreditAssessmentCase:
         financial_assessment = self.financial_assessment_service.assess(position)
         behavioural_section = (
@@ -43,6 +50,14 @@ class CreditAssessmentCaseService:
             else self._not_evaluable_section(
                 "Behavioural Analysis",
                 "Behavioural banking data are not available for this case.",
+            )
+        )
+        debt_sustainability_section = (
+            self.debt_sustainability_assessment_service.assess(debt_sustainability_data)
+            if debt_sustainability_data is not None
+            else self._not_evaluable_section(
+                "Debt Sustainability",
+                "Debt-service and cash-flow data are not available for this case.",
             )
         )
 
@@ -54,10 +69,7 @@ class CreditAssessmentCaseService:
             ),
             financial_analysis=self._financial_section(financial_assessment),
             behavioural_analysis=behavioural_section,
-            debt_sustainability=self._not_evaluable_section(
-                "Debt Sustainability",
-                "Debt-service and cash-flow analysis are not implemented in phase 1.",
-            ),
+            debt_sustainability=debt_sustainability_section,
         )
 
     @classmethod
