@@ -28,7 +28,7 @@ class DebtSustainabilityAssessmentService:
             self._debt_service_to_ebitda_result(data),
             self._cash_flow_buffer_result(data),
         ]
-        status = self.status_calculator.calculate(results)
+        status = self._section_status(results)
         findings = [
             RuleFinding(
                 result=result,
@@ -45,11 +45,32 @@ class DebtSustainabilityAssessmentService:
 
         return AssessmentSection(
             name="Debt Sustainability",
-            status=SectionStatus(status.value),
+            status=status,
             findings=findings,
             evidence=results,
             limitations=limitations,
         )
+
+    @staticmethod
+    def _section_status(results: list[RuleResult]) -> SectionStatus:
+        """Aggregate indicators without double-counting the same cash-flow breach."""
+        evaluable = [
+            result for result in results if result.status != RuleStatus.NOT_EVALUABLE
+        ]
+        if not evaluable:
+            return SectionStatus.ATTENTION
+
+        triggered = {result.rule_id for result in evaluable if result.status == RuleStatus.TRIGGERED}
+        if not triggered:
+            return SectionStatus.NORMAL
+
+        # DSCR and cash-flow buffer express the same CFADS/debt-service relationship.
+        # They must not turn one underlying weakness into two independent triggers.
+        independent_leverage_trigger = "DS002" in triggered
+        cash_flow_trigger = bool(triggered & {"DS001", "DS003"})
+        if independent_leverage_trigger and cash_flow_trigger:
+            return SectionStatus.CRITICAL
+        return SectionStatus.ATTENTION
 
     @classmethod
     def _dscr_result(cls, data: DebtSustainabilityData) -> RuleResult:
