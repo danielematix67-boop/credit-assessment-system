@@ -23,7 +23,9 @@ def _apply_results_styles() -> None:
         .results-divider {
             height: 1px;
             margin: 0 0 1.35rem 0;
-            background: linear-gradient(90deg, transparent, rgba(128,128,128,.28), transparent);
+            background: linear-gradient(
+                90deg, transparent, rgba(128,128,128,.28), transparent
+            );
         }
         .assessment-hero {
             position: relative;
@@ -32,7 +34,9 @@ def _apply_results_styles() -> None:
             padding: 1.35rem 1.5rem 1.25rem 1.5rem;
             border: 1px solid rgba(128,128,128,.20);
             border-radius: 1rem;
-            background: linear-gradient(135deg, rgba(128,128,128,.045), rgba(128,128,128,.015));
+            background: linear-gradient(
+                135deg, rgba(128,128,128,.045), rgba(128,128,128,.015)
+            );
             box-shadow: 0 8px 26px rgba(0,0,0,.035);
         }
         .assessment-hero::before {
@@ -81,10 +85,26 @@ def _apply_results_styles() -> None:
             border-radius: 50%;
             background: currentColor;
         }
-        .assessment-status.normal { color: #15803d; background: rgba(21,128,61,.08); border-color: rgba(21,128,61,.20); }
-        .assessment-status.attention { color: #b45309; background: rgba(180,83,9,.09); border-color: rgba(180,83,9,.22); }
-        .assessment-status.critical { color: #b91c1c; background: rgba(185,28,28,.08); border-color: rgba(185,28,28,.20); }
-        .assessment-status.neutral { color: #6b7280; background: rgba(107,114,128,.08); border-color: rgba(107,114,128,.18); }
+        .assessment-status.normal {
+            color: #15803d;
+            background: rgba(21,128,61,.08);
+            border-color: rgba(21,128,61,.20);
+        }
+        .assessment-status.attention {
+            color: #b45309;
+            background: rgba(180,83,9,.09);
+            border-color: rgba(180,83,9,.22);
+        }
+        .assessment-status.critical {
+            color: #b91c1c;
+            background: rgba(185,28,28,.08);
+            border-color: rgba(185,28,28,.20);
+        }
+        .assessment-status.neutral {
+            color: #6b7280;
+            background: rgba(107,114,128,.08);
+            border-color: rgba(107,114,128,.18);
+        }
         .assessment-subtitle {
             margin-top: .7rem;
             color: rgba(128,128,128,.95);
@@ -111,13 +131,20 @@ def _apply_results_styles() -> None:
             letter-spacing: .025em;
             text-transform: uppercase;
         }
-        .results-kpi-value { margin-top: .2rem; font-size: 1.15rem; font-weight: 740; line-height: 1.2; }
+        .results-kpi-value {
+            margin-top: .2rem;
+            font-size: 1.15rem;
+            font-weight: 740;
+            line-height: 1.2;
+        }
         .results-kpi-value.risk { color: #b91c1c; }
         .results-kpi-value.warning { color: #b45309; }
         .results-kpi-value.good { color: #15803d; }
         @media (max-width: 760px) {
             .assessment-hero-top { flex-direction: column; }
-            .results-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .results-kpi-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
         }
         </style>
         """,
@@ -132,7 +159,9 @@ def render_results_header(result: Any) -> None:
     status = str(getattr(status_obj, "value", status_obj or "Unknown"))
     rules = get_rule_results(result)
     triggered = sum(rule_status(rule) == "TRIGGERED" for rule in rules)
-    not_evaluable = sum(rule_status(rule) == "NOT_EVALUABLE" for rule in rules)
+    not_evaluable = sum(
+        rule_status(rule) == "NOT_EVALUABLE" for rule in rules
+    )
     status_class = _status_class(status)
 
     st.markdown(
@@ -146,22 +175,43 @@ def render_results_header(result: Any) -> None:
                 <div class="assessment-status {status_class}">{status}</div>
             </div>
             <div class="assessment-subtitle">
-                Deterministic assessment based on the configured Rule Engine, with the
-                reporting layer used only to provide an executive narrative.
+                Deterministic assessment based on the configured Rule Engine,
+                with the reporting layer used only to provide an executive
+                narrative.
             </div>
         </div>
         <div class="results-kpi-grid">
-            <div class="results-kpi"><div class="results-kpi-label">Rules evaluated</div><div class="results-kpi-value">{len(rules)}</div></div>
-            <div class="results-kpi"><div class="results-kpi-label">Triggered rules</div><div class="results-kpi-value {'risk' if triggered else 'good'}">{triggered}</div></div>
-            <div class="results-kpi"><div class="results-kpi-label">Not evaluable</div><div class="results-kpi-value {'warning' if not_evaluable else 'good'}">{not_evaluable}</div></div>
-            <div class="results-kpi"><div class="results-kpi-label">Decision source</div><div class="results-kpi-value">Rule Engine</div></div>
+            <div class="results-kpi">
+                <div class="results-kpi-label">Rules evaluated</div>
+                <div class="results-kpi-value">{len(rules)}</div>
+            </div>
+            <div class="results-kpi">
+                <div class="results-kpi-label">Triggered rules</div>
+                <div class="results-kpi-value {'risk' if triggered else 'good'}">
+                    {triggered}
+                </div>
+            </div>
+            <div class="results-kpi">
+                <div class="results-kpi-label">Not evaluable</div>
+                <div class="results-kpi-value {'warning' if not_evaluable else 'good'}">
+                    {not_evaluable}
+                </div>
+            </div>
+            <div class="results-kpi">
+                <div class="results-kpi-label">Decision source</div>
+                <div class="results-kpi-value">Rule Engine</div>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-def render_results(result: Any, assessment_position: Any, selected_reporting_mode: str) -> None:
+def render_results(
+    result: Any,
+    assessment_position: Any,
+    selected_reporting_mode: str,
+) -> None:
     if result is None:
         return
 
