@@ -1,5 +1,6 @@
 import streamlit as st
 
+from app.demo_scenarios import build_demo_case_data
 from app.workflow.assessment_workflow_factory import create_workflow
 from app.workflow.runner import run_assessment
 from src.models.position import CreditPosition
@@ -25,23 +26,11 @@ def build_credit_position(
     position_data: dict,
     input_mode: str,
 ) -> CreditPosition:
-    """
-    Build and validate the CreditPosition used by the assessment.
-
-    For manual input, the position is constructed from the
-    collected input data. For demo scenarios, the already
-    constructed position is returned.
-
-    Raises:
-        TypeError: If the manual input cannot be used to
-            construct a CreditPosition.
-        ValueError: If no credit position is available.
-    """
+    """Build and validate the CreditPosition used by the assessment."""
 
     if input_mode == "Manual Input":
         try:
             return CreditPosition(**position_data)
-
         except TypeError as error:
             raise TypeError("Unable to construct CreditPosition.") from error
 
@@ -54,14 +43,12 @@ def build_credit_position(
 def execute_assessment(
     position: CreditPosition,
     reporting_mode: str,
+    scenario_name: str | None = None,
 ):
     """Create and execute the assessment workflow."""
 
     try:
-        workflow = create_workflow(
-            reporting_mode=reporting_mode,
-        )
-
+        workflow = create_workflow(reporting_mode=reporting_mode)
     except Exception as error:
         st.error("Unable to create the assessment workflow.")
         st.exception(error)
@@ -71,10 +58,21 @@ def execute_assessment(
 
     with st.spinner(spinner_message):
         try:
-            result = run_assessment(
-                workflow,
-                position,
-            )
+            if scenario_name:
+                (
+                    customer_profile_data,
+                    behavioural_data,
+                    debt_sustainability_data,
+                ) = build_demo_case_data(scenario_name)
+                result = run_assessment(
+                    workflow,
+                    position,
+                    behavioural_data=behavioural_data,
+                    debt_sustainability_data=debt_sustainability_data,
+                    customer_profile_data=customer_profile_data,
+                )
+            else:
+                result = run_assessment(workflow, position)
 
         except Exception as error:
             st.error("Assessment execution failed.")
@@ -94,11 +92,8 @@ def store_assessment_result(
     """Store the latest assessment data in Streamlit session state."""
 
     st.session_state["assessment_result"] = result
-
     st.session_state["assessment_position"] = position
-
     st.session_state["assessment_input_mode"] = input_mode
-
     st.session_state["assessment_reporting_mode"] = reporting_mode
 
     if input_mode == "Demo Scenario":
