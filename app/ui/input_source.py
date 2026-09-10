@@ -3,7 +3,7 @@ from typing import Any
 import streamlit as st
 
 from app.demo_scenarios import DEMO_SCENARIOS, build_demo_position
-from app.ui.input import build_credit_position_from_ui, build_scenario_data_table
+from app.ui.input import build_credit_position_from_ui, display_position_table
 from src.models.position import CreditPosition
 
 
@@ -53,11 +53,7 @@ def _render_demo_scenario() -> tuple[
         st.stop()
 
     st.markdown("**Financial information available for review**")
-    st.dataframe(
-        build_scenario_data_table(position),
-        width="stretch",
-        hide_index=True,
-    )
+    display_position_table(position)
 
     return position, None, "Demo Scenario", scenario_name
 
