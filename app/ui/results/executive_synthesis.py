@@ -21,13 +21,13 @@ def render_executive_synthesis(result: Any) -> None:
 
     render_section_header(
         "06 · Executive Narrative",
-        "Management-level narrative generated from the deterministic assessment and its supporting evidence.",
+        "Management-level narrative generated from the deterministic assessment.",
     )
 
     analysis = getattr(result, "analysis", None)
     risk_factors = list(getattr(analysis, "risk_factors", []) or []) if analysis else []
     if risk_factors:
-        with st.expander("Material risk findings", expanded=True):
+        with st.expander("Material risk findings", expanded=False):
             for finding in risk_factors:
                 text = _finding_text(finding)
                 if text:
