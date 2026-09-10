@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.agents.analysis.analysis_agent import AnalysisAgent
+from src.agents.analysis.case_analysis_agent import CaseAnalysisAgent
 from src.agents.base.agent import Agent
 from src.agents.reporting.deterministic_report_generator import (
     DeterministicReportGenerator,
@@ -16,6 +17,7 @@ from src.models.assessment_workflow import AssessmentWorkflowResult
 from src.models.position import CreditPosition
 from src.models.report import Report
 from src.rules.base.severity import RuleSeverity
+from src.services.credit_assessment_case_service import CreditAssessmentCaseService
 
 # ============================================================
 # Helpers
@@ -86,6 +88,36 @@ def test_assessment_workflow_executes_all_stages(
 
     assert result.report_generator_used == "PRIMARY"
     assert result.report_generation_error is None
+
+
+def test_assessment_workflow_integrates_credit_case_pipeline(
+    assessment_service,
+):
+    position = make_position()
+    case_service = CreditAssessmentCaseService(assessment_service)
+
+    workflow = AssessmentWorkflow(
+        assessment_service=assessment_service,
+        analysis_agent=AnalysisAgent(),
+        reporting_agent=ReportingAgent(
+            report_generator=DeterministicReportGenerator(),
+        ),
+        credit_case_service=case_service,
+        case_analysis_agent=CaseAnalysisAgent(),
+    )
+
+    result = workflow.run(position)
+
+    assert result.credit_case is not None
+    assert result.credit_case.position.position_id == position.position_id
+
+    assert result.assessment.position_id == position.position_id
+    assert result.assessment.rule_results == result.credit_case.financial_analysis.evidence
+    assert result.assessment.findings == result.credit_case.financial_analysis.findings
+    assert result.assessment.status.value == result.credit_case.financial_analysis.status.value
+
+    assert result.analysis.assessment_status.value == result.credit_case.final_assessment.status.value
+    assert result.report.assessment_status == result.analysis.assessment_status
 
 
 # ============================================================

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
+from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.execution_metadata import ExecutionMetadata
 from src.models.report import Report
 
@@ -11,6 +12,7 @@ class AssessmentWorkflowResult:
     assessment: Assessment
     analysis: AssessmentAnalysis
     report: Report
+    credit_case: CreditAssessmentCase | None = None
     execution_metadata: ExecutionMetadata | None = None
 
     report_generator_used: str | None = None

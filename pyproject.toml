@@ -13,6 +13,7 @@ select = ["E", "F", "I"]
 
 [tool.ruff.lint.isort]
 known-third-party = ["pandas", "streamlit"]
+known-first-party = ["app", "src"]
 
 [tool.mypy]
 python_version = "3.13"
