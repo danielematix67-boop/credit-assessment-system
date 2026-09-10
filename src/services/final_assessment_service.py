@@ -1,4 +1,4 @@
-from src.models.assessment_section import AssessmentSection, SectionStatus
+from src.models.assessment_section import SectionStatus
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.final_assessment import FinalAssessment
 
