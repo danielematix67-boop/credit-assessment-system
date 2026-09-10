@@ -89,7 +89,7 @@ def test_missing_information_preserves_explicit_limitations(assessment_service) 
     assert case.customer_profile.status.value == "NOT_EVALUABLE"
     assert case.behavioural_analysis.status.value == "NOT_EVALUABLE"
     assert case.debt_sustainability.status.value == "NOT_EVALUABLE"
-    assert case.financial_analysis.status.value == "NORMAL"
+    assert case.financial_analysis.status.value == "ATTENTION"
     assert case.final_assessment is not None
     assert case.final_assessment.status.value == "ATTENTION"
     assert case.final_assessment.limitations
