@@ -3,9 +3,9 @@ from typing import Any
 
 import streamlit as st
 
-from app.ui.report import render_report_tab
 from app.ui.results.case_overview import render_credit_analysis_case
 from app.ui.results.dashboard import render_risk_indicator_dashboard
+from app.ui.results.executive_synthesis import render_executive_synthesis
 from app.ui.results.final_assessment import render_final_assessment
 from app.ui.results.helpers import get_rule_results, rule_status
 
@@ -161,9 +161,7 @@ def render_results_header(result: Any) -> None:
     status = str(getattr(status_obj, "value", status_obj or "Unknown"))
     rules = get_rule_results(result)
     triggered = sum(rule_status(rule) == "TRIGGERED" for rule in rules)
-    not_evaluable = sum(
-        rule_status(rule) == "NOT_EVALUABLE" for rule in rules
-    )
+    not_evaluable = sum(rule_status(rule) == "NOT_EVALUABLE" for rule in rules)
     status_class = _status_class(status)
 
     st.markdown(
@@ -229,10 +227,6 @@ def render_results(
         case_result = type("CaseResult", (), {"credit_case": case_without_final})()
         render_credit_analysis_case(case_result)
         render_final_assessment(credit_case)
+        render_executive_synthesis(result)
 
-    render_report_tab(
-        result=result,
-        selected_reporting_mode=selected_reporting_mode,
-        configured_model=None,
-    )
     render_risk_indicator_dashboard(result)
