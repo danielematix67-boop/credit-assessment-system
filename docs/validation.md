@@ -8,7 +8,7 @@ The application is deterministic at the assessment layer and optional/AI-assiste
 
 > **The deterministic assessment is the source of truth. The LLM can generate narrative content, but it cannot determine, modify or override the structured credit assessment.**
 
-Validation therefore covers rules, configuration, assessment, analysis, reporting, LLM integration, narrative grounding, fallback behavior, workflow propagation, execution metadata and CI quality gates.
+Validation therefore covers input integrity, rules, configuration, assessment, analysis, reporting, LLM integration, narrative grounding, fallback behavior, workflow propagation, execution metadata and CI quality gates.
 
 ---
 
@@ -32,7 +32,7 @@ Validation therefore covers rules, configuration, assessment, analysis, reportin
 
 | Level | Main objective |
 |---|---|
-| Unit | Validate individual components and business rules |
+| Unit | Validate individual components, validation rules and business rules |
 | Integration | Validate interactions between application layers |
 | Workflow | Validate the complete assessment-to-report pipeline |
 | LLM / grounding | Validate narrative constraints, evidence preservation and provider behavior |
@@ -56,7 +56,31 @@ Assessment Status
 
 The LLM is not part of this decision path.
 
-## 3.2 Status propagation
+## 3.2 Input validation precedes assessment
+
+```text
+CreditPosition
+      ↓
+CreditPositionValidator
+   /             \\
+valid           invalid
+  ↓                 ↓
+Rule Engine      Reject input
+```
+
+Structural validation is performed before rule evaluation. This prevents malformed objects, non-numeric values and non-finite numeric values from entering the deterministic assessment pipeline.
+
+The validator checks:
+
+- valid `CreditPosition` type;
+- non-empty `position_id`;
+- numeric financial fields or `None`;
+- rejection of boolean values in numeric fields;
+- finite numeric values only, rejecting `NaN` and positive/negative infinity.
+
+The validator deliberately does not impose business-specific sign constraints. Those semantics belong to the corresponding credit rule.
+
+## 3.3 Status propagation
 
 The deterministic status is preserved through the workflow:
 
@@ -68,7 +92,7 @@ AssessmentAnalysis.assessment_status
 Report.assessment_status
 ```
 
-## 3.3 Structured finding integrity
+## 3.4 Structured finding integrity
 
 ```text
 RuleResult
@@ -84,33 +108,45 @@ Report
 
 The LLM does not create or modify the structured finding collection.
 
-## 3.4 Reporting independence
+## 3.5 Reporting independence
 
-Different reporting strategies consume the same deterministic `AssessmentAnalysis`:
+Different reporting strategies consume the same deterministic `AssessmentAnalysis`.
 
-```text
-                 AssessmentAnalysis
-                         │
-              ┌──────────┴──────────┐
-              ▼                     ▼
- DeterministicReportGenerator   LLMReportGenerator
-              │                     │
-              └──────────┬──────────┘
-                         ▼
-                       Report
-```
-
-## 3.5 Execution metadata integrity
+## 3.6 Execution metadata integrity
 
 Execution metadata describes provenance and timing. It does not participate in assessment-status calculation.
 
 ---
 
-# 4. Unit and Rule Testing
+# 4. Input Validation Testing
+
+`CreditPositionValidator` has dedicated unit tests covering both accepted and rejected inputs.
+
+The test suite verifies that:
+
+| Input condition | Expected behavior |
+|---|---|
+| Valid `CreditPosition` | Accepted |
+| Blank/whitespace `position_id` | Rejected with `ValueError` |
+| Non-numeric financial field | Rejected with `ValueError` |
+| Boolean in numeric field | Rejected with `ValueError` |
+| `NaN` | Rejected with `ValueError` |
+| Positive/negative infinity | Rejected with `ValueError` |
+| Wrong object type | Rejected with `TypeError` |
+| `None` financial value | Accepted for downstream rule handling |
+
+The validation is structural rather than a credit-policy validator. For example, negative financial values are not rejected generically because their interpretation depends on the business rule evaluating the specific indicator.
+
+The `AssessmentService` injects the validator and invokes it before the Rule Engine. This makes the validation boundary explicit and independently testable.
+
+---
+
+# 5. Unit and Rule Testing
 
 Unit tests cover:
 
 - domain models;
+- input validation;
 - rule status and severity types;
 - severity policy;
 - configuration loading and validation;
@@ -140,7 +176,7 @@ Tests cover normal evaluations, triggered conditions, threshold boundaries and n
 
 ---
 
-# 5. Rule Validation
+# 6. Rule Validation
 
 Each rule returns a structured `RuleResult` containing information such as:
 
@@ -179,12 +215,14 @@ The YAML configuration is validated for required fields, unique rule IDs, suppor
 
 ---
 
-# 6. Assessment and Analysis Validation
+# 7. Assessment and Status Validation
 
 The deterministic assessment sequence is:
 
 ```text
 CreditPosition
+      ↓
+CreditPositionValidator
       ↓
 RuleEngine
       ↓
@@ -201,6 +239,18 @@ Assessment
 
 Validation verifies that rule results, findings and the position identifier are preserved and that the overall status is calculated from deterministic rule results.
 
+The current status rules are:
+
+| Rule-result condition | Assessment status |
+|---|---|
+| 2+ `TRIGGERED` | `CRITICAL` |
+| Exactly 1 `TRIGGERED` | `ATTENTION` |
+| 0 triggered + at least one evaluable rule | `NORMAL` |
+| All rules `NOT_EVALUABLE` | `ATTENTION` |
+| Empty result set | `NORMAL` |
+
+The all-`NOT_EVALUABLE` test is important because **no triggered rule is not necessarily equivalent to normal credit quality** when no indicator could actually be evaluated.
+
 The analysis stage is validated to ensure:
 
 ```text
@@ -213,35 +263,21 @@ The analysis layer organizes evidence but does not perform a second credit asses
 
 ---
 
-# 7. Reporting Validation
+# 8. Reporting Validation
 
-## 7.1 Deterministic reporting
+## 8.1 Deterministic reporting
 
 `DeterministicReportGenerator` must produce a report without external LLM dependencies while preserving the structured assessment information.
 
-## 7.2 LLM reporting
+## 8.2 LLM reporting
 
 `LLMReportGenerator` consumes `AssessmentAnalysis`, builds a constrained prompt and delegates text generation to an injected `LLMClient`.
-
-The conceptual flow is:
-
-```text
-AssessmentAnalysis
-       ↓
-Prompt Builder
-       ↓
-LLM Client
-       ↓
-Generated Narrative
-       ↓
-Validation / fallback when enabled
-```
 
 The generated narrative is not the source of truth for assessment status.
 
 ---
 
-# 8. LLM Narrative Contract
+# 9. LLM Narrative Contract
 
 The prompt contract is tested explicitly. It requires the LLM to:
 
@@ -262,7 +298,7 @@ The dedicated prompt tests assert the presence of these contractual instructions
 
 ---
 
-# 9. Indicator Grounding Validation
+# 10. Indicator Grounding Validation
 
 The current implementation supports strict indicator grounding for LLM reporting.
 
@@ -297,59 +333,35 @@ The grounding check is intentionally narrow. It protects required numerical evid
 
 ---
 
-# 10. Deterministic Status Protection
+# 11. Deterministic Status Protection
 
 The final structured assessment status is application-controlled.
 
-For an AI-assisted report the conceptual output is:
+For an AI-assisted report, the status is constructed from deterministic assessment data and displayed separately from the generated narrative.
 
-```text
-Assessment Status: Critical
-
-Generated executive narrative
-```
-
-The status line is constructed from deterministic assessment data. The LLM is explicitly instructed not to generate it.
-
-Tests verify that the status is preserved exactly and that the generated narrative cannot replace the structured status.
+Tests verify that the status is preserved exactly and that generated narrative cannot replace the structured status.
 
 ---
 
-# 11. LLM Response Validation Boundary
+# 12. LLM Response Validation Boundary
 
 The implementation deliberately avoids broad semantic string-matching rules that would attempt to decide whether an arbitrary narrative is "correct".
 
-The validation boundary is instead split into:
+The validation boundary is split into:
 
-1. **Deterministic structured status protection** — status is owned by application logic.
-2. **Prompt contract** — the model receives explicit grounding and narrative constraints.
-3. **Optional indicator grounding validation** — required deterministic numerical evidence must be present when strict mode is enabled.
-4. **Fallback** — a failed grounding check produces a deterministic report.
+1. **Structural input validation** — malformed positions are rejected before assessment.
+2. **Deterministic structured status protection** — status is owned by application logic.
+3. **Prompt contract** — the model receives explicit grounding and narrative constraints.
+4. **Optional indicator grounding validation** — required deterministic numerical evidence must be present when strict mode is enabled.
+5. **Fallback** — a failed grounding check produces a deterministic report.
 
 This provides a controlled compromise between safety, testability and natural-language flexibility.
 
 ---
 
-# 12. Fallback and Resilience Validation
+# 13. Fallback and Resilience Validation
 
-The reporting agent supports a primary generator and deterministic fallback:
-
-```text
-                 ReportingAgent
-                       │
-              Primary Generator
-                       │
-                ┌──────┴──────┐
-                │             │
-              Success       Failure
-                │             │
-                ▼             ▼
-             Report      Deterministic
-                           Fallback
-                              │
-                              ▼
-                            Report
-```
+The reporting agent supports a primary generator and deterministic fallback.
 
 Tests cover:
 
@@ -381,7 +393,7 @@ The key resilience property is:
 
 ---
 
-# 13. LLM Provider Abstraction
+# 14. LLM Provider Abstraction
 
 LLM access is abstracted behind `LLMClient` with provider-specific implementations such as Gemini and Ollama and a mock implementation for tests.
 
@@ -393,16 +405,16 @@ LLM access is abstracted behind `LLMClient` with provider-specific implementatio
       Gemini      Ollama       Mock
 ```
 
-Provider-specific failures are handled by the reporting layer and can activate deterministic fallback.
-
 ---
 
-# 14. Workflow and Orchestration Validation
+# 15. Workflow and Orchestration Validation
 
 The complete workflow is:
 
 ```text
 CreditPosition
+      ↓
+Validation
       ↓
 AssessmentService
       ↓
@@ -435,7 +447,7 @@ Terminal reporting failure is also tested: if both primary and fallback generato
 
 ---
 
-# 15. Execution Metadata Validation
+# 16. Execution Metadata Validation
 
 `ExecutionMetadata` is immutable provenance for successful workflow executions.
 
@@ -454,7 +466,7 @@ The metadata is diagnostic information and does not participate in assessment-st
 
 ---
 
-# 16. Presentation Validation Boundary
+# 17. Presentation Validation Boundary
 
 The Streamlit UI is intentionally downstream of the decision engine.
 
@@ -462,8 +474,6 @@ The current Results view is validated as a presentation hierarchy:
 
 ```text
 Executive Credit Assessment
-          ↓
-Assessment Overview
           ↓
 Risk Indicator Dashboard
           ↓
@@ -473,7 +483,6 @@ Audit Trail & Methodology
 The presentation layer consumes structured workflow objects and renders:
 
 - Executive Credit Assessment;
-- concise assessment KPIs and context;
 - graphical Decision Path;
 - rule-outcome distribution;
 - severity profile;
@@ -485,13 +494,11 @@ The presentation layer consumes structured workflow objects and renders:
 
 The Risk Indicator Dashboard is the single detailed rule-evidence surface. The Audit Trail contains broader workflow and traceability information.
 
-All visualizations are presentation-only: the UI does not recalculate thresholds, severity or assessment status. It reads deterministic `RuleResult` and assessment outputs produced by the core application.
-
-Legacy overlapping evidence views are intentionally not part of the current presentation boundary. The UI avoids duplicating the same rule evidence across multiple independent components.
+All visualizations are presentation-only: the UI does not recalculate thresholds, severity or assessment status.
 
 ---
 
-# 17. CI Quality Gates
+# 18. CI Quality Gates
 
 The GitHub Actions workflow runs on Python **3.13 and 3.14** and enforces:
 
@@ -509,16 +516,19 @@ The pytest command enforces a minimum coverage of **95% for `src`**.
 
 The current CI workflow is configured for pushes to `main` and pull requests targeting `main`.
 
+The latest validation changes are therefore intended to be protected by the same automated quality gates as the rest of the deterministic core.
+
 ---
 
-# 18. Validation Matrix
+# 19. Validation Matrix
 
 | Area | Validation mechanism | Expected property |
 |---|---|---|
+| Input validation | Validator unit tests | Invalid structural input is rejected before assessment |
 | Rule evaluation | Unit tests | Deterministic `RuleResult` |
 | Thresholds | Rule tests | Configured thresholds are applied correctly |
 | Severity | Severity-policy tests | Direction and thresholds are respected |
-| Non-evaluable inputs | Rule/service tests | `NOT_EVALUABLE` is handled explicitly |
+| Non-evaluable inputs | Rule/service/status tests | `NOT_EVALUABLE` is handled explicitly |
 | Configuration | Config tests | Invalid configuration is rejected |
 | Rule registry | Registry tests | Correct implementation is discovered |
 | Assessment service | Unit/integration tests | Results, findings and status are composed correctly |
@@ -537,13 +547,15 @@ The current CI workflow is configured for pushes to `main` and pull requests tar
 
 ---
 
-# 19. Testing Philosophy
+# 20. Testing Philosophy
 
 The project uses tests not only to verify implementation details but also to protect architectural boundaries.
 
 The most important contracts are therefore:
 
 ```text
+Valid structural input → deterministic assessment
+
 Deterministic rules → deterministic assessment
 
 Deterministic assessment → controlled analysis
