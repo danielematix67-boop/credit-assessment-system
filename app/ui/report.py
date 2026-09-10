@@ -70,8 +70,6 @@ def render_execution_metadata(result: Any) -> None:
 def render_report_tab(
     result: Any,
     selected_reporting_mode: str,
-    report_badge_kind: str,
-    report_badge_label: str,
     configured_model: str | None,
 ) -> None:
     """Render only the executive narrative; detailed evidence lives in dedicated UI sections."""
