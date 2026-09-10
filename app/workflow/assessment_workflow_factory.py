@@ -2,6 +2,7 @@ from app.config import (
     get_gemini_api_key,
     get_ollama_configuration,
 )
+from src.agents.analysis.case_analysis_agent import CaseAnalysisAgent
 from src.agents.analysis.analysis_agent import AnalysisAgent
 from src.agents.reporting.deterministic_report_generator import (
     DeterministicReportGenerator,
@@ -33,6 +34,7 @@ def create_workflow(
     assessment_service = create_default_assessment_service()
     credit_case_service = CreditAssessmentCaseService(assessment_service)
     analysis_agent = AnalysisAgent()
+    case_analysis_agent = CaseAnalysisAgent()
     deterministic_report_generator = DeterministicReportGenerator()
 
     if reporting_mode == "Deterministic":
@@ -80,4 +82,5 @@ def create_workflow(
         reporting_agent=reporting_agent,
         reporting_mode=reporting_mode,
         credit_case_service=credit_case_service,
+        case_analysis_agent=case_analysis_agent,
     )
