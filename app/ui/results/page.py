@@ -3,6 +3,7 @@ from typing import Any
 import streamlit as st
 
 from app.ui.report import render_report_tab
+from app.ui.results.case_overview import render_credit_analysis_case
 from app.ui.results.dashboard import render_risk_indicator_dashboard
 from app.ui.results.helpers import get_rule_results, rule_status
 
@@ -24,7 +25,6 @@ def _apply_results_styles() -> None:
             margin: 0 0 1.35rem 0;
             background: linear-gradient(90deg, transparent, rgba(128,128,128,.28), transparent);
         }
-
         .assessment-hero {
             position: relative;
             overflow: hidden;
@@ -35,7 +35,6 @@ def _apply_results_styles() -> None:
             background: linear-gradient(135deg, rgba(128,128,128,.045), rgba(128,128,128,.015));
             box-shadow: 0 8px 26px rgba(0,0,0,.035);
         }
-
         .assessment-hero::before {
             content: "";
             position: absolute;
@@ -43,14 +42,12 @@ def _apply_results_styles() -> None:
             width: 4px;
             background: var(--det-color, #2563eb);
         }
-
         .assessment-hero-top {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
             gap: 1rem;
         }
-
         .assessment-kicker {
             color: rgba(128,128,128,.95);
             font-size: .72rem;
@@ -58,7 +55,6 @@ def _apply_results_styles() -> None:
             letter-spacing: .10em;
             text-transform: uppercase;
         }
-
         .assessment-title {
             margin-top: .18rem;
             font-size: 1.55rem;
@@ -66,7 +62,6 @@ def _apply_results_styles() -> None:
             letter-spacing: -.025em;
             line-height: 1.2;
         }
-
         .assessment-status {
             display: inline-flex;
             align-items: center;
@@ -79,7 +74,6 @@ def _apply_results_styles() -> None:
             letter-spacing: .04em;
             white-space: nowrap;
         }
-
         .assessment-status::before {
             content: "";
             width: .48rem;
@@ -87,45 +81,22 @@ def _apply_results_styles() -> None:
             border-radius: 50%;
             background: currentColor;
         }
-
-        .assessment-status.normal {
-            color: #15803d;
-            background: rgba(21,128,61,.08);
-            border-color: rgba(21,128,61,.20);
-        }
-
-        .assessment-status.attention {
-            color: #b45309;
-            background: rgba(180,83,9,.09);
-            border-color: rgba(180,83,9,.22);
-        }
-
-        .assessment-status.critical {
-            color: #b91c1c;
-            background: rgba(185,28,28,.08);
-            border-color: rgba(185,28,28,.20);
-        }
-
-        .assessment-status.neutral {
-            color: #6b7280;
-            background: rgba(107,114,128,.08);
-            border-color: rgba(107,114,128,.18);
-        }
-
+        .assessment-status.normal { color: #15803d; background: rgba(21,128,61,.08); border-color: rgba(21,128,61,.20); }
+        .assessment-status.attention { color: #b45309; background: rgba(180,83,9,.09); border-color: rgba(180,83,9,.22); }
+        .assessment-status.critical { color: #b91c1c; background: rgba(185,28,28,.08); border-color: rgba(185,28,28,.20); }
+        .assessment-status.neutral { color: #6b7280; background: rgba(107,114,128,.08); border-color: rgba(107,114,128,.18); }
         .assessment-subtitle {
             margin-top: .7rem;
             color: rgba(128,128,128,.95);
             font-size: .86rem;
             line-height: 1.5;
         }
-
         .results-kpi-grid {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: .7rem;
             margin: .8rem 0 1.25rem 0;
         }
-
         .results-kpi {
             min-width: 0;
             padding: .85rem .95rem;
@@ -133,7 +104,6 @@ def _apply_results_styles() -> None:
             border-radius: .8rem;
             background: rgba(128,128,128,.025);
         }
-
         .results-kpi-label {
             color: rgba(128,128,128,.90);
             font-size: .70rem;
@@ -141,34 +111,13 @@ def _apply_results_styles() -> None:
             letter-spacing: .025em;
             text-transform: uppercase;
         }
-
-        .results-kpi-value {
-            margin-top: .2rem;
-            font-size: 1.15rem;
-            font-weight: 740;
-            line-height: 1.2;
-        }
-
-        .results-kpi-value.risk {
-            color: #b91c1c;
-        }
-
-        .results-kpi-value.warning {
-            color: #b45309;
-        }
-
-        .results-kpi-value.good {
-            color: #15803d;
-        }
-
+        .results-kpi-value { margin-top: .2rem; font-size: 1.15rem; font-weight: 740; line-height: 1.2; }
+        .results-kpi-value.risk { color: #b91c1c; }
+        .results-kpi-value.warning { color: #b45309; }
+        .results-kpi-value.good { color: #15803d; }
         @media (max-width: 760px) {
-            .assessment-hero-top {
-                flex-direction: column;
-            }
-
-            .results-kpi-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
+            .assessment-hero-top { flex-direction: column; }
+            .results-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
         </style>
         """,
@@ -202,40 +151,24 @@ def render_results_header(result: Any) -> None:
             </div>
         </div>
         <div class="results-kpi-grid">
-            <div class="results-kpi">
-                <div class="results-kpi-label">Rules evaluated</div>
-                <div class="results-kpi-value">{len(rules)}</div>
-            </div>
-            <div class="results-kpi">
-                <div class="results-kpi-label">Triggered rules</div>
-                <div class="results-kpi-value {'risk' if triggered else 'good'}">{triggered}</div>
-            </div>
-            <div class="results-kpi">
-                <div class="results-kpi-label">Not evaluable</div>
-                <div class="results-kpi-value {'warning' if not_evaluable else 'good'}">{not_evaluable}</div>
-            </div>
-            <div class="results-kpi">
-                <div class="results-kpi-label">Decision source</div>
-                <div class="results-kpi-value">Rule Engine</div>
-            </div>
+            <div class="results-kpi"><div class="results-kpi-label">Rules evaluated</div><div class="results-kpi-value">{len(rules)}</div></div>
+            <div class="results-kpi"><div class="results-kpi-label">Triggered rules</div><div class="results-kpi-value {'risk' if triggered else 'good'}">{triggered}</div></div>
+            <div class="results-kpi"><div class="results-kpi-label">Not evaluable</div><div class="results-kpi-value {'warning' if not_evaluable else 'good'}">{not_evaluable}</div></div>
+            <div class="results-kpi"><div class="results-kpi-label">Decision source</div><div class="results-kpi-value">Rule Engine</div></div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-def render_results(
-    result: Any,
-    assessment_position: Any,
-    selected_reporting_mode: str,
-) -> None:
+def render_results(result: Any, assessment_position: Any, selected_reporting_mode: str) -> None:
     if result is None:
         return
 
     _apply_results_styles()
     st.markdown('<div class="results-divider"></div>', unsafe_allow_html=True)
     render_results_header(result)
-
+    render_credit_analysis_case(result)
     render_report_tab(
         result=result,
         selected_reporting_mode=selected_reporting_mode,
