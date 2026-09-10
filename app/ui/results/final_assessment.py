@@ -9,7 +9,7 @@ def _status_value(status: Any) -> str:
 
 
 def render_final_assessment(credit_case: Any) -> None:
-    """Render the deterministic final assessment as an analyst conclusion."""
+    """Render the deterministic final assessment as a compact analyst conclusion."""
     final_assessment = getattr(credit_case, "final_assessment", None)
     if final_assessment is None:
         return
@@ -22,8 +22,7 @@ def render_final_assessment(credit_case: Any) -> None:
 
     st.markdown("### Final Assessment")
     st.caption(
-        "The final assessment consolidates the deterministic macro-area outcomes. "
-        "It does not introduce a weighted score or an LLM-generated decision."
+        "Deterministic consolidation of macro-area outcomes; no weighted score or LLM decision is introduced."
     )
 
     col1, col2, col3 = st.columns(3)
@@ -36,11 +35,10 @@ def render_final_assessment(credit_case: Any) -> None:
 
     rows = []
     for section in sections:
-        status = _status_value(getattr(section, "status", None))
         rows.append(
             {
                 "Analysis area": getattr(section, "name", "Unknown"),
-                "Status": status,
+                "Status": _status_value(getattr(section, "status", None)),
                 "Evidence": len(getattr(section, "evidence", []) or []),
                 "Findings": len(getattr(section, "findings", []) or []),
             }
@@ -48,28 +46,7 @@ def render_final_assessment(credit_case: Any) -> None:
 
     frame = pd.DataFrame(rows)
     if not frame.empty:
-        st.markdown("**Macro-area conclusion**")
         st.dataframe(frame, use_container_width=True, hide_index=True)
-
-        counts = frame["Status"].value_counts().reindex(
-            ["NORMAL", "ATTENTION", "CRITICAL", "NOT_EVALUABLE"], fill_value=0
-        )
-        st.bar_chart(counts, horizontal=True)
-
-    if risk_sections:
-        st.markdown("**Areas requiring attention**")
-        for section_name in risk_sections:
-            section = next(
-                (item for item in sections if getattr(item, "name", "") == section_name),
-                None,
-            )
-            status = _status_value(getattr(section, "status", None)) if section else "UNKNOWN"
-            st.warning(f"**{section_name}** — {status}")
-
-    if normal_sections:
-        with st.expander("Normal areas", expanded=False):
-            for section_name in normal_sections:
-                st.write(f"• {section_name}")
 
     if limitations:
         with st.expander("Assessment limitations", expanded=False):
