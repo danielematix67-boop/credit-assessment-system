@@ -5,6 +5,7 @@ from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.customer_profile_data import CustomerProfileData
 from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.models.position import CreditPosition
+from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 from src.services.assessment_service import AssessmentService
 from src.services.behavioural_assessment_service import BehaviouralAssessmentService
@@ -111,12 +112,22 @@ class CreditAssessmentCaseService:
                 result.rule_id, "Other Financial Indicators"
             )
             dimensions.setdefault(dimension, []).append(result)
+
+        all_not_evaluable = bool(assessment.rule_results) and all(
+            result.status == RuleStatus.NOT_EVALUABLE
+            for result in assessment.rule_results
+        )
+        status = SectionStatus.NORMAL if all_not_evaluable else SectionStatus(assessment.status.value)
+        limitations = [
+            "Financial indicators are not available for this case."
+        ] if all_not_evaluable else []
+
         return AssessmentSection(
             name="Financial Analysis",
-            status=SectionStatus(assessment.status.value),
+            status=status,
             findings=assessment.findings,
             evidence=assessment.rule_results,
-            limitations=[],
+            limitations=limitations,
             dimensions=dimensions,
         )
 
