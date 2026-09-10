@@ -8,6 +8,7 @@ from app.ui.results.dashboard import render_risk_indicator_dashboard
 from app.ui.results.executive_synthesis import render_executive_synthesis
 from app.ui.results.final_assessment import render_final_assessment
 from app.ui.results.helpers import get_rule_results, rule_status
+from app.ui.results.scenario_comparison import render_scenario_comparison
 
 
 def _status_class(status: str) -> str:
@@ -228,5 +229,9 @@ def render_results(
         render_credit_analysis_case(case_result)
         render_final_assessment(credit_case)
         render_executive_synthesis(result)
+
+        render_scenario_comparison(
+            st.session_state.get("assessment_scenario")
+        )
 
     render_risk_indicator_dashboard(result)
