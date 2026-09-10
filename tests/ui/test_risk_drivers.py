@@ -51,14 +51,14 @@ def test_build_risk_driver_frame_shows_triggered_rules_across_sections() -> None
         "Status",
         "Severity",
     ]
-    assert list(frame["Rule"]) == ["R001", "DS001"]
+    assert list(frame["Rule"]) == ["DS001", "R001"]
     assert list(frame["Macro-area"]) == [
-        "Financial Analysis",
         "Debt Sustainability",
+        "Financial Analysis",
     ]
     assert list(frame["Status"]) == ["TRIGGERED", "TRIGGERED"]
-    assert list(frame["Value"]) == [-0.20, 0.80]
-    assert list(frame["Threshold"]) == [-0.10, 1.00]
+    assert list(frame["Value"]) == [0.80, -0.20]
+    assert list(frame["Threshold"]) == [1.00, -0.10]
 
 
 def test_build_risk_driver_frame_returns_empty_for_no_triggered_rules() -> None:
