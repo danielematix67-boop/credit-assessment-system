@@ -64,9 +64,6 @@ def render_scenario_comparison(current_scenario: str | None) -> None:
     chart_frame = frame.set_index("Scenario")[[indicator]].copy()
     if indicator in {"Revenue growth", "EBITDA margin"}:
         chart_frame[indicator] = chart_frame[indicator] * 100
-        y_label = f"{indicator} (%)"
-    else:
-        y_label = indicator
 
     st.bar_chart(chart_frame, horizontal=True)
 
