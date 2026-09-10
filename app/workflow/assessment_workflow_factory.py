@@ -2,26 +2,16 @@ from app.config import (
     get_gemini_api_key,
     get_ollama_configuration,
 )
-from src.agents.analysis.case_analysis_agent import CaseAnalysisAgent
 from src.agents.analysis.analysis_agent import AnalysisAgent
-from src.agents.reporting.deterministic_report_generator import (
-    DeterministicReportGenerator,
-)
-from src.agents.reporting.llm_report_generator import (
-    LLMReportGenerator,
-)
-from src.agents.reporting.reporting_agent import (
-    ReportingAgent,
-)
-from src.agents.workflow.assessment_workflow import (
-    AssessmentWorkflow,
-)
+from src.agents.analysis.case_analysis_agent import CaseAnalysisAgent
+from src.agents.reporting.deterministic_report_generator import DeterministicReportGenerator
+from src.agents.reporting.llm_report_generator import LLMReportGenerator
+from src.agents.reporting.reporting_agent import ReportingAgent
+from src.agents.workflow.assessment_workflow import AssessmentWorkflow
 from src.llm.gemini_client import GeminiClient
 from src.llm.ollama_client import OllamaClient
 from src.services.credit_assessment_case_service import CreditAssessmentCaseService
-from src.services.service_factory import (
-    create_default_assessment_service,
-)
+from src.services.service_factory import create_default_assessment_service
 
 
 def create_workflow(
