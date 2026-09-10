@@ -1,6 +1,13 @@
 import streamlit as st
 
-from app.ui.design_tokens import FALLBACK_BG, FALLBACK_COLOR
+from app.ui.design_tokens import (
+    FALLBACK_BG,
+    FALLBACK_COLOR,
+    MUTED_BG,
+    MUTED_COLOR,
+    NORMAL_BG,
+    NORMAL_COLOR,
+)
 
 # ============================================================
 # Shared UI Components
@@ -31,11 +38,11 @@ def render_assessment_status(status: str) -> None:
     palette = {
         "CRITICAL": (FALLBACK_COLOR, FALLBACK_BG),
         "ATTENTION": (FALLBACK_COLOR, FALLBACK_BG),
-        "NORMAL": ("#166534", "rgba(22, 101, 52, 0.10)"),
+        "NORMAL": (NORMAL_COLOR, NORMAL_BG),
     }
     foreground, background = palette.get(
         normalized,
-        ("#4b5563", "rgba(107, 114, 128, 0.10)"),
+        (MUTED_COLOR, MUTED_BG),
     )
     label = normalized.replace("_", " ").title()
 
