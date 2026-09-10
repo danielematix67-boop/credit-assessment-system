@@ -2,11 +2,10 @@
 
 from typing import Any
 
-from app.demo_scenarios import DEMO_SCENARIOS
-
 import pandas as pd
 import streamlit as st
 
+from app.demo_scenarios import DEMO_SCENARIOS
 
 INDICATORS: dict[str, str] = {
     "Revenue growth": "revenue_growth",
