@@ -4,6 +4,7 @@ import streamlit as st
 
 from app.ui.report import render_report_tab
 from app.ui.results.dashboard import render_risk_indicator_dashboard
+from app.ui.results.helpers import get_rule_results, rule_status
 
 
 def _status_class(status: str) -> str:
@@ -180,9 +181,9 @@ def render_results_header(result: Any) -> None:
     assessment = getattr(result, "assessment", None)
     status_obj = getattr(assessment, "status", None)
     status = str(getattr(status_obj, "value", status_obj or "Unknown"))
-    rules = _get_rule_results(result)
-    triggered = sum(_rule_status(rule) == "TRIGGERED" for rule in rules)
-    not_evaluable = sum(_rule_status(rule) == "NOT_EVALUABLE" for rule in rules)
+    rules = get_rule_results(result)
+    triggered = sum(rule_status(rule) == "TRIGGERED" for rule in rules)
+    not_evaluable = sum(rule_status(rule) == "NOT_EVALUABLE" for rule in rules)
     status_class = _status_class(status)
 
     st.markdown(
@@ -221,17 +222,6 @@ def render_results_header(result: Any) -> None:
         """,
         unsafe_allow_html=True,
     )
-
-
-def _get_rule_results(result: Any) -> list[Any]:
-    """Read rule results without duplicating dashboard logic."""
-    assessment = getattr(result, "assessment", None)
-    return list(getattr(assessment, "rule_results", None) or [])
-
-
-def _rule_status(rule: Any) -> str:
-    status = getattr(rule, "status", None)
-    return str(getattr(status, "value", status or "")).upper()
 
 
 def render_results(
