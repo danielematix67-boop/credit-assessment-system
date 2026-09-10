@@ -61,7 +61,8 @@ def render_risk_driver_overview(credit_case: Any) -> None:
     st.markdown("### Risk Driver Overview")
     st.caption(
         "Indicators shown here are deterministic rules that triggered a risk finding. "
-        "The view reports the observed value, configured threshold and severity without introducing an additional score."
+        "The view reports the observed value, configured threshold and severity "
+        "without introducing an additional score."
     )
 
     st.dataframe(frame, use_container_width=True, hide_index=True)
