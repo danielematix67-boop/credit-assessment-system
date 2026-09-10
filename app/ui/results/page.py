@@ -8,21 +8,6 @@ from app.ui.results.dashboard import render_risk_indicator_dashboard
 from app.ui.results.helpers import get_rule_results, rule_status
 
 
-def resolve_report_badge(
-    selected_reporting_mode: str,
-    generator_used: str | None,
-    configured_model: str | None = None,
-) -> tuple[str, str]:
-    if generator_used == "FALLBACK":
-        return "fallback", "Deterministic fallback"
-    if generator_used == "PRIMARY":
-        if selected_reporting_mode == "Gemini + Fallback":
-            return "ai", "AI-generated — Gemini"
-        if selected_reporting_mode == "Ollama + Fallback":
-            return "ai", "AI-generated — Local LLM"
-    return "det", "Deterministic — Rule Engine"
-
-
 def _status_class(status: str) -> str:
     return {
         "NORMAL": "normal",
@@ -297,17 +282,9 @@ def render_results(
     st.markdown('<div class="results-divider"></div>', unsafe_allow_html=True)
     render_results_header(result)
 
-    generator_used = getattr(result, "report_generator_used", None)
-    report_badge_kind, report_badge_label = resolve_report_badge(
-        selected_reporting_mode,
-        generator_used,
-    )
-
     render_report_tab(
         result=result,
         selected_reporting_mode=selected_reporting_mode,
-        report_badge_kind=report_badge_kind,
-        report_badge_label=report_badge_label,
         configured_model=None,
     )
     render_assessment_overview(result)
