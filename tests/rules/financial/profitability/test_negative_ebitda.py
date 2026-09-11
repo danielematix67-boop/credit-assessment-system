@@ -3,9 +3,7 @@ from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_direction import SeverityDirection
 from src.rules.base.status import RuleStatus
-from src.rules.financial.profitability.negative_ebitda import (
-    NegativeEbitdaRule,
-)
+from src.rules.financial.profitability.negative_ebitda import NegativeEbitdaRule
 
 R002_CONFIG = RuleConfig(
     rule_id="R002",
@@ -14,6 +12,8 @@ R002_CONFIG = RuleConfig(
     threshold=0.0,
     severity=RuleSeverity.HIGH,
     severity_direction=SeverityDirection.LOWER_IS_WORSE,
+    input_field="ebitda",
+    trigger_operator="LT",
 )
 
 
@@ -36,7 +36,6 @@ def assert_result_matches_config(
 
 def test_negative_ebitda_rule_triggered():
     ebitda = -50_000
-
     position = CreditPosition(
         position_id="POS001",
         revenue_growth=-0.15,
@@ -46,9 +45,7 @@ def test_negative_ebitda_rule_triggered():
         nfp_to_ebitda=3.5,
         interest_expense=40_000,
     )
-
     result = create_rule().evaluate(position)
-
     assert_result_matches_config(result, R002_CONFIG)
     assert result.status == RuleStatus.TRIGGERED
     assert result.value == ebitda
@@ -56,7 +53,6 @@ def test_negative_ebitda_rule_triggered():
 
 def test_negative_ebitda_rule_not_triggered():
     ebitda = 250_000
-
     position = CreditPosition(
         position_id="POS002",
         revenue_growth=0.05,
@@ -66,9 +62,7 @@ def test_negative_ebitda_rule_not_triggered():
         nfp_to_ebitda=3.5,
         interest_expense=40_000,
     )
-
     result = create_rule().evaluate(position)
-
     assert_result_matches_config(result, R002_CONFIG)
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == ebitda
@@ -84,12 +78,11 @@ def test_negative_ebitda_rule_not_evaluable_when_none():
         nfp_to_ebitda=3.5,
         interest_expense=40_000,
     )
-
     result = create_rule().evaluate(position)
-
     assert_result_matches_config(result, R002_CONFIG)
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
+    assert result.severity == R002_CONFIG.severity
 
 
 def test_negative_ebitda_rule_uses_configured_threshold():
@@ -100,10 +93,10 @@ def test_negative_ebitda_rule_uses_configured_threshold():
         threshold=-100_000.0,
         severity=RuleSeverity.MEDIUM,
         severity_direction=SeverityDirection.LOWER_IS_WORSE,
+        input_field="ebitda",
+        trigger_operator="LT",
     )
-
     ebitda = -50_000
-
     position = CreditPosition(
         position_id="POS004",
         revenue_growth=0.05,
@@ -113,9 +106,7 @@ def test_negative_ebitda_rule_uses_configured_threshold():
         nfp_to_ebitda=3.5,
         interest_expense=40_000,
     )
-
     result = create_rule(config).evaluate(position)
-
     assert_result_matches_config(result, config)
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == ebitda
