@@ -4,6 +4,7 @@ rules:
     indicator: Active EWS
     category: customer_profile
     input_field: active_ews
+    trigger_operator: GT
     threshold: 1
     severity: HIGH
     severity_direction: HIGHER_IS_WORSE
@@ -15,6 +16,7 @@ rules:
     indicator: Previous Restructuring
     category: customer_profile
     input_field: previous_restructuring
+    trigger_operator: GT
     threshold: 1
     severity: HIGH
     severity_direction: HIGHER_IS_WORSE
@@ -26,6 +28,7 @@ rules:
     indicator: Business history (years)
     category: customer_profile
     input_field: business_history_years
+    trigger_operator: LTE
     threshold: 5
     severity: MEDIUM
     severity_direction: LOWER_IS_WORSE
