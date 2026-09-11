@@ -7,7 +7,6 @@ from src.agents.base.agent import Agent
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_workflow import AssessmentWorkflowResult
 from src.models.behavioural_data import BehaviouralData
-from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.customer_profile_data import CustomerProfileData
 from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.models.execution_metadata import ExecutionMetadata
