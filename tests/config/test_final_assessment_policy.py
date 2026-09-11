@@ -1,5 +1,6 @@
-import pytest
 from pathlib import Path
+
+import pytest
 
 from src.config.final_assessment_policy import FinalAssessmentPolicy
 from src.models.assessment_section import SectionStatus
