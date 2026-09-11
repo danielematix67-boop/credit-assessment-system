@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, ClassVar
+from typing import Callable, ClassVar
 
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
