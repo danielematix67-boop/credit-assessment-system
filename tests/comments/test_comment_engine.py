@@ -1,14 +1,19 @@
+from pathlib import Path
+
 import pytest
 
 from src.comments.comment_engine import CommentEngine
-from src.comments.templates import COMMENTS
+from src.config.rule_config_loader import RuleConfigLoader
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
-# ============================================================
-# Fixtures
-# ============================================================
+CONFIG_PATHS = (
+    Path("config/customer_profile_rules.yaml"),
+    Path("config/financial_analysis_rules.yaml"),
+    Path("config/behavioural_analysis_rules.yaml"),
+    Path("config/debt_sustainability_rules.yaml"),
+)
 
 
 @pytest.fixture
@@ -17,30 +22,22 @@ def comment_engine():
 
 
 @pytest.fixture
-def supported_rule_ids():
-    """
-    Return all rule IDs for which a comment template exists.
-    """
-    assert COMMENTS, "No comment templates are configured."
-
-    return tuple(COMMENTS)
-
-
-# ============================================================
-# Helpers
-# ============================================================
+def configured_rules():
+    loader = RuleConfigLoader()
+    return [config for path in CONFIG_PATHS for config in loader.load(path)]
 
 
 def make_rule_result(
     *,
-    rule_id,
-    status=RuleStatus.TRIGGERED,
-    value=1.0,
-    threshold=0.0,
-    rule_name="Test rule",
-    category="test",
-    severity=RuleSeverity.MEDIUM,
-):
+    rule_id: str = "TEST_RULE",
+    comment_template: str = "Configured comment for value {value:.1f}.",
+    status: RuleStatus = RuleStatus.TRIGGERED,
+    value: float | None = 123.456,
+    threshold: float = 0.0,
+    rule_name: str = "Test rule",
+    category: str = "test",
+    severity: RuleSeverity = RuleSeverity.MEDIUM,
+) -> RuleResult:
     return RuleResult(
         rule_id=rule_id,
         rule_name=rule_name,
@@ -49,233 +46,98 @@ def make_rule_result(
         value=value,
         threshold=threshold,
         severity=severity,
+        comment_template=comment_template,
     )
 
 
-def get_unsupported_rule_id():
-    """
-    Return an ID that is guaranteed not to have a configured
-    comment template.
-    """
-    rule_id = "__UNSUPPORTED_RULE__"
-
-    while rule_id in COMMENTS:
-        rule_id = f"_{rule_id}_"
-
-    return rule_id
-
-
-# ============================================================
-# Contract
-# ============================================================
-
-
-@pytest.mark.parametrize(
-    "rule_id",
-    tuple(COMMENTS),
-)
-def test_comment_engine_generates_comment_for_supported_rule(
-    comment_engine,
-    rule_id,
-):
+def test_comment_engine_generates_comment_from_rule_result_template(comment_engine):
     result = make_rule_result(
-        rule_id=rule_id,
+        comment_template="Revenue growth is {value:.1%}.",
+        value=-0.125,
     )
 
     comment = comment_engine.generate(result)
 
     assert comment is not None
     assert comment.rule_id == result.rule_id
-    assert comment.text
+    assert comment.text == "Revenue growth is -12.5%."
 
 
-def test_comment_engine_returns_none_for_unsupported_rule(
-    comment_engine,
-):
-    result = make_rule_result(
-        rule_id=get_unsupported_rule_id(),
-    )
-
-    comment = comment_engine.generate(result)
-
-    assert comment is None
-
-
-# ============================================================
-# Rule status
-# ============================================================
-
-
-@pytest.mark.parametrize(
-    "status",
-    tuple(RuleStatus),
-)
+@pytest.mark.parametrize("status", list(RuleStatus))
 def test_comment_engine_only_generates_comments_for_triggered_results(
     comment_engine,
-    supported_rule_ids,
     status,
 ):
-    rule_id = supported_rule_ids[0]
-
-    result = make_rule_result(
-        rule_id=rule_id,
-        status=status,
-    )
+    result = make_rule_result(status=status)
 
     comment = comment_engine.generate(result)
 
     if status == RuleStatus.TRIGGERED:
         assert comment is not None
-        assert comment.rule_id == result.rule_id
-        assert comment.text
     else:
         assert comment is None
 
 
-# ============================================================
-# Template coverage
-# ============================================================
+def test_all_configured_rules_have_deterministic_comment_templates(configured_rules):
+    assert configured_rules
+
+    for config in configured_rules:
+        assert config.comment_template, f"Missing comment_template for {config.rule_id}"
 
 
-def test_comment_engine_supports_all_configured_templates(
+def test_comment_engine_renders_all_configured_rule_templates(
     comment_engine,
-    supported_rule_ids,
+    configured_rules,
 ):
-    for rule_id in supported_rule_ids:
+    for config in configured_rules:
         result = make_rule_result(
-            rule_id=rule_id,
+            rule_id=config.rule_id,
+            comment_template=config.comment_template,
+            value=123.456,
+            threshold=config.threshold,
+            rule_name=config.rule_name,
+            category=config.category,
+            severity=config.severity,
         )
 
         comment = comment_engine.generate(result)
 
         assert comment is not None
-        assert comment.rule_id == rule_id
-        assert comment.text
+        assert comment.rule_id == config.rule_id
+        assert comment.text == config.comment_template.format(value=123.456)
 
 
-# ============================================================
-# Template rendering
-# ============================================================
+def test_comment_engine_returns_none_when_configured_template_is_missing(comment_engine):
+    result = make_rule_result(comment_template="")
+
+    assert comment_engine.generate(result) is None
 
 
-@pytest.mark.parametrize(
-    "rule_id, template",
-    tuple(COMMENTS.items()),
-)
-def test_comment_engine_renders_configured_template(
-    comment_engine,
-    rule_id,
-    template,
-):
-    value = 123.456
-
+def test_comment_engine_does_not_use_rule_id_as_a_second_template_source(comment_engine):
     result = make_rule_result(
-        rule_id=rule_id,
-        value=value,
+        rule_id="R001",
+        comment_template="Authoritative configured text: {value:.0f}.",
+        value=42.0,
     )
 
     comment = comment_engine.generate(result)
 
     assert comment is not None
-
-    expected_text = template.format(
-        value=value,
-    )
-
-    assert comment.text == expected_text
+    assert comment.text == "Authoritative configured text: 42."
 
 
-# ============================================================
-# RuleResult preservation
-# ============================================================
-
-
-@pytest.mark.parametrize(
-    "rule_id",
-    tuple(COMMENTS),
-)
-def test_comment_engine_does_not_modify_rule_result(
-    comment_engine,
-    rule_id,
-):
+def test_comment_engine_does_not_modify_rule_result(comment_engine):
     result = make_rule_result(
-        rule_id=rule_id,
+        rule_id="R001",
         value=123.0,
         threshold=100.0,
         rule_name="Arbitrary rule",
         category="arbitrary_category",
         severity=RuleSeverity.HIGH,
     )
-
-    original_values = (
-        result.rule_id,
-        result.rule_name,
-        result.category,
-        result.status,
-        result.value,
-        result.threshold,
-        result.severity,
-    )
-
-    original_result = result
+    original = result
 
     comment_engine.generate(result)
 
-    assert result is original_result
-
-    assert (
-        result.rule_id,
-        result.rule_name,
-        result.category,
-        result.status,
-        result.value,
-        result.threshold,
-        result.severity,
-    ) == original_values
-
-
-# ============================================================
-# Metadata independence
-# ============================================================
-
-
-@pytest.mark.parametrize(
-    "rule_id",
-    tuple(COMMENTS),
-)
-def test_comment_engine_uses_rule_id_as_template_key(
-    comment_engine,
-    rule_id,
-):
-    result = make_rule_result(
-        rule_id=rule_id,
-        rule_name="Arbitrary rule name",
-        category="arbitrary_category",
-        severity=RuleSeverity.HIGH,
-    )
-
-    comment = comment_engine.generate(result)
-
-    assert comment is not None
-    assert comment.rule_id == rule_id
-    assert comment.text
-
-
-# ============================================================
-# Missing template handling
-# ============================================================
-
-
-def test_comment_engine_handles_missing_template_gracefully(
-    comment_engine,
-):
-    unsupported_rule_id = get_unsupported_rule_id()
-
-    result = make_rule_result(
-        rule_id=unsupported_rule_id,
-        status=RuleStatus.TRIGGERED,
-    )
-
-    assert result.rule_id not in COMMENTS
-
-    assert comment_engine.generate(result) is None
+    assert result is original
+    assert result.comment_template == "Configured comment for value {value:.1f}."
