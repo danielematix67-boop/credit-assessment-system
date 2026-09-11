@@ -5,13 +5,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from app.ui.results.helpers import (
-    rule_direction,
-    rule_indicator,
-    rule_status,
-    threshold_distance,
-    threshold_relation,
-)
+from app.ui.results.helpers import rule_indicator, rule_status
 
 
 def build_indicator_analysis_frame(section: Any) -> pd.DataFrame:
@@ -23,56 +17,41 @@ def build_indicator_analysis_frame(section: Any) -> pd.DataFrame:
         if value is None or threshold is None:
             continue
 
-        value = float(value)
-        threshold = float(threshold)
-        distance = threshold_distance(value, threshold, rule_direction(rule))
-        relation = threshold_relation(distance)
-
         rows.append(
             {
                 "Rule": getattr(rule, "rule_id", ""),
                 "Indicator": rule_indicator(rule),
-                "Value": value,
-                "Threshold": threshold,
+                "Value": float(value),
+                "Threshold": float(threshold),
                 "Status": rule_status(rule),
-                "Distance": distance,
-                "Relation": relation,
             }
         )
     return pd.DataFrame(rows)
 
 
 def _indicator_frame(section: Any) -> pd.DataFrame:
-    """Build the compact indicator table used by threshold visualizations."""
+    """Build the compact indicator evidence table."""
     frame = build_indicator_analysis_frame(section)
     if frame.empty:
         return frame
     return frame[["Indicator", "Value", "Threshold", "Status", "Rule"]]
 
 
-def _render_area_summary(section: Any, frame: pd.DataFrame, area_label: str) -> None:
-    """Show descriptive coverage and trigger metrics without creating a new score."""
+def _render_area_summary(section: Any, area_label: str) -> None:
+    """Show descriptive evidence coverage without creating a new score."""
     evidence = list(getattr(section, "evidence", []) or [])
     statuses = [rule_status(rule) for rule in evidence]
     triggered = sum(status == "TRIGGERED" for status in statuses)
     evaluable = sum(status != "NOT_EVALUABLE" for status in statuses)
     not_evaluable = len(evidence) - evaluable
 
-    distances = frame["Distance"].dropna() if not frame.empty else pd.Series(dtype=float)
-    worst_distance = float(distances.max()) if not distances.empty else None
-
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     with col1:
         st.metric(f"{area_label} indicators", len(evidence))
     with col2:
         st.metric("Triggered", triggered)
     with col3:
         st.metric("Not evaluable", not_evaluable)
-    with col4:
-        st.metric(
-            "Furthest threshold distance",
-            "—" if worst_distance is None else f"{worst_distance:+.0%}",
-        )
 
     if not evidence:
         st.info(f"No {area_label.lower()} evidence is available for this case.")
@@ -81,53 +60,6 @@ def _render_area_summary(section: Any, frame: pd.DataFrame, area_label: str) -> 
             f"{not_evaluable} of {len(evidence)} {area_label.lower()} indicators are not evaluable "
             "with the available data."
         )
-
-
-def _threshold_distance_frame(section: Any) -> pd.DataFrame:
-    """Build a direction-aware distance from threshold for non-zero thresholds."""
-    frame = build_indicator_analysis_frame(section)
-    if frame.empty:
-        return frame
-    frame = frame.dropna(subset=["Distance"])
-    if frame.empty:
-        return pd.DataFrame()
-    return frame.set_index("Indicator")[["Distance"]].rename(
-        columns={"Distance": "Threshold distance"}
-    )
-
-
-def _render_threshold_distance_chart(section: Any, title: str) -> None:
-    frame = _threshold_distance_frame(section)
-    if frame.empty:
-        return
-    st.markdown(f"**{title}**")
-    st.caption(
-        "0.0 = configured threshold; positive values are on the worse side of the threshold, "
-        "negative values on the better side. Zero-threshold indicators remain in the evidence table."
-    )
-    st.bar_chart(frame, horizontal=True)
-
-
-def _render_risk_signal_ranking(section: Any) -> None:
-    """Rank triggered indicators by normalized distance from their thresholds."""
-    frame = build_indicator_analysis_frame(section)
-    if frame.empty:
-        return
-
-    signals = frame[(frame["Status"] == "TRIGGERED") & frame["Distance"].notna()]
-    if signals.empty:
-        return
-
-    signals = signals.sort_values("Distance", ascending=True).set_index("Indicator")
-    st.markdown("**Triggered risk signals**")
-    st.caption(
-        "Signals are ranked by normalized distance from the configured threshold. "
-        "Positive distance indicates the worse side of the threshold."
-    )
-    st.bar_chart(
-        signals[["Distance"]].rename(columns={"Distance": "Threshold distance"}),
-        horizontal=True,
-    )
 
 
 def _render_financial_dimensions(section: Any) -> None:
@@ -214,40 +146,29 @@ def _render_financial_dimensions(section: Any) -> None:
 
 
 def render_financial_analysis(section: Any) -> None:
-    """Render financial indicators and their deterministic threshold evidence."""
-    frame = build_indicator_analysis_frame(section)
-    _render_area_summary(section, frame, "Financial")
+    """Render financial indicators and their deterministic rule evidence."""
+    _render_area_summary(section, "Financial")
     _render_financial_dimensions(section)
-    _render_risk_signal_ranking(section)
-    _render_threshold_distance_chart(section, "Indicator position vs threshold")
 
+    frame = build_indicator_analysis_frame(section)
     if not frame.empty:
         st.markdown("**Indicator evidence**")
-        display_frame = frame.copy()
-        display_frame["Distance"] = display_frame["Distance"].map(
-            lambda value: "—" if pd.isna(value) else f"{value:+.0%}"
-        )
-        st.dataframe(display_frame, use_container_width=True, hide_index=True)
+        st.dataframe(frame, use_container_width=True, hide_index=True)
 
 
 def render_behavioural_analysis(section: Any) -> None:
-    """Render behavioural indicators against their configured thresholds."""
-    frame = build_indicator_analysis_frame(section)
-    _render_area_summary(section, frame, "Behavioural")
-    _render_threshold_distance_chart(section, "Behavioural indicators vs threshold")
+    """Render behavioural indicators and deterministic rule evidence."""
+    _render_area_summary(section, "Behavioural")
 
+    frame = build_indicator_analysis_frame(section)
     if not frame.empty:
         st.markdown("**Behavioural evidence**")
-        st.dataframe(
-            _indicator_frame(section), use_container_width=True, hide_index=True
-        )
+        st.dataframe(_indicator_frame(section), use_container_width=True, hide_index=True)
 
 
 def render_debt_analysis(section: Any) -> None:
-    """Render debt-service indicators and the deterministic cash-flow buffer."""
-    frame = build_indicator_analysis_frame(section)
-    _render_area_summary(section, frame, "Debt sustainability")
-    _render_threshold_distance_chart(section, "Debt-service indicators vs threshold")
+    """Render debt-service indicators and deterministic cash-flow evidence."""
+    _render_area_summary(section, "Debt sustainability")
 
     buffer_rule = next(
         (rule for rule in section.evidence if getattr(rule, "rule_id", "") == "DS003"),
@@ -257,8 +178,7 @@ def render_debt_analysis(section: Any) -> None:
         value = float(buffer_rule.value)
         st.metric("Cash Flow Debt-Service Buffer", f"{value:,.2f}")
 
+    frame = build_indicator_analysis_frame(section)
     if not frame.empty:
         st.markdown("**Debt sustainability evidence**")
-        st.dataframe(
-            _indicator_frame(section), use_container_width=True, hide_index=True
-        )
+        st.dataframe(_indicator_frame(section), use_container_width=True, hide_index=True)
