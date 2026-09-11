@@ -60,7 +60,7 @@ def test_demo_scenario_builder_produces_complete_inputs() -> None:
     position = build_demo_position(SCENARIO_NAME)
     profile, behavioural, debt = build_demo_case_data(SCENARIO_NAME)
 
-    assert position.position_id == "01-COMPLETE-CREDIT-ASSESSMENT"
+    assert position.position_id == "01"
     assert profile is not None
     assert behavioural is not None
     assert debt is not None
