@@ -5,7 +5,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from app.ui.results.helpers import rule_severity, rule_status
+from app.ui.results.helpers import rule_severity, rule_status, severity_rank
 
 
 def build_risk_driver_frame(credit_case: Any) -> pd.DataFrame:
@@ -33,11 +33,16 @@ def build_risk_driver_frame(credit_case: Any) -> pd.DataFrame:
     if frame.empty:
         return frame
 
-    return frame.sort_values(
-        ["Severity", "Macro-area", "Rule"],
-        ascending=[False, True, True],
-        kind="stable",
-    ).reset_index(drop=True)
+    frame["_severity_rank"] = frame["Severity"].map(severity_rank)
+    return (
+        frame.sort_values(
+            ["_severity_rank", "Macro-area", "Rule"],
+            ascending=[False, True, True],
+            kind="stable",
+        )
+        .drop(columns="_severity_rank")
+        .reset_index(drop=True)
+    )
 
 
 def render_risk_driver_overview(credit_case: Any) -> None:
