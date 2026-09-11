@@ -62,11 +62,12 @@ def assert_prompt_contains_any(prompt: str, alternatives: tuple[str, ...]) -> No
 
 
 def assert_deterministic_information_is_preserved(result):
-    assert result.assessment is not None
+    assessment = result.credit_case.final_assessment
+    assert assessment is not None
     assert result.analysis is not None
     assert result.report is not None
-    assert result.analysis.assessment_status == result.assessment.status
-    assert result.report.assessment_status == result.assessment.status
+    assert result.analysis.assessment_status == assessment.status
+    assert result.report.assessment_status == assessment.status
     assert report_findings_by_category(result.report) == analysis_findings_by_category(
         result.analysis
     )
@@ -83,21 +84,23 @@ def make_valid_llm_response():
 def test_credit_assessment_end_to_end(risk_position):
     workflow = create_default_assessment_workflow(use_llm=False)
     result = workflow.run(risk_position)
-    assert result.assessment.position_id == risk_position.position_id
+    assessment = result.credit_case.final_assessment
+    assert assessment.position_id == risk_position.position_id
     assert result.analysis.position_id == risk_position.position_id
     assert result.report.position_id == risk_position.position_id
-    assert result.report.assessment_status == result.assessment.status
+    assert result.report.assessment_status == assessment.status
     assert result.report.executive_summary
     assert isinstance(result.report.limitations, list)
 
 
 def test_credit_assessment_propagates_findings_through_pipeline(risk_position):
     result = create_default_assessment_workflow(use_llm=False).run(risk_position)
-    triggered = deterministic_findings(result.assessment)
+    assessment = result.credit_case.final_assessment
+    triggered = deterministic_findings(assessment)
     expected = [(f.result.category, f.comment.text) for f in triggered]
     actual = [(f.category, f.text) for f in result.analysis.key_findings]
     assert triggered
-    assert result.assessment.findings
+    assert assessment.findings
     assert actual == expected
     assert report_findings_by_category(result.report) == analysis_findings_by_category(
         result.analysis
@@ -158,10 +161,10 @@ def test_llm_prompt_contains_safety_constraints(risk_position):
 
 
 def test_llm_cannot_change_deterministic_assessment(risk_position):
-    expected = create_default_assessment_workflow(use_llm=False).run(risk_position).assessment.status
+    expected = create_default_assessment_workflow(use_llm=False).run(risk_position).credit_case.final_assessment.status
     client = MockLLMClient(response="The company shows severe financial deterioration.")
     result = create_default_assessment_workflow(use_llm=True, llm_client=client).run(risk_position)
-    assert result.assessment.status == expected
+    assert result.credit_case.final_assessment.status == expected
     assert result.analysis.assessment_status == expected
     assert result.report.assessment_status == expected
     assert_deterministic_information_is_preserved(result)
@@ -188,7 +191,7 @@ def test_llm_response_is_rejected_when_empty(risk_position):
     assert result.report is not None
     assert workflow.reporting_agent.last_generator_used == "FALLBACK"
     assert workflow.reporting_agent.last_error == "LLM report generation failed: LLM returned an empty response"
-    assert result.report.assessment_status == result.assessment.status
+    assert result.report.assessment_status == result.credit_case.final_assessment.status
 
 
 def test_llm_response_content_is_preserved(risk_position):
@@ -224,8 +227,8 @@ def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails(ris
     client = MockLLMClient(error=RuntimeError("LLM service unavailable"))
     workflow = create_default_assessment_workflow(use_llm=True, llm_client=client)
     result = workflow.run(risk_position)
-    assert result.assessment.status == result.analysis.assessment_status
-    assert result.report.assessment_status == result.assessment.status
+    assert result.credit_case.final_assessment.status == result.analysis.assessment_status
+    assert result.report.assessment_status == result.credit_case.final_assessment.status
     assert result.report.executive_summary
     assert workflow.reporting_agent.last_generator_used == "FALLBACK"
     assert workflow.reporting_agent.last_error == "LLM service is temporarily unavailable."
@@ -234,14 +237,15 @@ def test_credit_assessment_falls_back_to_deterministic_report_when_llm_fails(ris
 
 def test_not_evaluable_rules_do_not_generate_findings(normal_position):
     result = create_default_assessment_workflow(use_llm=False).run(normal_position)
+    assessment = result.credit_case.final_assessment
     not_evaluable = [
         rule_result
-        for rule_result in result.assessment.rule_results
+        for rule_result in assessment.rule_results
         if rule_result.status == RuleStatus.NOT_EVALUABLE
     ]
     assert not_evaluable
     not_evaluable_ids = {item.rule_id for item in not_evaluable}
-    finding_ids = {finding.result.rule_id for finding in result.assessment.findings}
+    finding_ids = {finding.result.rule_id for finding in assessment.findings}
     assert finding_ids.isdisjoint(not_evaluable_ids)
     assert result.analysis.key_findings == []
     assert report_findings_by_category(result.report) == {}
