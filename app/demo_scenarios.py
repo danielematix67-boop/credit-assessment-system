@@ -7,12 +7,11 @@ from src.models.customer_profile_data import CustomerProfileData
 from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.models.position import CreditPosition
 
-# Every scenario contains complete inputs for the four assessment domains.
-# Synthetic values are deliberately chosen to activate the intended rules while
-# keeping the remaining domains in a stable state. The deterministic Rule Engine
-# remains the only source of assessment decisions.
+# The demo catalog intentionally contains one complete credit case. It populates
+# every assessment domain so the Results page can expose the full deterministic
+# rule inventory in a single end-to-end scenario.
 _BASE_VALUES: dict[str, Any] = {
-    "position_id": "DEMO-BASE-001",
+    "position_id": "DEMO-INTEGRATED-001",
     "revenue": 10_000_000.0,
     "change_in_finished_goods_inventory": 100_000.0,
     "operating_grants": 50_000.0,
@@ -27,18 +26,18 @@ _BASE_VALUES: dict[str, Any] = {
     "operating_value_added": 3_500_000.0,
     "gross_operating_margin": 1_500_000.0,
     "net_operating_margin": 1_200_000.0,
-    "ebitda": 1_800_000.0,
-    "profit_loss": 900_000.0,
-    "ebitda_margin": 0.18,
+    "ebitda": -200_000.0,
+    "profit_loss": -350_000.0,
+    "ebitda_margin": -0.10,
     "ebitda_inventory_contribution": 0.01,
-    "nfp_to_ebitda": 1.5,
-    "interest_expense": 150_000.0,
-    "revenue_growth": 0.08,
+    "nfp_to_ebitda": None,
+    "interest_expense": 700_000.0,
+    "revenue_growth": -0.35,
 }
 
 _BASE_CASE_DATA: dict[str, dict[str, Any]] = {
     "customer_profile": {
-        "company_name": "Alpina Manufacturing S.p.A.",
+        "company_name": "Epsilon Industrial S.p.A.",
         "legal_form": "S.p.A.",
         "sector": "Industrial manufacturing",
         "size_class": "Mid-cap",
@@ -46,22 +45,22 @@ _BASE_CASE_DATA: dict[str, dict[str, Any]] = {
         "shareholders": ["Family holding", "Management shareholders"],
         "management_members": ["CEO", "CFO"],
         "relationship_years": 8,
-        "business_history_years": 24,
+        "business_history_years": 1,
         "historical_facilities": ["Revolving credit", "Term loan"],
-        "active_ews": False,
-        "previous_restructuring": False,
+        "active_ews": True,
+        "previous_restructuring": True,
     },
     "behavioural": {
-        "average_utilization": 0.42,
-        "overdraft_days": 1,
-        "payment_delay_days": 2,
-        "exposure_growth": 0.04,
+        "average_utilization": 0.97,
+        "overdraft_days": 45,
+        "payment_delay_days": 75,
+        "exposure_growth": 0.48,
     },
     "debt_sustainability": {
-        "cash_flow_available_for_debt_service": 1_200_000.0,
-        "debt_service": 450_000.0,
-        "ebitda": 1_800_000.0,
-        "interest_expense": 150_000.0,
+        "cash_flow_available_for_debt_service": 100_000.0,
+        "debt_service": 600_000.0,
+        "ebitda": 500_000.0,
+        "interest_expense": 700_000.0,
     },
 }
 
@@ -87,149 +86,14 @@ def _scenario(
 
 
 DEMO_SCENARIOS = {
-    "01 · Baseline": _scenario(
-        "01 · Baseline",
+    "01 · Complete Credit Assessment": _scenario(
+        "01 · Complete Credit Assessment",
         (
-            "Complete low-risk borrower profile. All four assessment domains are "
-            "populated and no configured rule is intentionally triggered."
+            "Single end-to-end synthetic credit case covering every configured "
+            "assessment domain and exposing the complete deterministic rule evidence "
+            "for customer profile, financial analysis, behavioural analysis and debt sustainability."
         ),
     ),
-    "02 · Customer Profile Risk": _scenario(
-        "02 · Customer Profile Risk",
-        (
-            "Focused customer-profile case activating CP001, CP002 and CP003 "
-            "while financial, behavioural and debt-sustainability inputs remain stable."
-        ),
-        case_data={
-            "customer_profile": {
-                "company_name": "Beta Early Stage S.r.l.",
-                "active_ews": True,
-                "previous_restructuring": True,
-                "business_history_years": 1,
-            }
-        },
-    ),
-    "03 · Revenue & Profitability Risk": _scenario(
-        "03 · Revenue & Profitability Risk",
-        (
-            "Focused financial-analysis case activating R001, R002 and R003: "
-            "revenue contraction, negative EBITDA and negative EBITDA margin."
-        ),
-        values={
-            "revenue": 6_000_000.0,
-            "change_in_finished_goods_inventory": 100_000.0,
-            "ebitda": -200_000.0,
-            "profit_loss": -300_000.0,
-            "ebitda_margin": -0.12,
-            "revenue_growth": -0.35,
-            "nfp_to_ebitda": None,
-            "interest_expense": 150_000.0,
-        },
-    ),
-    "04 · Leverage & Interest Risk": _scenario(
-        "04 · Leverage & Interest Risk",
-        (
-            "Focused financial-analysis case activating R004, R005 and R007 "
-            "through excessive leverage, high interest burden and weak interest coverage."
-        ),
-        values={
-            "nfp_to_ebitda": 8.0,
-            "interest_expense": 1_200_000.0,
-            "ebitda": 1_000_000.0,
-            "ebitda_margin": 0.10,
-        },
-    ),
-    "05 · Profitability Quality Risk": _scenario(
-        "05 · Profitability Quality Risk",
-        (
-            "Focused financial-quality case activating R006: EBITDA is materially "
-            "supported by the increase in finished-goods inventory."
-        ),
-        values={
-            "ebitda": 1_800_000.0,
-            "change_in_finished_goods_inventory": 600_000.0,
-        },
-    ),
-    "06 · Behavioural Risk": _scenario(
-        "06 · Behavioural Risk",
-        (
-            "Focused behavioural-monitoring case activating B001, B002, B003 and "
-            "B004 through high utilization, prolonged overdraft, payment delays and exposure growth."
-        ),
-        case_data={
-            "customer_profile": {"company_name": "Futura Logistics S.p.A."},
-            "behavioural": {
-                "average_utilization": 0.97,
-                "overdraft_days": 35,
-                "payment_delay_days": 65,
-                "exposure_growth": 0.45,
-            },
-        },
-    ),
-    "07 · Debt Sustainability Risk": _scenario(
-        "07 · Debt Sustainability Risk",
-        (
-            "Focused debt-sustainability case activating DS001, DS002 and DS003 "
-            "through insufficient DSCR, excessive debt service relative to EBITDA and a negative cash-flow buffer."
-        ),
-        values={"ebitda": 500_000.0},
-        case_data={
-            "debt_sustainability": {
-                "cash_flow_available_for_debt_service": 500_000.0,
-                "debt_service": 700_000.0,
-                "ebitda": 500_000.0,
-                "interest_expense": 150_000.0,
-            }
-        },
-    ),
-    "08 · Integrated Credit Stress": _scenario(
-        "08 · Integrated Credit Stress",
-        (
-            "End-to-end stressed borrower combining customer-profile, financial, behavioural and "
-            "debt-sustainability deterioration. This is the main cumulative-risk demonstration."
-        ),
-        values={
-            "change_in_finished_goods_inventory": 100_000.0,
-            "ebitda": -200_000.0,
-            "profit_loss": -350_000.0,
-            "ebitda_margin": -0.10,
-            "nfp_to_ebitda": None,
-            "interest_expense": 700_000.0,
-            "revenue_growth": -0.35,
-        },
-        case_data={
-            "customer_profile": {
-                "company_name": "Epsilon Industrial S.p.A.",
-                "active_ews": True,
-                "previous_restructuring": True,
-                "business_history_years": 1,
-            },
-            "behavioural": {
-                "average_utilization": 0.97,
-                "overdraft_days": 45,
-                "payment_delay_days": 75,
-                "exposure_growth": 0.48,
-            },
-            "debt_sustainability": {
-                "cash_flow_available_for_debt_service": 100_000.0,
-                "debt_service": 600_000.0,
-                "ebitda": 500_000.0,
-                "interest_expense": 700_000.0,
-            },
-        },
-    ),
-    "09 · Data Availability": {
-        "description": (
-            "Data-quality scenario with financial and domain-level inputs unavailable. "
-            "The assessment must preserve NOT_EVALUABLE evidence and expose limitations "
-            "rather than infer missing values."
-        ),
-        "values": {
-            **{field.name: None for field in fields(CreditPosition)},
-            "position_id": "09-DATA-AVAILABILITY",
-        },
-        "case_data": {},
-    },
 }
 
 
