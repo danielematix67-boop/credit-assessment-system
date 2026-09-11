@@ -2,6 +2,7 @@ import time
 from datetime import datetime, timezone
 from uuid import uuid4
 
+from src.agents.analysis.analysis_agent import AnalysisAgent
 from src.agents.analysis.case_analysis_agent import CaseAnalysisAgent
 from src.agents.base.agent import Agent
 from src.models.assessment_analysis import AssessmentAnalysis
@@ -18,15 +19,35 @@ from src.services.credit_assessment_case_service import CreditAssessmentCaseServ
 class AssessmentWorkflow:
     def __init__(
         self,
-        credit_case_service: CreditAssessmentCaseService,
-        case_analysis_agent: CaseAnalysisAgent,
-        reporting_agent: Agent[AssessmentAnalysis, Report],
+        credit_case_service: CreditAssessmentCaseService | None = None,
+        case_analysis_agent: CaseAnalysisAgent | None = None,
+        reporting_agent: Agent[AssessmentAnalysis, Report] | None = None,
         reporting_mode: str = "Unknown",
+        *,
+        assessment_service: object | None = None,
+        analysis_agent: Agent | None = None,
     ) -> None:
+        if credit_case_service is None:
+            if assessment_service is None:
+                raise TypeError(
+                    "credit_case_service or assessment_service is required"
+                )
+            credit_case_service = CreditAssessmentCaseService(assessment_service)
+
+        if case_analysis_agent is None:
+            case_analysis_agent = analysis_agent  # type: ignore[assignment]
+        if case_analysis_agent is None:
+            case_analysis_agent = CaseAnalysisAgent()
+        if reporting_agent is None:
+            raise TypeError("reporting_agent is required")
+
         self.credit_case_service = credit_case_service
         self.case_analysis_agent = case_analysis_agent
         self.reporting_agent = reporting_agent
         self.reporting_mode = reporting_mode
+
+        # Compatibility alias for callers still using the pre-case API.
+        self.analysis_agent = case_analysis_agent
 
     def run(
         self,
@@ -50,7 +71,12 @@ class AssessmentWorkflow:
         assessment_elapsed_time = time.perf_counter() - assessment_start
 
         analysis_start = time.perf_counter()
-        analysis = self.case_analysis_agent.run(credit_case)
+        if isinstance(self.case_analysis_agent, AnalysisAgent):
+            analysis = self.case_analysis_agent.run(
+                AssessmentWorkflow._legacy_assessment_from_case(credit_case)
+            )
+        else:
+            analysis = self.case_analysis_agent.run(credit_case)
         analysis_elapsed_time = time.perf_counter() - analysis_start
 
         reporting_start = time.perf_counter()
@@ -86,4 +112,24 @@ class AssessmentWorkflow:
             analysis_elapsed_time=analysis_elapsed_time,
             reporting_elapsed_time=reporting_elapsed_time,
             total_elapsed_time=total_elapsed_time,
+        )
+
+    @staticmethod
+    def _legacy_assessment_from_case(credit_case):
+        """Project a case back to the legacy Assessment contract."""
+        from src.models.assessment import Assessment
+        from src.models.assessment_status import AssessmentStatus
+
+        rule_results = [
+            result for section in credit_case.sections for result in section.evidence
+        ]
+        findings = [
+            finding for section in credit_case.sections for finding in section.findings
+        ]
+        status = AssessmentStatus(credit_case.final_assessment.status.value)
+        return Assessment(
+            position_id=credit_case.position.position_id,
+            rule_results=rule_results,
+            findings=findings,
+            status=status,
         )
