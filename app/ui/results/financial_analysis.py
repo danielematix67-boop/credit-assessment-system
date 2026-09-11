@@ -50,6 +50,39 @@ def _indicator_frame(section: Any) -> pd.DataFrame:
     return frame[["Indicator", "Value", "Threshold", "Status", "Rule"]]
 
 
+def _render_area_summary(section: Any, frame: pd.DataFrame, area_label: str) -> None:
+    """Show descriptive coverage and trigger metrics without creating a new score."""
+    evidence = list(getattr(section, "evidence", []) or [])
+    statuses = [rule_status(rule) for rule in evidence]
+    triggered = sum(status == "TRIGGERED" for status in statuses)
+    evaluable = sum(status != "NOT_EVALUABLE" for status in statuses)
+    not_evaluable = len(evidence) - evaluable
+
+    distances = frame["Distance"].dropna() if not frame.empty else pd.Series(dtype=float)
+    worst_distance = float(distances.max()) if not distances.empty else None
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric(f"{area_label} indicators", len(evidence))
+    with col2:
+        st.metric("Triggered", triggered)
+    with col3:
+        st.metric("Not evaluable", not_evaluable)
+    with col4:
+        st.metric(
+            "Furthest threshold distance",
+            "—" if worst_distance is None else f"{worst_distance:+.0%}",
+        )
+
+    if not evidence:
+        st.info(f"No {area_label.lower()} evidence is available for this case.")
+    elif not_evaluable:
+        st.caption(
+            f"{not_evaluable} of {len(evidence)} {area_label.lower()} indicators are not evaluable "
+            "with the available data."
+        )
+
+
 def _threshold_distance_frame(section: Any) -> pd.DataFrame:
     """Build a direction-aware distance from threshold for non-zero thresholds."""
     frame = build_indicator_analysis_frame(section)
@@ -182,11 +215,12 @@ def _render_financial_dimensions(section: Any) -> None:
 
 def render_financial_analysis(section: Any) -> None:
     """Render financial indicators and their deterministic threshold evidence."""
+    frame = build_indicator_analysis_frame(section)
+    _render_area_summary(section, frame, "Financial")
     _render_financial_dimensions(section)
     _render_risk_signal_ranking(section)
     _render_threshold_distance_chart(section, "Indicator position vs threshold")
 
-    frame = build_indicator_analysis_frame(section)
     if not frame.empty:
         st.markdown("**Indicator evidence**")
         display_frame = frame.copy()
@@ -198,11 +232,21 @@ def render_financial_analysis(section: Any) -> None:
 
 def render_behavioural_analysis(section: Any) -> None:
     """Render behavioural indicators against their configured thresholds."""
+    frame = build_indicator_analysis_frame(section)
+    _render_area_summary(section, frame, "Behavioural")
     _render_threshold_distance_chart(section, "Behavioural indicators vs threshold")
+
+    if not frame.empty:
+        st.markdown("**Behavioural evidence**")
+        st.dataframe(
+            _indicator_frame(section), use_container_width=True, hide_index=True
+        )
 
 
 def render_debt_analysis(section: Any) -> None:
     """Render debt-service indicators and the deterministic cash-flow buffer."""
+    frame = build_indicator_analysis_frame(section)
+    _render_area_summary(section, frame, "Debt sustainability")
     _render_threshold_distance_chart(section, "Debt-service indicators vs threshold")
 
     buffer_rule = next(
@@ -212,3 +256,9 @@ def render_debt_analysis(section: Any) -> None:
     if buffer_rule is not None and getattr(buffer_rule, "value", None) is not None:
         value = float(buffer_rule.value)
         st.metric("Cash Flow Debt-Service Buffer", f"{value:,.2f}")
+
+    if not frame.empty:
+        st.markdown("**Debt sustainability evidence**")
+        st.dataframe(
+            _indicator_frame(section), use_container_width=True, hide_index=True
+        )
