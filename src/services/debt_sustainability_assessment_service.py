@@ -7,7 +7,6 @@ from src.models.assessment_section import AssessmentSection, SectionStatus
 from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.models.rule_finding import RuleFinding
 from src.rules.base.config import RuleConfig
-from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_policy import SeverityPolicy
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
