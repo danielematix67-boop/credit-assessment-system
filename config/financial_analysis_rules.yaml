@@ -1,0 +1,115 @@
+rules:
+  - rule_id: R001
+    rule_name: Revenue growth deterioration
+    indicator: Revenue growth
+    category: revenue
+    input_field: revenue_growth
+    threshold: -0.10
+    severity: MEDIUM
+    severity_direction: LOWER_IS_WORSE
+    severity_thresholds:
+      - threshold: -0.10
+        severity: MEDIUM
+      - threshold: -0.30
+        severity: HIGH
+    comment_template: >-
+      Revenue growth declined to {value:.1%}, indicating a deterioration in
+      the company's top-line performance.
+
+  - rule_id: R002
+    rule_name: Negative EBITDA
+    indicator: EBITDA
+    category: profitability
+    input_field: ebitda
+    threshold: 0.0
+    severity: HIGH
+    severity_direction: LOWER_IS_WORSE
+    comment_template: >-
+      EBITDA is negative, with a reported value of €{value:,.0f}, indicating
+      negative operating profitability.
+
+  - rule_id: R003
+    rule_name: EBITDA margin deterioration
+    indicator: EBITDA margin
+    category: profitability
+    input_field: ebitda_margin
+    threshold: 0.0
+    severity: MEDIUM
+    severity_direction: LOWER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.0
+        severity: MEDIUM
+      - threshold: -0.10
+        severity: HIGH
+    comment_template: >-
+      EBITDA margin is {value:.1%}, below the acceptable level, indicating
+      weak operating profitability relative to revenue.
+
+  - rule_id: R004
+    rule_name: nfp / EBITDA leverage
+    indicator: NFP / EBITDA
+    category: leverage
+    input_field: nfp_to_ebitda
+    threshold: 5.0
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 5.0
+        severity: MEDIUM
+      - threshold: 7.0
+        severity: HIGH
+    comment_template: >-
+      NFP to EBITDA stands at {value:.1f}x, above the acceptable level,
+      indicating elevated leverage relative to operating earnings.
+
+  - rule_id: R005
+    rule_name: Interest expense to EBITDA
+    indicator: Interest expense / EBITDA
+    category: profitability
+    input_field: financial_expenses_to_ebitda
+    threshold: 0.60
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.60
+        severity: MEDIUM
+      - threshold: 1.00
+        severity: HIGH
+    comment_template: >-
+      Interest expense to EBITDA stands at {value:.1%}, above the acceptable
+      level, indicating a relatively high interest burden relative to
+      operating earnings.
+
+  - rule_id: R006
+    rule_name: EBITDA materially supported by finished goods inventory increase
+    indicator: EBITDA / finished goods inventory increase
+    category: profitability_quality
+    input_field: ebitda_inventory_contribution
+    threshold: 0.30
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.30
+        severity: MEDIUM
+      - threshold: 0.50
+        severity: HIGH
+    comment_template: >-
+      EBITDA is materially supported by an increase in finished goods
+      inventory, indicating weaker cash conversion quality.
+
+  - rule_id: R007
+    rule_name: Interest coverage ratio
+    indicator: Interest coverage ratio
+    category: profitability
+    input_field: interest_coverage_ratio
+    threshold: 2.0
+    severity: MEDIUM
+    severity_direction: LOWER_IS_WORSE
+    severity_thresholds:
+      - threshold: 2.0
+        severity: MEDIUM
+      - threshold: 1.0
+        severity: HIGH
+    comment_template: >-
+      The interest coverage ratio is {value:.1f}x, indicating that EBITDA
+      provides insufficient coverage of interest expense.
