@@ -224,7 +224,10 @@ DEMO_SCENARIOS = {
             "The assessment must preserve NOT_EVALUABLE evidence and expose limitations "
             "rather than infer missing values."
         ),
-        "values": {field.name: None for field in fields(CreditPosition)},
+        "values": {
+            **{field.name: None for field in fields(CreditPosition)},
+            "position_id": "09-DATA-AVAILABILITY",
+        },
         "case_data": {},
     },
 }
