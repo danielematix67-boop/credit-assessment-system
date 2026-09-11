@@ -10,16 +10,15 @@ class RevenueGrowthRule(Rule):
         self,
         position: CreditPosition,
     ) -> RuleResult:
-        value = position.revenue_growth
+        value, error = self._configured_value(position)
 
-        if value is None:
-            return self._not_evaluable(
-                reason="Revenue growth is not available.",
-            )
+        if error is not None:
+            return self._not_evaluable(reason=error)
 
+        assert value is not None
         status = (
             RuleStatus.TRIGGERED
-            if value < self.config.threshold
+            if self._is_triggered(value)
             else RuleStatus.NOT_TRIGGERED
         )
 
