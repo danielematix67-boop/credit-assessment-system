@@ -114,6 +114,14 @@ def _render_domain_coverage(dataframe: pd.DataFrame) -> None:
     with metric_cols[2]:
         st.metric("Macro-area coverage", f"{coverage_pct:.0f}%")
 
+    chart_data = summary.set_index("Macro-area")[[
+        "Triggered",
+        "Not_triggered",
+        "Not_evaluable",
+    ]]
+    st.caption("Rule outcomes by assessment area")
+    st.bar_chart(chart_data, height=230)
+
     st.dataframe(
         summary,
         use_container_width=True,
