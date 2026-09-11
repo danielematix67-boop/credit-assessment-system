@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -20,7 +21,7 @@ class RuleConfigLoader:
         if not paths:
             raise ValueError(f"No rule configuration files found in: {path}")
 
-        rules: list[dict] = []
+        rules: list[dict[str, Any]] = []
         for config_path in paths:
             with config_path.open("r", encoding="utf-8") as file:
                 data = yaml.safe_load(file)
@@ -36,9 +37,9 @@ class RuleConfigLoader:
 
         return self._build_configs(rules)
 
-    def _build_configs(self, rules: list[dict]) -> list[RuleConfig]:
-        configs = []
-        seen_rule_ids = set()
+    def _build_configs(self, rules: list[dict[str, Any]]) -> list[RuleConfig]:
+        configs: list[RuleConfig] = []
+        seen_rule_ids: set[Any] = set()
         for item in rules:
             if not isinstance(item, dict):
                 raise ValueError("Invalid rule configuration item")
