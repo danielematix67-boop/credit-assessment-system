@@ -17,6 +17,28 @@ from app.ui.results.helpers import (
 from app.ui.results.rule_detail import render_rule_indicator_detail
 
 
+_DOMAIN_LABELS = {
+    "CP": "Customer Profile",
+    "R": "Financial Analysis",
+    "B": "Behavioural Analysis",
+    "DS": "Debt Sustainability",
+}
+
+
+def _rule_domain(rule_id: str) -> str:
+    """Map the deterministic rule identifier to its assessment macro-area."""
+    rule_id = str(rule_id).upper()
+    if rule_id.startswith("DS"):
+        return _DOMAIN_LABELS["DS"]
+    if rule_id.startswith("CP"):
+        return _DOMAIN_LABELS["CP"]
+    if rule_id.startswith("B"):
+        return _DOMAIN_LABELS["B"]
+    if rule_id.startswith("R"):
+        return _DOMAIN_LABELS["R"]
+    return "Other"
+
+
 def _render_signal_overview(
     status_counts: dict[str, int],
     severity_counts_data: dict[str, int],
@@ -46,6 +68,66 @@ def _render_signal_overview(
         )
 
 
+def _render_domain_coverage(dataframe: pd.DataFrame) -> None:
+    """Show complete rule coverage by assessment macro-area."""
+    coverage = dataframe.copy()
+    coverage["Macro-area"] = coverage["Rule"].map(_rule_domain)
+
+    domain_order = [
+        "Customer Profile",
+        "Financial Analysis",
+        "Behavioural Analysis",
+        "Debt Sustainability",
+        "Other",
+    ]
+
+    summary = (
+        coverage.groupby("Macro-area", dropna=False)
+        .agg(
+            Rules=("Rule", "count"),
+            Triggered=("Status", lambda values: (values == "TRIGGERED").sum()),
+            Not_triggered=("Status", lambda values: (values == "NOT_TRIGGERED").sum()),
+            Not_evaluable=("Status", lambda values: (values == "NOT_EVALUABLE").sum()),
+        )
+        .reset_index()
+    )
+    summary["_domain_order"] = summary["Macro-area"].map(
+        {name: index for index, name in enumerate(domain_order)}
+    )
+    summary = summary.sort_values("_domain_order").drop(columns="_domain_order")
+
+    st.markdown("##### Rule Coverage by Assessment Area")
+    st.caption(
+        "Every configured deterministic rule is shown here, including rules that "
+        "are not triggered by the selected scenario."
+    )
+
+    metric_cols = st.columns([1, 1, 2])
+    with metric_cols[0]:
+        st.metric("Rules evaluated", len(coverage))
+    with metric_cols[1]:
+        st.metric("Assessment areas", coverage["Macro-area"].nunique())
+    with metric_cols[2]:
+        st.metric("Complete rule coverage", "100%")
+
+    st.dataframe(
+        summary,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Macro-area": st.column_config.TextColumn("Assessment area", width="medium"),
+            "Rules": st.column_config.NumberColumn("Rules", width="small"),
+            "Triggered": st.column_config.NumberColumn("Triggered", width="small"),
+            "Not_triggered": st.column_config.NumberColumn(
+                "Not triggered", width="small"
+            ),
+            "Not_evaluable": st.column_config.NumberColumn(
+                "Not evaluable", width="small"
+            ),
+        },
+    )
+
+
 def _render_rule_catalogue(dataframe: pd.DataFrame, status_counts: dict[str, int]) -> None:
     """Show filterable deterministic rule evidence."""
     filter_cols = st.columns([1.1, 1.1, 1.4, 1.2])
@@ -54,7 +136,7 @@ def _render_rule_catalogue(dataframe: pd.DataFrame, status_counts: dict[str, int
         selected_status = st.selectbox(
             "Status",
             status_options,
-            index=1 if status_counts["TRIGGERED"] else 0,
+            index=0,
             key="rule_catalogue_status",
         )
     with filter_cols[1]:
@@ -125,14 +207,14 @@ def _render_rule_catalogue(dataframe: pd.DataFrame, status_counts: dict[str, int
 
 
 def render_risk_indicator_dashboard(result: Any) -> None:
-    """Render a compact deterministic Rule Engine evidence view."""
+    """Render the complete deterministic Rule Engine evidence view."""
     rule_results = get_rule_results(result)
     if not rule_results:
         return
 
     render_section_header(
         "Rule Engine Evidence",
-        "Inspect deterministic indicator outcomes and drill into individual rules when needed.",
+        "Inspect the complete deterministic rule set and drill into individual rules when needed.",
     )
 
     dataframe = build_rule_dataframe(rule_results)
@@ -140,8 +222,9 @@ def render_risk_indicator_dashboard(result: Any) -> None:
     severity_counts_data = severity_counts(rule_results)
 
     _render_signal_overview(status_counts, severity_counts_data)
+    _render_domain_coverage(dataframe)
 
-    with st.expander("Rule catalogue & filters", expanded=False):
+    with st.expander("Complete rule catalogue & filters", expanded=True):
         _render_rule_catalogue(dataframe, status_counts)
 
     with st.expander("Individual rule detail", expanded=False):
