@@ -90,11 +90,17 @@ def _scenario(
 DEMO_SCENARIOS = {
     "01 · Baseline": _scenario(
         "01 · Baseline",
-        "Complete low-risk borrower profile. All four assessment domains are populated and no configured rule is intentionally triggered.",
+        (
+            "Complete low-risk borrower profile. All four assessment domains are "
+            "populated and no configured rule is intentionally triggered."
+        ),
     ),
     "02 · Customer Profile Risk": _scenario(
         "02 · Customer Profile Risk",
-        "Focused customer-profile case activating CP001, CP002 and CP003 while financial, behavioural and debt-sustainability inputs remain stable.",
+        (
+            "Focused customer-profile case activating CP001, CP002 and CP003 "
+            "while financial, behavioural and debt-sustainability inputs remain stable."
+        ),
         case_data={
             "customer_profile": {
                 "company_name": "Beta Early Stage S.r.l.",
