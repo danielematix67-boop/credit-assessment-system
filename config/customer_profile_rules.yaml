@@ -4,7 +4,7 @@ rules:
     indicator: Active EWS
     category: customer_profile
     input_field: active_ews
-    trigger_operator: GT
+    trigger_operator: GTE
     threshold: 1
     severity: HIGH
     severity_direction: HIGHER_IS_WORSE
@@ -16,7 +16,7 @@ rules:
     indicator: Previous Restructuring
     category: customer_profile
     input_field: previous_restructuring
-    trigger_operator: GT
+    trigger_operator: GTE
     threshold: 1
     severity: HIGH
     severity_direction: HIGHER_IS_WORSE
