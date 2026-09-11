@@ -17,6 +17,7 @@ class RuleConfig:
     indicator: str = ""
     input_field: str = ""
     comment_template: str = ""
+    trigger_operator: str = "GT"
 
     def __post_init__(self) -> None:
         if not self.rule_id.strip():
@@ -36,3 +37,10 @@ class RuleConfig:
 
         if self.comment_template and not self.comment_template.strip():
             raise ValueError("comment_template cannot be blank")
+
+        valid_operators = {"GT", "GTE", "LT", "LTE"}
+        if self.trigger_operator not in valid_operators:
+            raise ValueError(
+                "trigger_operator must be one of: "
+                + ", ".join(sorted(valid_operators))
+            )
