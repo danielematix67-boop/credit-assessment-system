@@ -228,9 +228,10 @@ def render_results(
 
     credit_case = getattr(result, "credit_case", None)
     if credit_case is not None:
-        # Keep the first screen focused on the decision and its main drivers.
-        # Detailed macro-area evidence remains available below as an optional
-        # drill-down, reducing the default page length without changing logic.
+        # Keep the first screen focused on the decision and its main drivers,
+        # then show the complete single-scenario case analysis directly below.
+        # No cross-scenario aggregation is introduced: the selected scenario
+        # remains the only case presented in the result page.
         render_final_assessment(credit_case)
         render_risk_driver_overview(credit_case)
         render_risk_indicator_dashboard(result)
@@ -238,7 +239,7 @@ def render_results(
 
         case_without_final = replace(credit_case, final_assessment=None)
         case_result = type("CaseResult", (), {"credit_case": case_without_final})()
-        with st.expander("Detailed analysis by macro-area", expanded=False):
+        with st.expander("Full single-scenario analysis by macro-area", expanded=True):
             render_credit_analysis_case(case_result)
     else:
         render_risk_indicator_dashboard(result)
