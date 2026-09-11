@@ -1,0 +1,39 @@
+rules:
+  - rule_id: CP001
+    rule_name: Active EWS
+    indicator: Active EWS
+    category: customer_profile
+    input_field: active_ews
+    threshold: 1
+    severity: HIGH
+    severity_direction: HIGHER_IS_WORSE
+    comment_template: >
+      An active Early Warning System flag is present for the customer profile.
+
+  - rule_id: CP002
+    rule_name: Previous Restructuring
+    indicator: Previous Restructuring
+    category: customer_profile
+    input_field: previous_restructuring
+    threshold: 1
+    severity: HIGH
+    severity_direction: HIGHER_IS_WORSE
+    comment_template: >
+      A previous restructuring event is present in the customer profile.
+
+  - rule_id: CP003
+    rule_name: Business history
+    indicator: Business history (years)
+    category: customer_profile
+    input_field: business_history_years
+    threshold: 5
+    severity: MEDIUM
+    severity_direction: LOWER_IS_WORSE
+    severity_thresholds:
+      - threshold: 5
+        severity: MEDIUM
+      - threshold: 2
+        severity: HIGH
+    comment_template: >
+      Customer business history is {value:.0f} years, indicating limited
+      operating or customer track record and increased early-stage credit risk.
