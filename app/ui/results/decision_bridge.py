@@ -2,6 +2,7 @@
 
 from typing import Any
 
+import pandas as pd
 import streamlit as st
 
 from app.ui.results.helpers import (
@@ -12,6 +13,72 @@ from app.ui.results.helpers import (
     rule_severity,
     rule_status,
 )
+
+
+def _status_value(status: Any) -> str:
+    return str(getattr(status, "value", status or "Unknown"))
+
+
+def _render_area_trace(sections: list[Any], rule_results: list[Any]) -> None:
+    """Provide a compact trace from one macro-area to its deterministic evidence."""
+    if not sections:
+        return
+
+    st.markdown("##### Trace an assessment area")
+    st.caption(
+        "Select a macro-area to see the evidence and findings that feed its status. "
+        "All values are read directly from the CreditAssessmentCase."
+    )
+
+    section_names = [str(getattr(section, "name", "Unknown")) for section in sections]
+    selected_name = st.selectbox(
+        "Assessment area",
+        section_names,
+        key="decision_path_area_trace",
+    )
+    selected_section = next(
+        section for section in sections if str(getattr(section, "name", "Unknown")) == selected_name
+    )
+
+    section_rule_ids = {
+        str(getattr(rule, "rule_id", ""))
+        for rule in getattr(selected_section, "evidence", []) or []
+    }
+    area_rules = [
+        rule
+        for rule in rule_results
+        if str(getattr(rule, "rule_id", "")) in section_rule_ids
+    ]
+    findings = list(getattr(selected_section, "findings", []) or [])
+    status = _status_value(getattr(selected_section, "status", None))
+
+    metrics = st.columns(4)
+    with metrics[0]:
+        st.metric("Area status", status)
+    with metrics[1]:
+        st.metric("Rules", len(area_rules))
+    with metrics[2]:
+        st.metric("Triggered", sum(rule_status(rule) == "TRIGGERED" for rule in area_rules))
+    with metrics[3]:
+        st.metric("Findings", len(findings))
+
+    if area_rules:
+        rows = [
+            {
+                "Rule": str(getattr(rule, "rule_id", "—")),
+                "Indicator": rule_indicator(rule),
+                "Status": rule_status(rule),
+                "Severity": rule_severity(rule),
+            }
+            for rule in area_rules
+        ]
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+    if findings:
+        with st.expander("Findings for selected area", expanded=False):
+            for finding in findings:
+                text = getattr(finding, "comment", None) or getattr(finding, "description", None) or str(finding)
+                st.write(f"• {text}")
 
 
 def render_decision_path(result: Any) -> None:
@@ -30,7 +97,7 @@ def render_decision_path(result: Any) -> None:
     ]
     findings_count = sum(len(getattr(section, "findings", []) or []) for section in sections)
     final_status_obj = getattr(final_assessment, "status", None)
-    final_status = str(getattr(final_status_obj, "value", final_status_obj or "Unknown"))
+    final_status = _status_value(final_status_obj)
 
     st.subheader("Decision Path")
     st.caption(
@@ -40,7 +107,7 @@ def render_decision_path(result: Any) -> None:
 
     area_chips = "".join(
         f'<span class="decision-chip">{escape_html(getattr(section, "name", "—"))} · '
-        f'{escape_html(getattr(getattr(section, "status", None), "value", "Unknown"))}</span>'
+        f'{escape_html(_status_value(getattr(section, "status", None)))}</span>'
         for section in sections
     )
     signal_chips = "".join(
@@ -54,19 +121,8 @@ def render_decision_path(result: Any) -> None:
     st.markdown(
         """
         <style>
-        .decision-flow {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: .55rem;
-            margin: .55rem 0 .85rem 0;
-        }
-        .decision-node {
-            min-width: 0;
-            padding: .95rem 1rem;
-            border: 1px solid rgba(128,128,128,.20);
-            border-radius: .85rem;
-            background: rgba(128,128,128,.025);
-        }
+        .decision-flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .55rem; margin: .55rem 0 .85rem 0; }
+        .decision-node { min-width: 0; padding: .95rem 1rem; border: 1px solid rgba(128,128,128,.20); border-radius: .85rem; background: rgba(128,128,128,.025); }
         .decision-node.det { border-color: rgba(37,99,235,.30); background: rgba(37,99,235,.055); }
         .decision-node.result { border-color: rgba(185,28,28,.25); background: rgba(185,28,28,.045); }
         .decision-node-kicker { color: rgba(128,128,128,.95); font-size: .68rem; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
@@ -115,6 +171,7 @@ def render_decision_path(result: Any) -> None:
         </div>
     """
     st.markdown(flow, unsafe_allow_html=True)
+    _render_area_trace(sections, rule_results)
     st.caption(
         "Explanatory view only: the Streamlit layer does not create a new risk score "
         "or modify RuleResult, findings, section status, or final assessment."
