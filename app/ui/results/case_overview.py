@@ -10,6 +10,7 @@ from app.ui.results.financial_analysis import (
     render_debt_analysis,
     render_financial_analysis,
 )
+from app.ui.results.helpers import rule_indicator, rule_status
 
 
 def _status_value(status: Any) -> str:
@@ -54,6 +55,7 @@ def _profile_completeness(data: Any) -> tuple[int, int]:
         "historical_facilities",
         "active_ews",
         "previous_restructuring",
+        "business_history_years",
     )
     available = sum(
         _profile_value(data, field, "") not in {"", "Not available"}
@@ -71,14 +73,19 @@ def _profile_list(data: Any, field: str) -> list[Any]:
 
 
 def _render_customer_profile(section: Any) -> None:
-    """Render customer context without introducing a synthetic risk score."""
+    """Render customer context and every deterministic customer-profile rule."""
     context = getattr(section, "context", {}) or {}
-    if not context:
+    evidence = list(getattr(section, "evidence", []) or [])
+
+    if not context and not evidence:
         st.info("Customer profile information is not available.")
         return
 
     available, total = _profile_completeness(context)
-    col1, col2, col3 = st.columns(3)
+    triggered = sum(_rule_status(rule) == "TRIGGERED" for rule in evidence)
+    not_evaluable = sum(_rule_status(rule) == "NOT_EVALUABLE" for rule in evidence)
+
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Profile information", f"{available}/{total}")
     with col2:
@@ -88,6 +95,14 @@ def _render_customer_profile(section: Any) -> None:
         st.metric(
             "Historical facilities",
             len(_profile_list(context, "historical_facilities")),
+        )
+    with col4:
+        st.metric("Profile rules triggered", triggered)
+
+    if not_evaluable:
+        st.caption(
+            f"{not_evaluable} of {len(evidence)} customer-profile rules are not evaluable "
+            "with the available data."
         )
 
     st.markdown("**Company & anagraphic profile**")
@@ -130,9 +145,33 @@ def _render_customer_profile(section: Any) -> None:
         if not shareholders and not management:
             st.caption("Ownership and management information not available.")
 
+    st.markdown("**Customer-profile rule evidence**")
+    rule_rows = []
+    for rule in evidence:
+        rule_rows.append(
+            {
+                "Rule": getattr(rule, "rule_id", ""),
+                "Indicator": rule_indicator(rule),
+                "Value": getattr(rule, "value", None),
+                "Threshold": getattr(rule, "threshold", None),
+                "Status": rule_status(rule),
+            }
+        )
+    rule_frame = pd.DataFrame(rule_rows)
+    if not rule_frame.empty:
+        st.dataframe(rule_frame, use_container_width=True, hide_index=True)
+
+        status_counts = (
+            rule_frame["Status"].value_counts().reindex(
+                ["TRIGGERED", "NOT_TRIGGERED", "NOT_EVALUABLE"], fill_value=0
+            )
+        )
+        st.markdown("**Customer-profile rule outcomes**")
+        st.bar_chart(status_counts.to_frame("Rules"), horizontal=True)
+
     st.markdown("**Risk-context signals**")
     evidence_by_rule = {
-        getattr(rule, "rule_id", ""): rule for rule in section.evidence
+        getattr(rule, "rule_id", ""): rule for rule in evidence
     }
     signal_frame = pd.DataFrame(
         [
@@ -146,6 +185,12 @@ def _render_customer_profile(section: Any) -> None:
                 "Signal": "Previous restructuring",
                 "Value": _rule_status(evidence_by_rule["CP002"])
                 if "CP002" in evidence_by_rule
+                else "NOT_EVALUABLE",
+            },
+            {
+                "Signal": "Business history",
+                "Value": _rule_status(evidence_by_rule["CP003"])
+                if "CP003" in evidence_by_rule
                 else "NOT_EVALUABLE",
             },
         ]
