@@ -4,7 +4,6 @@ from src.comments.comment_engine import CommentEngine
 from src.config.rule_config_loader import RuleConfigLoader
 from src.engine.rule_engine import RuleEngine
 from src.models.assessment_section import SectionStatus
-from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.position import CreditPosition
 from src.rules.base.rule import Rule
 from src.rules.base.status import RuleStatus
