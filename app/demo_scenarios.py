@@ -7,7 +7,6 @@ from src.models.customer_profile_data import CustomerProfileData
 from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.models.position import CreditPosition
 
-
 # Every scenario contains complete inputs for the four assessment domains.
 # Synthetic values are deliberately chosen to activate the intended rules while
 # keeping the remaining domains in a stable state. The deterministic Rule Engine
