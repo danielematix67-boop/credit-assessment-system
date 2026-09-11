@@ -13,6 +13,7 @@ class CustomerProfileData:
     shareholders: list[str] = field(default_factory=list)
     management_members: list[str] = field(default_factory=list)
     relationship_years: int | None = None
+    business_history_years: int | None = None
     historical_facilities: list[str] = field(default_factory=list)
     active_ews: bool | None = None
     previous_restructuring: bool | None = None
