@@ -34,8 +34,27 @@ class RuleConfig:
             raise ValueError("input_field cannot be blank")
         if any(not field.strip() for field in self.input_fields):
             raise ValueError("input_fields cannot contain blank values")
+        if self.input_field and self.input_fields:
+            raise ValueError(
+                "input_field and input_fields cannot both be configured"
+            )
         if self.calculation not in {"direct", "ratio", "difference"}:
-            raise ValueError("calculation must be one of: direct, difference, ratio")
+            raise ValueError(
+                "calculation must be one of: direct, difference, ratio"
+            )
+        expected_input_count = {
+            "direct": 1,
+            "ratio": 2,
+            "difference": 2,
+        }[self.calculation]
+        configured_input_count = len(self.input_fields) or (
+            1 if self.input_field else 0
+        )
+        if configured_input_count != expected_input_count:
+            raise ValueError(
+                f"{self.calculation} calculation requires "
+                f"exactly {expected_input_count} input field(s)"
+            )
         if self.comment_template and not self.comment_template.strip():
             raise ValueError("comment_template cannot be blank")
         valid_operators = {"GT", "GTE", "LT", "LTE"}
