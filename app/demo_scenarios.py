@@ -194,11 +194,72 @@ DEMO_SCENARIOS = {
             },
         },
     },
+    "Behavioural Stress": {
+        "description": (
+            "A borrower with sound financial fundamentals but materially deteriorating "
+            "banking behaviour. Customer profile shows an active EWS flag, while all "
+            "four behavioural rules are deliberately activated to demonstrate the "
+            "non-financial monitoring layer."
+        ),
+        "values": {
+            "position_id": "DEMO-BEHAVIOURAL-001",
+            "revenue": 10_000_000.0,
+            "change_in_finished_goods_inventory": 90_000.0,
+            "operating_grants": 40_000.0,
+            "net_purchases": 5_000_000.0,
+            "change_in_raw_materials_inventory": -40_000.0,
+            "costs_for_services_and_third_party_assets": 1_500_000.0,
+            "personnel_costs": 2_000_000.0,
+            "depreciation_tangible_assets": 300_000.0,
+            "working_capital_impairments": 40_000.0,
+            "operating_provisions": 30_000.0,
+            "other_income_expenses_balance": 20_000.0,
+            "operating_value_added": 3_400_000.0,
+            "gross_operating_margin": 1_450_000.0,
+            "net_operating_margin": 1_150_000.0,
+            "ebitda": 1_700_000.0,
+            "profit_loss": 850_000.0,
+            "ebitda_margin": 0.17,
+            "ebitda_inventory_contribution": 0.01,
+            "nfp_to_ebitda": 1.7,
+            "interest_expense": 140_000.0,
+            "revenue_growth": 0.04,
+        },
+        "case_data": {
+            "customer_profile": {
+                "company_name": "Futura Logistics S.p.A.",
+                "legal_form": "S.p.A.",
+                "sector": "Logistics",
+                "size_class": "Mid-cap",
+                "geography": "Northern Italy",
+                "shareholders": ["Industrial holding"],
+                "management_members": ["CEO", "CFO"],
+                "relationship_years": 7,
+                "business_history_years": 22,
+                "historical_facilities": ["Revolving credit", "Term loan"],
+                "active_ews": True,
+                "previous_restructuring": False,
+            },
+            "behavioural": {
+                "average_utilization": 0.96,
+                "overdraft_days": 35,
+                "payment_delay_days": 65,
+                "exposure_growth": 0.45,
+            },
+            "debt_sustainability": {
+                "cash_flow_available_for_debt_service": 1_100_000.0,
+                "debt_service": 450_000.0,
+                "ebitda": 1_700_000.0,
+                "interest_expense": 140_000.0,
+            },
+        },
+    },
     "Leverage Stress": {
         "description": (
-            "A company with solid operations and controlled banking behaviour but "
-            "excessive leverage and weak debt-service headroom. The scenario isolates "
-            "structural balance-sheet risk while still providing a complete case profile."
+            "A company with solid operations but excessive leverage and weak "
+            "debt-service headroom. A previous restructuring event is also present, "
+            "so customer-profile, financial and debt-sustainability rules contribute "
+            "to the CRITICAL assessment."
         ),
         "values": {
             "position_id": "DEMO-LEVERAGE-001",
@@ -237,7 +298,7 @@ DEMO_SCENARIOS = {
                 "business_history_years": 31,
                 "historical_facilities": ["Term loan", "Leasing", "Revolving credit"],
                 "active_ews": False,
-                "previous_restructuring": False,
+                "previous_restructuring": True,
             },
             "behavioural": {
                 "average_utilization": 0.64,
