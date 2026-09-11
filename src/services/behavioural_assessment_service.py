@@ -94,17 +94,13 @@ class BehaviouralAssessmentService:
             direction=config.severity_direction,
             thresholds=config.severity_thresholds,
         ).evaluate(value) or config.severity
-
-        if status == RuleStatus.TRIGGERED:
-            reason = (
-                f"{config.indicator} is {value:.2f}, above the configured "
-                f"threshold of {config.threshold:.2f}."
-            )
-        else:
-            reason = (
-                f"{config.indicator} is {value:.2f}, within the configured "
-                f"threshold of {config.threshold:.2f}."
-            )
+        reason = BehaviouralAssessmentService._build_reason(
+            config.indicator,
+            value,
+            config.threshold,
+            config.trigger_operator,
+            status,
+        )
 
         return RuleResult(
             rule_id=config.rule_id,
@@ -118,6 +114,37 @@ class BehaviouralAssessmentService:
             indicator=config.indicator,
             direction=config.severity_direction,
             comment_template=config.comment_template,
+        )
+
+    @staticmethod
+    def _build_reason(
+        indicator: str,
+        value: float,
+        threshold: float,
+        operator: str,
+        status: RuleStatus,
+    ) -> str:
+        if status == RuleStatus.TRIGGERED:
+            relation = {
+                "GT": "above",
+                "GTE": "at or above",
+                "LT": "below",
+                "LTE": "at or below",
+            }[operator]
+            return (
+                f"{indicator} is {value:.2f}, {relation} the configured "
+                f"threshold of {threshold:.2f}."
+            )
+
+        relation = {
+            "GT": "at or below",
+            "GTE": "below",
+            "LT": "at or above",
+            "LTE": "above",
+        }[operator]
+        return (
+            f"{indicator} is {value:.2f}, {relation} the configured "
+            f"threshold of {threshold:.2f}."
         )
 
     @staticmethod
