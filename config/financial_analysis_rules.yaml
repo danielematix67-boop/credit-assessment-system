@@ -26,9 +26,6 @@ rules:
     threshold: 0.0
     severity: HIGH
     severity_direction: LOWER_IS_WORSE
-    severity_thresholds:
-      - threshold: 0.0
-        severity: HIGH
     comment_template: >-
       EBITDA is negative at {value:,.0f}, indicating negative operating
       profitability.
