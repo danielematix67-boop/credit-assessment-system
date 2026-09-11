@@ -16,8 +16,8 @@ from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_workflow import AssessmentWorkflowResult
 from src.models.position import CreditPosition
 from src.models.report import Report
-from src.rules.base.severity import RuleSeverity
 from src.services.credit_assessment_case_service import CreditAssessmentCaseService
+from src.rules.base.severity import RuleSeverity
 
 
 # ============================================================
