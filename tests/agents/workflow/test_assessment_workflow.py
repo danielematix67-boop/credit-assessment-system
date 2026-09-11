@@ -31,16 +31,20 @@ def make_position() -> CreditPosition:
     Create a generic valid credit position.
 
     The exact financial values are irrelevant for workflow tests.
-    The position only needs to be structurally valid.
+    The position only needs to be structurally valid and fully evaluable
+    for the financial rules so the expected baseline status is NORMAL.
     """
     return CreditPosition(
         position_id="TEST_POSITION",
-        revenue_growth=0.0,
-        ebitda=0.0,
-        profit_loss=0.0,
-        ebitda_margin=0.0,
-        nfp_to_ebitda=0.0,
-        interest_expense=0.0,
+        revenue=10_000_000.0,
+        change_in_finished_goods_inventory=5_000_000.0,
+        revenue_growth=0.05,
+        ebitda=1_000_000.0,
+        profit_loss=500_000.0,
+        ebitda_margin=0.10,
+        ebitda_inventory_contribution=0.20,
+        nfp_to_ebitda=2.0,
+        interest_expense=500_000.0,
     )
 
 
