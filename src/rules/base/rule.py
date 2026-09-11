@@ -37,7 +37,9 @@ class Rule(ABC):
         position: CreditPosition,
     ) -> tuple[float | None, str | None]:
         """Resolve and calculate a numeric value from rule configuration."""
-        fields = self.config.input_fields or ((self.config.input_field,) if self.config.input_field else ())
+        fields = self.config.input_fields or (
+            (self.config.input_field,) if self.config.input_field else ()
+        )
 
         if not fields:
             return None, "No input field is configured."
@@ -148,9 +150,12 @@ class Rule(ABC):
         cls,
         rule_id: str,
     ) -> Callable[[type["Rule"]], type["Rule"]]:
-        """Register a concrete Rule implementation."""
+        """Register a concrete Rule implementation idempotently."""
         def decorator(rule_class: type["Rule"]) -> type["Rule"]:
-            if rule_id in cls._registry:
+            existing_rule = cls._registry.get(rule_id)
+            if existing_rule is not None:
+                if existing_rule is rule_class:
+                    return rule_class
                 raise ValueError(f"Rule already registered: {rule_id}")
             cls._registry[rule_id] = rule_class
             return rule_class
