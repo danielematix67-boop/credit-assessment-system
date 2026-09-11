@@ -70,7 +70,10 @@ rules:
     rule_name: Interest expense to EBITDA
     indicator: Interest expense / EBITDA
     category: profitability
-    input_field: financial_expenses_to_ebitda
+    input_fields:
+      - interest_expense
+      - ebitda
+    calculation: ratio
     trigger_operator: GT
     threshold: 0.60
     severity: MEDIUM
@@ -88,7 +91,6 @@ rules:
   - rule_id: R006
     rule_name: EBITDA materially supported by finished goods inventory increase
     indicator: EBITDA / finished goods inventory increase
-    category: profitability_quality
     input_field: ebitda_inventory_contribution
     trigger_operator: GT
     threshold: 0.30
