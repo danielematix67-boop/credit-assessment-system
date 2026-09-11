@@ -20,10 +20,6 @@ class Rule(ABC):
         """Evaluate the rule against a credit position."""
         raise NotImplementedError
 
-    def _configured_value(self, position: CreditPosition) -> Any:
-        """Return the position attribute mapped by the rule configuration."""
-        return getattr(position, self.config.value_field, None)
-
     def _is_triggered(self, value: float) -> bool:
         """Evaluate the configured trigger threshold."""
         return value > self.config.threshold
