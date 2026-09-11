@@ -9,14 +9,18 @@ from src.models.position import CreditPosition
 # ============================================================
 # Demo Scenarios
 # ============================================================
+# Every complete scenario is populated across all assessment domains:
+# customer profile, financial analysis, behavioural analysis and debt
+# sustainability. Values are synthetic and designed to demonstrate how
+# evidence from different domains contributes to the overall assessment.
 
 DEMO_SCENARIOS = {
     "Healthy Company": {
         "description": (
-            "A financially solid company with positive revenue growth, "
-            "strong operating performance, positive profitability, "
-            "healthy margins and moderate leverage. All financial rules "
-            "remain within their configured thresholds."
+            "A well-established company with strong financial performance, "
+            "conservative leverage, healthy debt-service capacity and stable "
+            "banking behaviour. No configured risk indicator is triggered "
+            "across the complete assessment."
         ),
         "values": {
             "position_id": "DEMO-HEALTHY-001",
@@ -52,6 +56,7 @@ DEMO_SCENARIOS = {
                 "shareholders": ["Family holding", "Management shareholders"],
                 "management_members": ["CEO", "CFO"],
                 "relationship_years": 8,
+                "business_history_years": 24,
                 "historical_facilities": ["Revolving credit", "Term loan"],
                 "active_ews": False,
                 "previous_restructuring": False,
@@ -72,10 +77,10 @@ DEMO_SCENARIOS = {
     },
     "Revenue Deterioration": {
         "description": (
-            "A company experiencing a significant contraction in revenues "
-            "while maintaining positive profitability and adequate interest "
-            "coverage. The scenario isolates the revenue-growth warning "
-            "without triggering the interest-burden rules."
+            "An established company facing a material contraction in revenues. "
+            "Customer profile, banking behaviour and debt-service capacity remain "
+            "sound, while financial analysis identifies the top-line deterioration. "
+            "This is a controlled ATTENTION case."
         ),
         "values": {
             "position_id": "DEMO-REVENUE-001",
@@ -111,8 +116,9 @@ DEMO_SCENARIOS = {
                 "shareholders": ["Entrepreneurial holding"],
                 "management_members": ["CEO", "Finance manager"],
                 "relationship_years": 6,
+                "business_history_years": 16,
                 "historical_facilities": ["Revolving credit", "Term loan"],
-                "active_ews": True,
+                "active_ews": False,
                 "previous_restructuring": False,
             },
             "behavioural": {
@@ -131,10 +137,9 @@ DEMO_SCENARIOS = {
     },
     "Profitability Stress": {
         "description": (
-            "A company showing deterioration in profitability, margins and "
-            "cash-conversion quality. The scenario activates the EBITDA "
-            "margin, interest burden, interest coverage and inventory-support "
-            "rules, providing a clear multi-rule CRITICAL case."
+            "A company with weakening profitability, deteriorating banking behaviour "
+            "and insufficient debt-service capacity. Customer-profile, behavioural, "
+            "financial and debt-sustainability evidence combine into a CRITICAL case."
         ),
         "values": {
             "position_id": "DEMO-PROFITABILITY-001",
@@ -170,15 +175,16 @@ DEMO_SCENARIOS = {
                 "shareholders": ["Private shareholders"],
                 "management_members": ["CEO", "CFO"],
                 "relationship_years": 4,
+                "business_history_years": 9,
                 "historical_facilities": ["Revolving credit"],
-                "active_ews": False,
+                "active_ews": True,
                 "previous_restructuring": False,
             },
             "behavioural": {
-                "average_utilization": 0.88,
-                "overdraft_days": 7,
-                "payment_delay_days": 18,
-                "exposure_growth": 0.22,
+                "average_utilization": 0.94,
+                "overdraft_days": 18,
+                "payment_delay_days": 42,
+                "exposure_growth": 0.28,
             },
             "debt_sustainability": {
                 "cash_flow_available_for_debt_service": 180_000.0,
@@ -190,10 +196,9 @@ DEMO_SCENARIOS = {
     },
     "Leverage Stress": {
         "description": (
-            "A company with significant financial leverage. Operating "
-            "performance, interest burden and interest coverage remain "
-            "within the configured limits, isolating the leverage rule as "
-            "the main financial criticality."
+            "A company with solid operations and controlled banking behaviour but "
+            "excessive leverage and weak debt-service headroom. The scenario isolates "
+            "structural balance-sheet risk while still providing a complete case profile."
         ),
         "values": {
             "position_id": "DEMO-LEVERAGE-001",
@@ -229,17 +234,16 @@ DEMO_SCENARIOS = {
                 "shareholders": ["Industrial holding"],
                 "management_members": ["CEO", "CFO"],
                 "relationship_years": 10,
-                "historical_facilities": [
-                    "Term loan", "Leasing", "Revolving credit"
-                ],
-                "active_ews": True,
+                "business_history_years": 31,
+                "historical_facilities": ["Term loan", "Leasing", "Revolving credit"],
+                "active_ews": False,
                 "previous_restructuring": False,
             },
             "behavioural": {
-                "average_utilization": 0.91,
-                "overdraft_days": 14,
-                "payment_delay_days": 35,
-                "exposure_growth": 0.31,
+                "average_utilization": 0.64,
+                "overdraft_days": 4,
+                "payment_delay_days": 7,
+                "exposure_growth": 0.12,
             },
             "debt_sustainability": {
                 "cash_flow_available_for_debt_service": 600_000.0,
@@ -251,10 +255,10 @@ DEMO_SCENARIOS = {
     },
     "Multiple Risk Factors": {
         "description": (
-            "A distressed company combining revenue contraction, negative "
-            "EBITDA, negative profitability, weak interest coverage and high "
-            "leverage. This scenario demonstrates the cumulative effect of "
-            "multiple triggered rules."
+            "A severely distressed borrower combining adverse customer-profile signals, "
+            "deteriorating banking behaviour, revenue contraction, negative profitability, "
+            "high leverage and insufficient debt-service capacity. This is the main "
+            "end-to-end stress scenario for demonstrating cumulative risk evidence."
         ),
         "values": {
             "position_id": "DEMO-MULTIPLE-RISK-001",
@@ -290,9 +294,8 @@ DEMO_SCENARIOS = {
                 "shareholders": ["Industrial holding"],
                 "management_members": ["CEO", "CFO"],
                 "relationship_years": 12,
-                "historical_facilities": [
-                    "Term loan", "Revolving credit", "Leasing"
-                ],
+                "business_history_years": 18,
+                "historical_facilities": ["Term loan", "Revolving credit", "Leasing"],
                 "active_ews": True,
                 "previous_restructuring": True,
             },
@@ -312,9 +315,10 @@ DEMO_SCENARIOS = {
     },
     "Missing Information": {
         "description": (
-            "A company for which several financial indicators are "
-            "unavailable. This scenario demonstrates NOT_EVALUABLE "
-            "handling and data-quality limitations."
+            "A partially documented customer used to demonstrate data-quality handling. "
+            "Customer-profile, behavioural and debt-sustainability inputs are unavailable, "
+            "while financial indicators are also missing. The system must preserve "
+            "NOT_EVALUABLE evidence and expose the resulting limitations explicitly."
         ),
         "values": {
             "position_id": "DEMO-MISSING-001",
