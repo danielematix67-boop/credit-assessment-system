@@ -3,8 +3,8 @@ from typing import Any
 import streamlit as st
 
 from app.demo_scenarios import DEMO_SCENARIOS, build_demo_position
-from src.models.position import CreditPosition
 from app.ui.input import build_credit_position_from_ui, display_position_table
+from src.models.position import CreditPosition
 
 
 _SCENARIO_GROUPS = {
