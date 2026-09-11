@@ -9,10 +9,7 @@ from src.rules.base.severity_threshold import SeverityThreshold
 
 
 class RuleConfigLoader:
-    def load(
-        self,
-        path: Path,
-    ) -> list[RuleConfig]:
+    def load(self, path: Path) -> list[RuleConfig]:
         with path.open("r", encoding="utf-8") as file:
             data = yaml.safe_load(file)
 
@@ -20,25 +17,18 @@ class RuleConfigLoader:
             raise ValueError("Invalid rule configuration")
         if "rules" not in data:
             raise ValueError("Missing 'rules' section")
-
         rules = data["rules"]
         if not isinstance(rules, list):
             raise ValueError("'rules' must be a list")
 
         configs = []
         seen_rule_ids = set()
-
         for item in rules:
             if not isinstance(item, dict):
                 raise ValueError("Invalid rule configuration item")
 
             required_fields = {
-                "rule_id",
-                "rule_name",
-                "category",
-                "threshold",
-                "severity",
-                "severity_direction",
+                "rule_id", "rule_name", "category", "threshold", "severity", "severity_direction"
             }
             missing_fields = required_fields - item.keys()
             if missing_fields:
@@ -53,31 +43,32 @@ class RuleConfigLoader:
                 threshold = float(item["threshold"])
             except (TypeError, ValueError) as exc:
                 raise ValueError(f"Invalid threshold for rule_id: {rule_id}") from exc
-
             try:
                 severity = RuleSeverity(item["severity"])
             except ValueError as exc:
                 raise ValueError(f"Invalid severity for rule_id: {rule_id}") from exc
-
             try:
                 severity_direction = SeverityDirection(item["severity_direction"])
             except ValueError as exc:
-                raise ValueError(
-                    f"Invalid severity direction for rule_id: {rule_id}"
-                ) from exc
+                raise ValueError(f"Invalid severity direction for rule_id: {rule_id}") from exc
 
             indicator = item.get("indicator", item["rule_name"])
             if not isinstance(indicator, str) or not indicator.strip():
                 raise ValueError(f"Invalid indicator for rule_id: {rule_id}")
-
             input_field = item.get("input_field", "")
             if not isinstance(input_field, str):
                 raise ValueError(f"Invalid input_field for rule_id: {rule_id}")
-
+            raw_input_fields = item.get("input_fields", [])
+            if not isinstance(raw_input_fields, list) or not all(
+                isinstance(field, str) and field.strip() for field in raw_input_fields
+            ):
+                raise ValueError(f"Invalid input_fields for rule_id: {rule_id}")
+            calculation = item.get("calculation", "direct")
+            if not isinstance(calculation, str):
+                raise ValueError(f"Invalid calculation for rule_id: {rule_id}")
             comment_template = item.get("comment_template", "")
             if not isinstance(comment_template, str):
                 raise ValueError(f"Invalid comment_template for rule_id: {rule_id}")
-
             trigger_operator = item.get("trigger_operator", "GT")
             if not isinstance(trigger_operator, str):
                 raise ValueError(f"Invalid trigger_operator for rule_id: {rule_id}")
@@ -86,45 +77,27 @@ class RuleConfigLoader:
             raw_severity_thresholds = item.get("severity_thresholds", [])
             if not isinstance(raw_severity_thresholds, list):
                 raise ValueError(f"Invalid severity_thresholds for rule_id: {rule_id}")
-
             for severity_threshold in raw_severity_thresholds:
                 if not isinstance(severity_threshold, dict):
-                    raise ValueError(
-                        "Invalid severity threshold "
-                        f"configuration for rule_id: {rule_id}"
-                    )
-
+                    raise ValueError(f"Invalid severity threshold configuration for rule_id: {rule_id}")
                 required_severity_fields = {"threshold", "severity"}
-                missing_severity_fields = (
-                    required_severity_fields - severity_threshold.keys()
-                )
+                missing_severity_fields = required_severity_fields - severity_threshold.keys()
                 if missing_severity_fields:
                     raise ValueError(
-                        "Missing severity threshold fields "
-                        f"for rule_id: {rule_id}: "
-                        f"{sorted(missing_severity_fields)}"
+                        f"Missing severity threshold fields for rule_id: {rule_id}: {sorted(missing_severity_fields)}"
                     )
-
                 try:
                     severity_value = float(severity_threshold["threshold"])
                 except (TypeError, ValueError) as exc:
-                    raise ValueError(
-                        f"Invalid severity threshold for rule_id: {rule_id}"
-                    ) from exc
-
+                    raise ValueError(f"Invalid severity threshold for rule_id: {rule_id}") from exc
                 try:
                     severity_level = RuleSeverity(severity_threshold["severity"])
                 except ValueError as exc:
                     raise ValueError(
-                        "Invalid severity for severity threshold "
-                        f"of rule_id: {rule_id}"
+                        f"Invalid severity for severity threshold of rule_id: {rule_id}"
                     ) from exc
-
                 severity_thresholds.append(
-                    SeverityThreshold(
-                        threshold=severity_value,
-                        severity=severity_level,
-                    )
+                    SeverityThreshold(threshold=severity_value, severity=severity_level)
                 )
 
             configs.append(
@@ -138,9 +111,10 @@ class RuleConfigLoader:
                     severity_thresholds=tuple(severity_thresholds),
                     indicator=indicator.strip(),
                     input_field=input_field.strip(),
+                    input_fields=tuple(field.strip() for field in raw_input_fields),
+                    calculation=calculation.strip().lower(),
                     comment_template=comment_template.strip(),
                     trigger_operator=trigger_operator.strip().upper(),
                 )
             )
-
         return configs
