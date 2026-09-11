@@ -8,7 +8,6 @@ import streamlit as st
 from app.ui.components import render_section_header
 from app.ui.results.helpers import (
     build_rule_area_dataframe,
-    build_rule_dataframe,
     build_status_overview,
     get_rule_results,
     rule_status_counts,
