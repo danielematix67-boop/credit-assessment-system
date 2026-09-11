@@ -1,5 +1,6 @@
-import pytest
 from types import SimpleNamespace
+
+import pytest
 
 from app.demo_scenarios import DEMO_SCENARIOS, build_demo_case_data, build_demo_position
 from app.ui.results.helpers import get_rule_results
