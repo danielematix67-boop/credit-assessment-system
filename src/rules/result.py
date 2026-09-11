@@ -17,6 +17,7 @@ class RuleResult:
     reason: str | None = None
     indicator: str = ""
     direction: SeverityDirection = SeverityDirection.HIGHER_IS_WORSE
+    comment_template: str = ""
 
     @property
     def is_triggered(self) -> bool:
