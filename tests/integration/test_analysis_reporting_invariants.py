@@ -2,6 +2,7 @@ from src.agents.analysis.case_analysis_agent import CaseAnalysisAgent
 from src.agents.reporting.deterministic_report_generator import (
     DeterministicReportGenerator,
 )
+from src.agents.reporting.llm_report_generator import LLMReportGenerator
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
@@ -171,3 +172,80 @@ def test_reporting_fallback_reuses_exact_same_analysis_without_reassessment() ->
 
     assert fallback.received is analysis
     assert report.assessment_status is analysis.assessment_status
+
+
+def test_llm_primary_and_deterministic_fallback_preserve_decision_content() -> None:
+    class SuccessfulLLMClient:
+        def generate(self, prompt: str) -> str:
+            return "The financial position requires management attention."
+
+    class FailingLLMClient:
+        def generate(self, prompt: str) -> str:
+            raise RuntimeError("synthetic LLM failure")
+
+    analysis = AssessmentAnalysis(
+        position_id="INVARIANT-004",
+        assessment_status=AssessmentStatus.CRITICAL,
+        key_findings=[
+            AnalysisFinding(
+                rule_id="R004",
+                category="Financial Analysis",
+                severity=RuleSeverity.HIGH,
+                text="Leverage is elevated.",
+            ),
+            AnalysisFinding(
+                rule_id="R007",
+                category="Financial Analysis",
+                severity=RuleSeverity.MEDIUM,
+                text="Interest coverage is weak.",
+            ),
+        ],
+        risk_factors=[],
+        limitations=[
+            AnalysisFinding(
+                rule_id="FINAL",
+                category="Final Assessment",
+                severity=RuleSeverity.MEDIUM,
+                text="Synthetic limitation.",
+            )
+        ],
+    )
+
+    primary_agent = ReportingAgent(
+        report_generator=LLMReportGenerator(SuccessfulLLMClient()),
+        fallback_generator=DeterministicReportGenerator(),
+    )
+    primary_report = primary_agent.run(analysis)
+
+    fallback_agent = ReportingAgent(
+        report_generator=LLMReportGenerator(FailingLLMClient()),
+        fallback_generator=DeterministicReportGenerator(),
+    )
+    fallback_report = fallback_agent.run(analysis)
+
+    assert primary_agent.last_generator_used == "PRIMARY"
+    assert primary_agent.last_error is None
+    assert fallback_agent.last_generator_used == "FALLBACK"
+    assert fallback_agent.last_error_category == "GENERATION_ERROR"
+
+    assert primary_report.assessment_status is analysis.assessment_status
+    assert fallback_report.assessment_status is analysis.assessment_status
+    assert primary_report.limitations is analysis.limitations
+    assert fallback_report.limitations is analysis.limitations
+
+    primary_findings = [
+        (finding.rule_id, finding.category, finding.severity, finding.text)
+        for group in primary_report.findings_by_category
+        for finding in group.findings
+    ]
+    fallback_findings = [
+        (finding.rule_id, finding.category, finding.severity, finding.text)
+        for group in fallback_report.findings_by_category
+        for finding in group.findings
+    ]
+    assert primary_findings == fallback_findings
+    assert primary_findings == [
+        ("R004", "Financial Analysis", RuleSeverity.HIGH, "Leverage is elevated."),
+        ("R007", "Financial Analysis", RuleSeverity.MEDIUM, "Interest coverage is weak."),
+    ]
+    assert primary_report.executive_summary != fallback_report.executive_summary
