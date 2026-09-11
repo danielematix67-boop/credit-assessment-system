@@ -9,23 +9,41 @@ from typing import Any
 import pandas as pd
 
 
-def get_rule_results(result: Any) -> list[Any]:
-    """Return deterministic rule evidence across every assessment macro-area.
-
-    The case-level assessment is the authoritative representation when it is
-    available. The legacy Assessment fallback is retained for older workflow
-    results that do not contain a CreditAssessmentCase.
-    """
+def get_rule_sections(result: Any) -> list[Any]:
+    """Return the assessment sections from the authoritative credit case."""
     credit_case = getattr(result, "credit_case", None)
-    if credit_case is not None:
-        rule_results: list[Any] = []
-        for section in getattr(credit_case, "sections", []) or []:
-            rule_results.extend(getattr(section, "evidence", []) or [])
-        if rule_results:
-            return rule_results
+    if credit_case is None:
+        return []
+    return list(getattr(credit_case, "sections", []) or [])
 
-    assessment = getattr(result, "assessment", None)
-    return list(getattr(assessment, "rule_results", []) or [])
+
+def get_rule_results(result: Any) -> list[Any]:
+    """Return deterministic rule evidence across every assessment macro-area."""
+    rule_results: list[Any] = []
+    for section in get_rule_sections(result):
+        rule_results.extend(getattr(section, "evidence", []) or [])
+    return rule_results
+
+
+def build_rule_area_dataframe(result: Any) -> pd.DataFrame:
+    """Build rule evidence while preserving the authoritative macro-area name."""
+    rows: list[dict[str, Any]] = []
+    for section in get_rule_sections(result):
+        area = str(getattr(section, "name", "Assessment area"))
+        for rule_result in getattr(section, "evidence", []) or []:
+            rows.append(
+                {
+                    "Assessment area": area,
+                    "Rule": str(getattr(rule_result, "rule_id", "—")),
+                    "Indicator": rule_indicator(rule_result),
+                    "Actual": getattr(rule_result, "value", None),
+                    "Threshold": getattr(rule_result, "threshold", None),
+                    "Status": rule_status(rule_result),
+                    "Severity": rule_severity(rule_result),
+                    "Category": str(getattr(rule_result, "category", "—")),
+                }
+            )
+    return pd.DataFrame(rows)
 
 
 def rule_status_counts(result: Any) -> dict[str, int]:
@@ -82,11 +100,8 @@ def severity_rank(severity: str) -> int:
 
 
 def rule_indicator(rule_result: Any) -> str:
-    """Return the explicit deterministic indicator, with legacy fallback."""
-    return str(
-        getattr(rule_result, "indicator", None)
-        or getattr(rule_result, "rule_name", "—")
-    )
+    """Return the explicit deterministic indicator."""
+    return str(getattr(rule_result, "indicator", None) or getattr(rule_result, "rule_name", "—"))
 
 
 def severity_counts(rule_results: list[Any]) -> dict[str, int]:
