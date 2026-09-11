@@ -10,6 +10,20 @@ import pandas as pd
 
 
 def get_rule_results(result: Any) -> list[Any]:
+    """Return deterministic rule evidence across every assessment macro-area.
+
+    The case-level assessment is the authoritative representation when it is
+    available. The legacy Assessment fallback is retained for older workflow
+    results that do not contain a CreditAssessmentCase.
+    """
+    credit_case = getattr(result, "credit_case", None)
+    if credit_case is not None:
+        rule_results: list[Any] = []
+        for section in getattr(credit_case, "sections", []) or []:
+            rule_results.extend(getattr(section, "evidence", []) or [])
+        if rule_results:
+            return rule_results
+
     assessment = getattr(result, "assessment", None)
     return list(getattr(assessment, "rule_results", []) or [])
 
