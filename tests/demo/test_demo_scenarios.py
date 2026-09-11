@@ -30,6 +30,7 @@ EXPECTED_TRIGGERED_RULES = {
     "08 · Integrated Credit Stress": {
         "CP001",
         "CP002",
+        "CP003",
         "R001",
         "R002",
         "R003",
