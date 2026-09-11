@@ -114,6 +114,7 @@ rules:
     threshold: 1.0
     severity: MEDIUM
     severity_direction: HIGHER_IS_WORSE
+    trigger_operator: GT
     input_field: test_value
     comment_template: 'YAML policy text: {value:.2f}.'
 """,
