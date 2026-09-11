@@ -1,6 +1,6 @@
+from typing import Any
 from copy import deepcopy
 from dataclasses import fields
-from typing import Any
 
 from src.models.behavioural_data import BehaviouralData
 from src.models.customer_profile_data import CustomerProfileData
