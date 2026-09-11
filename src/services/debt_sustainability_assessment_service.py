@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from src.comments.comment_engine import CommentEngine
+from src.config.rule_config_loader import RuleConfigLoader
 from src.models.assessment_section import AssessmentSection, SectionStatus
 from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.models.rule_finding import RuleFinding
@@ -9,7 +10,6 @@ from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_policy import SeverityPolicy
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
-from src.config.rule_config_loader import RuleConfigLoader
 from src.services.assessment_status_calculator import AssessmentStatusCalculator
 
 
@@ -62,7 +62,9 @@ class DebtSustainabilityAssessmentService:
         if config.calculation == "ratio":
             numerator, denominator = values
             if denominator <= 0:
-                return cls._not_evaluable(config, "The denominator must be positive to calculate the indicator.")
+                return cls._not_evaluable(
+                    config, "The denominator must be positive to calculate the indicator."
+                )
             value = numerator / denominator
         elif config.calculation == "difference":
             value = values[0] - values[1]
