@@ -9,27 +9,23 @@ class EbitdaMarginRule(Rule):
     """
     Triggers when EBITDA margin falls below the configured threshold.
 
-    The EBITDA margin is provided directly by CreditPosition.
-    The rule is responsible only for evaluating the value against
-    the configured business threshold.
-
-    The rule is not evaluable when EBITDA margin is missing.
+    The value and trigger semantics are resolved from rule configuration.
+    The rule is not evaluable when the configured input is unavailable.
     """
 
     def evaluate(
         self,
         position: CreditPosition,
     ) -> RuleResult:
-        value = position.ebitda_margin
+        value, error = self._configured_value(position)
 
-        if value is None:
-            return self._not_evaluable(
-                reason="EBITDA margin is not available.",
-            )
+        if error is not None:
+            return self._not_evaluable(reason=error)
 
+        assert value is not None
         status = (
             RuleStatus.TRIGGERED
-            if value < self.config.threshold
+            if self._is_triggered(value)
             else RuleStatus.NOT_TRIGGERED
         )
 
