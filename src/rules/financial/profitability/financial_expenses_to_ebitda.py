@@ -15,32 +15,29 @@ class FinancialExpensesToEbitdaRule(Rule):
         self,
         position: CreditPosition,
     ) -> RuleResult:
-        interest_expense = position.interest_expense
-        ebitda = position.ebitda
-
-        if interest_expense is None:
-            return self._not_evaluable(
-                reason="Interest expense is not available.",
-            )
-
-        if ebitda is None:
+        if position.ebitda is None:
             return self._not_evaluable(
                 reason="EBITDA is not available.",
             )
 
-        if ebitda <= 0:
+        if position.ebitda <= 0:
             return self._not_evaluable(
                 reason=(
-                    "Interest expense to EBITDA ratio is not meaningful because EBITDA is negative or zero."
-                    " Interest expenses cannot be covered by operating profitability."
+                    "Interest expense to EBITDA ratio is not meaningful because "
+                    "EBITDA is negative or zero. Interest expenses cannot be "
+                    "covered by operating profitability."
                 ),
             )
 
-        value = interest_expense / ebitda
+        value, error = self._configured_value(position)
 
+        if error is not None:
+            return self._not_evaluable(reason=error)
+
+        assert value is not None
         status = (
             RuleStatus.TRIGGERED
-            if value > self.config.threshold
+            if self._is_triggered(value)
             else RuleStatus.NOT_TRIGGERED
         )
 
