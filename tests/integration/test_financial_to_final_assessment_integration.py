@@ -5,7 +5,6 @@ from src.config.rule_config_loader import RuleConfigLoader
 from src.engine.rule_engine import RuleEngine
 from src.models.assessment_section import SectionStatus
 from src.models.behavioural_data import BehaviouralData
-from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.models.position import CreditPosition
 from src.rules.base.rule import Rule
