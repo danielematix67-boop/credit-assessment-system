@@ -1,108 +1,58 @@
 from abc import ABC, abstractmethod
-from collections.abc import Callable
-from typing import ClassVar
+from typing import Any, Callable, ClassVar
 
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
-from src.rules.base.severity import RuleSeverity
-from src.rules.base.severity_policy import SeverityPolicy
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
 
 class Rule(ABC):
+    """Base class for deterministic credit-assessment rules."""
+
     _registry: ClassVar[dict[str, type["Rule"]]] = {}
 
-    def __init__(
-        self,
-        config: RuleConfig,
-    ):
+    def __init__(self, config: RuleConfig) -> None:
         self.config = config
 
-        self._severity_policy = SeverityPolicy(
-            direction=config.severity_direction,
-            thresholds=config.severity_thresholds,
-        )
-
     @abstractmethod
-    def evaluate(
-        self,
-        position: CreditPosition,
-    ) -> RuleResult:
+    def evaluate(self, position: CreditPosition) -> RuleResult:
         """Evaluate the rule against a credit position."""
-        pass
+        raise NotImplementedError
 
-    def _configured_value(
-        self,
-        position: CreditPosition,
-    ) -> tuple[float | None, str | None]:
-        """Resolve and calculate a numeric value from rule configuration."""
-        fields = self.config.input_fields or (
-            (self.config.input_field,) if self.config.input_field else ()
-        )
+    def _configured_value(self, position: CreditPosition) -> Any:
+        """Return the position attribute mapped by the rule configuration."""
+        return getattr(position, self.config.value_field, None)
 
-        if not fields:
-            return None, "No input field is configured."
+    def _is_triggered(self, value: float) -> bool:
+        """Evaluate the configured trigger threshold."""
+        return value > self.config.threshold
 
-        values: list[float | None] = [getattr(position, field, None) for field in fields]
-
-        if any(value is None for value in values):
-            return None, f"Required input field is not available: {', '.join(fields)}."
-
-        numeric_values = [float(value) for value in values if value is not None]
-
-        if self.config.calculation == "direct":
-            if len(numeric_values) != 1:
-                return None, "Direct calculation requires exactly one input field."
-            return numeric_values[0], None
-
-        if len(numeric_values) != 2:
-            return None, f"{self.config.calculation} calculation requires exactly two input fields."
-
-        numerator, denominator = numeric_values
-        if self.config.calculation == "ratio":
-            if denominator == 0:
-                return None, "Ratio denominator cannot be zero."
-            return numerator / denominator, None
-
-        if self.config.calculation == "difference":
-            return numerator - denominator, None
-
-        return None, f"Unsupported calculation: {self.config.calculation}."
-
-    def _is_triggered(
-        self,
-        value: float,
-    ) -> bool:
-        """Apply the configured trigger operator to a calculated value."""
-        threshold = self.config.threshold
-        operators: dict[str, Callable[[float, float], bool]] = {
-            "GT": lambda left, right: left > right,
-            "GTE": lambda left, right: left >= right,
-            "LT": lambda left, right: left < right,
-            "LTE": lambda left, right: left <= right,
-        }
-        return operators[self.config.trigger_operator](value, threshold)
-
-    def _severity(
-        self,
-        value: float,
-    ) -> RuleSeverity:
-        """Resolve severity through the configured SeverityPolicy."""
-        resolved_severity = self._severity_policy.evaluate(value)
-        if resolved_severity is None:
+    def _severity(self, value: float) -> Any:
+        """Resolve severity from configured severity thresholds."""
+        thresholds = self.config.severity_thresholds
+        if not thresholds:
             return self.config.severity
-        return resolved_severity
 
-    def _format_reason(
-        self,
-        reason: str | None,
-    ) -> str:
-        """Add the deterministic rule reference to the reason."""
-        rule_reference = f"[{self.config.rule_id} - {self.config.rule_name}]"
-        if reason is None:
-            return f"{rule_reference} Rule evaluation completed."
-        return f"{rule_reference} {reason}"
+        if self.config.severity_direction.value == "higher_is_worse":
+            severity = thresholds[0].severity
+            for threshold in thresholds:
+                if value >= threshold.threshold:
+                    severity = threshold.severity
+            return severity
+
+        severity = thresholds[0].severity
+        for threshold in thresholds:
+            if value <= threshold.threshold:
+                severity = threshold.severity
+        return severity
+
+    def _format_reason(self, value: float) -> str | None:
+        """Format the configured rule comment template, when available."""
+        template = self.config.comment_template
+        if not template:
+            return None
+        return template.format(value=value, threshold=self.config.threshold)
 
     def _result(
         self,
@@ -110,27 +60,25 @@ class Rule(ABC):
         value: float | None,
         status: RuleStatus,
         reason: str | None = None,
-        severity: RuleSeverity | None = None,
     ) -> RuleResult:
-        """Build a deterministic RuleResult with configured metadata."""
-        if severity is not None:
-            resolved_severity = severity
-        elif value is not None:
-            resolved_severity = self._severity(value)
-        else:
-            resolved_severity = self.config.severity
+        """Build a RuleResult from the configured rule metadata."""
+        resolved_reason = reason
+        if resolved_reason is None and value is not None:
+            resolved_reason = self._format_reason(value)
+
+        severity = self.config.severity
+        if value is not None:
+            severity = self._severity(value)
 
         return RuleResult(
             rule_id=self.config.rule_id,
             rule_name=self.config.rule_name,
             category=self.config.category,
-            status=status,
             value=value,
             threshold=self.config.threshold,
-            severity=resolved_severity,
-            reason=self._format_reason(reason),
-            indicator=self.config.indicator or self.config.rule_name,
-            direction=self.config.severity_direction,
+            status=status,
+            severity=severity,
+            reason=resolved_reason,
             comment_template=self.config.comment_template,
         )
 
@@ -156,6 +104,17 @@ class Rule(ABC):
             if existing_rule is not None:
                 if existing_rule is rule_class:
                     return rule_class
+
+                # Test collection and module reloading can create a second
+                # class object for the same source declaration. Treat that as
+                # the same implementation while still rejecting a genuinely
+                # different class claiming the same rule id.
+                if (
+                    existing_rule.__module__ == rule_class.__module__
+                    and existing_rule.__qualname__ == rule_class.__qualname__
+                ):
+                    return existing_rule
+
                 raise ValueError(f"Rule already registered: {rule_id}")
             cls._registry[rule_id] = rule_class
             return rule_class
