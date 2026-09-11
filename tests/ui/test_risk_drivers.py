@@ -1,9 +1,5 @@
 from types import SimpleNamespace
 
-import pandas as pd
-import pytest
-
-from app.ui.results.helpers import threshold_distance, threshold_relation
 from app.ui.results.risk_drivers import build_risk_driver_frame
 
 
@@ -12,7 +8,6 @@ def _rule(
     value: float | None,
     threshold: float | None,
     status: str,
-    direction: str,
     indicator: str,
     severity: str = "HIGH",
 ) -> SimpleNamespace:
@@ -21,59 +16,25 @@ def _rule(
         value=value,
         threshold=threshold,
         status=status,
-        direction=direction,
         indicator=indicator,
         severity=severity,
     )
 
 
-def test_threshold_distance_positive_means_worse() -> None:
-    assert threshold_distance(-0.20, -0.10, "LOWER_IS_WORSE") == pytest.approx(1.0)
-    assert threshold_distance(7.0, 5.0, "HIGHER_IS_WORSE") == pytest.approx(0.4)
-
-
-def test_threshold_relation_covers_threshold_positions() -> None:
-    assert threshold_relation(None) == "Threshold = 0"
-    assert threshold_relation(0.2) == "Worse than threshold"
-    assert threshold_relation(-0.2) == "Better than threshold"
-    assert threshold_relation(0.0) == "At threshold"
-
-
-def test_build_risk_driver_frame_ranks_triggered_rules_across_sections() -> None:
+def test_build_risk_driver_frame_keeps_only_triggered_rules() -> None:
     credit_case = SimpleNamespace(
         sections=[
             SimpleNamespace(
                 name="Financial Analysis",
                 evidence=[
-                    _rule(
-                        "R001",
-                        -0.20,
-                        -0.10,
-                        "TRIGGERED",
-                        "LOWER_IS_WORSE",
-                        "Revenue Growth",
-                    ),
-                    _rule(
-                        "R003",
-                        3.00,
-                        5.00,
-                        "NOT_TRIGGERED",
-                        "HIGHER_IS_WORSE",
-                        "NFP / EBITDA",
-                    ),
+                    _rule("R001", -0.20, -0.10, "TRIGGERED", "Revenue Growth"),
+                    _rule("R003", 3.00, 5.00, "NOT_TRIGGERED", "NFP / EBITDA"),
                 ],
             ),
             SimpleNamespace(
                 name="Debt Sustainability",
                 evidence=[
-                    _rule(
-                        "DS001",
-                        0.80,
-                        1.00,
-                        "TRIGGERED",
-                        "LOWER_IS_WORSE",
-                        "Debt Service Coverage",
-                    )
+                    _rule("DS001", 0.80, 1.00, "TRIGGERED", "Debt Service Coverage"),
                 ],
             ),
         ]
@@ -86,25 +47,27 @@ def test_build_risk_driver_frame_ranks_triggered_rules_across_sections() -> None
         "Financial Analysis",
         "Debt Sustainability",
     ]
-    assert frame.loc[0, "Distance"] == pytest.approx(1.0)
-    assert frame.loc[1, "Distance"] == pytest.approx(0.2)
-    assert set(frame["Relation"]) == {"Worse than threshold"}
+    assert list(frame.columns) == [
+        "Macro-area",
+        "Rule",
+        "Indicator",
+        "Actual",
+        "Threshold",
+        "Severity",
+    ]
+    assert "Distance" not in frame.columns
+    assert "Relation" not in frame.columns
 
 
-def test_build_risk_driver_frame_keeps_zero_threshold_triggered_rules() -> None:
+def test_build_risk_driver_frame_sorts_by_existing_severity() -> None:
     credit_case = SimpleNamespace(
         sections=[
             SimpleNamespace(
                 name="Financial Analysis",
                 evidence=[
-                    _rule(
-                        "R002",
-                        0.05,
-                        0.00,
-                        "TRIGGERED",
-                        "LOWER_IS_WORSE",
-                        "EBITDA Margin",
-                    )
+                    _rule("R001", -0.20, -0.10, "TRIGGERED", "Revenue Growth", "HIGH"),
+                    _rule("R002", 0.05, 0.00, "TRIGGERED", "EBITDA Margin", "CRITICAL"),
+                    _rule("R003", 7.00, 5.00, "TRIGGERED", "NFP / EBITDA", "MEDIUM"),
                 ],
             )
         ]
@@ -112,6 +75,23 @@ def test_build_risk_driver_frame_keeps_zero_threshold_triggered_rules() -> None:
 
     frame = build_risk_driver_frame(credit_case)
 
-    assert len(frame) == 1
-    assert frame.loc[0, "Relation"] == "Threshold = 0"
-    assert pd.isna(frame.loc[0, "Distance"])
+    assert list(frame["Rule"]) == ["R002", "R001", "R003"]
+    assert list(frame["Severity"]) == ["CRITICAL", "HIGH", "MEDIUM"]
+
+
+def test_build_risk_driver_frame_preserves_actual_and_threshold() -> None:
+    credit_case = SimpleNamespace(
+        sections=[
+            SimpleNamespace(
+                name="Financial Analysis",
+                evidence=[
+                    _rule("R002", 0.05, 0.00, "TRIGGERED", "EBITDA Margin"),
+                ],
+            )
+        ]
+    )
+
+    frame = build_risk_driver_frame(credit_case)
+
+    assert frame.loc[0, "Actual"] == 0.05
+    assert frame.loc[0, "Threshold"] == 0.00
