@@ -66,32 +66,6 @@ def rule_severity(rule_result: Any) -> str:
     return str(getattr(severity_obj, "value", str(severity_obj or "—")))
 
 
-def rule_direction(rule_result: Any) -> str:
-    direction_obj = getattr(rule_result, "direction", None)
-    return str(getattr(direction_obj, "value", str(direction_obj or "—")))
-
-
-def threshold_distance(value: float, threshold: float, direction: str) -> float | None:
-    """Return normalized distance from threshold; positive means worse."""
-    if threshold == 0:
-        return None
-    scale = abs(threshold)
-    if direction.upper() == "LOWER_IS_WORSE":
-        return (threshold - value) / scale
-    return (value - threshold) / scale
-
-
-def threshold_relation(distance: float | None) -> str:
-    """Return the display relation represented by a normalized threshold distance."""
-    if distance is None:
-        return "Threshold = 0"
-    if distance > 0:
-        return "Worse than threshold"
-    if distance < 0:
-        return "Better than threshold"
-    return "At threshold"
-
-
 def severity_rank(severity: str) -> int:
     """Return a display-only severity ranking."""
     return {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}.get(
