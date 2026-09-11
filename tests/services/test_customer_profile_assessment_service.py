@@ -115,6 +115,7 @@ def test_customer_profile_rule_threshold_is_configuration_driven(tmp_path: Path)
         "    indicator: Business history (years)\n"
         "    category: customer_profile\n"
         "    input_field: business_history_years\n"
+        "    trigger_operator: LTE\n"
         "    threshold: 7\n"
         "    severity: MEDIUM\n"
         "    severity_direction: LOWER_IS_WORSE\n"
