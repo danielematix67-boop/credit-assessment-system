@@ -14,8 +14,8 @@ rules:
       - threshold: -0.30
         severity: HIGH
     comment_template: >-
-      Revenue growth declined to {value:.1%}, indicating a deterioration in
-      the company's top-line performance.
+      Revenue growth stands at {value:.1%}, below the acceptable level,
+      indicating a deterioration in the top-line trend.
 
   - rule_id: R002
     rule_name: Negative EBITDA
@@ -26,9 +26,12 @@ rules:
     threshold: 0.0
     severity: HIGH
     severity_direction: LOWER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.0
+        severity: HIGH
     comment_template: >-
-      EBITDA is negative, with a reported value of €{value:,.0f}, indicating
-      negative operating profitability.
+      EBITDA is negative at {value:,.0f}, indicating negative operating
+      profitability.
 
   - rule_id: R003
     rule_name: EBITDA margin deterioration
@@ -45,8 +48,8 @@ rules:
       - threshold: -0.10
         severity: HIGH
     comment_template: >-
-      EBITDA margin is {value:.1%}, below the acceptable level, indicating
-      weak operating profitability relative to revenue.
+      EBITDA margin stands at {value:.1%}, indicating weak operating
+      profitability relative to revenue.
 
   - rule_id: R004
     rule_name: nfp / EBITDA leverage
@@ -93,8 +96,8 @@ rules:
     indicator: EBITDA / finished goods inventory increase
     category: profitability_quality
     input_fields:
-      - change_in_finished_goods_inventory
       - ebitda
+      - change_in_finished_goods_inventory
     calculation: ratio
     trigger_operator: GT
     threshold: 0.30
@@ -128,4 +131,4 @@ rules:
         severity: HIGH
     comment_template: >-
       The interest coverage ratio is {value:.1f}x, indicating that EBITDA
-      provides insufficient coverage of interest expense.
+      provides limited coverage of interest expense.
