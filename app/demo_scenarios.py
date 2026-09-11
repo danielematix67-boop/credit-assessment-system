@@ -14,7 +14,7 @@ from src.models.position import CreditPosition
 _BASE_VALUES: dict[str, Any] = {
     "position_id": "DEMO-BASE-001",
     "revenue": 10_000_000.0,
-    "change_in_finished_goods_inventory": 7_000_000.0,
+    "change_in_finished_goods_inventory": 100_000.0,
     "operating_grants": 50_000.0,
     "net_purchases": 5_000_000.0,
     "change_in_raw_materials_inventory": -50_000.0,
@@ -147,7 +147,7 @@ DEMO_SCENARIOS = {
         ),
         values={
             "ebitda": 1_800_000.0,
-            "change_in_finished_goods_inventory": 100_000.0,
+            "change_in_finished_goods_inventory": 600_000.0,
         },
     ),
     "06 · Behavioural Risk": _scenario(
@@ -213,7 +213,7 @@ DEMO_SCENARIOS = {
             "debt_sustainability": {
                 "cash_flow_available_for_debt_service": 100_000.0,
                 "debt_service": 600_000.0,
-                "ebitda": -200_000.0,
+                "ebitda": 500_000.0,
                 "interest_expense": 700_000.0,
             },
         },
