@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from src.models.assessment_section import SectionStatus
 from src.models.customer_profile_data import CustomerProfileData
 from src.rules.base.severity import RuleSeverity
@@ -93,7 +95,7 @@ def test_business_history_missing_is_not_evaluable() -> None:
     assert result.severity == RuleSeverity.MEDIUM
 
 
-def test_business_history_trigger_uses_predefined_comment() -> None:
+def test_business_history_trigger_uses_configured_comment() -> None:
     section = CustomerProfileAssessmentService().assess(
         CustomerProfileData(company_name="Synthetic Co.", business_history_years=4)
     )
@@ -102,6 +104,38 @@ def test_business_history_trigger_uses_predefined_comment() -> None:
         "Customer business history is 4 years, indicating limited operating "
         "or customer track record and increased early-stage credit risk."
     )
+
+
+def test_customer_profile_rule_threshold_is_configuration_driven(tmp_path: Path) -> None:
+    config_path = tmp_path / "customer_profile_rules.yaml"
+    config_path.write_text(
+        """rules:\n"
+        "  - rule_id: CP003\n"
+        "    rule_name: Business history\n"
+        "    indicator: Business history (years)\n"
+        "    category: customer_profile\n"
+        "    input_field: business_history_years\n"
+        "    threshold: 7\n"
+        "    severity: MEDIUM\n"
+        "    severity_direction: LOWER_IS_WORSE\n"
+        "    severity_thresholds:\n"
+        "      - threshold: 7\n"
+        "        severity: MEDIUM\n"
+        "      - threshold: 3\n"
+        "        severity: HIGH\n"
+        "    comment_template: 'Configured history: {value:.0f} years.'\n""",
+        encoding="utf-8",
+    )
+
+    section = CustomerProfileAssessmentService(config_path=config_path).assess(
+        CustomerProfileData(company_name="Synthetic Co.", business_history_years=6)
+    )
+
+    result = section.evidence[0]
+    assert result.threshold == 7.0
+    assert result.status == RuleStatus.TRIGGERED
+    assert result.severity == RuleSeverity.MEDIUM
+    assert section.findings[0].comment.text == "Configured history: 6 years."
 
 
 def test_missing_customer_profile_is_not_evaluable() -> None:
