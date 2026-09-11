@@ -200,17 +200,7 @@ def test_ui_rule_evidence_source_covers_all_registered_demo_rules(
             behavioural_data=behavioural,
             debt_sustainability_data=debt,
         )
-        rule_results = [
-            rule
-            for section in (
-                case.customer_profile,
-                case.financial_analysis,
-                case.behavioural_analysis,
-                case.debt_sustainability,
-            )
-            for rule in section.evidence
-        ]
-        result = SimpleNamespace(assessment=SimpleNamespace(rule_results=rule_results))
+        result = SimpleNamespace(credit_case=case)
         displayed_rule_ids.update(rule.rule_id for rule in get_rule_results(result))
 
     assert displayed_rule_ids == EXPECTED_UI_RULE_IDS
