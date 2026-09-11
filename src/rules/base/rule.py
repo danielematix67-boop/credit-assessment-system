@@ -84,18 +84,19 @@ class Rule(ABC):
         if not thresholds:
             return self.config.severity
 
-        # Values outside the configured risk bands are explicitly LOW.
-        # The first configured threshold marks the entry into the
-        # rule's severity bands; it does not imply a MEDIUM/HIGH result
-        # for values on the safe side of that threshold.
-        severity = RuleSeverity.LOW
-
         if self.config.severity_direction.value == "HIGHER_IS_WORSE":
+            # Values below the first configured band are on the safe side
+            # of the rule and therefore explicitly LOW.
+            severity = RuleSeverity.LOW
             for threshold in thresholds:
                 if value >= threshold.threshold:
                     severity = threshold.severity
             return severity
 
+        # For LOWER_IS_WORSE, the configured rule-level severity is the
+        # baseline for values above the first risk band. More severe bands
+        # are then selected as the value crosses their thresholds.
+        severity = self.config.severity
         for threshold in thresholds:
             if value <= threshold.threshold:
                 severity = threshold.severity
