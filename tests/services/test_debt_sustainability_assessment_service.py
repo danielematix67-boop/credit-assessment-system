@@ -5,7 +5,6 @@ from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.rules.base.status import RuleStatus
 from src.services.debt_sustainability_assessment_service import DebtSustainabilityAssessmentService
 
-
 CONFIG_PATH = Path("config/debt_sustainability_rules.yaml")
 
 
