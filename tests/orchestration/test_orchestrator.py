@@ -2,14 +2,16 @@ from unittest.mock import Mock
 
 import pytest
 
-from src.agents.analysis.analysis_agent import AnalysisAgent
+from src.agents.analysis.case_analysis_agent import CaseAnalysisAgent
 from src.agents.reporting.deterministic_report_generator import (
     DeterministicReportGenerator,
 )
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.agents.workflow.assessment_workflow import AssessmentWorkflow
+from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.models.assessment_workflow import AssessmentWorkflowResult
+from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.position import CreditPosition
 from src.models.report import Report, ReportFindingGroup
 from src.orchestration.orchestrator import AssessmentOrchestrator
@@ -46,9 +48,12 @@ def critical_position():
 
 @pytest.fixture
 def deterministic_workflow(assessment_service):
+    from src.agents.analysis.case_analysis_agent import CaseAnalysisAgent
+    from src.services.credit_assessment_case_service import CreditAssessmentCaseService
+
     return AssessmentWorkflow(
-        assessment_service=assessment_service,
-        analysis_agent=AnalysisAgent(),
+        credit_case_service=CreditAssessmentCaseService(assessment_service),
+        case_analysis_agent=CaseAnalysisAgent(),
         reporting_agent=ReportingAgent(
             report_generator=DeterministicReportGenerator(),
         ),
@@ -84,16 +89,20 @@ def test_orchestrator_preserves_assessment_status(
     assert report.assessment_status == expected_status
 
 
+def _workflow_result(report):
+    return AssessmentWorkflowResult(
+        credit_case=Mock(spec=CreditAssessmentCase),
+        analysis=Mock(spec=AssessmentAnalysis),
+        report=report,
+    )
+
+
 def test_orchestrator_delegates_execution_to_workflow():
     position = Mock(spec=CreditPosition)
     expected_report = Mock(spec=Report)
 
     workflow = Mock(spec=AssessmentWorkflow)
-    workflow.run.return_value = AssessmentWorkflowResult(
-        assessment=None,
-        analysis=None,
-        report=expected_report,
-    )
+    workflow.run.return_value = _workflow_result(expected_report)
 
     orchestrator = AssessmentOrchestrator(
         workflow=workflow,
@@ -120,7 +129,7 @@ def test_default_orchestrator_creates_valid_orchestrator():
 
     assert isinstance(
         orchestrator.workflow.analysis_agent,
-        AnalysisAgent,
+        CaseAnalysisAgent,
     )
 
     assert isinstance(
@@ -134,12 +143,7 @@ def test_orchestrator_depends_only_on_workflow():
     expected_report = Mock(spec=Report)
 
     workflow = Mock(spec=AssessmentWorkflow)
-
-    workflow.run.return_value = AssessmentWorkflowResult(
-        assessment=None,
-        analysis=None,
-        report=expected_report,
-    )
+    workflow.run.return_value = _workflow_result(expected_report)
 
     orchestrator = AssessmentOrchestrator(
         workflow=workflow,
@@ -169,12 +173,7 @@ def test_orchestrator_preserves_report_status(
     )
 
     workflow = Mock(spec=AssessmentWorkflow)
-
-    workflow.run.return_value = AssessmentWorkflowResult(
-        assessment=None,
-        analysis=None,
-        report=expected_report,
-    )
+    workflow.run.return_value = _workflow_result(expected_report)
 
     orchestrator = AssessmentOrchestrator(
         workflow=workflow,
@@ -235,12 +234,7 @@ def test_orchestrator_preserves_findings_by_category(
     )
 
     workflow = Mock(spec=AssessmentWorkflow)
-
-    workflow.run.return_value = AssessmentWorkflowResult(
-        assessment=None,
-        analysis=None,
-        report=expected_report,
-    )
+    workflow.run.return_value = _workflow_result(expected_report)
 
     orchestrator = AssessmentOrchestrator(
         workflow=workflow,
