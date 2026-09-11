@@ -16,7 +16,6 @@ from app.ui.results.helpers import (
 )
 from app.ui.results.rule_detail import render_rule_indicator_detail
 
-
 _DOMAIN_LABELS = {
     "CP": "Customer Profile",
     "R": "Financial Analysis",
@@ -130,11 +129,11 @@ def _render_domain_coverage(dataframe: pd.DataFrame) -> None:
             "Macro-area": st.column_config.TextColumn("Assessment area", width="medium"),
             "Rules": st.column_config.NumberColumn("Rules", width="small"),
             "Triggered": st.column_config.NumberColumn("Triggered", width="small"),
-            "Not_triggered": st.column_config.NumberColumn(
-                "Not triggered", width="small"
-            ),
             "Not_evaluable": st.column_config.NumberColumn(
                 "Not evaluable", width="small"
+            ),
+            "Not_triggered": st.column_config.NumberColumn(
+                "Not triggered", width="small"
             ),
         },
     )
