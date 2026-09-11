@@ -60,7 +60,7 @@ def test_case_service_preserves_financial_evidence() -> None:
     assert case.financial_analysis.status == SectionStatus.ATTENTION
 
 
-def test_case_service_preserves_attention_for_all_not_evaluable_financial_rules() -> None:
+def test_case_service_marks_all_not_evaluable_financial_rules_as_not_evaluable() -> None:
     position = CreditPosition(position_id="TEST-002-NE")
     results = [
         RuleResult(
@@ -87,7 +87,7 @@ def test_case_service_preserves_attention_for_all_not_evaluable_financial_rules(
 
     case = CreditAssessmentCaseService(assessment_service).assess(position)
 
-    assert case.financial_analysis.status == SectionStatus.ATTENTION
+    assert case.financial_analysis.status == SectionStatus.NOT_EVALUABLE
     assert case.financial_analysis.limitations == [
         "Financial indicators are not available for this case."
     ]
