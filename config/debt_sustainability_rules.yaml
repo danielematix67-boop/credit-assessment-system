@@ -1,0 +1,64 @@
+rules:
+  - rule_id: DS001
+    rule_name: Debt Service Coverage Ratio
+    indicator: DSCR
+    category: Debt Sustainability
+    input_fields:
+      - cash_flow_available_for_debt_service
+      - debt_service
+    calculation: ratio
+    threshold: 1.00
+    severity: MEDIUM
+    severity_direction: LOWER_IS_WORSE
+    severity_thresholds:
+      - threshold: 1.00
+        severity: MEDIUM
+      - threshold: 0.80
+        severity: HIGH
+    trigger_operator: LT
+    comment_template: >-
+      DSCR is {value:.2f}x, below the acceptable level of 1.00x, indicating
+      insufficient cash-flow coverage of debt service.
+
+  - rule_id: DS002
+    rule_name: Debt Service / EBITDA
+    indicator: Debt Service / EBITDA
+    category: Debt Sustainability
+    input_fields:
+      - debt_service
+      - ebitda
+    calculation: ratio
+    threshold: 1.00
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 1.00
+        severity: MEDIUM
+      - threshold: 1.20
+        severity: HIGH
+    trigger_operator: GT
+    comment_template: >-
+      Debt Service to EBITDA is {value:.2f}x, above the acceptable level,
+      indicating a relatively high debt-service burden compared with
+      operating earnings.
+
+  - rule_id: DS003
+    rule_name: Cash Flow Debt-Service Buffer
+    indicator: CFADS - debt service
+    category: Debt Sustainability
+    input_fields:
+      - cash_flow_available_for_debt_service
+      - debt_service
+    calculation: difference
+    threshold: 0.00
+    severity: MEDIUM
+    severity_direction: LOWER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.00
+        severity: MEDIUM
+      - threshold: -0.20
+        severity: HIGH
+    trigger_operator: LT
+    comment_template: >-
+      The cash-flow debt-service buffer is {value:,.2f}, below the acceptable
+      level, indicating insufficient headroom after debt service.
