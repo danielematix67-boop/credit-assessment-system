@@ -8,6 +8,7 @@ EXPECTED_FINAL_STATUS = {
     "Healthy Company": "NORMAL",
     "Revenue Deterioration": "ATTENTION",
     "Profitability Stress": "CRITICAL",
+    "Behavioural Stress": "CRITICAL",
     "Leverage Stress": "CRITICAL",
     "Multiple Risk Factors": "CRITICAL",
     "Missing Information": "ATTENTION",
