@@ -46,15 +46,13 @@ def _workflow() -> AssessmentWorkflow:
     )
     deterministic_generator = DeterministicReportGenerator()
     return AssessmentWorkflow(
-        assessment_service=assessment_service,
-        analysis_agent=CaseAnalysisAgent(),
+        credit_case_service=case_service,
+        case_analysis_agent=CaseAnalysisAgent(),
         reporting_agent=ReportingAgent(
             report_generator=deterministic_generator,
             fallback_generator=deterministic_generator,
         ),
         reporting_mode="Deterministic",
-        credit_case_service=case_service,
-        case_analysis_agent=CaseAnalysisAgent(),
     )
 
 
@@ -119,7 +117,7 @@ def test_end_to_end_workflow_preserves_normal_decision_to_report() -> None:
     assert result.credit_case.final_assessment.status.value == "NORMAL"
     assert result.analysis.assessment_status is AssessmentStatus.NORMAL
     assert result.report.assessment_status is AssessmentStatus.NORMAL
-    assert result.assessment.status is AssessmentStatus.NORMAL
+    assert result.credit_case.final_assessment.status.value == result.analysis.assessment_status.value
     assert result.report_generator_used == "PRIMARY"
     assert result.execution_metadata is not None
     assert result.execution_metadata.fallback_used is False
@@ -137,7 +135,7 @@ def test_end_to_end_workflow_preserves_attention_decision_to_report() -> None:
     assert result.credit_case.final_assessment.status.value == "ATTENTION"
     assert result.analysis.assessment_status is AssessmentStatus.ATTENTION
     assert result.report.assessment_status is AssessmentStatus.ATTENTION
-    assert result.assessment.status is AssessmentStatus.ATTENTION
+    assert result.credit_case.final_assessment.status.value == result.report.assessment_status.value
 
 
 def test_end_to_end_workflow_preserves_cross_macro_critical_decision_to_report() -> None:
@@ -154,10 +152,9 @@ def test_end_to_end_workflow_preserves_cross_macro_critical_decision_to_report()
     assert result.credit_case.debt_sustainability.status.value == "ATTENTION"
     assert result.credit_case.final_assessment.status.value == "CRITICAL"
 
-    assert result.assessment.status is AssessmentStatus.CRITICAL
     assert result.analysis.assessment_status is AssessmentStatus.CRITICAL
     assert result.report.assessment_status is AssessmentStatus.CRITICAL
-
+    assert result.credit_case.final_assessment.status.value == result.analysis.assessment_status.value
     assert result.report.position_id == result.analysis.position_id
     assert result.report.position_id == result.credit_case.position.position_id
     assert result.report_generator_used == "PRIMARY"
