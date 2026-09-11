@@ -20,49 +20,35 @@ def _case(*statuses: SectionStatus) -> CreditAssessmentCase:
 
 
 def test_final_assessment_is_normal_when_all_evaluable_sections_are_normal() -> None:
-    result = FinalAssessmentService().assess(
-        _case(SectionStatus.NORMAL, SectionStatus.NORMAL)
-    )
+    result = FinalAssessmentService().assess(_case(SectionStatus.NORMAL, SectionStatus.NORMAL))
     assert result.status == SectionStatus.NORMAL
     assert result.evaluated_sections == 2
 
 
 def test_final_assessment_is_attention_for_one_attention_section() -> None:
-    result = FinalAssessmentService().assess(
-        _case(SectionStatus.ATTENTION, SectionStatus.NORMAL)
-    )
+    result = FinalAssessmentService().assess(_case(SectionStatus.ATTENTION, SectionStatus.NORMAL))
     assert result.status == SectionStatus.ATTENTION
 
 
 def test_final_assessment_is_critical_for_two_core_attention_sections() -> None:
     result = FinalAssessmentService().assess(
-        _case(
-            SectionStatus.NORMAL,
-            SectionStatus.ATTENTION,
-            SectionStatus.ATTENTION,
-        )
+        _case(SectionStatus.NORMAL, SectionStatus.ATTENTION, SectionStatus.ATTENTION)
     )
     assert result.status == SectionStatus.CRITICAL
 
 
 def test_customer_profile_attention_does_not_count_as_core_double_trigger() -> None:
-    result = FinalAssessmentService().assess(
-        _case(SectionStatus.ATTENTION, SectionStatus.ATTENTION)
-    )
+    result = FinalAssessmentService().assess(_case(SectionStatus.ATTENTION, SectionStatus.ATTENTION))
     assert result.status == SectionStatus.ATTENTION
 
 
 def test_customer_profile_critical_always_escalates_final_assessment() -> None:
-    result = FinalAssessmentService().assess(
-        _case(SectionStatus.CRITICAL, SectionStatus.NORMAL)
-    )
+    result = FinalAssessmentService().assess(_case(SectionStatus.CRITICAL, SectionStatus.NORMAL))
     assert result.status == SectionStatus.CRITICAL
 
 
 def test_final_assessment_is_critical_when_any_core_section_is_critical() -> None:
-    result = FinalAssessmentService().assess(
-        _case(SectionStatus.NORMAL, SectionStatus.CRITICAL)
-    )
+    result = FinalAssessmentService().assess(_case(SectionStatus.NORMAL, SectionStatus.CRITICAL))
     assert result.status == SectionStatus.CRITICAL
 
 
@@ -74,23 +60,15 @@ def test_final_assessment_is_attention_when_no_section_is_evaluable() -> None:
 
 def test_customer_profile_attention_plus_two_core_attention_is_critical() -> None:
     result = FinalAssessmentService().assess(
-        _case(
-            SectionStatus.ATTENTION,
-            SectionStatus.ATTENTION,
-            SectionStatus.ATTENTION,
-        )
+        _case(SectionStatus.ATTENTION, SectionStatus.ATTENTION, SectionStatus.ATTENTION)
     )
     assert result.status == SectionStatus.CRITICAL
 
 
 def test_partial_evaluation_with_all_evaluable_sections_normal_is_normal() -> None:
     result = FinalAssessmentService().assess(
-        _case(
-            SectionStatus.NORMAL,
-            SectionStatus.NORMAL,
-            SectionStatus.NOT_EVALUABLE,
-        )
+        _case(SectionStatus.NORMAL, SectionStatus.NORMAL, SectionStatus.NOT_EVALUABLE)
     )
     assert result.status == SectionStatus.NORMAL
     assert result.evaluated_sections == 2
-    assert len(result.limitations) == 2
+    assert len(result.limitations) == 3
