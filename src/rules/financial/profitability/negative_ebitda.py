@@ -10,16 +10,15 @@ class NegativeEbitdaRule(Rule):
         self,
         position: CreditPosition,
     ) -> RuleResult:
-        if position.ebitda is None:
-            return self._not_evaluable(
-                reason="EBITDA is not available.",
-            )
+        value, error = self._configured_value(position)
 
-        value = position.ebitda
+        if error is not None:
+            return self._not_evaluable(reason=error)
 
+        assert value is not None
         status = (
             RuleStatus.TRIGGERED
-            if value < self.config.threshold
+            if self._is_triggered(value)
             else RuleStatus.NOT_TRIGGERED
         )
 
