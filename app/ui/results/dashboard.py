@@ -102,13 +102,17 @@ def _render_domain_coverage(dataframe: pd.DataFrame) -> None:
         "are not triggered by the selected scenario."
     )
 
+    represented_areas = int(coverage["Macro-area"].nunique())
+    configured_areas = len(_DOMAIN_LABELS)
+    coverage_pct = (represented_areas / configured_areas * 100) if configured_areas else 0
+
     metric_cols = st.columns([1, 1, 2])
     with metric_cols[0]:
-        st.metric("Rules evaluated", len(coverage))
+        st.metric("Rules in evidence", len(coverage))
     with metric_cols[1]:
-        st.metric("Assessment areas", coverage["Macro-area"].nunique())
+        st.metric("Assessment areas", represented_areas)
     with metric_cols[2]:
-        st.metric("Complete rule coverage", "100%")
+        st.metric("Macro-area coverage", f"{coverage_pct:.0f}%")
 
     st.dataframe(
         summary,
