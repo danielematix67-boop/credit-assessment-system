@@ -93,11 +93,11 @@ rules:
 
   - rule_id: R006
     rule_name: EBITDA materially supported by finished goods inventory increase
-    indicator: EBITDA / finished goods inventory increase
+    indicator: Finished goods inventory increase / EBITDA
     category: profitability_quality
     input_fields:
-      - ebitda
       - change_in_finished_goods_inventory
+      - ebitda
     calculation: ratio
     trigger_operator: GT
     threshold: 0.30
