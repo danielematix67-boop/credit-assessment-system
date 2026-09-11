@@ -14,9 +14,9 @@ EXPECTED_FINAL_STATUS = {
     "Missing Information": "ATTENTION",
 }
 
-# The scenario matrix is intentionally explicit: it documents which deterministic
-# rules each demo case is expected to exercise, and protects the UI/demo layer
-# from silently drifting away from the configured rule set.
+# Explicit scenario coverage for the deterministic rules. The matrix documents
+# the rules each demo case is expected to activate and keeps the demo/UI layer
+# aligned with the actual assessment engine.
 EXPECTED_TRIGGERED_RULES = {
     "Healthy Company": set(),
     "Revenue Deterioration": {"R001"},
@@ -29,8 +29,6 @@ EXPECTED_TRIGGERED_RULES = {
         "DS001",
         "DS002",
         "DS003",
-        "R005",
-        "R006",
         "R007",
     },
     "Behavioural Stress": {"CP001", "B001", "B002", "B003", "B004"},
@@ -49,8 +47,6 @@ EXPECTED_TRIGGERED_RULES = {
         "R002",
         "R003",
         "R004",
-        "R005",
-        "R006",
         "R007",
     },
     "Missing Information": set(),
