@@ -78,6 +78,10 @@ class RuleConfigLoader:
             if not isinstance(comment_template, str):
                 raise ValueError(f"Invalid comment_template for rule_id: {rule_id}")
 
+            trigger_operator = item.get("trigger_operator", "GT")
+            if not isinstance(trigger_operator, str):
+                raise ValueError(f"Invalid trigger_operator for rule_id: {rule_id}")
+
             severity_thresholds: list[SeverityThreshold] = []
             raw_severity_thresholds = item.get("severity_thresholds", [])
             if not isinstance(raw_severity_thresholds, list):
@@ -135,6 +139,7 @@ class RuleConfigLoader:
                     indicator=indicator.strip(),
                     input_field=input_field.strip(),
                     comment_template=comment_template.strip(),
+                    trigger_operator=trigger_operator.strip().upper(),
                 )
             )
 
