@@ -5,7 +5,6 @@ import pytest
 from src.config.final_assessment_policy import FinalAssessmentPolicy
 from src.models.assessment_section import SectionStatus
 
-
 CONFIG_PATH = Path("config/final_assessment.yaml")
 
 
