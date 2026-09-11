@@ -31,8 +31,6 @@ jobs:
 
       - name: Run linting
         run: |
-          python -m ruff check . --fix --show-fixes
-          git diff -- tests/config/test_final_assessment_policy.py tests/services/test_debt_sustainability_assessment_service.py
           python -m ruff check .
 
       - name: Run type checking
