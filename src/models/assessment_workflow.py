@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
@@ -24,7 +25,7 @@ class AssessmentWorkflowResult:
     total_elapsed_time: float = 0.0
 
     @property
-    def rule_results(self) -> list:
+    def rule_results(self) -> list[Any]:
         """Return the complete deterministic rule evidence for the workflow.
 
         The case-level assessment is authoritative when available, while the
