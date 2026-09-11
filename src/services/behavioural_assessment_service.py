@@ -1,40 +1,48 @@
+from pathlib import Path
+from typing import Any
+
 from src.comments.comment import Comment
+from src.comments.comment_engine import CommentEngine
+from src.config.rule_config_loader import RuleConfigLoader
 from src.models.assessment_section import AssessmentSection, SectionStatus
 from src.models.behavioural_data import BehaviouralData
 from src.models.rule_finding import RuleFinding
-from src.rules.base.severity import RuleSeverity
-from src.rules.base.severity_direction import SeverityDirection
+from src.rules.base.severity_policy import SeverityPolicy
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 from src.services.assessment_status_calculator import AssessmentStatusCalculator
 
 
 class BehaviouralAssessmentService:
-    """Deterministically assess banking-behaviour indicators."""
+    """Build the behavioural assessment from externalized rule configuration."""
 
-    _RULES = (
-        ("B001", "High Credit Utilization", "Credit utilization", 0.90, 0.95),
-        ("B002", "Prolonged Overdraft", "Overdraft days", 10.0, 30.0),
-        ("B003", "Payment Delay", "Payment delay days", 30.0, 60.0),
-        ("B004", "Exposure Growth", "Exposure growth", 0.25, 0.40),
-    )
+    DEFAULT_CONFIG_PATH = Path("config/behavioural_analysis_rules.yaml")
 
-    def __init__(self, status_calculator: AssessmentStatusCalculator | None = None):
+    def __init__(
+        self,
+        status_calculator: AssessmentStatusCalculator | None = None,
+        comment_engine: CommentEngine | None = None,
+        config_loader: RuleConfigLoader | None = None,
+        config_path: Path | None = None,
+    ) -> None:
         self.status_calculator = status_calculator or AssessmentStatusCalculator()
+        self.comment_engine = comment_engine or CommentEngine()
+        self.config_loader = config_loader or RuleConfigLoader()
+        self.config_path = config_path or self.DEFAULT_CONFIG_PATH
 
     def assess(self, data: BehaviouralData) -> AssessmentSection:
-        results = [
-            self._evaluate_rule(rule, value)
-            for rule, value in zip(self._RULES, self._values(data), strict=True)
-        ]
-        findings = [
-            RuleFinding(
-                result=result,
-                comment=Comment(result.rule_id, result.reason or ""),
-            )
-            for result in results
-            if result.status == RuleStatus.TRIGGERED
-        ]
+        configs = self.config_loader.load(self.config_path)
+        results = [self._evaluate_rule(config, data) for config in configs]
+        findings = []
+
+        for result in results:
+            if result.status != RuleStatus.TRIGGERED:
+                continue
+            comment = self.comment_engine.generate(result)
+            if comment is None:
+                comment = Comment(result.rule_id, result.reason or "")
+            findings.append(RuleFinding(result=result, comment=comment))
+
         limitations = []
         if all(result.status == RuleStatus.NOT_EVALUABLE for result in results):
             limitations.append("Behavioural banking indicators are not available.")
@@ -48,54 +56,78 @@ class BehaviouralAssessmentService:
         )
 
     @staticmethod
-    def _values(data: BehaviouralData) -> tuple[float | None, ...]:
-        return (
-            data.average_utilization,
-            data.overdraft_days,
-            data.payment_delay_days,
-            data.exposure_growth,
+    def _evaluate_rule(config: Any, data: BehaviouralData) -> RuleResult:
+        if not config.input_field:
+            raise ValueError(
+                f"Behavioural rule {config.rule_id} requires input_field"
+            )
+        if not hasattr(data, config.input_field):
+            raise ValueError(
+                f"Unknown behavioural input field: {config.input_field}"
+            )
+
+        raw_value = getattr(data, config.input_field)
+        if raw_value is None:
+            return RuleResult(
+                rule_id=config.rule_id,
+                rule_name=config.rule_name,
+                category=config.category,
+                status=RuleStatus.NOT_EVALUABLE,
+                value=None,
+                threshold=config.threshold,
+                severity=config.severity,
+                reason=(
+                    f"[{config.rule_id} - {config.rule_name}] "
+                    f"{config.indicator} is not available."
+                ),
+                indicator=config.indicator,
+                direction=config.severity_direction,
+                comment_template=config.comment_template,
+            )
+
+        value = float(raw_value)
+        triggered = BehaviouralAssessmentService._matches_operator(
+            value, config.threshold, config.trigger_operator
+        )
+        status = RuleStatus.TRIGGERED if triggered else RuleStatus.NOT_TRIGGERED
+        severity = SeverityPolicy(
+            direction=config.severity_direction,
+            thresholds=config.severity_thresholds,
+        ).evaluate(value) or config.severity
+
+        if status == RuleStatus.TRIGGERED:
+            reason = (
+                f"{config.indicator} is {value:.2f}, above the configured "
+                f"threshold of {config.threshold:.2f}."
+            )
+        else:
+            reason = (
+                f"{config.indicator} is {value:.2f}, within the configured "
+                f"threshold of {config.threshold:.2f}."
+            )
+
+        return RuleResult(
+            rule_id=config.rule_id,
+            rule_name=config.rule_name,
+            category=config.category,
+            status=status,
+            value=value,
+            threshold=config.threshold,
+            severity=severity,
+            reason=f"[{config.rule_id} - {config.rule_name}] {reason}",
+            indicator=config.indicator,
+            direction=config.severity_direction,
+            comment_template=config.comment_template,
         )
 
     @staticmethod
-    def _evaluate_rule(
-        rule: tuple[str, str, str, float, float],
-        value: float | None,
-    ) -> RuleResult:
-        rule_id, rule_name, indicator, threshold, high_threshold = rule
-
-        if value is None:
-            return RuleResult(
-                rule_id=rule_id,
-                rule_name=rule_name,
-                category="Behavioural Analysis",
-                status=RuleStatus.NOT_EVALUABLE,
-                value=None,
-                threshold=threshold,
-                severity=RuleSeverity.MEDIUM,
-                reason=f"[{rule_id} - {rule_name}] Behavioural data are not available.",
-                indicator=indicator,
-                direction=SeverityDirection.HIGHER_IS_WORSE,
-            )
-
-        status = RuleStatus.TRIGGERED if value > threshold else RuleStatus.NOT_TRIGGERED
-        severity = RuleSeverity.HIGH if value > high_threshold else RuleSeverity.MEDIUM
-        reason = (
-            f"[{rule_id} - {rule_name}] {indicator} is {value:.2f}, "
-            f"above the threshold of {threshold:.2f}."
-            if status == RuleStatus.TRIGGERED
-            else f"[{rule_id} - {rule_name}] {indicator} is {value:.2f}, "
-            f"within the threshold of {threshold:.2f}."
-        )
-
-        return RuleResult(
-            rule_id=rule_id,
-            rule_name=rule_name,
-            category="Behavioural Analysis",
-            status=status,
-            value=value,
-            threshold=threshold,
-            severity=severity,
-            reason=reason,
-            indicator=indicator,
-            direction=SeverityDirection.HIGHER_IS_WORSE,
-        )
+    def _matches_operator(value: float, threshold: float, operator: str) -> bool:
+        if operator == "GT":
+            return value > threshold
+        if operator == "GTE":
+            return value >= threshold
+        if operator == "LT":
+            return value < threshold
+        if operator == "LTE":
+            return value <= threshold
+        raise ValueError(f"Unsupported trigger operator: {operator}")
