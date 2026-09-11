@@ -110,6 +110,7 @@ def test_rule_config_loader_preserves_configuration_values(loader, tmp_path):
             severity: MEDIUM
             severity_direction: LOWER_IS_WORSE
             input_field: test_value
+            trigger_operator: LTE
             comment_template: 'Configured value: {value}.'
         """,
         encoding="utf-8",
@@ -117,6 +118,7 @@ def test_rule_config_loader_preserves_configuration_values(loader, tmp_path):
     config = loader.load(config_path)[0]
     assert config.threshold == pytest.approx(0.30)
     assert config.input_field == "test_value"
+    assert config.trigger_operator == "LTE"
     assert config.comment_template == "Configured value: {value}."
 
 
@@ -162,6 +164,25 @@ def test_rule_config_loader_loads_severity_thresholds(loader, tmp_path):
     thresholds = loader.load(config_path)[0].severity_thresholds
     assert len(thresholds) == 3
     assert all(isinstance(item, SeverityThreshold) for item in thresholds)
+
+
+def test_rule_config_loader_rejects_invalid_trigger_operator(loader, tmp_path):
+    config_path = tmp_path / "invalid_operator.yaml"
+    config_path.write_text(
+        """
+        rules:
+          - rule_id: test_rule
+            rule_name: Test rule
+            category: test
+            threshold: 1.0
+            severity: MEDIUM
+            severity_direction: HIGHER_IS_WORSE
+            trigger_operator: BETWEEN
+        """,
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="trigger_operator"):
+        loader.load(config_path)
 
 
 def test_rule_config_loader_raises_for_missing_file(loader, tmp_path):
