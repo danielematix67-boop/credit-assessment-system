@@ -14,8 +14,10 @@ from src.agents.workflow.workflow_factory import (
     create_default_assessment_workflow,
 )
 from src.llm.mock_client import MockLLMClient
+from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_workflow import AssessmentWorkflowResult
 from src.models.position import CreditPosition
+from src.models.report import Report
 from src.rules.base.status import RuleStatus
 
 # ============================================================
@@ -51,7 +53,7 @@ def llm_client():
 class FailingReportGenerator(ReportGenerator):
     """Primary generator used to verify deterministic fallback behaviour."""
 
-    def generate(self, analysis):
+    def generate(self, analysis: AssessmentAnalysis) -> Report:
         raise RuntimeError("simulated report generation failure")
 
 
@@ -185,26 +187,26 @@ def test_factory_fallback_preserves_deterministic_findings(
 
     result = workflow.run(representative_position)
 
-    expected_findings = [
+    expected_findings = sorted(
         (
             finding.rule_id,
             finding.category,
-            finding.severity,
+            finding.severity.value,
             finding.text,
         )
         for finding in result.analysis.key_findings
-    ]
+    )
 
-    fallback_findings = [
+    fallback_findings = sorted(
         (
             finding.rule_id,
             finding.category,
-            finding.severity,
+            finding.severity.value,
             finding.text,
         )
         for group in result.report.findings_by_category
         for finding in group.findings
-    ]
+    )
 
     assert fallback_findings == expected_findings
     assert result.analysis.assessment_status == result.report.assessment_status
