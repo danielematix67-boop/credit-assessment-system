@@ -1,18 +1,20 @@
 from unittest.mock import Mock
 
 from src.models.assessment import Assessment
-from src.models.assessment_section import SectionStatus
+from src.models.assessment_section import AssessmentSection, SectionStatus
 from src.models.assessment_status import AssessmentStatus
 from src.models.behavioural_data import BehaviouralData
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.customer_profile_data import CustomerProfileData
 from src.models.debt_sustainability_data import DebtSustainabilityData
+from src.models.final_assessment import FinalAssessment
 from src.models.position import CreditPosition
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_direction import SeverityDirection
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 from src.services.credit_assessment_case_service import CreditAssessmentCaseService
+from src.agents.workflow.assessment_workflow import AssessmentWorkflow
 
 
 def _assessment(
@@ -170,3 +172,76 @@ def test_case_service_builds_customer_profile_when_data_are_available() -> None:
     )
     assert case.customer_profile.status == SectionStatus.NORMAL
     assert case.customer_profile.context["company_name"] == "Synthetic Co."
+
+
+def test_legacy_assessment_projection_aggregates_all_macro_area_evidence() -> None:
+    position = CreditPosition(position_id="TEST-WORKFLOW-001")
+    rule_ids = [
+        "CP001",
+        "CP002",
+        "CP003",
+        "R001",
+        "R002",
+        "R003",
+        "R004",
+        "R005",
+        "R006",
+        "R007",
+        "B001",
+        "B002",
+        "B003",
+        "B004",
+        "DS001",
+        "DS002",
+        "DS003",
+    ]
+    sections = []
+    for index, rule_id in enumerate(rule_ids):
+        result = _rule_result(rule_id)
+        sections.append(
+            AssessmentSection(
+                name=f"Section {index}",
+                status=SectionStatus.NORMAL,
+                findings=[],
+                evidence=[result],
+                limitations=[],
+            )
+        )
+
+    case = CreditAssessmentCase(
+        position=position,
+        customer_profile=sections[0],
+        financial_analysis=AssessmentSection(
+            name="Financial Analysis",
+            status=SectionStatus.NORMAL,
+            findings=[],
+            evidence=sections[1].evidence + sections[2].evidence + sections[3].evidence + sections[4].evidence + sections[5].evidence + sections[6].evidence,
+            limitations=[],
+        ),
+        behavioural_analysis=AssessmentSection(
+            name="Behavioural Analysis",
+            status=SectionStatus.NORMAL,
+            findings=[],
+            evidence=sections[7].evidence + sections[8].evidence + sections[9].evidence + sections[10].evidence,
+            limitations=[],
+        ),
+        debt_sustainability=AssessmentSection(
+            name="Debt Sustainability",
+            status=SectionStatus.NORMAL,
+            findings=[],
+            evidence=sections[11].evidence + sections[12].evidence + sections[13].evidence,
+            limitations=[],
+        ),
+        final_assessment=FinalAssessment(
+            status=SectionStatus.CRITICAL,
+            evaluated_sections=4,
+            risk_sections=["Financial Analysis"],
+        ),
+    )
+
+    projected = AssessmentWorkflow._legacy_assessment_from_case(case)
+
+    assert len(projected.rule_results) == 17
+    assert {result.rule_id for result in projected.rule_results} == set(rule_ids)
+    assert projected.status == AssessmentStatus.CRITICAL
+    assert projected.position_id == position.position_id
