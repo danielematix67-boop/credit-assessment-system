@@ -1,0 +1,72 @@
+rules:
+  - rule_id: B001
+    rule_name: High Credit Utilization
+    indicator: Credit utilization
+    category: utilization
+    input_field: average_utilization
+    threshold: 0.90
+    trigger_operator: GT
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.90
+        severity: MEDIUM
+      - threshold: 0.95
+        severity: HIGH
+    comment_template: >-
+      Credit utilization is {value:.1%}, above the acceptable level,
+      indicating elevated reliance on available credit lines.
+
+  - rule_id: B002
+    rule_name: Prolonged Overdraft
+    indicator: Overdraft days
+    category: overdraft
+    input_field: overdraft_days
+    threshold: 10.0
+    trigger_operator: GT
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 10.0
+        severity: MEDIUM
+      - threshold: 30.0
+        severity: HIGH
+    comment_template: >-
+      Overdraft usage reached {value:.0f} days, above the acceptable level,
+      indicating persistent liquidity pressure on the relationship.
+
+  - rule_id: B003
+    rule_name: Payment Delay
+    indicator: Payment delay days
+    category: payment_behaviour
+    input_field: payment_delay_days
+    threshold: 30.0
+    trigger_operator: GT
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 30.0
+        severity: MEDIUM
+      - threshold: 60.0
+        severity: HIGH
+    comment_template: >-
+      Payment delays reached {value:.0f} days, indicating deterioration in
+      the customer's payment behaviour.
+
+  - rule_id: B004
+    rule_name: Exposure Growth
+    indicator: Exposure growth
+    category: exposure
+    input_field: exposure_growth
+    threshold: 0.25
+    trigger_operator: GT
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.25
+        severity: MEDIUM
+      - threshold: 0.40
+        severity: HIGH
+    comment_template: >-
+      Exposure growth is {value:.1%}, above the configured level, indicating
+      a significant increase in credit exposure.
