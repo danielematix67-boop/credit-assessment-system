@@ -3,16 +3,16 @@ from pathlib import Path
 from src.comments.comment_engine import CommentEngine
 from src.config.rule_config_loader import RuleConfigLoader
 from src.engine.rule_engine import RuleEngine
-from src.models.assessment_status import AssessmentStatus
+from src.models.assessment_section import SectionStatus
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.position import CreditPosition
 from src.rules.base.rule import Rule
+from src.rules.base.status import RuleStatus
 from src.rules.discovery import discover_rules
 from src.services.assessment_service import AssessmentService
+from src.services.assessment_status_calculator import AssessmentStatusCalculator
 from src.services.credit_assessment_case_service import CreditAssessmentCaseService
-from src.services.final_assessment_service import FinalAssessmentService
 from src.services.position_validator import CreditPositionValidator
-from src.rules.base.status import RuleStatus
 
 RULES_CONFIG_PATH = Path("config/financial_analysis_rules.yaml")
 
@@ -24,10 +24,7 @@ def _case_service() -> CreditAssessmentCaseService:
     assessment_service = AssessmentService(
         rule_engine=RuleEngine(rules),
         comment_engine=CommentEngine(),
-        status_calculator=__import__(
-            "src.services.assessment_status_calculator",
-            fromlist=["AssessmentStatusCalculator"],
-        ).AssessmentStatusCalculator(),
+        status_calculator=AssessmentStatusCalculator(),
         position_validator=CreditPositionValidator(),
     )
     return CreditAssessmentCaseService(assessment_service)
@@ -49,9 +46,9 @@ def _position(**overrides: float) -> CreditPosition:
 def test_financial_rules_flow_from_position_to_normal_final_assessment() -> None:
     case = _case_service().assess(_position())
 
-    assert case.financial_analysis.status == AssessmentStatus.NORMAL
+    assert case.financial_analysis.status == SectionStatus.NORMAL
     assert case.final_assessment is not None
-    assert case.final_assessment.status == AssessmentStatus.NORMAL
+    assert case.final_assessment.status == SectionStatus.NORMAL
     assert all(
         result.status == RuleStatus.NOT_TRIGGERED
         for result in case.financial_analysis.evidence
@@ -61,9 +58,9 @@ def test_financial_rules_flow_from_position_to_normal_final_assessment() -> None
 def test_one_triggered_financial_rule_flows_to_attention_final_assessment() -> None:
     case = _case_service().assess(_position(revenue_growth=-0.15))
 
-    assert case.financial_analysis.status == AssessmentStatus.ATTENTION
+    assert case.financial_analysis.status == SectionStatus.ATTENTION
     assert case.final_assessment is not None
-    assert case.final_assessment.status == AssessmentStatus.ATTENTION
+    assert case.final_assessment.status == SectionStatus.ATTENTION
     triggered = [
         result.rule_id
         for result in case.financial_analysis.evidence
@@ -77,9 +74,9 @@ def test_two_triggered_financial_rules_flow_to_critical_final_assessment() -> No
         _position(revenue_growth=-0.15, nfp_to_ebitda=6.0)
     )
 
-    assert case.financial_analysis.status == AssessmentStatus.CRITICAL
+    assert case.financial_analysis.status == SectionStatus.CRITICAL
     assert case.final_assessment is not None
-    assert case.final_assessment.status == AssessmentStatus.CRITICAL
+    assert case.final_assessment.status == SectionStatus.CRITICAL
     triggered = [
         result.rule_id
         for result in case.financial_analysis.evidence
@@ -100,7 +97,7 @@ def test_non_triggered_rules_do_not_escalate_final_assessment() -> None:
     )
 
     assert case.final_assessment is not None
-    assert case.final_assessment.status == AssessmentStatus.NORMAL
+    assert case.final_assessment.status == SectionStatus.NORMAL
     assert all(
         result.status == RuleStatus.NOT_TRIGGERED
         for result in case.financial_analysis.evidence
