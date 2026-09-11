@@ -22,7 +22,7 @@ EXPECTED_FINAL_STATUS = {
 EXPECTED_TRIGGERED_RULES = {
     "01 · Baseline": set(),
     "02 · Customer Profile Risk": {"CP001", "CP002", "CP003"},
-    "03 · Revenue & Profitability Risk": {"R001", "R002", "R003"},
+    "03 · Revenue & Profitability Risk": {"R001", "R002", "R003", "R007"},
     "04 · Leverage & Interest Risk": {"R004", "R005", "R007"},
     "05 · Profitability Quality Risk": {"R006"},
     "06 · Behavioural Risk": {"B001", "B002", "B003", "B004"},
@@ -33,6 +33,7 @@ EXPECTED_TRIGGERED_RULES = {
         "R001",
         "R002",
         "R003",
+        "R007",
         "B001",
         "B002",
         "B003",
