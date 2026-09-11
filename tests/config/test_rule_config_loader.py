@@ -105,12 +105,14 @@ def test_rule_config_loader_preserves_input_order(loader, tmp_path):
             threshold: 1.0
             severity: LOW
             severity_direction: LOWER_IS_WORSE
+            trigger_operator: GT
           - rule_id: second
             rule_name: Second rule
             category: test
             threshold: 2.0
             severity: MEDIUM
             severity_direction: HIGHER_IS_WORSE
+            trigger_operator: GT
         """,
         encoding="utf-8",
     )
@@ -159,6 +161,7 @@ def test_rule_config_loader_supports_valid_severity_directions(
             threshold: 1.0
             severity: MEDIUM
             severity_direction: {direction.name}
+            trigger_operator: GT
         """,
         encoding="utf-8",
     )
@@ -204,6 +207,7 @@ def test_rule_config_loader_supports_valid_calculations(
             threshold: 1.0
             severity: MEDIUM
             severity_direction: HIGHER_IS_WORSE
+            trigger_operator: GT
             calculation: {calculation}
         """,
         encoding="utf-8",
@@ -241,6 +245,7 @@ def test_rule_config_loader_rejects_invalid_calculation(loader, tmp_path):
             threshold: 1.0
             severity: MEDIUM
             severity_direction: HIGHER_IS_WORSE
+            trigger_operator: GT
             calculation: average
         """,
         encoding="utf-8",
@@ -318,12 +323,14 @@ def test_rule_config_loader_rejects_duplicate_rule_ids(loader, tmp_path):
             threshold: 1.0
             severity: MEDIUM
             severity_direction: LOWER_IS_WORSE
+            trigger_operator: GT
           - rule_id: duplicate
             rule_name: Second
             category: test
             threshold: 2.0
             severity: HIGH
             severity_direction: HIGHER_IS_WORSE
+            trigger_operator: GT
         """,
         encoding="utf-8",
     )
