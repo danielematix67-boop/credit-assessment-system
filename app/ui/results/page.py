@@ -176,15 +176,19 @@ def render_results(
 
     credit_case = getattr(result, "credit_case", None)
     if credit_case is not None:
-        render_final_assessment(credit_case)
         render_decision_path(result)
+        render_final_assessment(credit_case)
         render_risk_driver_overview(credit_case)
         render_risk_indicator_dashboard(result)
         render_executive_synthesis(result)
 
         case_without_final = replace(credit_case, final_assessment=None)
         case_result = type("CaseResult", (), {"credit_case": case_without_final})()
-        with st.expander("Full single-scenario analysis by macro-area", expanded=True):
+        with st.expander("Detailed single-scenario analysis by macro-area", expanded=False):
+            st.caption(
+                "Use this drill-down for the contextual profile, detailed evidence, "
+                "findings and limitations of each assessment area."
+            )
             render_credit_analysis_case(case_result)
     else:
         render_risk_indicator_dashboard(result)
