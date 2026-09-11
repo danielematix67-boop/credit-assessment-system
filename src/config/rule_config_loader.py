@@ -15,17 +15,28 @@ class RuleConfigLoader:
     _VALID_CALCULATIONS = {"direct", "ratio", "difference"}
 
     def load(self, path: Path) -> list[RuleConfig]:
-        with path.open("r", encoding="utf-8") as file:
-            data = yaml.safe_load(file)
+        """Load rules from a YAML file or all rule catalogs in a directory."""
+        paths = sorted(path.glob("*_rules.yaml")) if path.is_dir() else [path]
+        if not paths:
+            raise ValueError(f"No rule configuration files found in: {path}")
 
-        if not isinstance(data, dict):
-            raise ValueError("Invalid rule configuration")
-        if "rules" not in data:
-            raise ValueError("Missing 'rules' section")
-        rules = data["rules"]
-        if not isinstance(rules, list):
-            raise ValueError("'rules' must be a list")
+        rules: list[dict] = []
+        for config_path in paths:
+            with config_path.open("r", encoding="utf-8") as file:
+                data = yaml.safe_load(file)
 
+            if not isinstance(data, dict):
+                raise ValueError("Invalid rule configuration")
+            if "rules" not in data:
+                raise ValueError("Missing 'rules' section")
+            file_rules = data["rules"]
+            if not isinstance(file_rules, list):
+                raise ValueError("'rules' must be a list")
+            rules.extend(file_rules)
+
+        return self._build_configs(rules)
+
+    def _build_configs(self, rules: list[dict]) -> list[RuleConfig]:
         configs = []
         seen_rule_ids = set()
         for item in rules:
