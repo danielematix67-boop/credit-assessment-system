@@ -14,9 +14,11 @@ def create_default_assessment_workflow(
     llm_client: LLMClient | None = None,
 ) -> AssessmentWorkflow:
     assessment_service = create_default_assessment_service()
-
     analysis_agent = AnalysisAgent()
 
+    # The deterministic generator is always instantiated and always wired
+    # as the reporting safety net. LLM availability must never determine
+    # whether a usable credit report can be produced.
     deterministic_report_generator = DeterministicReportGenerator()
 
     if use_llm:
@@ -26,16 +28,13 @@ def create_default_assessment_workflow(
         report_generator = LLMReportGenerator(
             llm_client=llm_client,
         )
-
-        reporting_agent = ReportingAgent(
-            report_generator=report_generator,
-            fallback_generator=deterministic_report_generator,
-        )
-
     else:
-        reporting_agent = ReportingAgent(
-            report_generator=deterministic_report_generator,
-        )
+        report_generator = deterministic_report_generator
+
+    reporting_agent = ReportingAgent(
+        report_generator=report_generator,
+        fallback_generator=deterministic_report_generator,
+    )
 
     return AssessmentWorkflow(
         assessment_service=assessment_service,
