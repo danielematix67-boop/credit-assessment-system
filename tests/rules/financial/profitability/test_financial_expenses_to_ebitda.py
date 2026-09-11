@@ -36,6 +36,9 @@ def rule_config():
                 severity=RuleSeverity.HIGH,
             ),
         ),
+        input_fields=("interest_expense", "ebitda"),
+        calculation="ratio",
+        trigger_operator="GT",
     )
 
 
@@ -194,6 +197,9 @@ def test_interest_expense_to_ebitda_rule_uses_configured_threshold():
         threshold=1.00,
         severity=RuleSeverity.MEDIUM,
         severity_direction=SeverityDirection.HIGHER_IS_WORSE,
+        input_fields=("interest_expense", "ebitda"),
+        calculation="ratio",
+        trigger_operator="GT",
     )
 
     position = make_position(
@@ -208,3 +214,26 @@ def test_interest_expense_to_ebitda_rule_uses_configured_threshold():
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == 0.80
     assert result.severity == RuleSeverity.MEDIUM
+
+
+def test_interest_expense_to_ebitda_rule_uses_configured_trigger_operator():
+    config = RuleConfig(
+        rule_id="CUSTOM_OPERATOR_RULE",
+        rule_name="Custom operator rule",
+        category=CATEGORY,
+        threshold=0.60,
+        severity=RuleSeverity.MEDIUM,
+        severity_direction=SeverityDirection.HIGHER_IS_WORSE,
+        input_fields=("interest_expense", "ebitda"),
+        calculation="ratio",
+        trigger_operator="GTE",
+    )
+
+    position = make_position(
+        ebitda=250_000,
+        interest_expense=150_000,
+    )
+
+    result = FinancialExpensesToEbitdaRule(config).evaluate(position)
+
+    assert result.status == RuleStatus.TRIGGERED
