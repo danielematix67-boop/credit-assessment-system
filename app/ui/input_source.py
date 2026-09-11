@@ -1,6 +1,6 @@
-import streamlit as st
-
 from typing import Any
+
+import streamlit as st
 
 from app.demo_scenarios import DEMO_SCENARIOS, build_demo_position
 from src.models.position import CreditPosition
