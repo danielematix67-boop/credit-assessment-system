@@ -30,11 +30,31 @@ def test_rule_config_loader_returns_unique_rule_ids(loader):
 def test_financial_configuration_contains_all_rules(loader):
     configs = loader.load(RULES_CONFIG_PATH)
     assert [config.rule_id for config in configs] == [
-        "R001", "R002", "R003", "R004", "R005", "R006", "R007"
+        "R001",
+        "R002",
+        "R003",
+        "R004",
+        "R005",
+        "R006",
+        "R007",
     ]
 
 
 def test_financial_configuration_contains_input_fields(loader):
+    configs = loader.load(RULES_CONFIG_PATH)
+    input_fields = {config.rule_id: config.input_fields for config in configs}
+    assert input_fields == {
+        "R001": (),
+        "R002": (),
+        "R003": (),
+        "R004": (),
+        "R005": ("interest_expense", "ebitda"),
+        "R006": ("change_in_finished_goods_inventory", "ebitda"),
+        "R007": ("ebitda", "interest_expense"),
+    }
+
+
+def test_financial_configuration_contains_single_input_fields(loader):
     configs = loader.load(RULES_CONFIG_PATH)
     input_fields = {config.rule_id: config.input_field for config in configs}
     assert input_fields == {
@@ -42,9 +62,9 @@ def test_financial_configuration_contains_input_fields(loader):
         "R002": "ebitda",
         "R003": "ebitda_margin",
         "R004": "nfp_to_ebitda",
-        "R005": "financial_expenses_to_ebitda",
-        "R006": "ebitda_inventory_contribution",
-        "R007": "interest_coverage_ratio",
+        "R005": "",
+        "R006": "",
+        "R007": "",
     }
 
 
@@ -119,11 +139,16 @@ def test_rule_config_loader_preserves_configuration_values(loader, tmp_path):
     assert config.threshold == pytest.approx(0.30)
     assert config.input_field == "test_value"
     assert config.trigger_operator == "LTE"
+    assert config.calculation == "direct"
     assert config.comment_template == "Configured value: {value}."
 
 
 @pytest.mark.parametrize("direction", list(SeverityDirection))
-def test_rule_config_loader_supports_valid_severity_directions(loader, tmp_path, direction):
+def test_rule_config_loader_supports_valid_severity_directions(
+    loader,
+    tmp_path,
+    direction,
+):
     config_path = tmp_path / "rules.yaml"
     config_path.write_text(
         f"""
@@ -140,30 +165,50 @@ def test_rule_config_loader_supports_valid_severity_directions(loader, tmp_path,
     assert loader.load(config_path)[0].severity_direction == direction
 
 
-def test_rule_config_loader_loads_severity_thresholds(loader, tmp_path):
+@pytest.mark.parametrize("operator", ["GT", "GTE", "LT", "LTE"])
+def test_rule_config_loader_supports_valid_trigger_operators(
+    loader,
+    tmp_path,
+    operator,
+):
     config_path = tmp_path / "rules.yaml"
     config_path.write_text(
-        """
+        f"""
         rules:
           - rule_id: test_rule
             rule_name: Test rule
             category: test
-            threshold: 5.0
-            severity: HIGH
+            threshold: 1.0
+            severity: MEDIUM
             severity_direction: HIGHER_IS_WORSE
-            severity_thresholds:
-              - threshold: 1.0
-                severity: LOW
-              - threshold: 5.0
-                severity: MEDIUM
-              - threshold: 10.0
-                severity: HIGH
+            trigger_operator: {operator}
         """,
         encoding="utf-8",
     )
-    thresholds = loader.load(config_path)[0].severity_thresholds
-    assert len(thresholds) == 3
-    assert all(isinstance(item, SeverityThreshold) for item in thresholds)
+    assert loader.load(config_path)[0].trigger_operator == operator
+
+
+@pytest.mark.parametrize("calculation", ["direct", "ratio", "difference"])
+def test_rule_config_loader_supports_valid_calculations(
+    loader,
+    tmp_path,
+    calculation,
+):
+    config_path = tmp_path / "rules.yaml"
+    config_path.write_text(
+        f"""
+        rules:
+          - rule_id: test_rule
+            rule_name: Test rule
+            category: test
+            threshold: 1.0
+            severity: MEDIUM
+            severity_direction: HIGHER_IS_WORSE
+            calculation: {calculation}
+        """,
+        encoding="utf-8",
+    )
+    assert loader.load(config_path)[0].calculation == calculation
 
 
 def test_rule_config_loader_rejects_invalid_trigger_operator(loader, tmp_path):
@@ -183,6 +228,49 @@ def test_rule_config_loader_rejects_invalid_trigger_operator(loader, tmp_path):
     )
     with pytest.raises(ValueError, match="trigger_operator"):
         loader.load(config_path)
+
+
+def test_rule_config_loader_rejects_invalid_calculation(loader, tmp_path):
+    config_path = tmp_path / "invalid_calculation.yaml"
+    config_path.write_text(
+        """
+        rules:
+          - rule_id: test_rule
+            rule_name: Test rule
+            category: test
+            threshold: 1.0
+            severity: MEDIUM
+            severity_direction: HIGHER_IS_WORSE
+            calculation: average
+        """,
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="calculation"):
+        loader.load(config_path)
+
+
+def test_rule_config_loader_normalizes_operator_and_calculation(
+    loader,
+    tmp_path,
+):
+    config_path = tmp_path / "normalized.yaml"
+    config_path.write_text(
+        """
+        rules:
+          - rule_id: test_rule
+            rule_name: Test rule
+            category: test
+            threshold: 1.0
+            severity: MEDIUM
+            severity_direction: HIGHER_IS_WORSE
+            trigger_operator:  lt
+            calculation:  RATIO
+        """,
+        encoding="utf-8",
+    )
+    config = loader.load(config_path)[0]
+    assert config.trigger_operator == "LT"
+    assert config.calculation == "ratio"
 
 
 def test_rule_config_loader_raises_for_missing_file(loader, tmp_path):
