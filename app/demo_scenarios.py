@@ -15,7 +15,8 @@ DEMO_SCENARIOS = {
         "description": (
             "A financially solid company with positive revenue growth, "
             "strong operating performance, positive profitability, "
-            "healthy margins and moderate leverage."
+            "healthy margins and moderate leverage. All financial rules "
+            "remain within their configured thresholds."
         ),
         "values": {
             "position_id": "DEMO-HEALTHY-001",
@@ -72,8 +73,9 @@ DEMO_SCENARIOS = {
     "Revenue Deterioration": {
         "description": (
             "A company experiencing a significant contraction in revenues "
-            "while maintaining positive profitability and relatively "
-            "stable financial structure."
+            "while maintaining positive profitability and adequate interest "
+            "coverage. The scenario isolates the revenue-growth warning "
+            "without triggering the interest-burden rules."
         ),
         "values": {
             "position_id": "DEMO-REVENUE-001",
@@ -96,7 +98,7 @@ DEMO_SCENARIOS = {
             "ebitda_margin": 0.12,
             "ebitda_inventory_contribution": 0.01,
             "nfp_to_ebitda": 2.0,
-            "interest_expense": 180_000.0,
+            "interest_expense": 100_000.0,
             "revenue_growth": -0.15,
         },
         "case_data": {
@@ -123,19 +125,21 @@ DEMO_SCENARIOS = {
                 "cash_flow_available_for_debt_service": 700_000.0,
                 "debt_service": 500_000.0,
                 "ebitda": 1_020_000.0,
-                "interest_expense": 180_000.0,
+                "interest_expense": 100_000.0,
             },
         },
     },
     "Profitability Stress": {
         "description": (
-            "A company showing deterioration in profitability and margins "
-            "despite maintaining positive EBITDA and moderate revenue growth."
+            "A company showing deterioration in profitability, margins and "
+            "cash-conversion quality. The scenario activates the EBITDA "
+            "margin, interest burden, interest coverage and inventory-support "
+            "rules, providing a clear multi-rule CRITICAL case."
         ),
         "values": {
             "position_id": "DEMO-PROFITABILITY-001",
             "revenue": 6_000_000.0,
-            "change_in_finished_goods_inventory": 20_000.0,
+            "change_in_finished_goods_inventory": 60_000.0,
             "operating_grants": 20_000.0,
             "net_purchases": 3_200_000.0,
             "change_in_raw_materials_inventory": -20_000.0,
@@ -186,9 +190,10 @@ DEMO_SCENARIOS = {
     },
     "Leverage Stress": {
         "description": (
-            "A company with significant financial leverage. "
-            "Operating performance remains positive, but debt capacity "
-            "represents the main risk factor."
+            "A company with significant financial leverage. Operating "
+            "performance, interest burden and interest coverage remain "
+            "within the configured limits, isolating the leverage rule as "
+            "the main financial criticality."
         ),
         "values": {
             "position_id": "DEMO-LEVERAGE-001",
@@ -246,8 +251,10 @@ DEMO_SCENARIOS = {
     },
     "Multiple Risk Factors": {
         "description": (
-            "A distressed company combining revenue contraction, "
-            "negative EBITDA, negative profitability and high leverage."
+            "A distressed company combining revenue contraction, negative "
+            "EBITDA, negative profitability, weak interest coverage and high "
+            "leverage. This scenario demonstrates the cumulative effect of "
+            "multiple triggered rules."
         ),
         "values": {
             "position_id": "DEMO-MULTIPLE-RISK-001",
