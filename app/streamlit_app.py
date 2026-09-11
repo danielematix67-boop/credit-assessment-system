@@ -139,6 +139,7 @@ if run_button:
     result = execute_assessment(
         position=position,
         reporting_mode=reporting_mode,
+        scenario_name=(scenario_name if input_mode == "Demo Scenario" else None),
     )
 
     store_assessment_result(
