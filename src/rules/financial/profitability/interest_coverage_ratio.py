@@ -6,9 +6,7 @@ from src.rules.result import RuleResult
 
 @Rule.register("R007")
 class InterestCoverageRatioRule(Rule):
-    """
-    Triggers when EBITDA does not sufficiently cover interest expense.
-    """
+    """Evaluate EBITDA coverage of interest expense."""
 
     def evaluate(
         self,
@@ -18,9 +16,7 @@ class InterestCoverageRatioRule(Rule):
         interest_expense = position.interest_expense
 
         if ebitda is None:
-            return self._not_evaluable(
-                reason="EBITDA is not available.",
-            )
+            return self._not_evaluable(reason="EBITDA is not available.")
 
         if interest_expense is None:
             return self._not_evaluable(
@@ -30,16 +26,20 @@ class InterestCoverageRatioRule(Rule):
         if interest_expense <= 0:
             return self._not_evaluable(
                 reason=(
-                    "Interest expense must be greater than zero "
-                    "to calculate the interest coverage ratio."
+                    "Interest expense must be greater than zero to calculate "
+                    "the interest coverage ratio."
                 ),
             )
 
-        value = ebitda / interest_expense
+        value, error = self._configured_value(position)
 
+        if error is not None:
+            return self._not_evaluable(reason=error)
+
+        assert value is not None
         status = (
             RuleStatus.TRIGGERED
-            if value < self.config.threshold
+            if self._is_triggered(value)
             else RuleStatus.NOT_TRIGGERED
         )
 
