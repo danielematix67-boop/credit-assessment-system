@@ -3,6 +3,7 @@ from src.agents.reporting.deterministic_report_generator import (
     DeterministicReportGenerator,
 )
 from src.agents.reporting.llm_report_generator import LLMReportGenerator
+from src.agents.reporting.report_generator import ReportGenerator
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.agents.workflow.assessment_workflow import AssessmentWorkflow
 from src.llm.client import LLMClient
@@ -25,7 +26,7 @@ def create_default_assessment_workflow(
         if llm_client is None:
             raise ValueError("llm_client is required when use_llm=True")
 
-        report_generator = LLMReportGenerator(
+        report_generator: ReportGenerator = LLMReportGenerator(
             llm_client=llm_client,
         )
     else:
