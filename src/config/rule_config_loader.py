@@ -51,6 +51,7 @@ class RuleConfigLoader:
                 "threshold",
                 "severity",
                 "severity_direction",
+                "trigger_operator",
             }
             missing_fields = required_fields - item.keys()
             if missing_fields:
@@ -106,7 +107,7 @@ class RuleConfigLoader:
             if not isinstance(comment_template, str):
                 raise ValueError(f"Invalid comment_template for rule_id: {rule_id}")
 
-            trigger_operator = item.get("trigger_operator", "GT")
+            trigger_operator = item["trigger_operator"]
             if not isinstance(trigger_operator, str):
                 raise ValueError(f"Invalid trigger_operator for rule_id: {rule_id}")
             trigger_operator = trigger_operator.strip().upper()
