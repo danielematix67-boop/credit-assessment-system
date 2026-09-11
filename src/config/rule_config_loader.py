@@ -70,6 +70,14 @@ class RuleConfigLoader:
             if not isinstance(indicator, str) or not indicator.strip():
                 raise ValueError(f"Invalid indicator for rule_id: {rule_id}")
 
+            input_field = item.get("input_field", "")
+            if not isinstance(input_field, str):
+                raise ValueError(f"Invalid input_field for rule_id: {rule_id}")
+
+            comment_template = item.get("comment_template", "")
+            if not isinstance(comment_template, str):
+                raise ValueError(f"Invalid comment_template for rule_id: {rule_id}")
+
             severity_thresholds: list[SeverityThreshold] = []
             raw_severity_thresholds = item.get("severity_thresholds", [])
             if not isinstance(raw_severity_thresholds, list):
@@ -125,6 +133,8 @@ class RuleConfigLoader:
                     severity_direction=severity_direction,
                     severity_thresholds=tuple(severity_thresholds),
                     indicator=indicator.strip(),
+                    input_field=input_field.strip(),
+                    comment_template=comment_template.strip(),
                 )
             )
 
