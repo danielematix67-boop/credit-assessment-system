@@ -9,6 +9,12 @@ from src.rules.result import RuleResult
 
 
 class AnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
+    """Adapt deterministic assessment evidence into the analysis contract.
+
+    This agent only interprets deterministic evidence. It does not recalculate
+    rule outcomes, thresholds, severities, or the final assessment status.
+    """
+
     @staticmethod
     def _to_analysis_finding(
         finding: RuleFinding,
@@ -39,6 +45,14 @@ class AnalysisAgent(Agent[Assessment, AssessmentAnalysis]):
         self,
         assessment: Assessment,
     ) -> AssessmentAnalysis:
+        """Translate deterministic findings without changing their meaning.
+
+        The legacy Assessment contract is intentionally preserved here for
+        compatibility with the legacy workflow path. Domain/category
+        information already present in each deterministic finding is retained
+        in ``AnalysisFinding.category`` so downstream reporting can group
+        evidence by assessment area.
+        """
         triggered_findings = [
             finding
             for finding in assessment.findings
