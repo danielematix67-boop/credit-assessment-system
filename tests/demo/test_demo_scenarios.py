@@ -191,7 +191,9 @@ def test_missing_information_preserves_explicit_limitations(assessment_service) 
     assert case.final_assessment.limitations
 
 
-def test_ui_rule_evidence_source_covers_all_registered_demo_rules(assessment_service) -> None:
+def test_ui_rule_evidence_source_covers_all_registered_demo_rules(
+    assessment_service,
+) -> None:
     """Ensure the Results-page evidence source exposes every deterministic rule ID."""
     case_service = CreditAssessmentCaseService(
         financial_assessment_service=assessment_service
@@ -218,8 +220,6 @@ def test_ui_rule_evidence_source_covers_all_registered_demo_rules(assessment_ser
             for rule in section.evidence
         ]
         result = SimpleNamespace(assessment=SimpleNamespace(rule_results=rule_results))
-        displayed_rule_ids.update(
-            rule.rule_id for rule in get_rule_results(result)
-        )
+        displayed_rule_ids.update(rule.rule_id for rule in get_rule_results(result))
 
     assert displayed_rule_ids == EXPECTED_UI_RULE_IDS
