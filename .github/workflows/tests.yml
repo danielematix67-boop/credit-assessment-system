@@ -31,8 +31,7 @@ jobs:
 
       - name: Run linting
         run: |
-          python -m ruff check . --fix --show-fixes
-          git diff -- app/demo_scenarios.py app/ui/input_source.py app/ui/results/dashboard.py
+          python -m ruff check .
 
       - name: Run type checking
         run: |
