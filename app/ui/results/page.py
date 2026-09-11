@@ -1,4 +1,3 @@
-from dataclasses import replace
 from typing import Any
 
 import streamlit as st
@@ -159,11 +158,7 @@ def render_results_header(result: Any) -> None:
     """Render the executive assessment header without changing assessment logic."""
     report = getattr(result, "report", None)
     report_status = getattr(report, "assessment_status", None)
-    if report_status is not None:
-        status_obj = report_status
-    else:
-        assessment = getattr(result, "assessment", None)
-        status_obj = getattr(assessment, "status", None)
+    status_obj = report_status
 
     status = str(getattr(status_obj, "value", status_obj or "Unknown"))
     rules = get_rule_results(result)
