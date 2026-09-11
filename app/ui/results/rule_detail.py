@@ -8,7 +8,6 @@ import streamlit as st
 from app.ui.results.helpers import (
     format_indicator_value,
     get_rule_results,
-    rule_direction,
     rule_indicator,
     rule_severity,
     rule_status,
@@ -57,7 +56,6 @@ def render_rule_indicator_detail(result: Any) -> None:
     category = str(getattr(selected_rule, "category", "—"))
     status = rule_status(selected_rule)
     severity = rule_severity(selected_rule)
-    direction = rule_direction(selected_rule)
     value = getattr(selected_rule, "value", None)
     threshold = getattr(selected_rule, "threshold", None)
     reason = getattr(selected_rule, "reason", None)
@@ -93,14 +91,11 @@ def render_rule_indicator_detail(result: Any) -> None:
             )
             st.bar_chart(chart_data, x="Measure", y="Value", height=170)
 
-        meta_cols = st.columns(3)
+        meta_cols = st.columns(2)
         with meta_cols[0]:
             st.caption("Status")
             st.markdown(f"**{status_text}**")
         with meta_cols[1]:
-            st.caption("Direction")
-            st.markdown(f"**{direction}**")
-        with meta_cols[2]:
             st.caption("Category")
             st.markdown(f"**{category}**")
 
