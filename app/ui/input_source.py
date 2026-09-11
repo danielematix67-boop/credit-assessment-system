@@ -6,7 +6,6 @@ from app.demo_scenarios import DEMO_SCENARIOS, build_demo_position
 from app.ui.input import build_credit_position_from_ui, display_position_table
 from src.models.position import CreditPosition
 
-
 _SCENARIO_GROUPS = {
     "1 · Baseline": ["01 · Baseline"],
     "2 · Customer Profile": ["02 · Customer Profile Risk"],
