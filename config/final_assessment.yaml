@@ -1,0 +1,17 @@
+# Deterministic final-assessment policy.
+# This file defines aggregation policy only; section-level rules remain in
+# their respective macro-area configuration files.
+policy:
+  critical_if_any_section_critical: true
+  critical_if_core_attention_at_least: 2
+  core_sections:
+    - Financial Analysis
+    - Behavioural Analysis
+    - Debt Sustainability
+  contextual_sections:
+    - Customer Profile
+  normal_if_all_evaluable_normal: true
+  normal_requires_min_evaluable_sections: 2
+  no_evaluable_status: ATTENTION
+  partial_evaluation_message: "Final assessment is based on {evaluable} of {total} evaluable macro-areas."
+  not_evaluable_message: "{section} could not be evaluated because sufficient evidence was not available."
