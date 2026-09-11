@@ -27,15 +27,12 @@ def rule_config():
         severity=DEFAULT_SEVERITY,
         severity_direction=SeverityDirection.LOWER_IS_WORSE,
         severity_thresholds=(
-            SeverityThreshold(
-                threshold=1.50,
-                severity=RuleSeverity.MEDIUM,
-            ),
-            SeverityThreshold(
-                threshold=1.00,
-                severity=RuleSeverity.HIGH,
-            ),
+            SeverityThreshold(threshold=1.50, severity=RuleSeverity.MEDIUM),
+            SeverityThreshold(threshold=1.00, severity=RuleSeverity.HIGH),
         ),
+        input_fields=("ebitda", "interest_expense"),
+        calculation="ratio",
+        trigger_operator="LT",
     )
 
 
@@ -51,11 +48,7 @@ def make_position(
 ) -> CreditPosition:
     return CreditPosition(
         position_id="TEST_POSITION",
-        revenue_growth=0.0,
         ebitda=ebitda,
-        profit_loss=0.0,
-        ebitda_margin=0.0,
-        nfp_to_ebitda=0.0,
         interest_expense=interest_expense,
     )
 
@@ -76,37 +69,13 @@ def assert_result_metadata(result, config):
         "expected_severity",
     ),
     [
-        (
-            50_000,
-            50_000,
-            1.00,
-            RuleStatus.TRIGGERED,
-            RuleSeverity.HIGH,
-        ),
-        (
-            75_000,
-            50_000,
-            1.50,
-            RuleStatus.TRIGGERED,
-            RuleSeverity.MEDIUM,
-        ),
-        (
-            100_000,
-            50_000,
-            2.00,
-            RuleStatus.NOT_TRIGGERED,
-            RuleSeverity.LOW,
-        ),
-        (
-            150_000,
-            50_000,
-            3.00,
-            RuleStatus.NOT_TRIGGERED,
-            RuleSeverity.LOW,
-        ),
+        (50_000, 50_000, 1.00, RuleStatus.TRIGGERED, RuleSeverity.HIGH),
+        (75_000, 50_000, 1.50, RuleStatus.TRIGGERED, RuleSeverity.MEDIUM),
+        (100_000, 50_000, 2.00, RuleStatus.NOT_TRIGGERED, RuleSeverity.LOW),
+        (150_000, 50_000, 3.00, RuleStatus.NOT_TRIGGERED, RuleSeverity.LOW),
     ],
 )
-def test_interest_coverage_ratio_rule_evaluates_ratio(
+def test_interest_coverage_ratio_rule_evaluates_configured_ratio(
     rule,
     rule_config,
     ebitda,
@@ -128,13 +97,8 @@ def test_interest_coverage_ratio_rule_evaluates_ratio(
     assert result.severity == expected_severity
 
 
-def test_interest_coverage_ratio_threshold_is_exclusive(
-    rule,
-):
-    position = make_position(
-        ebitda=100_000,
-        interest_expense=50_000,
-    )
+def test_interest_coverage_ratio_threshold_is_exclusive(rule):
+    position = make_position(ebitda=100_000, interest_expense=50_000)
 
     result = rule.evaluate(position)
 
@@ -179,12 +143,12 @@ def test_interest_coverage_ratio_rule_uses_configured_threshold():
         threshold=1.50,
         severity=RuleSeverity.MEDIUM,
         severity_direction=SeverityDirection.LOWER_IS_WORSE,
+        input_fields=("ebitda", "interest_expense"),
+        calculation="ratio",
+        trigger_operator="LT",
     )
 
-    position = make_position(
-        ebitda=75_000,
-        interest_expense=50_000,
-    )
+    position = make_position(ebitda=75_000, interest_expense=50_000)
 
     result = InterestCoverageRatioRule(config).evaluate(position)
 
