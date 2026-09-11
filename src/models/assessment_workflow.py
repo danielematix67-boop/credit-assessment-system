@@ -4,6 +4,7 @@ from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.execution_metadata import ExecutionMetadata
 from src.models.report import Report
+from src.rules.result import RuleResult
 
 
 @dataclass(frozen=True)
@@ -22,7 +23,7 @@ class AssessmentWorkflowResult:
     total_elapsed_time: float = 0.0
 
     @property
-    def rule_results(self) -> list:
+    def rule_results(self) -> list[RuleResult]:
         """Return the deterministic rule evidence contained in the case."""
         return [
             result
