@@ -295,7 +295,12 @@ def test_rule_config_loader_raises_when_rules_section_is_missing(loader, tmp_pat
 def test_rule_config_loader_rejects_missing_required_field(loader, tmp_path):
     config_path = tmp_path / "missing_field.yaml"
     config_path.write_text(
-        "rules:\n  - rule_id: test_rule\n    rule_name: Test\n    category: test\n    threshold: 1.0\n    severity: MEDIUM\n",
+        "rules:\n"
+        "  - rule_id: test_rule\n"
+        "    rule_name: Test\n"
+        "    category: test\n"
+        "    threshold: 1.0\n"
+        "    severity: MEDIUM\n",
         encoding="utf-8",
     )
     with pytest.raises(ValueError):
