@@ -1,7 +1,5 @@
 from dataclasses import dataclass
-from typing import Any
 
-from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.execution_metadata import ExecutionMetadata
@@ -24,15 +22,8 @@ class AssessmentWorkflowResult:
     total_elapsed_time: float = 0.0
 
     @property
-    def assessment(self) -> Assessment:
-        """Return the legacy deterministic assessment projection."""
-        from src.agents.workflow.assessment_workflow import AssessmentWorkflow
-
-        return AssessmentWorkflow._legacy_assessment_from_case(self.credit_case)
-
-    @property
-    def rule_results(self) -> list[Any]:
-        """Return the complete deterministic evidence from all assessment sections."""
+    def rule_results(self) -> list:
+        """Return the deterministic rule evidence contained in the case."""
         return [
             result
             for section in self.credit_case.sections
