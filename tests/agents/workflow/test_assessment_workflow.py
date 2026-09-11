@@ -21,23 +21,18 @@ from src.models.report import Report
 from src.rules.base.severity import RuleSeverity
 from src.services.credit_assessment_case_service import CreditAssessmentCaseService
 
+
 # ============================================================
 # Helpers
 # ============================================================
 
 
 def make_position() -> CreditPosition:
-    """
-    Create a generic valid credit position.
-
-    The exact financial values are irrelevant for workflow tests.
-    The position only needs to be structurally valid and fully evaluable
-    for the financial rules so the expected baseline status is NORMAL.
-    """
+    """Create a generic fully evaluable, risk-free financial test position."""
     return CreditPosition(
         position_id="TEST_POSITION",
         revenue=10_000_000.0,
-        change_in_finished_goods_inventory=5_000_000.0,
+        change_in_finished_goods_inventory=100_000.0,
         revenue_growth=0.05,
         ebitda=1_000_000.0,
         profit_loss=500_000.0,
@@ -52,9 +47,7 @@ def make_report(
     position_id: str,
     assessment_status,
 ) -> Report:
-    """
-    Create a minimal report suitable for workflow tests.
-    """
+    """Create a minimal report suitable for workflow tests."""
     return Report(
         position_id=position_id,
         assessment_status=assessment_status,
