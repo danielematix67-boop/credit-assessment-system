@@ -7,4 +7,4 @@ class RuleConfiguration:
 
     @classmethod
     def default(cls) -> "RuleConfiguration":
-        return cls(Path("config"))
+        return cls(Path("config/financial_analysis_rules.yaml"))
