@@ -7,6 +7,16 @@ from app.ui.input import build_credit_position_from_ui, display_position_table
 from src.models.position import CreditPosition
 
 
+_SCENARIO_GROUPS = {
+    "1 · Baseline": ["Healthy Company"],
+    "2 · Customer Profile": ["Customer Profile Stress"],
+    "3 · Financial Analysis": ["Revenue Deterioration", "Financial Stress", "Profitability Stress"],
+    "4 · Behavioural Analysis": ["Behavioural Stress - Isolated", "Behavioural Stress"],
+    "5 · Debt Sustainability": ["Debt Sustainability Stress", "Leverage Stress"],
+    "6 · End-to-End / Data Quality": ["Multiple Risk Factors", "Missing Information"],
+}
+
+
 def render_credit_data_source() -> tuple[
     CreditPosition | None,
     dict[str, Any] | None,
@@ -34,11 +44,31 @@ def _render_demo_scenario() -> tuple[
     str,
     str | None,
 ]:
+    group_names = list(_SCENARIO_GROUPS)
+    group_name = st.selectbox(
+        "Assessment path",
+        options=group_names,
+        index=0,
+        help="Choose the assessment area you want to demonstrate.",
+    )
+
+    available_scenarios = [
+        scenario_name
+        for scenario_name in _SCENARIO_GROUPS[group_name]
+        if scenario_name in DEMO_SCENARIOS
+    ]
     scenario_name = st.selectbox(
-        "Scenario", options=list(DEMO_SCENARIOS.keys()), index=0
+        "Scenario",
+        options=available_scenarios,
+        index=0,
     )
     scenario = DEMO_SCENARIOS[scenario_name]
+
     st.caption(scenario["description"])
+    st.caption(
+        f"Demonstration path: **{group_name.split(' · ', maxsplit=1)[-1]}** · "
+        "the deterministic Rule Engine remains the source of truth."
+    )
 
     try:
         position = build_demo_position(scenario_name)
