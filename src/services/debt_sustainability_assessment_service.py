@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 
 from src.comments.comment_engine import CommentEngine
 from src.config.rule_config_loader import RuleConfigLoader
@@ -34,11 +35,13 @@ class DebtSustainabilityAssessmentService:
         configs = self.config_loader.load(self.config_path)
         results = [self._evaluate_rule(config, data) for config in configs]
         status = self._section_status(results)
-        findings = [
-            RuleFinding(result=result, comment=self.comment_engine.generate(result))
-            for result in results
-            if result.status == RuleStatus.TRIGGERED
-        ]
+        findings = []
+        for result in results:
+            if result.status != RuleStatus.TRIGGERED:
+                continue
+            comment = self.comment_engine.generate(result)
+            assert comment is not None
+            findings.append(RuleFinding(result=result, comment=comment))
         limitations = (
             ["Debt-service and cash-flow data are not available."]
             if all(result.status == RuleStatus.NOT_EVALUABLE for result in results)
@@ -59,17 +62,18 @@ class DebtSustainabilityAssessmentService:
         if not fields or any(value is None for value in values):
             return cls._not_evaluable(config, "Required input data are not available.")
 
+        numeric_values = [cast(float, value) for value in values]
         if config.calculation == "ratio":
-            numerator, denominator = values
+            numerator, denominator = numeric_values
             if denominator <= 0:
                 return cls._not_evaluable(
                     config, "The denominator must be positive to calculate the indicator."
                 )
             value = numerator / denominator
         elif config.calculation == "difference":
-            value = values[0] - values[1]
+            value = numeric_values[0] - numeric_values[1]
         else:
-            value = values[0]
+            value = numeric_values[0]
 
         triggered = cls._compare(value, config.threshold, config.trigger_operator)
         severity = SeverityPolicy(
