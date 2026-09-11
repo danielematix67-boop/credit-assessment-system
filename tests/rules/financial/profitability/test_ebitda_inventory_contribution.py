@@ -3,6 +3,7 @@ import pytest
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
+from src.rules.base.severity_direction import SeverityDirection
 from src.rules.base.severity_threshold import SeverityThreshold
 from src.rules.base.status import RuleStatus
 from src.rules.financial.profitability.ebitda_inventory_contribution import (
@@ -24,6 +25,7 @@ def rule_config():
         category=CATEGORY,
         threshold=THRESHOLD,
         severity=DEFAULT_SEVERITY,
+        severity_direction=SeverityDirection.HIGHER_IS_WORSE,
         severity_thresholds=(
             SeverityThreshold(
                 threshold=0.30,
@@ -34,6 +36,9 @@ def rule_config():
                 severity=RuleSeverity.HIGH,
             ),
         ),
+        input_fields=("change_in_finished_goods_inventory", "ebitda"),
+        calculation="ratio",
+        trigger_operator="GT",
     )
 
 
@@ -74,39 +79,14 @@ def assert_result_metadata(result, config):
         "expected_severity",
     ),
     [
-        (
-            100_000,
-            0.10,
-            RuleStatus.NOT_TRIGGERED,
-            RuleSeverity.LOW,
-        ),
-        (
-            300_000,
-            0.30,
-            RuleStatus.TRIGGERED,
-            RuleSeverity.MEDIUM,
-        ),
-        (
-            400_000,
-            0.40,
-            RuleStatus.TRIGGERED,
-            RuleSeverity.MEDIUM,
-        ),
-        (
-            500_000,
-            0.50,
-            RuleStatus.TRIGGERED,
-            RuleSeverity.HIGH,
-        ),
-        (
-            600_000,
-            0.60,
-            RuleStatus.TRIGGERED,
-            RuleSeverity.HIGH,
-        ),
+        (100_000, 0.10, RuleStatus.NOT_TRIGGERED, RuleSeverity.LOW),
+        (300_000, 0.30, RuleStatus.NOT_TRIGGERED, RuleSeverity.MEDIUM),
+        (400_000, 0.40, RuleStatus.TRIGGERED, RuleSeverity.MEDIUM),
+        (500_000, 0.50, RuleStatus.TRIGGERED, RuleSeverity.HIGH),
+        (600_000, 0.60, RuleStatus.TRIGGERED, RuleSeverity.HIGH),
     ],
 )
-def test_ebitda_inventory_contribution_evaluates_ratio(
+def test_ebitda_inventory_contribution_evaluates_configured_ratio(
     rule,
     rule_config,
     ebitda,
@@ -128,7 +108,7 @@ def test_ebitda_inventory_contribution_evaluates_ratio(
     assert result.severity == expected_severity
 
 
-def test_ebitda_inventory_contribution_threshold_is_inclusive(
+def test_ebitda_inventory_contribution_uses_configured_operator(
     rule,
     ebitda,
 ):
@@ -140,7 +120,7 @@ def test_ebitda_inventory_contribution_threshold_is_inclusive(
     result = rule.evaluate(position)
 
     assert result.value == THRESHOLD
-    assert result.status == RuleStatus.TRIGGERED
+    assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.severity == RuleSeverity.MEDIUM
 
 
