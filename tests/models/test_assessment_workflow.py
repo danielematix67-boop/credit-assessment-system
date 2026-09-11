@@ -95,7 +95,7 @@ def test_assessment_workflow_result_preserves_components(
     assert workflow_result.credit_case is case
     assert workflow_result.analysis is analysis
     assert workflow_result.report is report
-    assert workflow_result.assessment.position_id == case.position.position_id
+    assert workflow_result.credit_case.position.position_id == case.position.position_id
 
 
 @pytest.mark.parametrize(
@@ -165,7 +165,8 @@ def test_assessment_workflow_result_accepts_all_assessment_statuses(
         report=report,
     )
 
-    assert result.assessment.status == status
+    assert result.credit_case.final_assessment is not None
+    assert result.credit_case.final_assessment.status == section_status
     assert result.analysis.assessment_status == status
     assert result.report.assessment_status == status
 
