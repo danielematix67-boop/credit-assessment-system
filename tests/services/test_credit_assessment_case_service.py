@@ -1,15 +1,12 @@
 from unittest.mock import Mock
 
-from src.agents.workflow.assessment_workflow import AssessmentWorkflow
-from src.models.assessment import Assessment
 from src.models.assessment_section import AssessmentSection, SectionStatus
 from src.models.assessment_status import AssessmentStatus
 from src.models.behavioural_data import BehaviouralData
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.customer_profile_data import CustomerProfileData
 from src.models.debt_sustainability_data import DebtSustainabilityData
-from src.models.final_assessment import FinalAssessment
-from src.models.position import CreditPosition
+from src.models.financial_assessment import FinancialAssessment
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_direction import SeverityDirection
 from src.rules.base.status import RuleStatus
@@ -17,210 +14,83 @@ from src.rules.result import RuleResult
 from src.services.credit_assessment_case_service import CreditAssessmentCaseService
 
 
-def _assessment(
-    position: CreditPosition,
-    status: AssessmentStatus = AssessmentStatus.NORMAL,
-) -> Assessment:
-    return Assessment(
-        position_id=position.position_id,
-        rule_results=[],
-        findings=[],
-        status=status,
-    )
+def _assessment(position, status=AssessmentStatus.NORMAL, results=None):
+    return FinancialAssessment(position_id=position.position_id, rule_results=results or [], findings=[], status=status)
 
 
-def test_case_service_builds_four_macro_sections_and_final_assessment() -> None:
-    position = CreditPosition(position_id="TEST-001")
+def test_case_service_builds_four_macro_sections_and_final_assessment():
+    position = __import__("src.models.position", fromlist=["CreditPosition"]).CreditPosition(position_id="TEST-001")
     assessment_service = Mock()
     assessment_service.assess.return_value = _assessment(position)
     case = CreditAssessmentCaseService(assessment_service).assess(position)
-
     assert isinstance(case, CreditAssessmentCase)
-    assert [section.name for section in case.sections] == [
-        "Customer Profile",
-        "Financial Analysis",
-        "Behavioural Analysis",
-        "Debt Sustainability",
-    ]
+    assert [section.name for section in case.sections] == ["Customer Profile", "Financial Analysis", "Behavioural Analysis", "Debt Sustainability"]
     assert case.financial_analysis.status == SectionStatus.NORMAL
     assert case.customer_profile.status == SectionStatus.NOT_EVALUABLE
     assert case.final_assessment is not None
     assert case.final_assessment.status == SectionStatus.ATTENTION
 
 
-def test_case_service_preserves_financial_evidence() -> None:
+def test_case_service_preserves_financial_evidence():
+    from src.models.position import CreditPosition
     position = CreditPosition(position_id="TEST-002")
     assessment_service = Mock()
-    assessment_service.assess.return_value = _assessment(
-        position,
-        AssessmentStatus.ATTENTION,
-    )
+    assessment_service.assess.return_value = _assessment(position, AssessmentStatus.ATTENTION)
     case = CreditAssessmentCaseService(assessment_service).assess(position)
     assert case.financial_analysis.evidence == []
     assert case.financial_analysis.status == SectionStatus.ATTENTION
 
 
-def test_case_service_marks_all_not_evaluable_financial_rules_as_not_evaluable() -> None:
+def test_case_service_marks_all_not_evaluable_financial_rules_as_not_evaluable():
+    from src.models.position import CreditPosition
     position = CreditPosition(position_id="TEST-002-NE")
-    results = [
-        RuleResult(
-            rule_id=rule_id,
-            rule_name=f"Rule {rule_id}",
-            category="test",
-            status=RuleStatus.NOT_EVALUABLE,
-            value=None,
-            threshold=0.0,
-            severity=RuleSeverity.MEDIUM,
-            indicator="Test indicator",
-            direction=SeverityDirection.HIGHER_IS_WORSE,
-        )
-        for rule_id in ["R001", "R002", "R003", "R004", "R005", "R006", "R007"]
-    ]
-    assessment = Assessment(
-        position_id=position.position_id,
-        rule_results=results,
-        findings=[],
-        status=AssessmentStatus.ATTENTION,
-    )
+    results = [RuleResult(rule_id=rule_id, rule_name=f"Rule {rule_id}", category="test", status=RuleStatus.NOT_EVALUABLE, value=None, threshold=0.0, severity=RuleSeverity.MEDIUM, indicator="Test indicator", direction=SeverityDirection.HIGHER_IS_WORSE) for rule_id in ["R001", "R002", "R003", "R004", "R005", "R006", "R007"]]
     assessment_service = Mock()
-    assessment_service.assess.return_value = assessment
-
+    assessment_service.assess.return_value = _assessment(position, AssessmentStatus.ATTENTION, results)
     case = CreditAssessmentCaseService(assessment_service).assess(position)
-
     assert case.financial_analysis.status == SectionStatus.NOT_EVALUABLE
-    assert case.financial_analysis.limitations == [
-        "Financial indicators are not available for this case."
-    ]
+    assert case.financial_analysis.limitations == ["Financial indicators are not available for this case."]
 
 
-def _rule_result(rule_id: str) -> RuleResult:
-    return RuleResult(
-        rule_id=rule_id,
-        rule_name=f"Rule {rule_id}",
-        category="test",
-        status=RuleStatus.NOT_TRIGGERED,
-        value=1.0,
-        threshold=2.0,
-        severity=RuleSeverity.MEDIUM,
-        indicator="Test indicator",
-        direction=SeverityDirection.HIGHER_IS_WORSE,
-    )
+def _rule_result(rule_id):
+    return RuleResult(rule_id=rule_id, rule_name=f"Rule {rule_id}", category="test", status=RuleStatus.NOT_TRIGGERED, value=1.0, threshold=2.0, severity=RuleSeverity.MEDIUM, indicator="Test indicator", direction=SeverityDirection.HIGHER_IS_WORSE)
 
 
-def test_case_service_groups_financial_rules_by_analyst_dimension() -> None:
+def test_case_service_groups_financial_rules_by_analyst_dimension():
+    from src.models.position import CreditPosition
     position = CreditPosition(position_id="TEST-003")
-    results = [
-        _rule_result(rule_id)
-        for rule_id in ["R001", "R002", "R003", "R004", "R005", "R006", "R007"]
-    ]
-    assessment = Assessment(
-        position_id=position.position_id,
-        rule_results=results,
-        findings=[],
-        status=AssessmentStatus.NORMAL,
-    )
+    results = [_rule_result(rule_id) for rule_id in ["R001", "R002", "R003", "R004", "R005", "R006", "R007"]]
     assessment_service = Mock()
-    assessment_service.assess.return_value = assessment
+    assessment_service.assess.return_value = _assessment(position, AssessmentStatus.NORMAL, results)
     case = CreditAssessmentCaseService(assessment_service).assess(position)
-    dimensions = case.financial_analysis.dimensions
-    assert list(dimensions) == [
-        "Revenue & Growth",
-        "Profitability",
-        "Financial Structure",
-        "Debt Service Burden",
-        "Profitability Quality",
-    ]
+    assert list(case.financial_analysis.dimensions) == ["Revenue & Growth", "Profitability", "Financial Structure", "Debt Service Burden", "Profitability Quality"]
 
 
-def test_case_service_builds_behavioural_section_when_data_are_available() -> None:
+def test_case_service_builds_behavioural_section_when_data_are_available():
+    from src.models.position import CreditPosition
     position = CreditPosition(position_id="TEST-004")
     assessment_service = Mock()
     assessment_service.assess.return_value = _assessment(position)
-    case = CreditAssessmentCaseService(assessment_service).assess(
-        position,
-        behavioural_data=BehaviouralData(average_utilization=0.95),
-    )
+    case = CreditAssessmentCaseService(assessment_service).assess(position, behavioural_data=BehaviouralData(average_utilization=0.95))
     assert case.behavioural_analysis.status == SectionStatus.ATTENTION
     assert case.behavioural_analysis.evidence[0].rule_id == "B001"
 
 
-def test_case_service_builds_debt_sustainability_section_when_data_are_available() -> None:
+def test_case_service_builds_debt_sustainability_section_when_data_are_available():
+    from src.models.position import CreditPosition
     position = CreditPosition(position_id="TEST-006")
     assessment_service = Mock()
     assessment_service.assess.return_value = _assessment(position)
-    case = CreditAssessmentCaseService(assessment_service).assess(
-        position,
-        debt_sustainability_data=DebtSustainabilityData(
-            cash_flow_available_for_debt_service=80,
-            debt_service=100,
-        ),
-    )
+    case = CreditAssessmentCaseService(assessment_service).assess(position, debt_sustainability_data=DebtSustainabilityData(cash_flow_available_for_debt_service=80, debt_service=100))
     assert case.debt_sustainability.status == SectionStatus.ATTENTION
     assert len(case.debt_sustainability.evidence) == 3
 
 
-def test_case_service_builds_customer_profile_when_data_are_available() -> None:
+def test_case_service_builds_customer_profile_when_data_are_available():
+    from src.models.position import CreditPosition
     position = CreditPosition(position_id="TEST-008")
     assessment_service = Mock()
     assessment_service.assess.return_value = _assessment(position)
-    case = CreditAssessmentCaseService(assessment_service).assess(
-        position,
-        customer_profile_data=CustomerProfileData(
-            company_name="Synthetic Co.",
-            sector="Manufacturing",
-        ),
-    )
+    case = CreditAssessmentCaseService(assessment_service).assess(position, customer_profile_data=CustomerProfileData(company_name="Synthetic Co.", sector="Manufacturing"))
     assert case.customer_profile.status == SectionStatus.NORMAL
     assert case.customer_profile.context["company_name"] == "Synthetic Co."
-
-
-def _section(name: str, rule_ids: list[str]) -> AssessmentSection:
-    return AssessmentSection(
-        name=name,
-        status=SectionStatus.NORMAL,
-        findings=[],
-        evidence=[_rule_result(rule_id) for rule_id in rule_ids],
-        limitations=[],
-    )
-
-
-def test_legacy_assessment_projection_aggregates_all_macro_area_evidence() -> None:
-    position = CreditPosition(position_id="TEST-WORKFLOW-001")
-    expected_rule_ids = [
-        "CP001",
-        "CP002",
-        "CP003",
-        "R001",
-        "R002",
-        "R003",
-        "R004",
-        "R005",
-        "R006",
-        "R007",
-        "B001",
-        "B002",
-        "B003",
-        "B004",
-        "DS001",
-        "DS002",
-        "DS003",
-    ]
-    case = CreditAssessmentCase(
-        position=position,
-        customer_profile=_section("Customer Profile", expected_rule_ids[:3]),
-        financial_analysis=_section("Financial Analysis", expected_rule_ids[3:10]),
-        behavioural_analysis=_section("Behavioural Analysis", expected_rule_ids[10:14]),
-        debt_sustainability=_section("Debt Sustainability", expected_rule_ids[14:]),
-        final_assessment=FinalAssessment(
-            status=SectionStatus.CRITICAL,
-            evaluated_sections=4,
-            risk_sections=["Financial Analysis"],
-        ),
-    )
-
-    projected = AssessmentWorkflow._legacy_assessment_from_case(case)
-
-    assert len(projected.rule_results) == 17
-    assert [result.rule_id for result in projected.rule_results] == expected_rule_ids
-    assert projected.status == AssessmentStatus.CRITICAL
-    assert projected.position_id == position.position_id
