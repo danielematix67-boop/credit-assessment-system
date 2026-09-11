@@ -5,9 +5,7 @@ import pytest
 from src.agents.analysis.analysis_agent import AnalysisAgent
 from src.agents.analysis.case_analysis_agent import CaseAnalysisAgent
 from src.agents.base.agent import Agent
-from src.agents.reporting.deterministic_report_generator import (
-    DeterministicReportGenerator,
-)
+from src.agents.reporting.deterministic_report_generator import DeterministicReportGenerator
 from src.agents.reporting.llm_report_generator import LLMReportGenerator
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.agents.workflow.assessment_workflow import AssessmentWorkflow
