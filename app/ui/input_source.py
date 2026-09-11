@@ -8,12 +8,19 @@ from src.models.position import CreditPosition
 
 
 _SCENARIO_GROUPS = {
-    "1 · Baseline": ["Healthy Company"],
-    "2 · Customer Profile": ["Customer Profile Stress"],
-    "3 · Financial Analysis": ["Revenue Deterioration", "Financial Stress", "Profitability Stress"],
-    "4 · Behavioural Analysis": ["Behavioural Stress - Isolated", "Behavioural Stress"],
-    "5 · Debt Sustainability": ["Debt Sustainability Stress", "Leverage Stress"],
-    "6 · End-to-End / Data Quality": ["Multiple Risk Factors", "Missing Information"],
+    "1 · Baseline": ["01 · Baseline"],
+    "2 · Customer Profile": ["02 · Customer Profile Risk"],
+    "3 · Financial Analysis": [
+        "03 · Revenue & Profitability Risk",
+        "04 · Leverage & Interest Risk",
+        "05 · Profitability Quality Risk",
+    ],
+    "4 · Behavioural Analysis": ["06 · Behavioural Risk"],
+    "5 · Debt Sustainability": ["07 · Debt Sustainability Risk"],
+    "6 · End-to-End / Data Quality": [
+        "08 · Integrated Credit Stress",
+        "09 · Data Availability",
+    ],
 }
 
 
@@ -44,10 +51,9 @@ def _render_demo_scenario() -> tuple[
     str,
     str | None,
 ]:
-    group_names = list(_SCENARIO_GROUPS)
     group_name = st.selectbox(
         "Assessment path",
-        options=group_names,
+        options=list(_SCENARIO_GROUPS),
         index=0,
         help="Choose the assessment area you want to demonstrate.",
     )
@@ -57,11 +63,7 @@ def _render_demo_scenario() -> tuple[
         for scenario_name in _SCENARIO_GROUPS[group_name]
         if scenario_name in DEMO_SCENARIOS
     ]
-    scenario_name = st.selectbox(
-        "Scenario",
-        options=available_scenarios,
-        index=0,
-    )
+    scenario_name = st.selectbox("Scenario", options=available_scenarios, index=0)
     scenario = DEMO_SCENARIOS[scenario_name]
 
     st.caption(scenario["description"])
