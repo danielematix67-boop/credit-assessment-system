@@ -3,6 +3,7 @@ from typing import Any, Callable, ClassVar
 
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
+from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 
@@ -36,7 +37,7 @@ class Rule(ABC):
         for field in fields:
             raw_value = getattr(position, field, None)
             if raw_value is None:
-                return None, f"{field} is not available."
+                return None, f"Required input field is not available: {field}."
             if not isinstance(raw_value, (int, float)):
                 return None, f"{field} is not numeric."
             values.append(float(raw_value))
@@ -55,7 +56,7 @@ class Rule(ABC):
         numerator, denominator = values
         if self.config.calculation == "ratio":
             if denominator == 0:
-                return None, "Cannot calculate ratio because the denominator is zero."
+                return None, "Ratio denominator cannot be zero."
             return numerator / denominator, None
 
         if self.config.calculation == "difference":
@@ -74,13 +75,13 @@ class Rule(ABC):
         }
         return operators[self.config.trigger_operator](value, threshold)
 
-    def _severity(self, value: float) -> Any:
+    def _severity(self, value: float) -> RuleSeverity:
         """Resolve severity from configured severity thresholds."""
         thresholds = self.config.severity_thresholds
         if not thresholds:
             return self.config.severity
 
-        if self.config.severity_direction.value == "higher_is_worse":
+        if self.config.severity_direction.value == "HIGHER_IS_WORSE":
             severity = thresholds[0].severity
             for threshold in thresholds:
                 if value >= threshold.threshold:
@@ -100,21 +101,33 @@ class Rule(ABC):
             return None
         return template.format(value=value, threshold=self.config.threshold)
 
+    def _qualify_reason(self, reason: str) -> str:
+        """Add a stable rule reference to non-template reasons."""
+        return f"[{self.config.rule_id} - {self.config.rule_name}] {reason}"
+
     def _result(
         self,
         *,
         value: float | None,
         status: RuleStatus,
         reason: str | None = None,
+        severity: RuleSeverity | None = None,
     ) -> RuleResult:
         """Build a RuleResult from the configured rule metadata."""
         resolved_reason = reason
         if resolved_reason is None and value is not None:
             resolved_reason = self._format_reason(value)
+        if resolved_reason is None:
+            resolved_reason = "Rule evaluation completed."
 
-        severity = self.config.severity
-        if value is not None:
-            severity = self._severity(value)
+        if reason is not None or not self.config.comment_template:
+            resolved_reason = self._qualify_reason(resolved_reason)
+
+        resolved_severity = severity
+        if resolved_severity is None:
+            resolved_severity = self.config.severity
+            if value is not None:
+                resolved_severity = self._severity(value)
 
         return RuleResult(
             rule_id=self.config.rule_id,
@@ -123,7 +136,7 @@ class Rule(ABC):
             value=value,
             threshold=self.config.threshold,
             status=status,
-            severity=severity,
+            severity=resolved_severity,
             reason=resolved_reason,
             comment_template=self.config.comment_template,
         )
