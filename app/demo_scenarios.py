@@ -106,7 +106,10 @@ DEMO_SCENARIOS = {
     ),
     "03 · Revenue & Profitability Risk": _scenario(
         "03 · Revenue & Profitability Risk",
-        "Focused financial-analysis case activating R001, R002 and R003: revenue contraction, negative EBITDA and negative EBITDA margin.",
+        (
+            "Focused financial-analysis case activating R001, R002 and R003: "
+            "revenue contraction, negative EBITDA and negative EBITDA margin."
+        ),
         values={
             "revenue": 6_000_000.0,
             "change_in_finished_goods_inventory": 100_000.0,
@@ -120,7 +123,10 @@ DEMO_SCENARIOS = {
     ),
     "04 · Leverage & Interest Risk": _scenario(
         "04 · Leverage & Interest Risk",
-        "Focused financial-analysis case activating R004, R005 and R007 through excessive leverage, high interest burden and weak interest coverage.",
+        (
+            "Focused financial-analysis case activating R004, R005 and R007 "
+            "through excessive leverage, high interest burden and weak interest coverage."
+        ),
         values={
             "nfp_to_ebitda": 8.0,
             "interest_expense": 1_200_000.0,
@@ -130,7 +136,10 @@ DEMO_SCENARIOS = {
     ),
     "05 · Profitability Quality Risk": _scenario(
         "05 · Profitability Quality Risk",
-        "Focused financial-quality case activating R006: EBITDA is materially supported by the increase in finished-goods inventory.",
+        (
+            "Focused financial-quality case activating R006: EBITDA is materially "
+            "supported by the increase in finished-goods inventory."
+        ),
         values={
             "ebitda": 1_800_000.0,
             "change_in_finished_goods_inventory": 100_000.0,
@@ -138,7 +147,10 @@ DEMO_SCENARIOS = {
     ),
     "06 · Behavioural Risk": _scenario(
         "06 · Behavioural Risk",
-        "Focused behavioural-monitoring case activating B001, B002, B003 and B004 through high utilization, prolonged overdraft, payment delays and exposure growth.",
+        (
+            "Focused behavioural-monitoring case activating B001, B002, B003 and "
+            "B004 through high utilization, prolonged overdraft, payment delays and exposure growth."
+        ),
         case_data={
             "customer_profile": {"company_name": "Futura Logistics S.p.A."},
             "behavioural": {
@@ -151,7 +163,10 @@ DEMO_SCENARIOS = {
     ),
     "07 · Debt Sustainability Risk": _scenario(
         "07 · Debt Sustainability Risk",
-        "Focused debt-sustainability case activating DS001, DS002 and DS003 through insufficient DSCR, excessive debt service relative to EBITDA and a negative cash-flow buffer.",
+        (
+            "Focused debt-sustainability case activating DS001, DS002 and DS003 "
+            "through insufficient DSCR, excessive debt service relative to EBITDA and a negative cash-flow buffer."
+        ),
         values={"ebitda": 500_000.0},
         case_data={
             "debt_sustainability": {
@@ -164,7 +179,10 @@ DEMO_SCENARIOS = {
     ),
     "08 · Integrated Credit Stress": _scenario(
         "08 · Integrated Credit Stress",
-        "End-to-end stressed borrower combining customer-profile, financial, behavioural and debt-sustainability deterioration. This is the main cumulative-risk demonstration.",
+        (
+            "End-to-end stressed borrower combining customer-profile, financial, behavioural and "
+            "debt-sustainability deterioration. This is the main cumulative-risk demonstration."
+        ),
         values={
             "change_in_finished_goods_inventory": 100_000.0,
             "ebitda": -200_000.0,
@@ -196,7 +214,11 @@ DEMO_SCENARIOS = {
         },
     ),
     "09 · Data Availability": {
-        "description": "Data-quality scenario with the financial position and domain-level inputs unavailable. The assessment must preserve NOT_EVALUABLE evidence and expose limitations rather than infer missing values.",
+        "description": (
+            "Data-quality scenario with financial and domain-level inputs unavailable. "
+            "The assessment must preserve NOT_EVALUABLE evidence and expose limitations "
+            "rather than infer missing values."
+        ),
         "values": {field.name: None for field in fields(CreditPosition)},
         "case_data": {},
     },
