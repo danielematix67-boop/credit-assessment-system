@@ -42,19 +42,20 @@ class RuleConfig:
             raise ValueError(
                 "calculation must be one of: direct, difference, ratio"
             )
-        expected_input_count = {
-            "direct": 1,
-            "ratio": 2,
-            "difference": 2,
-        }[self.calculation]
         configured_input_count = len(self.input_fields) or (
             1 if self.input_field else 0
         )
-        if configured_input_count != expected_input_count:
-            raise ValueError(
-                f"{self.calculation} calculation requires "
-                f"exactly {expected_input_count} input field(s)"
-            )
+        if configured_input_count:
+            expected_input_count = {
+                "direct": 1,
+                "ratio": 2,
+                "difference": 2,
+            }[self.calculation]
+            if configured_input_count != expected_input_count:
+                raise ValueError(
+                    f"{self.calculation} calculation requires "
+                    f"exactly {expected_input_count} input field(s)"
+                )
         if self.comment_template and not self.comment_template.strip():
             raise ValueError("comment_template cannot be blank")
         valid_operators = {"GT", "GTE", "LT", "LTE"}
