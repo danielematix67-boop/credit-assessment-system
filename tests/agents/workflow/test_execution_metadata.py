@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock
 
 from src.agents.workflow.assessment_workflow import AssessmentWorkflow
-from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
+from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.position import CreditPosition
 from src.models.report import Report
 
@@ -25,11 +25,11 @@ def make_workflow(
     error: str | None = None,
     error_category: str | None = None,
 ) -> AssessmentWorkflow:
-    assessment_service = MagicMock()
+    credit_case_service = MagicMock()
     analysis_agent = MagicMock()
     reporting_agent = MagicMock()
 
-    assessment_service.assess.return_value = MagicMock(spec=Assessment)
+    credit_case_service.assess.return_value = MagicMock(spec=CreditAssessmentCase)
     analysis_agent.run.return_value = MagicMock(spec=AssessmentAnalysis)
     reporting_agent.run.return_value = MagicMock(spec=Report)
     reporting_agent.last_generator_used = generator_used
@@ -37,8 +37,8 @@ def make_workflow(
     reporting_agent.last_error_category = error_category
 
     return AssessmentWorkflow(
-        assessment_service=assessment_service,
-        analysis_agent=analysis_agent,
+        credit_case_service=credit_case_service,
+        case_analysis_agent=analysis_agent,
         reporting_agent=reporting_agent,
         reporting_mode=reporting_mode,
     )
