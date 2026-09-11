@@ -109,7 +109,7 @@ def test_business_history_trigger_uses_configured_comment() -> None:
 def test_customer_profile_rule_threshold_is_configuration_driven(tmp_path: Path) -> None:
     config_path = tmp_path / "customer_profile_rules.yaml"
     config_path.write_text(
-        """rules:\n"
+        "rules:\n"
         "  - rule_id: CP003\n"
         "    rule_name: Business history\n"
         "    indicator: Business history (years)\n"
@@ -123,7 +123,7 @@ def test_customer_profile_rule_threshold_is_configuration_driven(tmp_path: Path)
         "        severity: MEDIUM\n"
         "      - threshold: 3\n"
         "        severity: HIGH\n"
-        "    comment_template: 'Configured history: {value:.0f} years.'\n""",
+        "    comment_template: 'Configured history: {value:.0f} years.'\n",
         encoding="utf-8",
     )
 
