@@ -20,9 +20,59 @@ class Rule(ABC):
         """Evaluate the rule against a credit position."""
         raise NotImplementedError
 
+    def _configured_value(
+        self,
+        position: CreditPosition,
+    ) -> tuple[float | None, str | None]:
+        """Resolve a rule value from its configured input field(s)."""
+        fields = self.config.input_fields
+        if not fields and self.config.input_field:
+            fields = (self.config.input_field,)
+
+        if not fields:
+            return None, "No input field is configured for this rule."
+
+        values: list[float] = []
+        for field in fields:
+            raw_value = getattr(position, field, None)
+            if raw_value is None:
+                return None, f"{field} is not available."
+            if not isinstance(raw_value, (int, float)):
+                return None, f"{field} is not numeric."
+            values.append(float(raw_value))
+
+        if self.config.calculation == "direct":
+            if len(values) != 1:
+                return None, "Direct calculation requires exactly one input field."
+            return values[0], None
+
+        if len(values) != 2:
+            return None, (
+                f"{self.config.calculation} calculation requires exactly "
+                "two input fields."
+            )
+
+        numerator, denominator = values
+        if self.config.calculation == "ratio":
+            if denominator == 0:
+                return None, "Cannot calculate ratio because the denominator is zero."
+            return numerator / denominator, None
+
+        if self.config.calculation == "difference":
+            return numerator - denominator, None
+
+        return None, f"Unsupported calculation: {self.config.calculation}."
+
     def _is_triggered(self, value: float) -> bool:
-        """Evaluate the configured trigger threshold."""
-        return value > self.config.threshold
+        """Evaluate the configured trigger operator against the threshold."""
+        threshold = self.config.threshold
+        operators: dict[str, Callable[[float, float], bool]] = {
+            "GT": lambda current, limit: current > limit,
+            "GTE": lambda current, limit: current >= limit,
+            "LT": lambda current, limit: current < limit,
+            "LTE": lambda current, limit: current <= limit,
+        }
+        return operators[self.config.trigger_operator](value, threshold)
 
     def _severity(self, value: float) -> Any:
         """Resolve severity from configured severity thresholds."""
@@ -101,10 +151,6 @@ class Rule(ABC):
                 if existing_rule is rule_class:
                     return rule_class
 
-                # Test collection and module reloading can create a second
-                # class object for the same source declaration. Treat that as
-                # the same implementation while still rejecting a genuinely
-                # different class claiming the same rule id.
                 if (
                     existing_rule.__module__ == rule_class.__module__
                     and existing_rule.__qualname__ == rule_class.__qualname__
