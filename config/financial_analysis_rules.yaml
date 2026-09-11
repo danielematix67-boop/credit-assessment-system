@@ -91,7 +91,11 @@ rules:
   - rule_id: R006
     rule_name: EBITDA materially supported by finished goods inventory increase
     indicator: EBITDA / finished goods inventory increase
-    input_field: ebitda_inventory_contribution
+    category: profitability_quality
+    input_fields:
+      - change_in_finished_goods_inventory
+      - ebitda
+    calculation: ratio
     trigger_operator: GT
     threshold: 0.30
     severity: MEDIUM
@@ -109,7 +113,10 @@ rules:
     rule_name: Interest coverage ratio
     indicator: Interest coverage ratio
     category: profitability
-    input_field: interest_coverage_ratio
+    input_fields:
+      - ebitda
+      - interest_expense
+    calculation: ratio
     trigger_operator: LT
     threshold: 2.0
     severity: MEDIUM
