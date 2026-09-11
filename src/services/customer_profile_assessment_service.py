@@ -1,36 +1,42 @@
+from pathlib import Path
+from typing import Any
+
+from src.comments.comment import Comment
 from src.comments.comment_engine import CommentEngine
+from src.config.rule_config_loader import RuleConfigLoader
 from src.models.assessment_section import AssessmentSection, SectionStatus
 from src.models.customer_profile_data import CustomerProfileData
 from src.models.rule_finding import RuleFinding
-from src.rules.base.severity import RuleSeverity
-from src.rules.base.severity_direction import SeverityDirection
+from src.rules.base.severity_policy import SeverityPolicy
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
 from src.services.assessment_status_calculator import AssessmentStatusCalculator
 
 
 class CustomerProfileAssessmentService:
-    """Build a deterministic customer profile and flag explicit credit-risk signals."""
+    """Build the customer-profile assessment from externalized rule configuration."""
+
+    DEFAULT_CONFIG_PATH = Path("config/customer_profile_rules.yaml")
 
     def __init__(
         self,
         status_calculator: AssessmentStatusCalculator | None = None,
         comment_engine: CommentEngine | None = None,
-    ):
+        config_loader: RuleConfigLoader | None = None,
+        config_path: Path | None = None,
+    ) -> None:
         self.status_calculator = status_calculator or AssessmentStatusCalculator()
         self.comment_engine = comment_engine or CommentEngine()
+        self.config_loader = config_loader or RuleConfigLoader()
+        self.config_path = config_path or self.DEFAULT_CONFIG_PATH
 
     def assess(self, data: CustomerProfileData) -> AssessmentSection:
-        results = [
-            self._boolean_flag("CP001", "Active EWS", data.active_ews),
-            self._boolean_flag(
-                "CP002", "Previous Restructuring", data.previous_restructuring
-            ),
-            self._business_history_flag(data.business_history_years),
-        ]
+        configs = self.config_loader.load(self.config_path)
+        results = [self._evaluate_rule(config, data) for config in configs]
         evaluable_results = [
             result for result in results if result.status != RuleStatus.NOT_EVALUABLE
         ]
+
         has_profile_data = self._has_profile_data(data)
         if not has_profile_data:
             status = SectionStatus.NOT_EVALUABLE
@@ -48,6 +54,13 @@ class CustomerProfileAssessmentService:
             comment = self.comment_engine.generate(result)
             if comment is not None:
                 findings.append(RuleFinding(result=result, comment=comment))
+            else:
+                findings.append(
+                    RuleFinding(
+                        result=result,
+                        comment=Comment(result.rule_id, result.reason or ""),
+                    )
+                )
 
         limitations = []
         if not has_profile_data:
@@ -72,6 +85,8 @@ class CustomerProfileAssessmentService:
                 "relationship_years": data.relationship_years,
                 "business_history_years": data.business_history_years,
                 "historical_facilities": list(data.historical_facilities),
+                "active_ews": data.active_ews,
+                "previous_restructuring": data.previous_restructuring,
             },
         )
 
@@ -96,78 +111,67 @@ class CustomerProfileAssessmentService:
         )
 
     @staticmethod
-    def _boolean_flag(rule_id: str, rule_name: str, value: bool | None) -> RuleResult:
-        if value is None:
-            return RuleResult(
-                rule_id=rule_id,
-                rule_name=rule_name,
-                category="Customer Profile",
-                status=RuleStatus.NOT_EVALUABLE,
-                value=None,
-                threshold=1.0,
-                severity=RuleSeverity.MEDIUM,
-                reason=f"[{rule_id} - {rule_name}] {rule_name} is not available.",
-                indicator=rule_name,
-                direction=SeverityDirection.HIGHER_IS_WORSE,
+    def _evaluate_rule(config: Any, data: CustomerProfileData) -> RuleResult:
+        if not config.input_field:
+            raise ValueError(
+                f"Customer profile rule {config.rule_id} requires input_field"
             )
 
-        status = RuleStatus.TRIGGERED if value else RuleStatus.NOT_TRIGGERED
-        return RuleResult(
-            rule_id=rule_id,
-            rule_name=rule_name,
-            category="Customer Profile",
-            status=status,
-            value=1.0 if value else 0.0,
-            threshold=1.0,
-            severity=RuleSeverity.HIGH if value else RuleSeverity.MEDIUM,
-            reason=(
-                f"[{rule_id} - {rule_name}] {rule_name} is present."
-                if value
-                else f"[{rule_id} - {rule_name}] {rule_name} is not present."
-            ),
-            indicator=rule_name,
-            direction=SeverityDirection.HIGHER_IS_WORSE,
-        )
-
-    @staticmethod
-    def _business_history_flag(years: int | None) -> RuleResult:
-        rule_id = "CP003"
-        rule_name = "Business history"
-        threshold = 5.0
-
-        if years is None:
-            return RuleResult(
-                rule_id=rule_id,
-                rule_name=rule_name,
-                category="Customer Profile",
-                status=RuleStatus.NOT_EVALUABLE,
-                value=None,
-                threshold=threshold,
-                severity=RuleSeverity.MEDIUM,
-                reason=f"[{rule_id} - {rule_name}] Business history is not available.",
-                indicator="Business history (years)",
-                direction=SeverityDirection.LOWER_IS_WORSE,
+        if not hasattr(data, config.input_field):
+            raise ValueError(
+                f"Unknown customer profile input field: {config.input_field}"
             )
 
-        severity = RuleSeverity.HIGH if years <= 2 else RuleSeverity.MEDIUM
-        status = RuleStatus.TRIGGERED if years <= threshold else RuleStatus.NOT_TRIGGERED
+        raw_value = getattr(data, config.input_field)
+        if raw_value is None:
+            return RuleResult(
+                rule_id=config.rule_id,
+                rule_name=config.rule_name,
+                category=config.category,
+                status=RuleStatus.NOT_EVALUABLE,
+                value=None,
+                threshold=config.threshold,
+                severity=config.severity,
+                reason=(
+                    f"[{config.rule_id} - {config.rule_name}] "
+                    f"{config.indicator} is not available."
+                ),
+                indicator=config.indicator,
+                direction=config.severity_direction,
+                comment_template=config.comment_template,
+            )
+
+        value = float(raw_value)
+        if config.severity_direction.value == "LOWER_IS_WORSE":
+            triggered = value <= config.threshold
+        else:
+            triggered = value >= config.threshold
+
+        severity = SeverityPolicy(
+            direction=config.severity_direction,
+            thresholds=config.severity_thresholds,
+        ).evaluate(value) or config.severity
+        status = RuleStatus.TRIGGERED if triggered else RuleStatus.NOT_TRIGGERED
+
+        comparison = "at or below" if config.severity_direction.value == "LOWER_IS_WORSE" else "at or above"
         reason = (
-            f"[{rule_id} - {rule_name}] Business history is {years} years, "
-            "below the minimum track-record threshold."
-            if status == RuleStatus.TRIGGERED
-            else f"[{rule_id} - {rule_name}] Business history is {years} years, "
-            "above the minimum track-record threshold."
+            f"[{config.rule_id} - {config.rule_name}] {config.indicator} "
+            f"is {value:g}, {comparison} the configured risk threshold."
+            if triggered
+            else f"[{config.rule_id} - {config.rule_name}] {config.indicator} "
+            "is outside the configured risk threshold."
         )
 
         return RuleResult(
-            rule_id=rule_id,
-            rule_name=rule_name,
-            category="Customer Profile",
+            rule_id=config.rule_id,
+            rule_name=config.rule_name,
+            category=config.category,
             status=status,
-            value=float(years),
-            threshold=threshold,
+            value=value,
+            threshold=config.threshold,
             severity=severity,
             reason=reason,
-            indicator="Business history (years)",
-            direction=SeverityDirection.LOWER_IS_WORSE,
+            indicator=config.indicator,
+            direction=config.severity_direction,
+            comment_template=config.comment_template,
         )
