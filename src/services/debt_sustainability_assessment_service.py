@@ -117,7 +117,7 @@ class DebtSustainabilityAssessmentService:
             status=RuleStatus.NOT_EVALUABLE,
             value=None,
             threshold=config.threshold,
-            severity=RuleSeverity.MEDIUM,
+            severity=config.severity,
             reason=f"[{config.rule_id} - {config.rule_name}] {reason}",
             indicator=config.indicator,
             direction=config.severity_direction,
