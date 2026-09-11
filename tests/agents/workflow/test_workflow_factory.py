@@ -7,6 +7,7 @@ from src.agents.reporting.deterministic_report_generator import (
 from src.agents.reporting.llm_report_generator import (
     LLMReportGenerator,
 )
+from src.agents.reporting.report_generator import ReportGenerator
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.agents.workflow.assessment_workflow import AssessmentWorkflow
 from src.agents.workflow.workflow_factory import (
@@ -47,6 +48,13 @@ def llm_client():
     return MockLLMClient()
 
 
+class FailingReportGenerator(ReportGenerator):
+    """Primary generator used to verify deterministic fallback behaviour."""
+
+    def generate(self, analysis):
+        raise RuntimeError("simulated report generation failure")
+
+
 # ============================================================
 # Factory construction
 # ============================================================
@@ -61,6 +69,23 @@ def test_factory_creates_default_workflow():
 
     assert isinstance(
         workflow.reporting_agent.report_generator,
+        DeterministicReportGenerator,
+    )
+
+
+def test_factory_always_wires_deterministic_fallback():
+    deterministic_workflow = create_default_assessment_workflow(use_llm=False)
+    llm_workflow = create_default_assessment_workflow(
+        use_llm=True,
+        llm_client=MockLLMClient(),
+    )
+
+    assert isinstance(
+        deterministic_workflow.reporting_agent.fallback_generator,
+        DeterministicReportGenerator,
+    )
+    assert isinstance(
+        llm_workflow.reporting_agent.fallback_generator,
         DeterministicReportGenerator,
     )
 
@@ -123,6 +148,66 @@ def test_factory_creates_executable_workflow(
     assert result.analysis.assessment_status == result.assessment.status
 
     assert result.report.assessment_status == result.assessment.status
+
+
+# ============================================================
+# Deterministic fallback execution
+# ============================================================
+
+
+def test_factory_llm_workflow_falls_back_to_deterministic_report(
+    representative_position,
+):
+    workflow = create_default_assessment_workflow(
+        use_llm=True,
+        llm_client=MockLLMClient(),
+    )
+    workflow.reporting_agent.report_generator = FailingReportGenerator()
+
+    result = workflow.run(representative_position)
+
+    assert result.report.position_id == representative_position.position_id
+    assert result.report.assessment_status == result.assessment.status
+    assert result.report.executive_summary
+    assert result.metadata.generator_used == "FALLBACK"
+    assert result.metadata.fallback_used is True
+    assert result.metadata.error_category == "GENERATION_ERROR"
+
+
+def test_factory_fallback_preserves_deterministic_findings(
+    representative_position,
+):
+    workflow = create_default_assessment_workflow(
+        use_llm=True,
+        llm_client=MockLLMClient(),
+    )
+    workflow.reporting_agent.report_generator = FailingReportGenerator()
+
+    result = workflow.run(representative_position)
+
+    expected_findings = [
+        (
+            finding.rule_id,
+            finding.category,
+            finding.severity,
+            finding.text,
+        )
+        for finding in result.analysis.key_findings
+    ]
+
+    fallback_findings = [
+        (
+            finding.rule_id,
+            finding.category,
+            finding.severity,
+            finding.text,
+        )
+        for group in result.report.findings_by_category
+        for finding in group.findings
+    ]
+
+    assert fallback_findings == expected_findings
+    assert result.analysis.assessment_status == result.report.assessment_status
 
 
 # ============================================================
