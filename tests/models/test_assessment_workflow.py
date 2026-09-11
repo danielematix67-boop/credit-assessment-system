@@ -1,9 +1,12 @@
 import pytest
 
-from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
+from src.models.assessment_section import AssessmentSection, SectionStatus
 from src.models.assessment_status import AssessmentStatus
 from src.models.assessment_workflow import AssessmentWorkflowResult
+from src.models.credit_assessment_case import CreditAssessmentCase
+from src.models.final_assessment import FinalAssessment
+from src.models.position import CreditPosition
 from src.models.report import Report
 
 
@@ -13,58 +16,71 @@ def position_id():
 
 
 @pytest.fixture
-def assessment_data(position_id):
-    return {
-        "position_id": position_id,
-        "rule_results": [],
-        "findings": [],
-        "status": AssessmentStatus.CRITICAL,
-    }
+def case(position_id):
+    section = AssessmentSection(
+        name="Financial Analysis",
+        status=SectionStatus.CRITICAL,
+        findings=[],
+        evidence=[],
+        limitations=[],
+    )
+    return CreditAssessmentCase(
+        position=CreditPosition(position_id=position_id),
+        customer_profile=AssessmentSection(
+            name="Customer Profile",
+            status=SectionStatus.NORMAL,
+            findings=[],
+            evidence=[],
+            limitations=[],
+        ),
+        financial_analysis=section,
+        behavioural_analysis=AssessmentSection(
+            name="Behavioural Analysis",
+            status=SectionStatus.NORMAL,
+            findings=[],
+            evidence=[],
+            limitations=[],
+        ),
+        debt_sustainability=AssessmentSection(
+            name="Debt Sustainability",
+            status=SectionStatus.NORMAL,
+            findings=[],
+            evidence=[],
+            limitations=[],
+        ),
+        final_assessment=FinalAssessment(
+            status=SectionStatus.CRITICAL,
+            evaluated_sections=4,
+        ),
+    )
 
 
 @pytest.fixture
-def analysis_data(position_id):
-    return {
-        "position_id": position_id,
-        "assessment_status": AssessmentStatus.CRITICAL,
-        "key_findings": ["Test finding"],
-        "risk_factors": ["Test risk factor"],
-        "limitations": ["Test limitation"],
-    }
+def analysis(position_id):
+    return AssessmentAnalysis(
+        position_id=position_id,
+        assessment_status=AssessmentStatus.CRITICAL,
+        key_findings=["Test finding"],
+        risk_factors=["Test risk factor"],
+        limitations=["Test limitation"],
+    )
 
 
 @pytest.fixture
-def report_data(position_id):
-    return {
-        "position_id": position_id,
-        "assessment_status": AssessmentStatus.CRITICAL,
-        "executive_summary": "Test executive summary.",
-        "findings_by_category": {
-            "test_category": ["Test finding"],
-        },
-        "limitations": ["Test limitation"],
-    }
+def report(position_id):
+    return Report(
+        position_id=position_id,
+        assessment_status=AssessmentStatus.CRITICAL,
+        executive_summary="Test executive summary.",
+        findings_by_category={"test_category": ["Test finding"]},
+        limitations=["Test limitation"],
+    )
 
 
 @pytest.fixture
-def assessment(assessment_data):
-    return Assessment(**assessment_data)
-
-
-@pytest.fixture
-def analysis(analysis_data):
-    return AssessmentAnalysis(**analysis_data)
-
-
-@pytest.fixture
-def report(report_data):
-    return Report(**report_data)
-
-
-@pytest.fixture
-def workflow_result(assessment, analysis, report):
+def workflow_result(case, analysis, report):
     return AssessmentWorkflowResult(
-        assessment=assessment,
+        credit_case=case,
         analysis=analysis,
         report=report,
     )
@@ -72,13 +88,14 @@ def workflow_result(assessment, analysis, report):
 
 def test_assessment_workflow_result_preserves_components(
     workflow_result,
-    assessment,
+    case,
     analysis,
     report,
 ):
-    assert workflow_result.assessment is assessment
+    assert workflow_result.credit_case is case
     assert workflow_result.analysis is analysis
     assert workflow_result.report is report
+    assert workflow_result.assessment.position_id == case.position.position_id
 
 
 @pytest.mark.parametrize(
@@ -89,11 +106,41 @@ def test_assessment_workflow_result_accepts_all_assessment_statuses(
     position_id,
     status,
 ):
-    assessment = Assessment(
-        position_id=position_id,
-        rule_results=[],
-        findings=[],
-        status=status,
+    section_status = SectionStatus(status.value)
+    case = CreditAssessmentCase(
+        position=CreditPosition(position_id=position_id),
+        customer_profile=AssessmentSection(
+            name="Customer Profile",
+            status=section_status,
+            findings=[],
+            evidence=[],
+            limitations=[],
+        ),
+        financial_analysis=AssessmentSection(
+            name="Financial Analysis",
+            status=section_status,
+            findings=[],
+            evidence=[],
+            limitations=[],
+        ),
+        behavioural_analysis=AssessmentSection(
+            name="Behavioural Analysis",
+            status=section_status,
+            findings=[],
+            evidence=[],
+            limitations=[],
+        ),
+        debt_sustainability=AssessmentSection(
+            name="Debt Sustainability",
+            status=section_status,
+            findings=[],
+            evidence=[],
+            limitations=[],
+        ),
+        final_assessment=FinalAssessment(
+            status=section_status,
+            evaluated_sections=4,
+        ),
     )
 
     analysis = AssessmentAnalysis(
@@ -113,7 +160,7 @@ def test_assessment_workflow_result_accepts_all_assessment_statuses(
     )
 
     result = AssessmentWorkflowResult(
-        assessment=assessment,
+        credit_case=case,
         analysis=analysis,
         report=report,
     )
@@ -130,7 +177,7 @@ def test_assessment_workflow_result_is_immutable(
         workflow_result.report = None
 
     with pytest.raises(AttributeError):
-        workflow_result.assessment = None
+        workflow_result.credit_case = None
 
     with pytest.raises(AttributeError):
         workflow_result.analysis = None
