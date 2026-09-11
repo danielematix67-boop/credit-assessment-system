@@ -25,6 +25,8 @@ R001_CONFIG = RuleConfig(
             severity=RuleSeverity.HIGH,
         ),
     ),
+    input_field="revenue_growth",
+    trigger_operator="LT",
 )
 
 
@@ -51,36 +53,12 @@ def assert_result_matches_config(
         "expected_severity",
     ),
     [
-        (
-            0.05,
-            RuleStatus.NOT_TRIGGERED,
-            RuleSeverity.LOW,
-        ),
-        (
-            -0.05,
-            RuleStatus.NOT_TRIGGERED,
-            RuleSeverity.LOW,
-        ),
-        (
-            -0.10,
-            RuleStatus.NOT_TRIGGERED,
-            RuleSeverity.MEDIUM,
-        ),
-        (
-            -0.15,
-            RuleStatus.TRIGGERED,
-            RuleSeverity.MEDIUM,
-        ),
-        (
-            -0.20,
-            RuleStatus.TRIGGERED,
-            RuleSeverity.HIGH,
-        ),
-        (
-            -0.25,
-            RuleStatus.TRIGGERED,
-            RuleSeverity.HIGH,
-        ),
+        (0.05, RuleStatus.NOT_TRIGGERED, RuleSeverity.LOW),
+        (-0.05, RuleStatus.NOT_TRIGGERED, RuleSeverity.LOW),
+        (-0.10, RuleStatus.NOT_TRIGGERED, RuleSeverity.MEDIUM),
+        (-0.15, RuleStatus.TRIGGERED, RuleSeverity.MEDIUM),
+        (-0.20, RuleStatus.TRIGGERED, RuleSeverity.HIGH),
+        (-0.25, RuleStatus.TRIGGERED, RuleSeverity.HIGH),
     ],
 )
 def test_revenue_growth_rule_evaluates_dynamic_severity(
@@ -143,6 +121,8 @@ def test_revenue_growth_rule_uses_configured_threshold():
                 severity=RuleSeverity.HIGH,
             ),
         ),
+        input_field="revenue_growth",
+        trigger_operator="LT",
     )
 
     revenue_growth = -0.15
@@ -163,3 +143,23 @@ def test_revenue_growth_rule_uses_configured_threshold():
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == revenue_growth
     assert result.severity == RuleSeverity.LOW
+
+
+def test_revenue_growth_rule_uses_configured_input_field_and_operator():
+    config = RuleConfig(
+        rule_id="R001_CUSTOM_INPUT",
+        rule_name="Configured revenue deterioration",
+        category="revenue",
+        threshold=0.10,
+        severity=RuleSeverity.MEDIUM,
+        severity_direction=SeverityDirection.LOWER_IS_WORSE,
+        input_field="revenue_growth",
+        trigger_operator="GTE",
+    )
+
+    position = CreditPosition(position_id="POS004", revenue_growth=0.10)
+
+    result = RevenueGrowthRule(config).evaluate(position)
+
+    assert result.value == 0.10
+    assert result.status == RuleStatus.TRIGGERED
