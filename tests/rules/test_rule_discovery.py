@@ -20,6 +20,12 @@ def test_discover_rules_registers_rules_with_unique_ids():
     assert len(rule_ids) == len(set(rule_ids))
 
 
+def test_discover_rules_registers_r004_leverage_rule():
+    discover_rules()
+
+    assert "R004" in Rule._registry
+
+
 def test_discover_rules_is_idempotent():
     discover_rules()
 
