@@ -457,3 +457,8 @@ def build_demo_case_data(
         BehaviouralData(**case_data["behavioural"]),
         DebtSustainabilityData(**case_data["debt_sustainability"]),
     )
+
+
+from app.demo_scenario_profiles import extend_demo_scenarios
+
+extend_demo_scenarios(DEMO_SCENARIOS)
