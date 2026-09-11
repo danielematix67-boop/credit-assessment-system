@@ -1,6 +1,6 @@
 from unittest.mock import Mock
 
-from src.models.assessment_section import AssessmentSection, SectionStatus
+from src.models.assessment_section import SectionStatus
 from src.models.assessment_status import AssessmentStatus
 from src.models.behavioural_data import BehaviouralData
 from src.models.credit_assessment_case import CreditAssessmentCase
