@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import fields
 from typing import Any
 
@@ -6,359 +7,179 @@ from src.models.customer_profile_data import CustomerProfileData
 from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.models.position import CreditPosition
 
-# ============================================================
-# Demo Scenarios
-# ============================================================
-# Every complete scenario is populated across all assessment domains:
-# customer profile, financial analysis, behavioural analysis and debt
-# sustainability. Values are synthetic and designed to demonstrate how
-# evidence from different domains contributes to the overall assessment.
+
+# Every scenario contains complete inputs for the four assessment domains.
+# Synthetic values are deliberately chosen to activate the intended rules while
+# keeping the remaining domains in a stable state. The deterministic Rule Engine
+# remains the only source of assessment decisions.
+_BASE_VALUES: dict[str, Any] = {
+    "position_id": "DEMO-BASE-001",
+    "revenue": 10_000_000.0,
+    "change_in_finished_goods_inventory": 7_000_000.0,
+    "operating_grants": 50_000.0,
+    "net_purchases": 5_000_000.0,
+    "change_in_raw_materials_inventory": -50_000.0,
+    "costs_for_services_and_third_party_assets": 1_500_000.0,
+    "personnel_costs": 2_000_000.0,
+    "depreciation_tangible_assets": 300_000.0,
+    "working_capital_impairments": 50_000.0,
+    "operating_provisions": 30_000.0,
+    "other_income_expenses_balance": 20_000.0,
+    "operating_value_added": 3_500_000.0,
+    "gross_operating_margin": 1_500_000.0,
+    "net_operating_margin": 1_200_000.0,
+    "ebitda": 1_800_000.0,
+    "profit_loss": 900_000.0,
+    "ebitda_margin": 0.18,
+    "ebitda_inventory_contribution": 0.01,
+    "nfp_to_ebitda": 1.5,
+    "interest_expense": 150_000.0,
+    "revenue_growth": 0.08,
+}
+
+_BASE_CASE_DATA: dict[str, dict[str, Any]] = {
+    "customer_profile": {
+        "company_name": "Alpina Manufacturing S.p.A.",
+        "legal_form": "S.p.A.",
+        "sector": "Industrial manufacturing",
+        "size_class": "Mid-cap",
+        "geography": "Northern Italy",
+        "shareholders": ["Family holding", "Management shareholders"],
+        "management_members": ["CEO", "CFO"],
+        "relationship_years": 8,
+        "business_history_years": 24,
+        "historical_facilities": ["Revolving credit", "Term loan"],
+        "active_ews": False,
+        "previous_restructuring": False,
+    },
+    "behavioural": {
+        "average_utilization": 0.42,
+        "overdraft_days": 1,
+        "payment_delay_days": 2,
+        "exposure_growth": 0.04,
+    },
+    "debt_sustainability": {
+        "cash_flow_available_for_debt_service": 1_200_000.0,
+        "debt_service": 450_000.0,
+        "ebitda": 1_800_000.0,
+        "interest_expense": 150_000.0,
+    },
+}
+
+
+def _scenario(
+    name: str,
+    description: str,
+    *,
+    values: dict[str, Any] | None = None,
+    case_data: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    merged_values = deepcopy(_BASE_VALUES)
+    merged_case_data = deepcopy(_BASE_CASE_DATA)
+    merged_values.update(values or {})
+    for domain, domain_values in (case_data or {}).items():
+        merged_case_data[domain].update(domain_values)
+    merged_values["position_id"] = name.split(" · ", maxsplit=1)[0].replace(" ", "-")
+    return {
+        "description": description,
+        "values": merged_values,
+        "case_data": merged_case_data,
+    }
+
 
 DEMO_SCENARIOS = {
-    "Healthy Company": {
-        "description": (
-            "A well-established company with strong financial performance, "
-            "conservative leverage, healthy debt-service capacity and stable "
-            "banking behaviour. No configured risk indicator is triggered "
-            "across the complete assessment."
-        ),
-        "values": {
-            "position_id": "DEMO-HEALTHY-001",
-            "revenue": 10_000_000.0,
-            "change_in_finished_goods_inventory": 100_000.0,
-            "operating_grants": 50_000.0,
-            "net_purchases": 5_000_000.0,
-            "change_in_raw_materials_inventory": -50_000.0,
-            "costs_for_services_and_third_party_assets": 1_500_000.0,
-            "personnel_costs": 2_000_000.0,
-            "depreciation_tangible_assets": 300_000.0,
-            "working_capital_impairments": 50_000.0,
-            "operating_provisions": 30_000.0,
-            "other_income_expenses_balance": 20_000.0,
-            "operating_value_added": 3_500_000.0,
-            "gross_operating_margin": 1_500_000.0,
-            "net_operating_margin": 1_200_000.0,
-            "ebitda": 1_800_000.0,
-            "profit_loss": 900_000.0,
-            "ebitda_margin": 0.18,
-            "ebitda_inventory_contribution": 0.01,
-            "nfp_to_ebitda": 1.5,
-            "interest_expense": 150_000.0,
-            "revenue_growth": 0.08,
-        },
-        "case_data": {
+    "01 · Baseline": _scenario(
+        "01 · Baseline",
+        "Complete low-risk borrower profile. All four assessment domains are populated and no configured rule is intentionally triggered.",
+    ),
+    "02 · Customer Profile Risk": _scenario(
+        "02 · Customer Profile Risk",
+        "Focused customer-profile case activating CP001, CP002 and CP003 while financial, behavioural and debt-sustainability inputs remain stable.",
+        case_data={
             "customer_profile": {
-                "company_name": "Alpina Manufacturing S.p.A.",
-                "legal_form": "S.p.A.",
-                "sector": "Industrial manufacturing",
-                "size_class": "Mid-cap",
-                "geography": "Northern Italy",
-                "shareholders": ["Family holding", "Management shareholders"],
-                "management_members": ["CEO", "CFO"],
-                "relationship_years": 8,
-                "business_history_years": 24,
-                "historical_facilities": ["Revolving credit", "Term loan"],
-                "active_ews": False,
-                "previous_restructuring": False,
-            },
-            "behavioural": {
-                "average_utilization": 0.42,
-                "overdraft_days": 1,
-                "payment_delay_days": 2,
-                "exposure_growth": 0.04,
-            },
-            "debt_sustainability": {
-                "cash_flow_available_for_debt_service": 1_200_000.0,
-                "debt_service": 450_000.0,
-                "ebitda": 1_800_000.0,
-                "interest_expense": 150_000.0,
-            },
+                "company_name": "Beta Early Stage S.r.l.",
+                "active_ews": True,
+                "previous_restructuring": True,
+                "business_history_years": 1,
+            }
         },
-    },
-    "Revenue Deterioration": {
-        "description": (
-            "An established company facing a material contraction in revenues. "
-            "Customer profile, banking behaviour and debt-service capacity remain "
-            "sound, while financial analysis identifies the top-line deterioration. "
-            "This is a controlled ATTENTION case."
-        ),
-        "values": {
-            "position_id": "DEMO-REVENUE-001",
-            "revenue": 8_500_000.0,
-            "change_in_finished_goods_inventory": 80_000.0,
-            "operating_grants": 40_000.0,
-            "net_purchases": 4_300_000.0,
-            "change_in_raw_materials_inventory": -40_000.0,
-            "costs_for_services_and_third_party_assets": 1_300_000.0,
-            "personnel_costs": 1_700_000.0,
-            "depreciation_tangible_assets": 280_000.0,
-            "working_capital_impairments": 40_000.0,
-            "operating_provisions": 25_000.0,
-            "other_income_expenses_balance": 10_000.0,
-            "operating_value_added": 3_000_000.0,
-            "gross_operating_margin": 1_200_000.0,
-            "net_operating_margin": 900_000.0,
-            "ebitda": 1_020_000.0,
-            "profit_loss": 420_000.0,
-            "ebitda_margin": 0.12,
-            "ebitda_inventory_contribution": 0.01,
-            "nfp_to_ebitda": 2.0,
-            "interest_expense": 100_000.0,
-            "revenue_growth": -0.15,
-        },
-        "case_data": {
-            "customer_profile": {
-                "company_name": "Boreale Components S.r.l.",
-                "legal_form": "S.r.l.",
-                "sector": "Industrial components",
-                "size_class": "SME",
-                "geography": "Northern Italy",
-                "shareholders": ["Entrepreneurial holding"],
-                "management_members": ["CEO", "Finance manager"],
-                "relationship_years": 6,
-                "business_history_years": 16,
-                "historical_facilities": ["Revolving credit", "Term loan"],
-                "active_ews": False,
-                "previous_restructuring": False,
-            },
-            "behavioural": {
-                "average_utilization": 0.72,
-                "overdraft_days": 8,
-                "payment_delay_days": 12,
-                "exposure_growth": 0.18,
-            },
-            "debt_sustainability": {
-                "cash_flow_available_for_debt_service": 700_000.0,
-                "debt_service": 500_000.0,
-                "ebitda": 1_020_000.0,
-                "interest_expense": 100_000.0,
-            },
-        },
-    },
-    "Profitability Stress": {
-        "description": (
-            "A company with weakening profitability, deteriorating banking behaviour "
-            "and insufficient debt-service capacity. Customer-profile, behavioural, "
-            "financial and debt-sustainability evidence combine into a CRITICAL case."
-        ),
-        "values": {
-            "position_id": "DEMO-PROFITABILITY-001",
+    ),
+    "03 · Revenue & Profitability Risk": _scenario(
+        "03 · Revenue & Profitability Risk",
+        "Focused financial-analysis case activating R001, R002 and R003: revenue contraction, negative EBITDA and negative EBITDA margin.",
+        values={
             "revenue": 6_000_000.0,
-            "change_in_finished_goods_inventory": 60_000.0,
-            "operating_grants": 20_000.0,
-            "net_purchases": 3_200_000.0,
-            "change_in_raw_materials_inventory": -20_000.0,
-            "costs_for_services_and_third_party_assets": 900_000.0,
-            "personnel_costs": 1_400_000.0,
-            "depreciation_tangible_assets": 180_000.0,
-            "working_capital_impairments": 60_000.0,
-            "operating_provisions": 40_000.0,
-            "other_income_expenses_balance": -20_000.0,
-            "operating_value_added": 1_900_000.0,
-            "gross_operating_margin": 300_000.0,
-            "net_operating_margin": 120_000.0,
-            "ebitda": 150_000.0,
-            "profit_loss": -50_000.0,
-            "ebitda_margin": 0.025,
-            "ebitda_inventory_contribution": 0.005,
-            "nfp_to_ebitda": 3.0,
-            "interest_expense": 220_000.0,
-            "revenue_growth": 0.02,
+            "change_in_finished_goods_inventory": 100_000.0,
+            "ebitda": -200_000.0,
+            "profit_loss": -300_000.0,
+            "ebitda_margin": -0.12,
+            "revenue_growth": -0.35,
+            "nfp_to_ebitda": None,
+            "interest_expense": 150_000.0,
         },
-        "case_data": {
-            "customer_profile": {
-                "company_name": "Gamma Services S.r.l.",
-                "legal_form": "S.r.l.",
-                "sector": "Business services",
-                "size_class": "SME",
-                "geography": "Central Italy",
-                "shareholders": ["Private shareholders"],
-                "management_members": ["CEO", "CFO"],
-                "relationship_years": 4,
-                "business_history_years": 9,
-                "historical_facilities": ["Revolving credit"],
-                "active_ews": True,
-                "previous_restructuring": False,
-            },
+    ),
+    "04 · Leverage & Interest Risk": _scenario(
+        "04 · Leverage & Interest Risk",
+        "Focused financial-analysis case activating R004, R005 and R007 through excessive leverage, high interest burden and weak interest coverage.",
+        values={
+            "nfp_to_ebitda": 8.0,
+            "interest_expense": 1_200_000.0,
+            "ebitda": 1_000_000.0,
+            "ebitda_margin": 0.10,
+        },
+    ),
+    "05 · Profitability Quality Risk": _scenario(
+        "05 · Profitability Quality Risk",
+        "Focused financial-quality case activating R006: EBITDA is materially supported by the increase in finished-goods inventory.",
+        values={
+            "ebitda": 1_800_000.0,
+            "change_in_finished_goods_inventory": 100_000.0,
+        },
+    ),
+    "06 · Behavioural Risk": _scenario(
+        "06 · Behavioural Risk",
+        "Focused behavioural-monitoring case activating B001, B002, B003 and B004 through high utilization, prolonged overdraft, payment delays and exposure growth.",
+        case_data={
+            "customer_profile": {"company_name": "Futura Logistics S.p.A."},
             "behavioural": {
-                "average_utilization": 0.94,
-                "overdraft_days": 18,
-                "payment_delay_days": 42,
-                "exposure_growth": 0.28,
-            },
-            "debt_sustainability": {
-                "cash_flow_available_for_debt_service": 180_000.0,
-                "debt_service": 250_000.0,
-                "ebitda": 150_000.0,
-                "interest_expense": 220_000.0,
-            },
-        },
-    },
-    "Behavioural Stress": {
-        "description": (
-            "A borrower with sound financial fundamentals but materially deteriorating "
-            "banking behaviour. Customer profile shows an active EWS flag, while all "
-            "four behavioural rules are deliberately activated to demonstrate the "
-            "non-financial monitoring layer."
-        ),
-        "values": {
-            "position_id": "DEMO-BEHAVIOURAL-001",
-            "revenue": 10_000_000.0,
-            "change_in_finished_goods_inventory": 90_000.0,
-            "operating_grants": 40_000.0,
-            "net_purchases": 5_000_000.0,
-            "change_in_raw_materials_inventory": -40_000.0,
-            "costs_for_services_and_third_party_assets": 1_500_000.0,
-            "personnel_costs": 2_000_000.0,
-            "depreciation_tangible_assets": 300_000.0,
-            "working_capital_impairments": 40_000.0,
-            "operating_provisions": 30_000.0,
-            "other_income_expenses_balance": 20_000.0,
-            "operating_value_added": 3_400_000.0,
-            "gross_operating_margin": 1_450_000.0,
-            "net_operating_margin": 1_150_000.0,
-            "ebitda": 1_700_000.0,
-            "profit_loss": 850_000.0,
-            "ebitda_margin": 0.17,
-            "ebitda_inventory_contribution": 0.01,
-            "nfp_to_ebitda": 1.7,
-            "interest_expense": 140_000.0,
-            "revenue_growth": 0.04,
-        },
-        "case_data": {
-            "customer_profile": {
-                "company_name": "Futura Logistics S.p.A.",
-                "legal_form": "S.p.A.",
-                "sector": "Logistics",
-                "size_class": "Mid-cap",
-                "geography": "Northern Italy",
-                "shareholders": ["Industrial holding"],
-                "management_members": ["CEO", "CFO"],
-                "relationship_years": 7,
-                "business_history_years": 22,
-                "historical_facilities": ["Revolving credit", "Term loan"],
-                "active_ews": True,
-                "previous_restructuring": False,
-            },
-            "behavioural": {
-                "average_utilization": 0.96,
+                "average_utilization": 0.97,
                 "overdraft_days": 35,
                 "payment_delay_days": 65,
                 "exposure_growth": 0.45,
             },
-            "debt_sustainability": {
-                "cash_flow_available_for_debt_service": 1_100_000.0,
-                "debt_service": 450_000.0,
-                "ebitda": 1_700_000.0,
-                "interest_expense": 140_000.0,
-            },
         },
-    },
-    "Leverage Stress": {
-        "description": (
-            "A company with solid operations but excessive leverage and weak "
-            "debt-service headroom. A previous restructuring event is also present, "
-            "so customer-profile, financial and debt-sustainability rules contribute "
-            "to the CRITICAL assessment."
-        ),
-        "values": {
-            "position_id": "DEMO-LEVERAGE-001",
-            "revenue": 9_000_000.0,
-            "change_in_finished_goods_inventory": 80_000.0,
-            "operating_grants": 30_000.0,
-            "net_purchases": 4_600_000.0,
-            "change_in_raw_materials_inventory": -30_000.0,
-            "costs_for_services_and_third_party_assets": 1_300_000.0,
-            "personnel_costs": 1_800_000.0,
-            "depreciation_tangible_assets": 300_000.0,
-            "working_capital_impairments": 40_000.0,
-            "operating_provisions": 30_000.0,
-            "other_income_expenses_balance": 10_000.0,
-            "operating_value_added": 3_200_000.0,
-            "gross_operating_margin": 1_300_000.0,
-            "net_operating_margin": 1_000_000.0,
-            "ebitda": 1_260_000.0,
-            "profit_loss": 600_000.0,
-            "ebitda_margin": 0.14,
-            "ebitda_inventory_contribution": 0.01,
-            "nfp_to_ebitda": 6.0,
-            "interest_expense": 500_000.0,
-            "revenue_growth": 0.03,
-        },
-        "case_data": {
-            "customer_profile": {
-                "company_name": "Delta Engineering S.p.A.",
-                "legal_form": "S.p.A.",
-                "sector": "Engineering",
-                "size_class": "Mid-cap",
-                "geography": "Northern Italy",
-                "shareholders": ["Industrial holding"],
-                "management_members": ["CEO", "CFO"],
-                "relationship_years": 10,
-                "business_history_years": 31,
-                "historical_facilities": ["Term loan", "Leasing", "Revolving credit"],
-                "active_ews": False,
-                "previous_restructuring": True,
-            },
-            "behavioural": {
-                "average_utilization": 0.64,
-                "overdraft_days": 4,
-                "payment_delay_days": 7,
-                "exposure_growth": 0.12,
-            },
+    ),
+    "07 · Debt Sustainability Risk": _scenario(
+        "07 · Debt Sustainability Risk",
+        "Focused debt-sustainability case activating DS001, DS002 and DS003 through insufficient DSCR, excessive debt service relative to EBITDA and a negative cash-flow buffer.",
+        values={"ebitda": 500_000.0},
+        case_data={
             "debt_sustainability": {
-                "cash_flow_available_for_debt_service": 600_000.0,
+                "cash_flow_available_for_debt_service": 500_000.0,
                 "debt_service": 700_000.0,
-                "ebitda": 1_260_000.0,
-                "interest_expense": 500_000.0,
-            },
+                "ebitda": 500_000.0,
+                "interest_expense": 150_000.0,
+            }
         },
-    },
-    "Multiple Risk Factors": {
-        "description": (
-            "A severely distressed borrower combining adverse customer-profile signals, "
-            "deteriorating banking behaviour, revenue contraction, negative profitability, "
-            "high leverage and insufficient debt-service capacity. This is the main "
-            "end-to-end stress scenario for demonstrating cumulative risk evidence."
-        ),
-        "values": {
-            "position_id": "DEMO-MULTIPLE-RISK-001",
-            "revenue": 5_000_000.0,
-            "change_in_finished_goods_inventory": -100_000.0,
-            "operating_grants": 10_000.0,
-            "net_purchases": 3_000_000.0,
-            "change_in_raw_materials_inventory": 50_000.0,
-            "costs_for_services_and_third_party_assets": 1_000_000.0,
-            "personnel_costs": 1_300_000.0,
-            "depreciation_tangible_assets": 250_000.0,
-            "working_capital_impairments": 100_000.0,
-            "operating_provisions": 80_000.0,
-            "other_income_expenses_balance": -50_000.0,
-            "operating_value_added": 900_000.0,
-            "gross_operating_margin": -200_000.0,
-            "net_operating_margin": -500_000.0,
-            "ebitda": -120_000.0,
-            "profit_loss": -180_000.0,
-            "ebitda_margin": -0.08,
-            "ebitda_inventory_contribution": -0.02,
-            "nfp_to_ebitda": 7.0,
+    ),
+    "08 · Integrated Credit Stress": _scenario(
+        "08 · Integrated Credit Stress",
+        "End-to-end stressed borrower combining customer-profile, financial, behavioural and debt-sustainability deterioration. This is the main cumulative-risk demonstration.",
+        values={
+            "change_in_finished_goods_inventory": 100_000.0,
+            "ebitda": -200_000.0,
+            "profit_loss": -350_000.0,
+            "ebitda_margin": -0.10,
+            "nfp_to_ebitda": None,
             "interest_expense": 700_000.0,
-            "revenue_growth": -0.20,
+            "revenue_growth": -0.35,
         },
-        "case_data": {
+        case_data={
             "customer_profile": {
                 "company_name": "Epsilon Industrial S.p.A.",
-                "legal_form": "S.p.A.",
-                "sector": "Industrial manufacturing",
-                "size_class": "Mid-cap",
-                "geography": "Northern Italy",
-                "shareholders": ["Industrial holding"],
-                "management_members": ["CEO", "CFO"],
-                "relationship_years": 12,
-                "business_history_years": 18,
-                "historical_facilities": ["Term loan", "Revolving credit", "Leasing"],
                 "active_ews": True,
                 "previous_restructuring": True,
+                "business_history_years": 1,
             },
             "behavioural": {
                 "average_utilization": 0.97,
@@ -369,71 +190,32 @@ DEMO_SCENARIOS = {
             "debt_sustainability": {
                 "cash_flow_available_for_debt_service": 100_000.0,
                 "debt_service": 600_000.0,
-                "ebitda": -120_000.0,
+                "ebitda": -200_000.0,
                 "interest_expense": 700_000.0,
             },
         },
-    },
-    "Missing Information": {
-        "description": (
-            "A partially documented customer used to demonstrate data-quality handling. "
-            "Customer-profile, behavioural and debt-sustainability inputs are unavailable, "
-            "while financial indicators are also missing. The system must preserve "
-            "NOT_EVALUABLE evidence and expose the resulting limitations explicitly."
-        ),
-        "values": {
-            "position_id": "DEMO-MISSING-001",
-            "revenue": None,
-            "change_in_finished_goods_inventory": None,
-            "operating_grants": None,
-            "net_purchases": None,
-            "change_in_raw_materials_inventory": None,
-            "costs_for_services_and_third_party_assets": None,
-            "personnel_costs": None,
-            "depreciation_tangible_assets": None,
-            "working_capital_impairments": None,
-            "operating_provisions": None,
-            "other_income_expenses_balance": None,
-            "operating_value_added": None,
-            "gross_operating_margin": None,
-            "net_operating_margin": None,
-            "ebitda": None,
-            "profit_loss": None,
-            "ebitda_margin": None,
-            "ebitda_inventory_contribution": None,
-            "nfp_to_ebitda": None,
-            "interest_expense": None,
-            "revenue_growth": None,
-        },
+    ),
+    "09 · Data Availability": {
+        "description": "Data-quality scenario with the financial position and domain-level inputs unavailable. The assessment must preserve NOT_EVALUABLE evidence and expose limitations rather than infer missing values.",
+        "values": {field.name: None for field in fields(CreditPosition)},
         "case_data": {},
     },
 }
 
 
-# ============================================================
-# Demo Position Builder
-# ============================================================
-
-
 def build_demo_position(scenario_name: str) -> CreditPosition:
-    """Build a CreditPosition from a predefined demo scenario."""
+    """Build a CreditPosition from the predefined scenario catalog."""
     if scenario_name not in DEMO_SCENARIOS:
         raise ValueError(f"Unknown demo scenario: {scenario_name}")
 
     scenario_values = DEMO_SCENARIOS[scenario_name]["values"]
     position_data: dict[str, Any] = {}
-
     for field in fields(CreditPosition):
-        field_name = field.name
-        if field_name in scenario_values:
-            position_data[field_name] = scenario_values[field_name]
-            continue
-        raise ValueError(
-            f"Demo scenario '{scenario_name}' does not define "
-            f"the required CreditPosition field '{field_name}'. "
-            "Update demo_scenarios.py."
-        )
-
+        if field.name not in scenario_values:
+            raise ValueError(
+                f"Scenario '{scenario_name}' does not define required field '{field.name}'."
+            )
+        position_data[field.name] = scenario_values[field.name]
     return CreditPosition(**position_data)
 
 
@@ -444,7 +226,7 @@ def build_demo_case_data(
     BehaviouralData | None,
     DebtSustainabilityData | None,
 ]:
-    """Build optional synthetic case-level inputs for a demo scenario."""
+    """Build synthetic case-level inputs for a predefined scenario."""
     if scenario_name not in DEMO_SCENARIOS:
         raise ValueError(f"Unknown demo scenario: {scenario_name}")
 
@@ -457,8 +239,3 @@ def build_demo_case_data(
         BehaviouralData(**case_data["behavioural"]),
         DebtSustainabilityData(**case_data["debt_sustainability"]),
     )
-
-
-from app.demo_scenario_profiles import extend_demo_scenarios
-
-extend_demo_scenarios(DEMO_SCENARIOS)
