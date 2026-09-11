@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
 
-from src.models.assessment import Assessment
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.execution_metadata import ExecutionMetadata
@@ -10,10 +9,9 @@ from src.models.report import Report
 
 @dataclass(frozen=True)
 class AssessmentWorkflowResult:
-    assessment: Assessment
+    credit_case: CreditAssessmentCase
     analysis: AssessmentAnalysis
     report: Report
-    credit_case: CreditAssessmentCase | None = None
     execution_metadata: ExecutionMetadata | None = None
 
     report_generator_used: str | None = None
@@ -26,17 +24,9 @@ class AssessmentWorkflowResult:
 
     @property
     def rule_results(self) -> list[Any]:
-        """Return the complete deterministic rule evidence for the workflow.
-
-        The case-level assessment is authoritative when available, while the
-        legacy Assessment remains the fallback for older workflow executions.
-        """
-        if self.credit_case is not None:
-            results = [
-                result
-                for section in self.credit_case.sections
-                for result in section.evidence
-            ]
-            if results:
-                return results
-        return list(self.assessment.rule_results)
+        """Return the complete deterministic evidence from all assessment sections."""
+        return [
+            result
+            for section in self.credit_case.sections
+            for result in section.evidence
+        ]
