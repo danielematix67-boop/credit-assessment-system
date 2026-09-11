@@ -1,4 +1,3 @@
-from src.comments.comment import Comment
 from src.comments.comment_engine import CommentEngine
 from src.models.assessment_section import AssessmentSection, SectionStatus
 from src.models.customer_profile_data import CustomerProfileData
@@ -38,7 +37,9 @@ class CustomerProfileAssessmentService:
         elif not evaluable_results:
             status = SectionStatus.NORMAL
         else:
-            status = SectionStatus(self.status_calculator.calculate(evaluable_results).value)
+            status = SectionStatus(
+                self.status_calculator.calculate(evaluable_results).value
+            )
 
         findings = []
         for result in results:
@@ -47,13 +48,6 @@ class CustomerProfileAssessmentService:
             comment = self.comment_engine.generate(result)
             if comment is not None:
                 findings.append(RuleFinding(result=result, comment=comment))
-            else:
-                findings.append(
-                    RuleFinding(
-                        result=result,
-                        comment=Comment(result.rule_id, result.reason or ""),
-                    )
-                )
 
         limitations = []
         if not has_profile_data:
