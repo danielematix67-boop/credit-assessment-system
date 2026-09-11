@@ -32,6 +32,56 @@ class Rule(ABC):
         """Evaluate the rule against a credit position."""
         pass
 
+    def _configured_value(
+        self,
+        position: CreditPosition,
+    ) -> tuple[float | None, str | None]:
+        """Resolve and calculate a numeric value from rule configuration."""
+        fields = self.config.input_fields or ((self.config.input_field,) if self.config.input_field else ())
+
+        if not fields:
+            return None, "No input field is configured."
+
+        values: list[float | None] = [getattr(position, field, None) for field in fields]
+
+        if any(value is None for value in values):
+            return None, f"Required input field is not available: {', '.join(fields)}."
+
+        numeric_values = [float(value) for value in values if value is not None]
+
+        if self.config.calculation == "direct":
+            if len(numeric_values) != 1:
+                return None, "Direct calculation requires exactly one input field."
+            return numeric_values[0], None
+
+        if len(numeric_values) != 2:
+            return None, f"{self.config.calculation} calculation requires exactly two input fields."
+
+        numerator, denominator = numeric_values
+        if self.config.calculation == "ratio":
+            if denominator == 0:
+                return None, "Ratio denominator cannot be zero."
+            return numerator / denominator, None
+
+        if self.config.calculation == "difference":
+            return numerator - denominator, None
+
+        return None, f"Unsupported calculation: {self.config.calculation}."
+
+    def _is_triggered(
+        self,
+        value: float,
+    ) -> bool:
+        """Apply the configured trigger operator to a calculated value."""
+        threshold = self.config.threshold
+        operators: dict[str, Callable[[float, float], bool]] = {
+            "GT": lambda left, right: left > right,
+            "GTE": lambda left, right: left >= right,
+            "LT": lambda left, right: left < right,
+            "LTE": lambda left, right: left <= right,
+        }
+        return operators[self.config.trigger_operator](value, threshold)
+
     def _severity(
         self,
         value: float,
