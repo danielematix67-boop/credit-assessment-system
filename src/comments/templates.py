@@ -1,4 +1,10 @@
 COMMENTS = {
+    "CP001": "An active Early Warning System flag is present for the customer profile.",
+    "CP002": "A previous restructuring event is present in the customer profile.",
+    "CP003": (
+        "Customer business history is {value:.0f} years, indicating limited operating "
+        "or customer track record and increased early-stage credit risk."
+    ),
     "R001": (
         "Revenue growth declined to {value:.1%}, indicating "
         "a deterioration in the company's top-line performance."
