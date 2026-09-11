@@ -5,12 +5,12 @@ from src.agents.reporting.deterministic_report_generator import (
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
-from src.models.assessment_status import AssessmentStatus
 from src.models.assessment_section import AssessmentSection, SectionStatus
+from src.models.assessment_status import AssessmentStatus
 from src.models.credit_assessment_case import CreditAssessmentCase
+from src.models.final_assessment import FinalAssessment
 from src.models.position import CreditPosition
 from src.models.rule_finding import RuleFinding
-from src.models.final_assessment import FinalAssessment
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_direction import SeverityDirection
 from src.rules.base.status import RuleStatus
@@ -73,7 +73,8 @@ def _case() -> CreditAssessmentCase:
         ),
         final_assessment=FinalAssessment(
             status=SectionStatus.ATTENTION,
-            reasons=["One core section requires attention."],
+            evaluated_sections=1,
+            risk_sections=["Financial Analysis"],
             limitations=["Final limitation."],
         ),
     )
@@ -101,8 +102,8 @@ def test_analysis_agent_does_not_recalculate_status_when_case_status_changes() -
         debt_sustainability=case.debt_sustainability,
         final_assessment=FinalAssessment(
             status=SectionStatus.CRITICAL,
-            reasons=["Deterministic escalation."],
-            limitations=[],
+            evaluated_sections=1,
+            risk_sections=["Financial Analysis"],
         ),
     )
 
@@ -144,7 +145,7 @@ def test_deterministic_report_reuses_analysis_status_findings_and_limitations() 
 
 def test_reporting_fallback_reuses_exact_same_analysis_without_reassessment() -> None:
     class FailingGenerator:
-        def generate(self, analysis: AssessmentAnalysis):
+        def generate(self, analysis: AssessmentAnalysis) -> None:
             raise RuntimeError("synthetic generation failure")
 
     class CapturingGenerator:
