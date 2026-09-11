@@ -109,10 +109,21 @@ class AssessmentWorkflow:
 
     @staticmethod
     def _legacy_assessment_from_case(case: CreditAssessmentCase) -> Assessment:
-        financial_section = case.financial_analysis
+        """Expose the complete case through the legacy Assessment contract."""
+        sections = case.sections
+        rule_results = [result for section in sections for result in section.evidence]
+        findings = [finding for section in sections for finding in section.findings]
+
+        final_status = case.final_assessment.status if case.final_assessment else None
+        status = (
+            AssessmentStatus(final_status.value)
+            if final_status is not None
+            else AssessmentStatus.ATTENTION
+        )
+
         return Assessment(
             position_id=case.position.position_id,
-            rule_results=financial_section.evidence,
-            findings=financial_section.findings,
-            status=AssessmentStatus(financial_section.status.value),
+            rule_results=rule_results,
+            findings=findings,
+            status=status,
         )
