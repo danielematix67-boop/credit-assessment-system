@@ -109,7 +109,7 @@ def test_assessment_workflow_integrates_credit_case_pipeline(
     assert result.assessment.position_id == position.position_id
     assert result.assessment.rule_results == result.credit_case.financial_analysis.evidence
     assert result.assessment.findings == result.credit_case.financial_analysis.findings
-    assert result.assessment.status.value == result.credit_case.financial_analysis.status.value
+    assert result.assessment.status.value == result.credit_case.final_assessment.status.value
 
     assert result.analysis.assessment_status.value == result.credit_case.final_assessment.status.value
     assert result.report.assessment_status == result.analysis.assessment_status
