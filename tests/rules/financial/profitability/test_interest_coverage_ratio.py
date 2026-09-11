@@ -27,7 +27,7 @@ def rule_config():
         severity=DEFAULT_SEVERITY,
         severity_direction=SeverityDirection.LOWER_IS_WORSE,
         severity_thresholds=(
-            SeverityThreshold(threshold=1.50, severity=RuleSeverity.MEDIUM),
+            SeverityThreshold(threshold=2.00, severity=RuleSeverity.MEDIUM),
             SeverityThreshold(threshold=1.00, severity=RuleSeverity.HIGH),
         ),
         input_fields=("ebitda", "interest_expense"),
@@ -71,7 +71,7 @@ def assert_result_metadata(result, config):
     [
         (50_000, 50_000, 1.00, RuleStatus.TRIGGERED, RuleSeverity.HIGH),
         (75_000, 50_000, 1.50, RuleStatus.TRIGGERED, RuleSeverity.MEDIUM),
-        (100_000, 50_000, 2.00, RuleStatus.NOT_TRIGGERED, RuleSeverity.LOW),
+        (100_000, 50_000, 2.00, RuleStatus.NOT_TRIGGERED, RuleSeverity.MEDIUM),
         (150_000, 50_000, 3.00, RuleStatus.NOT_TRIGGERED, RuleSeverity.LOW),
     ],
 )
@@ -104,7 +104,7 @@ def test_interest_coverage_ratio_threshold_is_exclusive(rule):
 
     assert result.value == 2.00
     assert result.status == RuleStatus.NOT_TRIGGERED
-    assert result.severity == RuleSeverity.LOW
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 @pytest.mark.parametrize(
