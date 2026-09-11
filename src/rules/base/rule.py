@@ -17,7 +17,10 @@ class Rule(ABC):
         self.config = config
 
     @abstractmethod
-    def evaluate(self, position: CreditPosition) -> RuleResult:
+    def evaluate(
+        self,
+        position: CreditPosition,
+    ) -> RuleResult:
         """Evaluate the rule against a credit position."""
         raise NotImplementedError
 
@@ -81,14 +84,18 @@ class Rule(ABC):
         if not thresholds:
             return self.config.severity
 
+        # Values outside the configured risk bands are explicitly LOW.
+        # The first configured threshold marks the entry into the
+        # rule's severity bands; it does not imply a MEDIUM/HIGH result
+        # for values on the safe side of that threshold.
+        severity = RuleSeverity.LOW
+
         if self.config.severity_direction.value == "HIGHER_IS_WORSE":
-            severity = thresholds[0].severity
             for threshold in thresholds:
                 if value >= threshold.threshold:
                     severity = threshold.severity
             return severity
 
-        severity = thresholds[0].severity
         for threshold in thresholds:
             if value <= threshold.threshold:
                 severity = threshold.severity
