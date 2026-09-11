@@ -65,8 +65,8 @@ def test_factory_creates_executable_workflow(representative_position, llm_client
     assert result.credit_case.position.position_id == representative_position.position_id
     assert result.analysis.position_id == representative_position.position_id
     assert result.report.position_id == representative_position.position_id
-    assert result.analysis.assessment_status == result.credit_case.final_assessment.status
-    assert result.report.assessment_status == result.credit_case.final_assessment.status
+    assert result.analysis.assessment_status.value == result.credit_case.final_assessment.status.value
+    assert result.report.assessment_status.value == result.credit_case.final_assessment.status.value
 
 
 def test_factory_llm_workflow_falls_back_to_deterministic_report(representative_position):
@@ -74,7 +74,7 @@ def test_factory_llm_workflow_falls_back_to_deterministic_report(representative_
     workflow.reporting_agent.report_generator = FailingReportGenerator()
     result = workflow.run(representative_position)
     assert result.report.position_id == representative_position.position_id
-    assert result.report.assessment_status == result.credit_case.final_assessment.status
+    assert result.report.assessment_status.value == result.credit_case.final_assessment.status.value
     assert result.report.executive_summary
     assert result.execution_metadata is not None
     assert result.execution_metadata.generator_used == "FALLBACK"
@@ -89,7 +89,7 @@ def test_factory_fallback_preserves_deterministic_findings(representative_positi
     expected_findings = sorted((f.rule_id, f.category, f.severity.value, f.text) for f in result.analysis.key_findings)
     fallback_findings = sorted((f.rule_id, f.category, f.severity.value, f.text) for group in result.report.findings_by_category for f in group.findings)
     assert fallback_findings == expected_findings
-    assert result.analysis.assessment_status == result.report.assessment_status
+    assert result.analysis.assessment_status.value == result.report.assessment_status.value
 
 
 def test_factory_does_not_create_findings_not_present_in_case(representative_position):
@@ -103,15 +103,15 @@ def test_factory_does_not_create_findings_not_present_in_case(representative_pos
 def test_llm_workflow_preserves_deterministic_assessment_data(representative_position, llm_client):
     workflow = create_default_assessment_workflow(use_llm=True, llm_client=llm_client)
     result = workflow.run(representative_position)
-    assert result.report.assessment_status == result.credit_case.final_assessment.status
+    assert result.report.assessment_status.value == result.credit_case.final_assessment.status.value
     assert all(finding.rule_id for finding in result.analysis.key_findings)
 
 
 def test_llm_workflow_preserves_assessment_status(representative_position, llm_client):
     workflow = create_default_assessment_workflow(use_llm=True, llm_client=llm_client)
     result = workflow.run(representative_position)
-    assert result.analysis.assessment_status == result.credit_case.final_assessment.status
-    assert result.report.assessment_status == result.credit_case.final_assessment.status
+    assert result.analysis.assessment_status.value == result.credit_case.final_assessment.status.value
+    assert result.report.assessment_status.value == result.credit_case.final_assessment.status.value
 
 
 def test_factory_does_not_require_specific_rule_identifiers(representative_position):
