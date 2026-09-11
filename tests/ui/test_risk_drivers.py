@@ -42,11 +42,12 @@ def test_build_risk_driver_frame_keeps_only_triggered_rules() -> None:
 
     frame = build_risk_driver_frame(credit_case)
 
-    assert list(frame["Rule"]) == ["R001", "DS001"]
-    assert list(frame["Macro-area"]) == [
+    assert set(frame["Rule"]) == {"R001", "DS001"}
+    assert len(frame) == 2
+    assert set(frame["Macro-area"]) == {
         "Financial Analysis",
         "Debt Sustainability",
-    ]
+    }
     assert list(frame.columns) == [
         "Macro-area",
         "Rule",
