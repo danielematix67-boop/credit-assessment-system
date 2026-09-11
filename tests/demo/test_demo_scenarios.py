@@ -14,6 +14,48 @@ EXPECTED_FINAL_STATUS = {
     "Missing Information": "ATTENTION",
 }
 
+# The scenario matrix is intentionally explicit: it documents which deterministic
+# rules each demo case is expected to exercise, and protects the UI/demo layer
+# from silently drifting away from the configured rule set.
+EXPECTED_TRIGGERED_RULES = {
+    "Healthy Company": set(),
+    "Revenue Deterioration": {"R001"},
+    "Profitability Stress": {
+        "CP001",
+        "B001",
+        "B002",
+        "B003",
+        "B004",
+        "DS001",
+        "DS002",
+        "DS003",
+        "R005",
+        "R006",
+        "R007",
+    },
+    "Behavioural Stress": {"CP001", "B001", "B002", "B003", "B004"},
+    "Leverage Stress": {"CP002", "DS001", "DS003", "R004"},
+    "Multiple Risk Factors": {
+        "CP001",
+        "CP002",
+        "B001",
+        "B002",
+        "B003",
+        "B004",
+        "DS001",
+        "DS002",
+        "DS003",
+        "R001",
+        "R002",
+        "R003",
+        "R004",
+        "R005",
+        "R006",
+        "R007",
+    },
+    "Missing Information": set(),
+}
+
 
 @pytest.mark.parametrize("scenario_name", DEMO_SCENARIOS)
 def test_demo_scenario_builders_produce_valid_inputs(scenario_name: str) -> None:
@@ -30,6 +72,40 @@ def test_demo_scenario_builders_produce_valid_inputs(scenario_name: str) -> None
         assert profile is not None
         assert behavioural is not None
         assert debt is not None
+
+
+def _triggered_rule_ids(case) -> set[str]:
+    """Collect triggered deterministic rule IDs across all assessment areas."""
+    sections = (
+        case.customer_profile,
+        case.financial_analysis,
+        case.behavioural_analysis,
+        case.debt_sustainability,
+    )
+    return {
+        result.rule_id
+        for section in sections
+        for result in section.evidence
+        if result.is_triggered
+    }
+
+
+def test_demo_scenarios_cover_expected_triggered_rule_ids(assessment_service) -> None:
+    case_service = CreditAssessmentCaseService(
+        financial_assessment_service=assessment_service
+    )
+
+    for scenario_name, expected_rule_ids in EXPECTED_TRIGGERED_RULES.items():
+        position = build_demo_position(scenario_name)
+        profile, behavioural, debt = build_demo_case_data(scenario_name)
+        case = case_service.assess(
+            position,
+            customer_profile_data=profile,
+            behavioural_data=behavioural,
+            debt_sustainability_data=debt,
+        )
+
+        assert _triggered_rule_ids(case) == expected_rule_ids
 
 
 def test_demo_scenarios_have_expected_final_statuses(assessment_service) -> None:
