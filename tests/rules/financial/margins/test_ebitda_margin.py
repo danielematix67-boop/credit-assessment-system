@@ -12,6 +12,8 @@ R003_CONFIG = RuleConfig(
     threshold=0.0,
     severity=RuleSeverity.MEDIUM,
     severity_direction=SeverityDirection.LOWER_IS_WORSE,
+    input_field="ebitda_margin",
+    trigger_operator="LT",
 )
 
 
@@ -98,6 +100,8 @@ def test_ebitda_margin_rule_uses_configured_threshold():
         threshold=-0.10,
         severity=RuleSeverity.HIGH,
         severity_direction=SeverityDirection.LOWER_IS_WORSE,
+        input_field="ebitda_margin",
+        trigger_operator="LT",
     )
 
     ebitda_margin = -0.05
@@ -117,3 +121,32 @@ def test_ebitda_margin_rule_uses_configured_threshold():
     assert_result_matches_config(result, config)
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.value == ebitda_margin
+
+
+def test_ebitda_margin_rule_uses_configured_trigger_operator():
+    config = RuleConfig(
+        rule_id="R003_CUSTOM_OPERATOR",
+        rule_name="Custom EBITDA margin operator",
+        category=R003_CONFIG.category,
+        threshold=0.0,
+        severity=R003_CONFIG.severity,
+        severity_direction=R003_CONFIG.severity_direction,
+        input_field="ebitda_margin",
+        trigger_operator="GTE",
+    )
+
+    position = CreditPosition(
+        position_id="POS005",
+        revenue_growth=0.05,
+        ebitda=250_000,
+        profit_loss=50_000,
+        ebitda_margin=0.0,
+        nfp_to_ebitda=3.5,
+        interest_expense=40_000,
+    )
+
+    result = create_rule(config).evaluate(position)
+
+    assert_result_matches_config(result, config)
+    assert result.status == RuleStatus.TRIGGERED
+    assert result.value == 0.0
