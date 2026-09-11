@@ -1,10 +1,14 @@
+from src.config.final_assessment_policy import FinalAssessmentPolicy
 from src.models.assessment_section import SectionStatus
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.final_assessment import FinalAssessment
 
 
 class FinalAssessmentService:
-    """Aggregate macro-area statuses into one deterministic final assessment."""
+    """Aggregate macro-area statuses using an external deterministic policy."""
+
+    def __init__(self, policy: FinalAssessmentPolicy | None = None):
+        self.policy = policy or FinalAssessmentPolicy.default()
 
     def assess(self, case: CreditAssessmentCase) -> FinalAssessment:
         sections = case.sections
@@ -20,32 +24,37 @@ class FinalAssessmentService:
         ]
         not_evaluable = [section for section in sections if not section.is_evaluable]
 
-        # Customer Profile flags are retained as explicit findings, but they
-        # do not independently turn a second macro-area attention into CRITICAL.
-        # This avoids double-counting contextual risk signals with core
-        # financial/behavioural/debt-risk assessments.
         core_attention = [
-            section for section in attention if section.name != "Customer Profile"
+            section
+            for section in attention
+            if section.name in self.policy.core_sections
         ]
 
-        if critical:
+        if self.policy.critical_if_any_section_critical and critical:
             status = SectionStatus.CRITICAL
-        elif len(core_attention) >= 2:
+        elif len(core_attention) >= self.policy.critical_if_core_attention_at_least:
             status = SectionStatus.CRITICAL
         elif attention:
             status = SectionStatus.ATTENTION
-        elif len(evaluable) >= 2:
+        elif (
+            self.policy.normal_if_all_evaluable_normal
+            and len(evaluable) >= self.policy.normal_requires_min_evaluable_sections
+            and len(normal) == len(evaluable)
+        ):
             status = SectionStatus.NORMAL
         else:
-            status = SectionStatus.ATTENTION
+            status = self.policy.no_evaluable_status
 
         limitations = [
-            f"{section.name} could not be evaluated because sufficient evidence was not available."
+            self.policy.not_evaluable_message.format(section=section.name)
             for section in not_evaluable
         ]
         if not_evaluable:
             limitations.append(
-                f"Final assessment is based on {len(evaluable)} of {len(sections)} evaluable macro-areas."
+                self.policy.partial_evaluation_message.format(
+                    evaluable=len(evaluable),
+                    total=len(sections),
+                )
             )
 
         return FinalAssessment(
