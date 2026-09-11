@@ -19,7 +19,6 @@ from src.models.report import Report
 from src.rules.base.severity import RuleSeverity
 from src.services.credit_assessment_case_service import CreditAssessmentCaseService
 
-
 # ============================================================
 # Helpers
 # ============================================================
@@ -53,7 +52,6 @@ def make_report(
         findings_by_category=[],
         limitations=[],
     )
-
 
 # ============================================================
 # Workflow execution
@@ -150,7 +148,6 @@ def test_assessment_workflow_llm_cannot_override_deterministic_status(
     assert "Assessment Status: Critical" not in result.report.executive_summary
     assert "Assessment Status: Normal" in result.report.executive_summary
 
-
 # ============================================================
 # Agent contract compatibility
 # ============================================================
@@ -230,7 +227,6 @@ def test_assessment_workflow_accepts_agent_contracts(
     )
 
     assert result.analysis.limitations == []
-
 
 # ============================================================
 # Reporting telemetry propagation
