@@ -15,6 +15,8 @@ class RuleConfig:
     severity_direction: SeverityDirection = SeverityDirection.HIGHER_IS_WORSE
     severity_thresholds: tuple[SeverityThreshold, ...] = ()
     indicator: str = ""
+    input_field: str = ""
+    comment_template: str = ""
 
     def __post_init__(self) -> None:
         if not self.rule_id.strip():
@@ -28,3 +30,9 @@ class RuleConfig:
 
         if self.indicator and not self.indicator.strip():
             raise ValueError("indicator cannot be blank")
+
+        if self.input_field and not self.input_field.strip():
+            raise ValueError("input_field cannot be blank")
+
+        if self.comment_template and not self.comment_template.strip():
+            raise ValueError("comment_template cannot be blank")
