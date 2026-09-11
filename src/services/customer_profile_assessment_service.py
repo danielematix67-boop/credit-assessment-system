@@ -142,25 +142,27 @@ class CustomerProfileAssessmentService:
             )
 
         value = float(raw_value)
-        if config.severity_direction.value == "LOWER_IS_WORSE":
-            triggered = value <= config.threshold
-        else:
-            triggered = value >= config.threshold
-
+        triggered = CustomerProfileAssessmentService._matches_operator(
+            value,
+            config.threshold,
+            config.trigger_operator,
+        )
         severity = SeverityPolicy(
             direction=config.severity_direction,
             thresholds=config.severity_thresholds,
         ).evaluate(value) or config.severity
         status = RuleStatus.TRIGGERED if triggered else RuleStatus.NOT_TRIGGERED
 
-        comparison = "at or below" if config.severity_direction.value == "LOWER_IS_WORSE" else "at or above"
-        reason = (
-            f"[{config.rule_id} - {config.rule_name}] {config.indicator} "
-            f"is {value:g}, {comparison} the configured risk threshold."
-            if triggered
-            else f"[{config.rule_id} - {config.rule_name}] {config.indicator} "
-            "is outside the configured risk threshold."
-        )
+        if triggered:
+            reason = (
+                f"[{config.rule_id} - {config.rule_name}] {config.indicator} "
+                f"is {value:g}, meeting the configured risk condition."
+            )
+        else:
+            reason = (
+                f"[{config.rule_id} - {config.rule_name}] {config.indicator} "
+                "is outside the configured risk condition."
+            )
 
         return RuleResult(
             rule_id=config.rule_id,
@@ -175,3 +177,15 @@ class CustomerProfileAssessmentService:
             direction=config.severity_direction,
             comment_template=config.comment_template,
         )
+
+    @staticmethod
+    def _matches_operator(value: float, threshold: float, operator: str) -> bool:
+        if operator == "GT":
+            return value > threshold
+        if operator == "GTE":
+            return value >= threshold
+        if operator == "LT":
+            return value < threshold
+        if operator == "LTE":
+            return value <= threshold
+        raise ValueError(f"Unsupported trigger operator: {operator}")
