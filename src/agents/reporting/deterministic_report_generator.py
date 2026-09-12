@@ -2,6 +2,7 @@ from src.agents.reporting.report_generator import ReportGenerator
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.report import Report, ReportFindingGroup
+from src.rules.base.status import RuleStatus
 
 
 class DeterministicReportGenerator(ReportGenerator):
@@ -45,6 +46,7 @@ class DeterministicReportGenerator(ReportGenerator):
                 finding
                 for finding in category_findings
                 if finding.rule_id != "PROFILE"
+                and DeterministicReportGenerator._is_triggered(finding)
             ]
 
             sentences: list[str] = []
@@ -56,6 +58,14 @@ class DeterministicReportGenerator(ReportGenerator):
 
         narrative = "\n\n".join(paragraphs)
         return f"{status}\n\n{narrative}"
+
+    @staticmethod
+    def _is_triggered(finding: AnalysisFinding) -> bool:
+        """Return whether evidence is triggered without inspecting narrative text."""
+        if finding.status is None:
+            # Legacy fixtures created before AnalysisFinding carried RuleStatus.
+            return True
+        return finding.status == RuleStatus.TRIGGERED
 
     @staticmethod
     def _group_findings_by_category(
