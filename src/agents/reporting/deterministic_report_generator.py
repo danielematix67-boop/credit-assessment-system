@@ -28,7 +28,7 @@ class DeterministicReportGenerator(ReportGenerator):
         status = f"Assessment Status: {analysis.assessment_status.value.capitalize()}"
         findings = analysis.key_findings
         if not findings:
-            return f"{status}\n\nNo deterministic reporting evidence is available for this assessment."
+            return status
 
         grouped: dict[str, list[AnalysisFinding]] = {}
         for finding in findings:
