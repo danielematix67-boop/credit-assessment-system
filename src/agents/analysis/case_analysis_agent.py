@@ -107,14 +107,22 @@ class CaseAnalysisAgent:
         *,
         triggered_text: str | None = None,
     ) -> AnalysisFinding:
-        """Expose every deterministic rule result without exposing thresholds."""
+        """Expose every deterministic rule result in reporting-safe language."""
         if result.status == RuleStatus.TRIGGERED:
-            text = triggered_text or result.indicator
+            text = triggered_text or result.indicator or result.rule_name
         elif result.status == RuleStatus.NOT_TRIGGERED:
             value = CaseAnalysisAgent._format_value(result.value)
-            text = f"{result.indicator} is {value} and does not trigger a risk condition."
+            indicator = result.indicator or result.rule_name
+            text = (
+                f"{indicator} is {value}; the observed value does not meet "
+                "the deterministic trigger condition."
+            )
         else:
-            text = f"{result.indicator} is not available and cannot be evaluated."
+            indicator = result.indicator or result.rule_name
+            text = (
+                f"{indicator}: no sufficiently reliable value is available; "
+                "the rule cannot be evaluated."
+            )
 
         return AnalysisFinding(
             rule_id=result.rule_id,
