@@ -58,6 +58,7 @@ def test_case_analysis_agent_maps_final_status_and_findings() -> None:
     analysis = CaseAnalysisAgent().run(case)
     assert analysis.assessment_status == AssessmentStatus.ATTENTION
     assert analysis.key_findings[0].rule_id == "X001"
+    assert analysis.key_findings[0].status == RuleStatus.TRIGGERED
     assert analysis.risk_factors[0].rule_id == "X001"
 
 
@@ -84,4 +85,5 @@ def test_case_analysis_agent_includes_customer_profile_context() -> None:
     analysis = CaseAnalysisAgent().run(case)
     assert analysis.assessment_status == AssessmentStatus.NORMAL
     assert analysis.key_findings[0].category == "Customer Profile"
+    assert analysis.key_findings[0].status is None
     assert "Synthetic Co." in analysis.key_findings[0].text
