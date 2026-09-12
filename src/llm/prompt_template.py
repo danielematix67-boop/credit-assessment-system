@@ -50,6 +50,7 @@ class ReportPromptTemplate:
         "- Begin with the overall customer context only once, if customer-profile information is provided.\n"
         "- Do not repeat customer-profile facts when discussing individual customer-profile rules.\n"
         "- For each macro-area, Synthesise multiple findings into one coherent paragraph where possible.\n"
+        "- When categories are presented in the authoritative order, prefer one narrative paragraph for each category where the evidence permits.\n"
         "- Prioritise material triggered findings; they should form the core of the executive narrative.\n"
         "- Include non-triggered findings only where they add meaningful context to the assessment.\n"
         "- Do not narrate each non-evaluable indicator as a separate sentence. Instead, consolidate unavailable-data items into one concise statement explaining that the affected indicators could not be evaluated.\n"
@@ -86,7 +87,8 @@ class ReportPromptTemplate:
         category_instruction = (
             "CATEGORY ORDER:\n"
             f"{category_order}\n\n"
-            "The category order is authoritative. Use it to structure the narrative without printing category names."
+            "The category order is authoritative. Use it to structure the narrative without printing category names.\n"
+            "Discuss each category at most once."
         )
 
         return "\n\n".join(
