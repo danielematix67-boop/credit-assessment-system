@@ -5,6 +5,7 @@ from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.final_assessment import FinalAssessment
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
+from src.rules.result import RuleResult
 
 
 class CaseAnalysisAgent:
@@ -13,6 +14,7 @@ class CaseAnalysisAgent:
     def run(self, case: CreditAssessmentCase) -> AssessmentAnalysis:
         final_assessment = case.final_assessment or self._require_final_assessment(case)
         findings: list[AnalysisFinding] = []
+        rule_evidence: list[AnalysisFinding] = []
         risk_factors: list[AnalysisFinding] = []
         limitations: list[AnalysisFinding] = []
 
@@ -29,6 +31,9 @@ class CaseAnalysisAgent:
                 )
 
         for section in case.sections:
+            for result in section.evidence:
+                rule_evidence.append(self._rule_evidence_finding(result))
+
             for finding in section.findings:
                 analysis_finding = AnalysisFinding(
                     rule_id=finding.result.rule_id,
@@ -37,7 +42,10 @@ class CaseAnalysisAgent:
                     text=finding.comment.text,
                 )
                 findings.append(analysis_finding)
-                if finding.result.status == RuleStatus.TRIGGERED and finding.result.severity == RuleSeverity.HIGH:
+                if (
+                    finding.result.status == RuleStatus.TRIGGERED
+                    and finding.result.severity == RuleSeverity.HIGH
+                ):
                     risk_factors.append(analysis_finding)
 
             for limitation in section.limitations:
@@ -66,7 +74,32 @@ class CaseAnalysisAgent:
             key_findings=findings,
             risk_factors=risk_factors,
             limitations=limitations,
+            rule_evidence=rule_evidence,
         )
+
+    @staticmethod
+    def _rule_evidence_finding(result: RuleResult) -> AnalysisFinding:
+        """Expose every deterministic rule result to the reporting layer."""
+        if result.status == RuleStatus.TRIGGERED:
+            text = result.reason or f"{result.indicator} is flagged."
+        elif result.status == RuleStatus.NOT_TRIGGERED:
+            value = CaseAnalysisAgent._format_value(result.value)
+            text = f"{result.indicator} is {value} and does not trigger a risk condition."
+        else:
+            text = f"{result.indicator} is not available and cannot be evaluated."
+
+        return AnalysisFinding(
+            rule_id=result.rule_id,
+            category=result.category,
+            severity=result.severity,
+            text=text,
+        )
+
+    @staticmethod
+    def _format_value(value: object) -> str:
+        if isinstance(value, float):
+            return f"{value:g}"
+        return str(value)
 
     @staticmethod
     def _require_final_assessment(case: CreditAssessmentCase) -> FinalAssessment:
