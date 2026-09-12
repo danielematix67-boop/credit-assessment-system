@@ -26,7 +26,8 @@ class ReportPromptTemplate:
         "- Preserve every material deterministic finding in the overall report, but do not force "
         "every technical evidence item into a repetitive executive sentence.\n"
         "- Every material numerical indicator supplied by the deterministic assessment must remain "
-        "available to the narrative, but each value should normally be stated only once.\n"
+        "available to the narrative; material values must appear in the narrative, but each value "
+        "should normally be stated only once.\n"
         "- Combine related findings into coherent credit-analysis statements.\n"
         "- Do not invent facts, figures, causes or explanations.\n"
         "- Do not infer causality unless explicitly supported.\n"
@@ -75,6 +76,7 @@ class ReportPromptTemplate:
         "- Do not mention rules, rule IDs or thresholds.\n"
         "- Do not add information not present in the findings.\n"
         "- Do not generate unsupported causes or consequences.\n"
+        "- Do not repeat the same finding or indicator value.\n"
         "- End after the final material evidence statement."
     )
 
