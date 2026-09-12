@@ -41,14 +41,12 @@ class ReportPromptBuilder:
         """
         Build the complete prompt for executive narrative generation.
 
-        Findings are grouped by deterministic category order and
-        ordered by severity before being passed to the LLM.
-
-        Risk factors are not passed as a separate duplicated list,
-        since they are already a subset of key findings.
+        Complete deterministic rule evidence is preferred when available;
+        lightweight analyses without rule_evidence retain compatibility by
+        falling back to key_findings.
         """
-
-        grouped_findings = self._group_findings(analysis.key_findings)
+        findings = analysis.rule_evidence or analysis.key_findings
+        grouped_findings = self._group_findings(findings)
         category_order = list(grouped_findings.keys())
 
         return self.template.render(
