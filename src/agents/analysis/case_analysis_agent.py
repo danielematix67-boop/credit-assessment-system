@@ -9,26 +9,13 @@ from src.rules.result import RuleResult
 
 
 class CaseAnalysisAgent:
-    """Adapt deterministic case evidence into the existing analysis contract."""
+    """Adapt deterministic case evidence into the reporting analysis contract."""
 
     def run(self, case: CreditAssessmentCase) -> AssessmentAnalysis:
         final_assessment = case.final_assessment or self._require_final_assessment(case)
-        findings: list[AnalysisFinding] = []
         rule_evidence: list[AnalysisFinding] = []
         risk_factors: list[AnalysisFinding] = []
         limitations: list[AnalysisFinding] = []
-
-        if case.customer_profile.context:
-            summary = self._profile_summary(case.customer_profile.context)
-            if summary:
-                findings.append(
-                    AnalysisFinding(
-                        rule_id="PROFILE",
-                        category="Customer Profile",
-                        severity=RuleSeverity.MEDIUM,
-                        text=summary,
-                    )
-                )
 
         for section in case.sections:
             triggered_text_by_rule = {
@@ -36,24 +23,14 @@ class CaseAnalysisAgent:
                 for finding in section.findings
             }
             for result in section.evidence:
-                rule_evidence.append(
-                    self._rule_evidence_finding(
-                        result,
-                        triggered_text=triggered_text_by_rule.get(result.rule_id),
-                    )
+                analysis_finding = self._rule_evidence_finding(
+                    result,
+                    triggered_text=triggered_text_by_rule.get(result.rule_id),
                 )
-
-            for finding in section.findings:
-                analysis_finding = AnalysisFinding(
-                    rule_id=finding.result.rule_id,
-                    category=finding.result.category,
-                    severity=finding.result.severity,
-                    text=finding.comment.text,
-                )
-                findings.append(analysis_finding)
+                rule_evidence.append(analysis_finding)
                 if (
-                    finding.result.status == RuleStatus.TRIGGERED
-                    and finding.result.severity == RuleSeverity.HIGH
+                    result.status == RuleStatus.TRIGGERED
+                    and result.severity == RuleSeverity.HIGH
                 ):
                     risk_factors.append(analysis_finding)
 
@@ -80,7 +57,9 @@ class CaseAnalysisAgent:
         return AssessmentAnalysis(
             position_id=case.position.position_id,
             assessment_status=self._to_assessment_status(final_assessment),
-            key_findings=findings,
+            # key_findings is the reporting input: it deliberately contains
+            # every deterministic rule result, not only triggered findings.
+            key_findings=rule_evidence,
             risk_factors=risk_factors,
             limitations=limitations,
             rule_evidence=rule_evidence,
@@ -123,15 +102,3 @@ class CaseAnalysisAgent:
     @staticmethod
     def _to_assessment_status(final_assessment: FinalAssessment) -> AssessmentStatus:
         return AssessmentStatus(final_assessment.status.value)
-
-    @staticmethod
-    def _profile_summary(profile: dict[str, object]) -> str:
-        fields = (
-            ("Company", profile.get("company_name")),
-            ("Legal form", profile.get("legal_form")),
-            ("Sector", profile.get("sector")),
-            ("Size class", profile.get("size_class")),
-            ("Geography", profile.get("geography")),
-            ("Relationship years", profile.get("relationship_years")),
-        )
-        return "; ".join(f"{label}: {value}" for label, value in fields if value not in (None, ""))
