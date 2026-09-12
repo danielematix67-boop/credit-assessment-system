@@ -31,8 +31,17 @@ class CaseAnalysisAgent:
                 )
 
         for section in case.sections:
+            triggered_text_by_rule = {
+                finding.result.rule_id: finding.comment.text
+                for finding in section.findings
+            }
             for result in section.evidence:
-                rule_evidence.append(self._rule_evidence_finding(result))
+                rule_evidence.append(
+                    self._rule_evidence_finding(
+                        result,
+                        triggered_text=triggered_text_by_rule.get(result.rule_id),
+                    )
+                )
 
             for finding in section.findings:
                 analysis_finding = AnalysisFinding(
@@ -78,10 +87,14 @@ class CaseAnalysisAgent:
         )
 
     @staticmethod
-    def _rule_evidence_finding(result: RuleResult) -> AnalysisFinding:
-        """Expose every deterministic rule result to the reporting layer."""
+    def _rule_evidence_finding(
+        result: RuleResult,
+        *,
+        triggered_text: str | None = None,
+    ) -> AnalysisFinding:
+        """Expose every deterministic rule result without exposing thresholds."""
         if result.status == RuleStatus.TRIGGERED:
-            text = result.reason or f"{result.indicator} is flagged."
+            text = triggered_text or result.indicator
         elif result.status == RuleStatus.NOT_TRIGGERED:
             value = CaseAnalysisAgent._format_value(result.value)
             text = f"{result.indicator} is {value} and does not trigger a risk condition."
