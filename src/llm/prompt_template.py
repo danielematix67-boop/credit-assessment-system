@@ -47,6 +47,7 @@ class ReportPromptTemplate:
         "- Write a concise, genuinely discursive credit-monitoring narrative, not a list of metrics.\n"
         "- Group related findings into coherent paragraphs.\n"
         "- Discuss each category at most once unless the evidence genuinely requires separation.\n"
+        "- Never return to a category after moving to the next category.\n"
         "- Begin with the overall customer context only once, if customer-profile information is provided.\n"
         "- Do not repeat customer-profile facts when discussing individual customer-profile rules.\n"
         "- For each macro-area, Synthesise multiple findings into one coherent paragraph where possible.\n"
