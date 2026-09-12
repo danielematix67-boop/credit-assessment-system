@@ -43,8 +43,6 @@ class CaseAnalysisAgent:
                 for result in section.evidence
             ]
 
-            # Keep compatibility with lightweight unit-test sections that may
-            # provide findings without duplicating the deterministic evidence.
             if not section_rule_evidence:
                 section_rule_evidence = [
                     AnalysisFinding(
@@ -52,15 +50,13 @@ class CaseAnalysisAgent:
                         category=finding.result.category,
                         severity=finding.result.severity,
                         text=finding.comment.text,
+                        status=finding.result.status,
                     )
                     for finding in section.findings
                 ]
 
             rule_evidence.extend(section_rule_evidence)
 
-            # key_findings remains the concise executive input: triggered rules
-            # only. Complete deterministic evidence is exposed separately via
-            # rule_evidence and can be supplied to the LLM prompt builder.
             for finding in section.findings:
                 evidence = next(
                     evidence
@@ -132,6 +128,7 @@ class CaseAnalysisAgent:
             category=result.category,
             severity=result.severity,
             text=text,
+            status=result.status,
         )
 
     @staticmethod
