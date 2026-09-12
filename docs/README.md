@@ -9,6 +9,7 @@ The documentation is organized around five complementary concerns: architecture,
 | [`architecture.md`](architecture.md) | Current system architecture, domain boundaries, workflow, Results UI and configuration model |
 | [`reporting.md`](reporting.md) | Complete multi-domain evidence flow from deterministic rules to narrative reporting |
 | [`architecture-decisions.md`](architecture-decisions.md) | Accepted architectural decisions and rationale |
+| [`adr-016-complete-rule-evidence-reporting.md`](adr-016-complete-rule-evidence-reporting.md) | ADR defining complete rule-evidence propagation into reporting |
 | [`validation.md`](validation.md) | Test strategy, deterministic invariants, LLM grounding, resilience and CI gates |
 | [`security-data-handling.md`](security-data-handling.md) | Input integrity, secrets, data minimization, LLM trust boundary and production limitations |
 
@@ -24,6 +25,8 @@ docs/architecture.md
 docs/reporting.md
    ↓
 docs/architecture-decisions.md
+   ↓
+docs/adr-016-complete-rule-evidence-reporting.md
    ↓
 docs/validation.md
    ↓
