@@ -14,20 +14,21 @@ class CaseAnalysisAgent:
     def run(self, case: CreditAssessmentCase) -> AssessmentAnalysis:
         final_assessment = case.final_assessment or self._require_final_assessment(case)
         rule_evidence: list[AnalysisFinding] = []
+        key_findings: list[AnalysisFinding] = []
         risk_factors: list[AnalysisFinding] = []
         limitations: list[AnalysisFinding] = []
 
         if case.customer_profile.context:
             summary = self._profile_summary(case.customer_profile.context)
             if summary:
-                rule_evidence.append(
-                    AnalysisFinding(
-                        rule_id="PROFILE",
-                        category="Customer Profile",
-                        severity=RuleSeverity.MEDIUM,
-                        text=summary,
-                    )
+                profile_finding = AnalysisFinding(
+                    rule_id="PROFILE",
+                    category="Customer Profile",
+                    severity=RuleSeverity.MEDIUM,
+                    text=summary,
                 )
+                rule_evidence.append(profile_finding)
+                key_findings.append(profile_finding)
 
         for section in case.sections:
             triggered_text_by_rule = {
@@ -57,18 +58,22 @@ class CaseAnalysisAgent:
 
             rule_evidence.extend(section_rule_evidence)
 
+            # key_findings remains the concise executive input: triggered rules
+            # only. Complete deterministic evidence is exposed separately via
+            # rule_evidence and can be supplied to the LLM prompt builder.
             for finding in section.findings:
+                evidence = next(
+                    evidence
+                    for evidence in section_rule_evidence
+                    if evidence.rule_id == finding.result.rule_id
+                )
+                key_findings.append(evidence)
+
                 if (
                     finding.result.status == RuleStatus.TRIGGERED
                     and finding.result.severity == RuleSeverity.HIGH
                 ):
-                    risk_factors.append(
-                        next(
-                            evidence
-                            for evidence in section_rule_evidence
-                            if evidence.rule_id == finding.result.rule_id
-                        )
-                    )
+                    risk_factors.append(evidence)
 
             for limitation in section.limitations:
                 limitations.append(
@@ -93,9 +98,7 @@ class CaseAnalysisAgent:
         return AssessmentAnalysis(
             position_id=case.position.position_id,
             assessment_status=self._to_assessment_status(final_assessment),
-            # key_findings is the reporting input and contains all deterministic
-            # rule results, not only triggered rules.
-            key_findings=rule_evidence,
+            key_findings=key_findings,
             risk_factors=risk_factors,
             limitations=limitations,
             rule_evidence=rule_evidence,
