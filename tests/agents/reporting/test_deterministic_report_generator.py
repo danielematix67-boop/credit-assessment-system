@@ -9,6 +9,7 @@ from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.models.report import ReportFindingGroup
 from src.rules.base.severity import RuleSeverity
+from src.rules.base.status import RuleStatus
 
 
 @pytest.fixture
@@ -22,12 +23,14 @@ def make_analysis_finding(
     category: str = "test_category",
     severity: RuleSeverity = RuleSeverity.MEDIUM,
     text: str = "Test finding.",
+    status: RuleStatus | None = None,
 ) -> AnalysisFinding:
     return AnalysisFinding(
         rule_id=rule_id,
         category=category,
         severity=severity,
         text=text,
+        status=status,
     )
 
 
@@ -121,6 +124,37 @@ def test_deterministic_report_generator_status_is_authoritative_and_separate(gen
         "EBITDA is negative at €-120,000."
     )
     assert report.executive_summary.count("Assessment Status:") == 1
+
+
+def test_deterministic_fallback_uses_structured_status_not_text(generator):
+    findings = [
+        make_analysis_finding(
+            rule_id="R001",
+            category="Revenue",
+            text="Revenue growth declined to -20.0%.",
+            status=RuleStatus.TRIGGERED,
+        ),
+        make_analysis_finding(
+            rule_id="R002",
+            category="Revenue",
+            text="Revenue growth is 5.0%; this wording contains no status cue.",
+            status=RuleStatus.NOT_TRIGGERED,
+        ),
+        make_analysis_finding(
+            rule_id="R003",
+            category="Revenue",
+            text="Revenue growth: no sufficiently reliable value is available.",
+            status=RuleStatus.NOT_EVALUABLE,
+        ),
+    ]
+    analysis = make_analysis(
+        status=AssessmentStatus.ATTENTION,
+        key_findings=findings,
+    )
+    report = generator.generate(analysis)
+    assert "Revenue growth declined to -20.0%." in report.executive_summary
+    assert "5.0%" not in report.executive_summary
+    assert "no sufficiently reliable" not in report.executive_summary
 
 
 def test_deterministic_fallback_keeps_all_findings_in_category_paragraphs(generator):
