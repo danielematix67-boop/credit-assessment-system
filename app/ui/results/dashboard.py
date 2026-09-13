@@ -12,9 +12,9 @@ from app.ui.results.helpers import (
     get_rule_results,
     get_rule_sections,
     rule_indicator,
+    rule_severity,
     rule_status,
     rule_status_counts,
-    rule_severity,
     severity_counts,
     severity_rank,
 )
