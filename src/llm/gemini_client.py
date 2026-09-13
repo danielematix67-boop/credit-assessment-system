@@ -11,8 +11,8 @@ class GeminiClient(LLMClient):
         self,
         api_key: str | None = None,
         model: str = "gemini-3.5-flash",
-        temperature: float = 0.2,
-        max_output_tokens: int = 2048,
+        temperature: float = 0.1,
+        max_output_tokens: int = 8192,
     ) -> None:
         resolved_api_key = api_key or os.getenv("GEMINI_API_KEY")
 
@@ -41,6 +41,10 @@ class GeminiClient(LLMClient):
             config=types.GenerateContentConfig(
                 temperature=self.temperature,
                 max_output_tokens=self.max_output_tokens,
+                thinking_config=types.ThinkingConfig(
+                    thinking_level="minimal",
+                    include_thoughts=False,
+                ),
             ),
         )
 
