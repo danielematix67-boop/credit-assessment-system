@@ -12,6 +12,7 @@ from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.models.report import Report, ReportFindingGroup
 from src.rules.base.severity import RuleSeverity
+from src.rules.base.status import RuleStatus
 
 
 def make_finding(
@@ -20,12 +21,14 @@ def make_finding(
     rule_id: str = "TEST_RULE",
     category: str = "Test Category",
     severity: RuleSeverity = RuleSeverity.MEDIUM,
+    status: RuleStatus = RuleStatus.TRIGGERED,
 ) -> AnalysisFinding:
     return AnalysisFinding(
         rule_id=rule_id,
         category=category,
         severity=severity,
         text=text,
+        status=status,
     )
 
 
