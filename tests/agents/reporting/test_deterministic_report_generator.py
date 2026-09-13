@@ -23,7 +23,7 @@ def make_analysis_finding(
     category: str = "test_category",
     severity: RuleSeverity = RuleSeverity.MEDIUM,
     text: str = "Test finding.",
-    status: RuleStatus | None = None,
+    status: RuleStatus | None = RuleStatus.TRIGGERED,
 ) -> AnalysisFinding:
     return AnalysisFinding(
         rule_id=rule_id,
@@ -155,6 +155,56 @@ def test_deterministic_fallback_uses_structured_status_not_text(generator):
     assert "Revenue growth declined to -20.0%." in report.executive_summary
     assert "5.0%" not in report.executive_summary
     assert "no sufficiently reliable" not in report.executive_summary
+
+
+def test_deterministic_fallback_classification_is_invariant_to_finding_wording(generator):
+    original = make_analysis_finding(
+        rule_id="R001",
+        category="Revenue",
+        text="Revenue growth declined to -20.0%.",
+        status=RuleStatus.TRIGGERED,
+    )
+    rewritten = make_analysis_finding(
+        rule_id="R001",
+        category="Revenue",
+        text="The observed revenue metric is materially below the reference level.",
+        status=RuleStatus.TRIGGERED,
+    )
+
+    original_report = generator.generate(make_analysis(key_findings=[original]))
+    rewritten_report = generator.generate(make_analysis(key_findings=[rewritten]))
+
+    assert original_report.findings_by_category[0].findings[0].status == RuleStatus.TRIGGERED
+    assert rewritten_report.findings_by_category[0].findings[0].status == RuleStatus.TRIGGERED
+    assert rewritten_report.executive_summary.endswith(rewritten.text)
+
+
+def test_deterministic_report_rejects_rule_evidence_without_status(generator):
+    analysis = make_analysis(
+        key_findings=[
+            make_analysis_finding(
+                rule_id="R001",
+                category="Revenue",
+                text="Revenue growth declined to -20.0%.",
+                status=None,
+            )
+        ]
+    )
+
+    with pytest.raises(ValueError, match="Rule evidence requires a structured RuleStatus"):
+        generator.generate(analysis)
+
+
+def test_deterministic_report_allows_profile_summary_without_rule_status(generator):
+    profile = make_analysis_finding(
+        rule_id="PROFILE",
+        category="Customer Profile",
+        text="Company: Example S.p.A.",
+        status=None,
+    )
+    report = generator.generate(make_analysis(key_findings=[profile]))
+
+    assert "Company: Example S.p.A." in report.executive_summary
 
 
 def test_deterministic_fallback_keeps_all_findings_in_category_paragraphs(generator):
