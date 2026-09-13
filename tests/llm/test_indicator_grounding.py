@@ -5,6 +5,7 @@ from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.rules.base.severity import RuleSeverity
+from src.rules.base.status import RuleStatus
 
 
 def make_analysis(*findings: AnalysisFinding) -> AssessmentAnalysis:
@@ -23,6 +24,7 @@ def make_finding(text: str, category: str = "Financial Risk") -> AnalysisFinding
         category=category,
         severity=RuleSeverity.HIGH,
         text=text,
+        status=RuleStatus.TRIGGERED,
     )
 
 
