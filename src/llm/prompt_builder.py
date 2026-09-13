@@ -9,23 +9,18 @@ class ReportPromptBuilder:
     """
     Builds prompts for LLM-based credit assessment reporting.
 
-    The prompt builder prepares deterministic findings for the LLM
-    by grouping them by financial category and ordering them by
-    deterministic category and severity.
+    The prompt builder prepares deterministic Analysis findings for the LLM
+    using the authoritative assessment macro-area order.
 
     The deterministic assessment remains the sole source of truth.
     The LLM is responsible only for narrative generation.
     """
 
-    _SEVERITY_PRIORITY = {
-        "HIGH": 0,
-        "MEDIUM": 1,
-        "LOW": 2,
-    }
     _CATEGORY_PRIORITY = {
-        "revenue": 0,
-        "profitability": 1,
-        "leverage": 2,
+        "customer profile": 0,
+        "financial analysis": 1,
+        "behavioural analysis": 2,
+        "debt sustainability": 3,
     }
 
     def __init__(
@@ -54,24 +49,19 @@ class ReportPromptBuilder:
             category_order=self._format_category_order(category_order),
         )
 
-    # ============================================================
-    # Finding preparation
-    # ============================================================
-
     @classmethod
     def _group_findings(
         cls,
         findings: list[AnalysisFinding],
     ) -> dict[str, list[AnalysisFinding]]:
         """
-        Group findings by deterministic category.
+        Group findings by assessment macro area.
 
-        Categories follow the authoritative financial order: revenue,
-        profitability, leverage, then any additional categories in first
-        occurrence order. Findings within each category are ordered by
-        severity, while equal-severity findings retain their source order.
+        The four assessment areas have a fixed authoritative order:
+        Customer Profile, Financial Analysis, Behavioural Analysis and
+        Debt Sustainability. Findings within each area retain the order
+        supplied by the Analysis agent.
         """
-
         grouped: dict[str, list[AnalysisFinding]] = defaultdict(list)
 
         for finding in findings:
@@ -85,19 +75,7 @@ class ReportPromptBuilder:
             ),
         )
 
-        for category in ordered_categories:
-            grouped[category].sort(
-                key=lambda finding: cls._SEVERITY_PRIORITY.get(
-                    finding.severity.value.upper(),
-                    99,
-                )
-            )
-
         return {category: grouped[category] for category in ordered_categories}
-
-    # ============================================================
-    # Formatting
-    # ============================================================
 
     @staticmethod
     def _format_category_order(categories: list[str]) -> str:
@@ -120,7 +98,6 @@ class ReportPromptBuilder:
         Rule IDs are intentionally excluded from the narrative input
         because they are internal implementation details.
         """
-
         if not grouped_findings:
             return "None."
 
