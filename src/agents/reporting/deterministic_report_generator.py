@@ -10,6 +10,7 @@ class DeterministicReportGenerator(ReportGenerator):
         self,
         analysis: AssessmentAnalysis,
     ) -> Report:
+        self._validate_rule_evidence(analysis.key_findings)
         summary = self._generate_summary(analysis)
         findings_by_category = self._group_findings_by_category(analysis.key_findings)
 
@@ -60,11 +61,27 @@ class DeterministicReportGenerator(ReportGenerator):
         return f"{status}\n\n{narrative}"
 
     @staticmethod
+    def _validate_rule_evidence(findings: list[AnalysisFinding]) -> None:
+        """Reject rule evidence that is not backed by a structured deterministic status."""
+        missing_status = [
+            finding.rule_id
+            for finding in findings
+            if finding.rule_id != "PROFILE" and finding.status is None
+        ]
+        if missing_status:
+            rule_ids = ", ".join(missing_status)
+            raise ValueError(
+                "Rule evidence requires a structured RuleStatus; "
+                f"missing status for: {rule_ids}"
+            )
+
+    @staticmethod
     def _is_triggered(finding: AnalysisFinding) -> bool:
-        """Return whether evidence is triggered without inspecting narrative text."""
+        """Return whether structured deterministic evidence is triggered."""
         if finding.status is None:
-            # Legacy fixtures created before AnalysisFinding carried RuleStatus.
-            return True
+            raise ValueError(
+                f"Rule evidence {finding.rule_id!r} is missing RuleStatus"
+            )
         return finding.status == RuleStatus.TRIGGERED
 
     @staticmethod
