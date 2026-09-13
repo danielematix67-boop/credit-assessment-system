@@ -110,8 +110,6 @@ class LLMReportGenerator(ReportGenerator):
             unit = "x"
             compact = compact[:-1]
 
-        # Source data may use either decimal comma or decimal point. Thousands
-        # separators are removed conservatively before numeric comparison.
         if "," in compact and "." in compact:
             if compact.rfind(",") > compact.rfind("."):
                 compact = compact.replace(".", "").replace(",", ".")
@@ -144,21 +142,25 @@ class LLMReportGenerator(ReportGenerator):
         """Validate factual grounding without forcing literal numeric repetition.
 
         The deterministic assessment remains authoritative. The LLM may summarise,
-        omit, or reformat individual indicators; it must not be required to copy
-        every source value verbatim. Numeric formatting such as ``20.0%`` versus
-        ``20%`` and decimal comma versus decimal point is therefore treated as
-        equivalent. Genuine LLM/API failures still propagate to ReportingAgent,
-        where the deterministic fallback is applied.
+        omit, or reformat individual indicators; it must not introduce numerical
+        values that are absent from the deterministic evidence. Formatting such as
+        ``20.0%`` versus ``20%`` and decimal comma versus decimal point is treated
+        as equivalent. Validation failures propagate to ReportingAgent, where the
+        deterministic fallback is applied.
         """
         narrative = cls._NUMERIC_SPACING_PATTERN.sub(".", narrative).strip()
-        required_values = cls._extract_indicator_values(findings)
+        source_values = cls._extract_indicator_values(findings)
+        narrative_values = cls._extract_indicator_values_from_text(narrative)
 
-        # Grounding is intentionally permissive: omission is acceptable because
-        # the narrative is a synthesis, while any supplied source indicator must
-        # be represented consistently when it is mentioned.
-        for value in required_values:
-            if cls._contains_equivalent_indicator(narrative, value):
-                continue
+        for candidate in narrative_values:
+            if not any(
+                cls._contains_equivalent_indicator(candidate, source_value)
+                for source_value in source_values
+            ):
+                raise ValueError(
+                    "LLM narrative introduced an unsupported indicator value: "
+                    f"{candidate!r}"
+                )
 
         return narrative
 
