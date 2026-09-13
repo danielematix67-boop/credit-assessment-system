@@ -119,6 +119,7 @@ def test_deterministic_report_reuses_analysis_status_findings_and_limitations() 
                 category="Financial Structure",
                 severity=RuleSeverity.HIGH,
                 text="Leverage is elevated.",
+                status=RuleStatus.TRIGGERED,
             )
         ],
         risk_factors=[],
@@ -184,12 +185,14 @@ def test_llm_primary_and_deterministic_fallback_preserve_decision_content() -> N
                 category="Financial Analysis",
                 severity=RuleSeverity.HIGH,
                 text="Leverage is elevated.",
+                status=RuleStatus.TRIGGERED,
             ),
             AnalysisFinding(
                 rule_id="R007",
                 category="Financial Analysis",
                 severity=RuleSeverity.MEDIUM,
                 text="Interest coverage is weak.",
+                status=RuleStatus.TRIGGERED,
             ),
         ],
         risk_factors=[],
