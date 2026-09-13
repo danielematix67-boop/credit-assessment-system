@@ -1,6 +1,5 @@
 from src.rules.registry import get_default_rules
 
-
 EXPECTED_RULE_IDS = {
     "CP001",
     "CP002",
