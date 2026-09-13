@@ -78,10 +78,6 @@ class DeterministicReportGenerator(ReportGenerator):
     @staticmethod
     def _is_triggered(finding: AnalysisFinding) -> bool:
         """Return whether structured deterministic evidence is triggered."""
-        if finding.status is None:
-            raise ValueError(
-                f"Rule evidence {finding.rule_id!r} is missing RuleStatus"
-            )
         return finding.status == RuleStatus.TRIGGERED
 
     @staticmethod
