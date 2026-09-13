@@ -10,7 +10,11 @@ from app.ui.results.helpers import (
     build_rule_area_dataframe,
     build_status_overview,
     get_rule_results,
+    get_rule_sections,
+    rule_indicator,
+    rule_status,
     rule_status_counts,
+    rule_severity,
     severity_counts,
     severity_rank,
 )
@@ -46,8 +50,63 @@ def _render_signal_overview(
         )
 
 
-def _render_area_coverage(dataframe: pd.DataFrame) -> None:
-    """Show rule coverage using the section names produced by the case service."""
+def _section_indicators(section: Any) -> list[str]:
+    """Return display-only key indicators from deterministic section evidence."""
+    evidence = list(getattr(section, "evidence", []) or [])
+    triggered = [
+        rule_indicator(rule_result)
+        for rule_result in evidence
+        if rule_status(rule_result) == "TRIGGERED"
+    ]
+    if triggered:
+        return triggered[:3]
+
+    ranked = sorted(
+        evidence,
+        key=lambda rule_result: severity_rank(rule_severity(rule_result)),
+        reverse=True,
+    )
+    return [rule_indicator(rule_result) for rule_result in ranked[:3]]
+
+
+def _render_area_coverage(result: Any, dataframe: pd.DataFrame) -> None:
+    """Render the four authoritative macro-areas as an analyst dashboard."""
+    sections = get_rule_sections(result)
+    if not sections:
+        return
+
+    st.markdown("##### Risk Assessment by Macro-Area")
+    st.caption(
+        "Each card reads the section status and evidence directly from the "
+        "CreditAssessmentCase. The UI does not infer status from rule IDs."
+    )
+
+    area_columns = st.columns(2, gap="medium")
+    for index, section in enumerate(sections):
+        evidence = list(getattr(section, "evidence", []) or [])
+        statuses = [rule_status(rule_result) for rule_result in evidence]
+        triggered = statuses.count("TRIGGERED")
+        not_triggered = statuses.count("NOT_TRIGGERED")
+        not_evaluable = statuses.count("NOT_EVALUABLE")
+        status = str(
+            getattr(getattr(section, "status", None), "value", "NOT_EVALUABLE")
+        )
+        indicators = _section_indicators(section)
+
+        with area_columns[index % 2].container(border=True):
+            st.markdown(f"**{getattr(section, 'name', 'Assessment area')}**")
+            st.caption(f"Section status: **{status}**")
+            metric_cols = st.columns(4)
+            metric_cols[0].metric("Rules", len(evidence))
+            metric_cols[1].metric("Triggered", triggered)
+            metric_cols[2].metric("Not triggered", not_triggered)
+            metric_cols[3].metric("Not evaluable", not_evaluable)
+            if indicators:
+                st.caption("Key indicators")
+                st.write(" · ".join(indicators))
+            else:
+                st.caption("Key indicators: —")
+
     summary = (
         dataframe.groupby("Assessment area", dropna=False)
         .agg(
@@ -58,42 +117,13 @@ def _render_area_coverage(dataframe: pd.DataFrame) -> None:
         )
         .reset_index()
     )
-    summary = summary.sort_values("Assessment area", key=lambda values: values.str.lower())
-
-    st.markdown("##### Rule Coverage by Assessment Area")
-    st.caption(
-        "The macro-areas shown here come directly from the CreditAssessmentCase; "
-        "no rule-prefix mapping or fixed rule count is used by the UI."
-    )
-
-    metric_cols = st.columns([1, 1, 1])
-    with metric_cols[0]:
-        st.metric("Rules in evidence", len(dataframe))
-    with metric_cols[1]:
-        st.metric("Assessment areas", len(summary))
-    with metric_cols[2]:
-        st.metric("Triggered rules", int(summary["Triggered"].sum()))
-
+    st.caption("Rule outcomes by macro-area")
     chart_data = summary.set_index("Assessment area")[[
         "Triggered",
         "Not_triggered",
         "Not_evaluable",
     ]]
-    st.caption("Rule outcomes by assessment area")
-    st.bar_chart(chart_data, height=230)
-
-    st.dataframe(
-        summary,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Assessment area": st.column_config.TextColumn("Assessment area", width="medium"),
-            "Rules": st.column_config.NumberColumn("Rules", width="small"),
-            "Triggered": st.column_config.NumberColumn("Triggered", width="small"),
-            "Not_evaluable": st.column_config.NumberColumn("Not evaluable", width="small"),
-            "Not_triggered": st.column_config.NumberColumn("Not triggered", width="small"),
-        },
-    )
+    st.bar_chart(chart_data, height=210)
 
 
 def _render_rule_catalogue(dataframe: pd.DataFrame) -> None:
@@ -181,7 +211,7 @@ def render_risk_indicator_dashboard(result: Any) -> None:
 
     render_section_header(
         "Rule Engine Evidence",
-        "Inspect all deterministic rules across every assessment area and drill into individual evidence.",
+        "Inspect the deterministic assessment across the four macro-areas, then drill into individual rules.",
     )
 
     dataframe = build_rule_area_dataframe(result)
@@ -189,9 +219,9 @@ def render_risk_indicator_dashboard(result: Any) -> None:
     severity_counts_data = severity_counts(rule_results)
 
     _render_signal_overview(status_counts, severity_counts_data)
-    _render_area_coverage(dataframe)
+    _render_area_coverage(result, dataframe)
 
-    with st.expander("Complete rule catalogue & filters", expanded=True):
+    with st.expander("Complete rule catalogue & filters", expanded=False):
         _render_rule_catalogue(dataframe)
 
     with st.expander("Individual rule detail", expanded=False):
