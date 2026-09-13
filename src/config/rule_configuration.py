@@ -7,5 +7,5 @@ class RuleConfiguration:
 
     @classmethod
     def default(cls) -> "RuleConfiguration":
-        """Return the default configuration containing every rule catalog."""
-        return cls(Path("config"))
+        """Return the default configuration for the core Rule Engine catalog."""
+        return cls(Path("config/financial_analysis_rules.yaml"))
