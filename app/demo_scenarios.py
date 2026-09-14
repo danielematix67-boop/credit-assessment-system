@@ -50,6 +50,7 @@ _BASE_CASE_DATA: dict[str, dict[str, Any]] = {
         "historical_facilities": ["Revolving credit", "Term loan"],
         "ews_score_class": EwsScoreClass.LIGHT_RED,
         "previous_restructuring": True,
+        "forborne": True,
     },
     "behavioural": {
         "average_utilization": 0.97,
