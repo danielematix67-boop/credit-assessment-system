@@ -6,7 +6,18 @@ from src.rules.customer_profile.cp002 import PreviousRestructuringRule
 
 
 def make_rule() -> PreviousRestructuringRule:
-    return PreviousRestructuringRule(RuleConfig(rule_id="CP002", rule_name="Previous Restructuring", category="customer_profile", threshold=1.0, severity=RuleSeverity.HIGH, severity_direction="HIGHER_IS_WORSE", input_field="previous_restructuring", trigger_operator="GTE"))
+    return PreviousRestructuringRule(
+        RuleConfig(
+            rule_id="CP002",
+            rule_name="Previous Restructuring",
+            category="customer_profile",
+            threshold=1.0,
+            severity=RuleSeverity.HIGH,
+            severity_direction="HIGHER_IS_WORSE",
+            input_field="previous_restructuring",
+            trigger_operator="GTE",
+        )
+    )
 
 
 def test_previous_restructuring_triggers() -> None:
