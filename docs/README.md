@@ -1,21 +1,19 @@
 # Documentation
 
-The documentation is organized around five complementary concerns: architecture, reporting, validation, security/data handling and architectural decisions.
+This folder contains the concise technical documentation for the current implementation.
 
 ## Documentation map
 
 | Document | Purpose |
 |---|---|
-| [`architecture.md`](architecture.md) | Current system architecture, domain boundaries, workflow, Results UI and configuration model |
-| [`reporting.md`](reporting.md) | Complete multi-domain evidence flow from deterministic rules to narrative reporting |
+| [`architecture.md`](architecture.md) | System architecture, domains, workflow, configuration and Results UI |
+| [`reporting.md`](reporting.md) | Deterministic evidence flow and bounded reporting |
 | [`architecture-decisions.md`](architecture-decisions.md) | Accepted architectural decisions and rationale |
-| [`adr-016-complete-rule-evidence-reporting.md`](adr-016-complete-rule-evidence-reporting.md) | ADR defining complete rule-evidence propagation into reporting |
-| [`validation.md`](validation.md) | Test strategy, deterministic invariants, LLM grounding, resilience and CI gates |
-| [`security-data-handling.md`](security-data-handling.md) | Input integrity, secrets, data minimization, LLM trust boundary and production limitations |
+| [`adr-016-complete-rule-evidence-reporting.md`](adr-016-complete-rule-evidence-reporting.md) | Complete rule-evidence propagation into reporting |
+| [`validation.md`](validation.md) | Testing, invariants, scenario coverage and CI |
+| [`security-data-handling.md`](security-data-handling.md) | Input integrity, secrets, data minimization and LLM boundary |
 
 ## Reading order
-
-For a technical reviewer or supervisor, the recommended order is:
 
 ```text
 README.md
@@ -26,38 +24,34 @@ docs/reporting.md
    ↓
 docs/architecture-decisions.md
    ↓
-docs/adr-016-complete-rule-evidence-reporting.md
-   ↓
 docs/validation.md
    ↓
 docs/security-data-handling.md
 ```
 
-## Current architectural message
-
-The repository is intentionally built around one primary invariant:
+## Current architecture
 
 > **The deterministic assessment decides; AI only explains.**
 
-The current implementation contains four deterministic assessment domains:
+The system evaluates four explicit domains:
 
-- Customer Profile (`CP001–CP002`)
-- Financial Analysis (`R001–R007`)
-- Behavioural Analysis (`B001–B004`)
-- Debt Sustainability (`DS001–DS003`)
+- Customer Profile — `CP001–CP003`
+- Financial Analysis — `R001–R007`
+- Behavioural Analysis — `B001–B004`
+- Debt Sustainability — `DS001–DS003`
 
-These domains are consolidated by a deterministic final-assessment service. The analysis layer then aggregates the **complete rule evidence from every domain**, including `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` outcomes. The Reporting Agent consumes this evidence for narrative synthesis; `risk_factors` remains restricted to high-severity triggered evidence.
+The **17-rule** inventory is evaluated deterministically. The case-level assessment is produced before reporting. The analysis layer preserves complete rule evidence, including `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` outcomes.
 
-The Streamlit Results UI is a read-only presentation layer over the resulting evidence. Optional Gemini/Ollama reporting can generate narrative content, but provider failure or grounding failure activates deterministic fallback and cannot alter the credit decision.
+Reporting consumes this evidence. Gemini and Ollama are optional providers; deterministic fallback remains available and LLM output cannot modify the assessment.
 
-## Documentation maintenance rule
+The Streamlit Results page is a read-only presentation layer with one authoritative macro-area evidence dashboard followed by the Executive Narrative.
 
-Documentation should describe the **current implementation**, not planned architecture. In particular:
+## Documentation rule
 
-- rule configuration paths must match the files under `config/`;
-- reporting documentation must distinguish complete rule evidence from the narrower risk-driver collection;
-- UI descriptions must match the current Results hierarchy;
-- removed metrics or helpers must not be documented as active features;
-- roadmap items must distinguish completed functionality from future work;
-- deterministic decision boundaries must remain explicit whenever LLM functionality is described;
-- new rule families should flow through domain services and case evidence rather than introducing rule logic into the Reporting Agent.
+Documentation must describe the repository as it exists on `main`.
+
+- Keep paths aligned with the current source tree.
+- Keep the rule catalogue aligned with configuration and implementation.
+- Do not document removed legacy modules or duplicated UI sections.
+- Keep deterministic decisioning separate from reporting.
+- Mark future work as roadmap, not as implemented functionality.
