@@ -5,6 +5,7 @@ from typing import Any
 from src.models.behavioural_data import BehaviouralData
 from src.models.customer_profile_data import CustomerProfileData
 from src.models.debt_sustainability_data import DebtSustainabilityData
+from src.models.ews_score import EwsScoreClass
 from src.models.position import CreditPosition
 
 # The demo catalog intentionally contains one complete credit case. It populates
@@ -47,7 +48,7 @@ _BASE_CASE_DATA: dict[str, dict[str, Any]] = {
         "relationship_years": 8,
         "business_history_years": 1,
         "historical_facilities": ["Revolving credit", "Term loan"],
-        "active_ews": True,
+        "ews_score_class": EwsScoreClass.LIGHT_RED,
         "previous_restructuring": True,
     },
     "behavioural": {
