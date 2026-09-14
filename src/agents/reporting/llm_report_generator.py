@@ -51,7 +51,7 @@ class LLMReportGenerator(ReportGenerator):
         response = self.llm_client.generate(self.prompt_builder.build(analysis))
         narrative = self._validate_response(response)
         if self.require_indicator_values:
-            narrative = self._validate_indicator_grounding(
+            narrative = self._sanitize_indicator_grounding(
                 narrative,
                 analysis.key_findings,
             )
@@ -132,7 +132,7 @@ class LLMReportGenerator(ReportGenerator):
         narrative: str,
         findings: list[AnalysisFinding],
     ) -> str:
-        """Keep only sentences whose numeric indicators are grounded in findings."""
+        """Remove unsupported numeric claims while preserving safe qualitative text."""
         source_values = {
             cls._normalise_indicator(value)
             for value in cls._extract_indicator_values(findings)
@@ -201,7 +201,7 @@ class LLMReportGenerator(ReportGenerator):
         narrative: str,
         findings: list[AnalysisFinding],
     ) -> str:
-        return cls._validate_indicator_grounding(narrative, findings)
+        return cls._sanitize_indicator_grounding(narrative, findings)
 
     @staticmethod
     def _group_findings_by_category(
