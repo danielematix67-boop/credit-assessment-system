@@ -1,5 +1,6 @@
 """Single-rule indicator detail visualization."""
 
+from numbers import Number
 from typing import Any
 
 import pandas as pd
@@ -13,6 +14,11 @@ from app.ui.results.helpers import (
     rule_status,
     status_label,
 )
+
+
+def _is_numeric(value: Any) -> bool:
+    """Return whether a value is suitable for the numeric indicator chart."""
+    return isinstance(value, Number) and not isinstance(value, bool)
 
 
 def render_rule_indicator_detail(result: Any) -> None:
@@ -62,6 +68,7 @@ def render_rule_indicator_detail(result: Any) -> None:
 
     status_text = status_label(status)
     severity_text = severity.upper()
+    numeric_indicator = _is_numeric(value) and _is_numeric(threshold)
 
     # Presentation-only card. All displayed values come directly from RuleResult.
     with st.container(border=True):
@@ -80,9 +87,12 @@ def render_rule_indicator_detail(result: Any) -> None:
             st.markdown(f"## {format_indicator_value(value)}")
         with value_cols[1]:
             st.caption("Configured threshold")
-            st.markdown(f"## {format_indicator_value(threshold)}")
+            if numeric_indicator:
+                st.markdown(f"## {format_indicator_value(threshold)}")
+            else:
+                st.markdown("## —")
 
-        if value is not None and threshold is not None:
+        if numeric_indicator:
             chart_data = pd.DataFrame(
                 {
                     "Measure": ["Actual", "Threshold"],
