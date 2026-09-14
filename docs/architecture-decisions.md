@@ -21,12 +21,13 @@ This document records the architectural decisions that define the Credit Assessm
 | ADR-013 | Explicit Handling of All-`NOT_EVALUABLE` Assessments | Accepted |
 | ADR-014 | Multi-Domain Case Assessment | Accepted |
 | ADR-015 | Severity-Based Risk Driver Presentation | Accepted |
+| ADR-016 | Application-Controlled Executive Narrative Structure | Accepted |
 
 ---
 
 # ADR-001 — Deterministic Rule Engine as Decision Authority
 
-**Decision:** The deterministic Rule Engine is the decision authority for financial rule assessment. The deterministic `FinalAssessmentService` is the authority for cross-domain case aggregation. LLM components cannot modify or override either structured decision.
+**Decision:** Deterministic assessment services are the decision authority. `FinalAssessmentService` is the authority for cross-domain case aggregation. LLM components cannot modify or override either structured decision.
 
 **Rationale:** Determinism, reproducibility, traceability and separation of business logic from generative AI.
 
@@ -46,7 +47,7 @@ This document records the architectural decisions that define the Credit Assessm
 
 # ADR-004 — Pluggable Rule Architecture and Registry
 
-**Decision:** Rules share a common abstraction and are resolved through registry/discovery mechanisms using configured rule identifiers.
+**Decision:** Rules share common abstractions and are resolved through registry/discovery mechanisms using configured rule identifiers.
 
 **Rationale:** New indicators can be added without rule-specific branching in central services.
 
@@ -90,31 +91,31 @@ This document records the architectural decisions that define the Credit Assessm
 
 # ADR-011 — Evidence-Oriented Results UI
 
-**Decision:** The Results view follows this progressive hierarchy:
+**Decision:** The Results view follows a progressive hierarchy:
 
 ```text
 Executive Credit Assessment
           ↓
-Final Assessment
-          ↓
-Risk Drivers
-          ↓
-Rule Engine Evidence
+Assessment by Macro-Area
           ↓
 Executive Narrative
           ↓
-Detailed Analysis by Macro-area
+Risk Drivers (collapsed)
+          ↓
+Detailed Assessment (collapsed)
+          ↓
+Rule Catalogue & Filters (collapsed)
+          ↓
+Individual Rule Detail (collapsed)
 ```
 
-The executive assessment is the primary decision surface. Final Assessment exposes deterministic cross-domain consolidation. Risk Drivers exposes triggered evidence. Rule Engine Evidence provides technical inspection. Narrative provides management-oriented prose. Detailed Analysis provides deeper macro-area evidence.
+The four macro-area sections are the authoritative visible deterministic overview. Technical detail is progressively disclosed rather than repeated through multiple aggregate views.
 
-The UI consumes workflow outputs and does not recalculate thresholds, severity or assessment status.
-
-**Rationale:** Separates decision, drivers, evidence, narrative and drill-down detail while avoiding repetitive technical presentation.
+**Rationale:** Separates decision, domain evidence, narrative and technical drill-down while reducing duplication.
 
 # ADR-012 — Structural Input Validation Before Assessment
 
-**Decision:** `CreditPositionValidator` is invoked before Rule Engine evaluation. It validates object type, non-empty `position_id`, numeric fields, boolean misuse and finite numeric values. `None` remains valid for downstream `NOT_EVALUABLE` handling.
+**Decision:** `CreditPositionValidator` is invoked before deterministic assessment. It validates object type, non-empty `position_id`, numeric fields, boolean misuse and finite numeric values. `None` remains valid for downstream `NOT_EVALUABLE` handling.
 
 The validator does not impose generic financial sign constraints; those remain the responsibility of individual rules.
 
@@ -136,12 +137,10 @@ EMPTY RESULTS → NORMAL
 
 # ADR-014 — Multi-Domain Case Assessment
 
-**Status:** Accepted
-
 **Decision:** The system models a complete credit case across four explicit deterministic domains:
 
 ```text
-Customer Profile      → CP001–CP002
+Customer Profile      → CP001–CP003
 Financial Analysis    → R001–R007
 Behavioural Analysis  → B001–B004
 Debt Sustainability   → DS001–DS003
@@ -149,7 +148,7 @@ Debt Sustainability   → DS001–DS003
                   Final Assessment
 ```
 
-Each domain owns its inputs and rule evaluation. `FinalAssessmentService` performs the deterministic cross-domain consolidation.
+Each domain owns its inputs and rule evaluation. `FinalAssessmentService` performs deterministic cross-domain consolidation.
 
 Customer Profile is contextual for the two-core-area escalation: `ATTENTION` does not count toward the two-area threshold, while `CRITICAL` can still produce a `CRITICAL` final assessment.
 
@@ -157,13 +156,22 @@ Customer Profile is contextual for the two-core-area escalation: `ATTENTION` doe
 
 # ADR-015 — Severity-Based Risk Driver Presentation
 
-**Status:** Accepted
+**Decision:** Risk Drivers presents triggered deterministic indicators across macro-areas and orders them by configured severity priority. The UI does not calculate a secondary risk score or expose the removed threshold-distance metric.
 
-**Decision:** Risk Drivers presents triggered deterministic indicators across macro-areas and orders them by configured severity priority. The UI no longer exposes the previously used threshold-distance metric or related derived helpers.
+**Rationale:** Severity is an existing deterministic property and provides a clear, defensible prioritization without introducing a second scoring mechanism.
 
-The Risk Drivers view is descriptive evidence presentation and does not create a new risk score or alter the final assessment.
+# ADR-016 — Application-Controlled Executive Narrative Structure
 
-**Rationale:** Severity is an existing deterministic property of each rule and provides a clearer, more defensible prioritization than introducing a secondary distance metric into the presentation layer.
+**Decision:** The Executive Narrative always presents the assessment areas in this exact order:
+
+1. Customer Profile
+2. Financial Analysis
+3. Behavioural Analysis
+4. Debt Sustainability
+
+Python owns the titles and structural order. The LLM supplies narrative prose derived from deterministic evidence and cannot create, remove or reorder assessment categories.
+
+**Rationale:** The macro-area taxonomy is part of the application's domain model and presentation contract. Keeping it outside the LLM prevents inconsistent headings, missing domains and structural drift between reporting providers.
 
 ---
 
@@ -182,8 +190,9 @@ The decisions above imply:
 9. LLM failure cannot invalidate deterministic assessment.
 10. Presentation code does not own business logic.
 11. Execution provenance remains separate from decision data.
-12. The UI explains the decision path without reproducing decision logic.
+12. The UI explains deterministic evidence without reproducing decision logic.
 13. Technical evidence is progressively disclosed rather than presented all at once.
+14. The Executive Narrative structure is application-controlled and provider-independent.
 
 ## Current Architecture
 
@@ -191,16 +200,8 @@ The decisions above imply:
 flowchart LR
     UI[Streamlit UI] --> WF[Assessment Workflow]
     WF --> VAL[CreditPosition Validator]
-    VAL --> FIN[Financial Assessment]
-    FIN --> RE[Rule Engine]
-    RE --> RR[Rule Results]
-    WF --> CP[Customer Profile]
-    WF --> BEH[Behavioural Analysis]
-    WF --> DS[Debt Sustainability]
-    RR --> CASE[Credit Assessment Case]
-    CP --> CASE
-    BEH --> CASE
-    DS --> CASE
+    VAL --> DOM[Four Domain Assessments]
+    DOM --> CASE[Credit Assessment Case]
     CASE --> FINAL[Final Assessment]
     FINAL --> UI
     WF --> ANA[Deterministic Analysis]
@@ -211,10 +212,7 @@ flowchart LR
     GROUND -. invalid .-> DRG
     RP -. provider failure .-> DRG
     WF --> META[Execution Metadata]
-    CFG[config/*.yaml] --> RE
-    CFG --> CP
-    CFG --> BEH
-    CFG --> DS
+    CFG[config/*.yaml] --> DOM
     CFG --> FINAL
 ```
 
