@@ -88,6 +88,7 @@ class CustomerProfileAssessmentService:
                     data.ews_score_class.value if data.ews_score_class else None
                 ),
                 "previous_restructuring": data.previous_restructuring,
+                "forborne": data.forborne,
             },
         )
 
@@ -108,5 +109,6 @@ class CustomerProfileAssessmentService:
                 data.historical_facilities,
                 data.ews_score_class,
                 data.previous_restructuring,
+                data.forborne,
             )
         )
