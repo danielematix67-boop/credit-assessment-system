@@ -16,7 +16,7 @@ def render_executive_synthesis(result: Any) -> None:
         return
 
     render_section_header(
-        "06 · Executive Narrative",
+        "Executive Narrative",
         "Management-level narrative generated from the deterministic assessment evidence.",
     )
 
