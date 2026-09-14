@@ -99,6 +99,18 @@ def test_llm_accepts_equivalent_source_indicator_formatting() -> None:
     assert report.executive_summary.endswith(response)
 
 
+def test_llm_accepts_deterministic_monetary_indicator_formatting() -> None:
+    analysis = make_analysis(
+        make_finding("EBITDA is negative at €-120,000.00.", category="profitability"),
+    )
+    response = "EBITDA is negative at €-120000.00."
+    report = LLMReportGenerator(
+        MockLLMClient(response=response),
+        require_indicator_values=True,
+    ).generate(analysis)
+    assert report.executive_summary.endswith(response)
+
+
 def test_llm_sanitizes_unsupported_indicator_values_instead_of_falling_back() -> None:
     analysis = make_analysis(
         make_finding(
