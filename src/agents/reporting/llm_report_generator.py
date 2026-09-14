@@ -24,6 +24,12 @@ class LLMReportGenerator(ReportGenerator):
         re.IGNORECASE,
     )
     _NUMERIC_SPACING_PATTERN = re.compile(r"(?<=\d)\s*\.\s*(?=\d)")
+    _ASSESSMENT_AREA_ORDER = (
+        "Customer Profile",
+        "Financial Analysis",
+        "Behavioural Analysis",
+        "Debt Sustainability",
+    )
 
     def __init__(
         self,
@@ -64,19 +70,65 @@ class LLMReportGenerator(ReportGenerator):
             limitations=analysis.limitations,
         )
 
-    @staticmethod
+    @classmethod
     def _build_executive_summary(
+        cls,
         analysis: AssessmentAnalysis,
         narrative: str,
     ) -> str:
-        """Build one authoritative status line followed by the LLM narrative."""
+        """Build status plus fixed assessment-area sections around the LLM prose."""
         status_value = getattr(
             analysis.assessment_status,
             "value",
             str(analysis.assessment_status),
         )
         status_label = str(status_value).capitalize()
-        return f"Assessment Status: {status_label}\n\n{narrative}"
+        sections = cls._format_assessment_area_sections(analysis, narrative)
+        return f"Assessment Status: {status_label}\n\n{sections}"
+
+    @classmethod
+    def _format_assessment_area_sections(
+        cls,
+        analysis: AssessmentAnalysis,
+        narrative: str,
+    ) -> str:
+        """Add deterministic assessment-area headings without asking the LLM to format them."""
+        findings = analysis.rule_evidence or analysis.key_findings
+        categories = cls._ordered_assessment_areas(findings)
+
+        # Keep lightweight/unit-test analyses backward compatible when they do not
+        # use the four production assessment areas.
+        if not categories:
+            return narrative
+
+        paragraphs = [
+            paragraph.strip()
+            for paragraph in narrative.split("\n\n")
+            if paragraph.strip()
+        ]
+        if len(paragraphs) != len(categories):
+            raise ValueError(
+                "LLM narrative must contain exactly one paragraph per represented "
+                "assessment area."
+            )
+
+        return "\n\n".join(
+            f"### {category}\n\n{paragraph}"
+            for category, paragraph in zip(categories, paragraphs, strict=True)
+        )
+
+    @classmethod
+    def _ordered_assessment_areas(
+        cls,
+        findings: list[AnalysisFinding],
+    ) -> list[str]:
+        """Return represented macro areas in the deterministic canonical order."""
+        represented = {finding.category.casefold() for finding in findings}
+        return [
+            category
+            for category in cls._ASSESSMENT_AREA_ORDER
+            if category.casefold() in represented
+        ]
 
     @classmethod
     def _extract_indicator_values(cls, findings: list[AnalysisFinding]) -> list[str]:
