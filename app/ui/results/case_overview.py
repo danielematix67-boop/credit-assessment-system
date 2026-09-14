@@ -66,6 +66,7 @@ def _render_customer_evidence(section: Any) -> None:
         "Size class": _profile_value(context, "size_class"),
         "Geography": _profile_value(context, "geography"),
         "EWS Score Class": _profile_value(context, "ews_score_class"),
+        "Forborne": _profile_value(context, "forborne"),
     }])
     st.dataframe(profile_frame, use_container_width=True, hide_index=True)
     relationship_col, ownership_col = st.columns(2)
