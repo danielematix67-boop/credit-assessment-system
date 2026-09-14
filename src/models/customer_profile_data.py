@@ -19,3 +19,4 @@ class CustomerProfileData:
     historical_facilities: list[str] = field(default_factory=list)
     ews_score_class: EwsScoreClass | None = None
     previous_restructuring: bool | None = None
+    forborne: bool | None = None
