@@ -6,9 +6,9 @@ Accepted
 
 ## Context
 
-The assessment catalog contains 17 deterministic rules across four domains:
+The assessment catalog contains **18 deterministic rules across four domains**:
 
-- Customer Profile: `CP001–CP003`
+- Customer Profile: `CP001–CP004`
 - Financial Analysis: `R001–R007`
 - Behavioural Analysis: `B001–B004`
 - Debt Sustainability: `DS001–DS003`
@@ -46,7 +46,8 @@ src/rules/
 ├── customer_profile/
 │   ├── cp001.py
 │   ├── cp002.py
-│   └── cp003.py
+│   ├── cp003.py
+│   └── cp004.py
 ├── financial_analysis/
 │   ├── r001.py
 │   ├── r002.py
@@ -101,7 +102,7 @@ Contains declarative rule metadata:
 - severity bands;
 - comment template.
 
-Configuration therefore controls **parameters**, while Python controls **rule execution**.
+Configuration therefore controls **parameters**, while Python controls **rule execution and specialised business semantics**.
 
 ### Tests
 
@@ -123,6 +124,38 @@ tests/rules/
     └── ...
 ```
 
+Tests should cover triggered, not-triggered, boundary, severity, missing/invalid input, calculation edge cases and deterministic evidence. Configuration/registry tests must also ensure that configured rules have registered implementations.
+
+## New Rule Change Path
+
+A complete rule change follows this path:
+
+```text
+Business requirement
+       ↓
+CreditPosition input field(s)
+       ↓
+Domain YAML configuration
+       ↓
+Concrete Rule implementation
+       ↓
+Automatic discovery + registry
+       ↓
+RuleEngine / Domain Assessment Service
+       ↓
+RuleResult
+       ↓
+Deterministic analysis
+       ↓
+Reporting + grounding validation
+       ↓
+Results UI
+       ↓
+Tests + demo scenarios + documentation
+```
+
+The rule itself owns deterministic business semantics. Aggregation, reporting and presentation must remain outside the rule.
+
 ## Consequences
 
 ### Positive
@@ -133,7 +166,7 @@ tests/rules/
 - Complex rules can gain private helper modules without affecting other rules.
 - Domain services do not duplicate threshold/comparison/severity logic.
 - Rule behaviour has a single deterministic implementation path.
-- Thresholds can be changed without changing Python rule code.
+- Thresholds can be changed without changing Python rule code when the generic rule semantics are sufficient.
 - Rule discovery and registry validation can detect missing implementations.
 - Rule-specific tests remain focused and easy to locate.
 - The architecture remains compatible with the deterministic-first AI boundary.
