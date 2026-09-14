@@ -165,5 +165,6 @@ class CaseAnalysisAgent:
             ("Size class", profile.get("size_class")),
             ("Geography", profile.get("geography")),
             ("Relationship years", profile.get("relationship_years")),
+            ("EWS Score class", profile.get("ews_score_class")),
         )
         return "; ".join(f"{label}: {value}" for label, value in fields if value not in (None, ""))
