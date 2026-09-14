@@ -6,6 +6,7 @@ This directory contains the technical documentation for the assessment system.
 
 | Document | Purpose |
 |---|---|
+| [`getting-started.md`](getting-started.md) | First-time orientation, local setup and recommended reading paths |
 | [`architecture.md`](architecture.md) | System architecture, boundaries, configuration and workflow |
 | [`rules.md`](rules.md) | Complete lifecycle for designing, implementing, testing and documenting a new rule |
 | [`reporting.md`](reporting.md) | Deterministic evidence flow and bounded reporting |
@@ -17,21 +18,47 @@ This directory contains the technical documentation for the assessment system.
 
 ## Recommended reading order
 
+For a first-time reader:
+
 ```text
 README.md
    ↓
+docs/getting-started.md
+   ↓
 docs/architecture.md
    ↓
-docs/rules.md
-   ↓
 docs/reporting.md
-   ↓
-docs/validation.md
-   ↓
-docs/security-data-handling.md
 ```
 
-Architecture decisions provide the rationale behind the implementation and can be consulted when a design choice is being changed.
+For a developer:
+
+```text
+Architecture
+   ↓
+Rules
+   ↓
+Validation
+   ↓
+Reporting
+   ↓
+ADRs
+```
+
+For a thesis/reviewer perspective:
+
+```text
+Business problem
+   ↓
+Architecture
+   ↓
+Deterministic / AI boundary
+   ↓
+Rule lifecycle
+   ↓
+Validation and testing
+   ↓
+Architectural decisions
+```
 
 ## Source-of-truth hierarchy
 
@@ -67,7 +94,8 @@ Avoid maintaining lists such as:
 - exact rule counts per domain;
 - fixed threshold values;
 - provider/model names that are merely deployment choices;
-- exact coverage values when they belong to CI configuration.
+- exact coverage values when they belong to CI configuration;
+- a specific Python runtime version when that version is already declared by CI.
 
 Those values change more frequently than the architecture.
 
@@ -115,5 +143,6 @@ Before merging documentation changes, verify that:
 - examples are clearly distinguished from production catalogue values;
 - removed legacy components are not presented as current architecture;
 - reporting is described as downstream of deterministic assessment;
-- rule inventory and policy values are not unnecessarily duplicated;
-- links between related documents remain valid.
+- rule inventory, policy values and environment versions are not unnecessarily duplicated;
+- links between related documents remain valid;
+- the documentation map includes every maintained entry-point document.
