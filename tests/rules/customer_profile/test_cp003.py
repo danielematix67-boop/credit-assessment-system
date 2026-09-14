@@ -6,7 +6,18 @@ from src.rules.customer_profile.cp003 import BusinessHistoryRule
 
 
 def make_rule() -> BusinessHistoryRule:
-    return BusinessHistoryRule(RuleConfig(rule_id="CP003", rule_name="Business history", category="customer_profile", threshold=5.0, severity=RuleSeverity.MEDIUM, severity_direction="LOWER_IS_WORSE", input_field="business_history_years", trigger_operator="LTE"))
+    return BusinessHistoryRule(
+        RuleConfig(
+            rule_id="CP003",
+            rule_name="Business history",
+            category="customer_profile",
+            threshold=5.0,
+            severity=RuleSeverity.MEDIUM,
+            severity_direction="LOWER_IS_WORSE",
+            input_field="business_history_years",
+            trigger_operator="LTE",
+        )
+    )
 
 
 def test_short_business_history_triggers() -> None:
