@@ -1,9 +1,12 @@
 from pathlib import Path
+from typing import cast
 
 from src.comments.comment_engine import CommentEngine
 from src.config.rule_config_loader import RuleConfigLoader
 from src.models.assessment_section import AssessmentSection, SectionStatus
+from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.debt_sustainability_data import DebtSustainabilityData
+from src.models.position import CreditPosition
 from src.models.rule_finding import RuleFinding
 from src.rules.base.status import RuleStatus
 from src.rules.registry import build_rules
@@ -29,7 +32,9 @@ class DebtSustainabilityAssessmentService:
 
     def assess(self, data: DebtSustainabilityData) -> AssessmentSection:
         configs = self.config_loader.load(self.config_path)
-        results = [rule.evaluate(data) for rule in build_rules(configs)]
+        results = [
+            rule.evaluate(cast(CreditPosition, data)) for rule in build_rules(configs)
+        ]
         status = self._section_status(results)
         findings = []
         for result in results:
@@ -42,7 +47,9 @@ class DebtSustainabilityAssessmentService:
         limitations = (
             ["Debt-service and cash-flow data are not available."]
             if all(result.status == RuleStatus.NOT_EVALUABLE for result in results)
-            else ["Debt sustainability is assessed from the supplied synthetic inputs only."]
+            else [
+                "Debt sustainability is assessed from the supplied synthetic inputs only."
+            ]
         )
         return AssessmentSection(
             name="Debt Sustainability",
@@ -54,11 +61,17 @@ class DebtSustainabilityAssessmentService:
 
     @staticmethod
     def _section_status(results):
-        evaluable = [result for result in results if result.status != RuleStatus.NOT_EVALUABLE]
+        evaluable = [
+            result for result in results if result.status != RuleStatus.NOT_EVALUABLE
+        ]
         if not evaluable:
             return SectionStatus.ATTENTION
 
-        triggered = {result.rule_id for result in evaluable if result.status == RuleStatus.TRIGGERED}
+        triggered = {
+            result.rule_id
+            for result in evaluable
+            if result.status == RuleStatus.TRIGGERED
+        }
         if not triggered:
             return SectionStatus.NORMAL
 
