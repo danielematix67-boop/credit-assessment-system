@@ -72,7 +72,17 @@ def execute_assessment(
                     customer_profile_data=customer_profile_data,
                 )
             else:
-                result = run_assessment(workflow, position)
+                result = run_assessment(
+                    workflow,
+                    position,
+                    behavioural_data=st.session_state.get("manual_behavioural_data"),
+                    debt_sustainability_data=st.session_state.get(
+                        "manual_debt_sustainability_data"
+                    ),
+                    customer_profile_data=st.session_state.get(
+                        "manual_customer_profile_data"
+                    ),
+                )
 
         except Exception as error:
             st.error("Assessment execution failed.")
