@@ -1,4 +1,4 @@
-"""Credit assessment case overview presentation."""
+"""Detailed analyst view for the credit assessment case."""
 
 from typing import Any
 
@@ -10,26 +10,6 @@ from app.ui.results.financial_analysis import (
     render_debt_analysis,
     render_financial_analysis,
 )
-from app.ui.results.helpers import rule_indicator, rule_status
-
-
-def _status_value(status: Any) -> str:
-    return str(getattr(status, "value", status or "NOT_EVALUABLE")).upper()
-
-
-def _status_class(status: str) -> str:
-    return {
-        "NORMAL": "normal",
-        "ATTENTION": "attention",
-        "CRITICAL": "critical",
-        "NOT_EVALUABLE": "neutral",
-    }.get(status, "neutral")
-
-
-def _rule_status(rule: Any) -> str:
-    return str(
-        getattr(getattr(rule, "status", None), "value", getattr(rule, "status", ""))
-    ).upper()
 
 
 def _profile_value(data: Any, field: str, default: str = "Not available") -> str:
@@ -73,7 +53,7 @@ def _profile_list(data: Any, field: str) -> list[Any]:
 
 
 def _render_customer_profile(section: Any) -> None:
-    """Render customer context and every deterministic customer-profile rule."""
+    """Render customer context without duplicating Rule Engine evidence."""
     context = getattr(section, "context", {}) or {}
     evidence = list(getattr(section, "evidence", []) or [])
 
@@ -82,28 +62,14 @@ def _render_customer_profile(section: Any) -> None:
         return
 
     available, total = _profile_completeness(context)
-    triggered = sum(_rule_status(rule) == "TRIGGERED" for rule in evidence)
-    not_evaluable = sum(_rule_status(rule) == "NOT_EVALUABLE" for rule in evidence)
-
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Profile information", f"{available}/{total}")
     with col2:
         relationship_years = _profile_value(context, "relationship_years", "—")
         st.metric("Banking relationship", f"{relationship_years} years")
     with col3:
-        st.metric(
-            "Historical facilities",
-            len(_profile_list(context, "historical_facilities")),
-        )
-    with col4:
-        st.metric("Profile rules triggered", triggered)
-
-    if not_evaluable:
-        st.caption(
-            f"{not_evaluable} of {len(evidence)} customer-profile rules are not evaluable "
-            "with the available data."
-        )
+        st.metric("Historical facilities", len(_profile_list(context, "historical_facilities")))
 
     st.markdown("**Company & anagraphic profile**")
     profile_frame = pd.DataFrame(
@@ -145,86 +111,25 @@ def _render_customer_profile(section: Any) -> None:
         if not shareholders and not management:
             st.caption("Ownership and management information not available.")
 
-    st.markdown("**Customer-profile rule evidence**")
-    rule_rows = []
-    for rule in evidence:
-        rule_rows.append(
-            {
-                "Rule": getattr(rule, "rule_id", ""),
-                "Indicator": rule_indicator(rule),
-                "Value": getattr(rule, "value", None),
-                "Threshold": getattr(rule, "threshold", None),
-                "Status": rule_status(rule),
-            }
-        )
-    rule_frame = pd.DataFrame(rule_rows)
-    if not rule_frame.empty:
-        st.dataframe(rule_frame, use_container_width=True, hide_index=True)
 
-        status_counts = (
-            rule_frame["Status"].value_counts().reindex(
-                ["TRIGGERED", "NOT_TRIGGERED", "NOT_EVALUABLE"], fill_value=0
-            )
-        )
-        st.markdown("**Customer-profile rule outcomes**")
-        st.bar_chart(status_counts.to_frame("Rules"), horizontal=True)
-
-    st.markdown("**Risk-context signals**")
-    evidence_by_rule = {
-        getattr(rule, "rule_id", ""): rule for rule in evidence
-    }
-    signal_frame = pd.DataFrame(
-        [
-            {
-                "Signal": "Active EWS",
-                "Value": _rule_status(evidence_by_rule["CP001"])
-                if "CP001" in evidence_by_rule
-                else "NOT_EVALUABLE",
-            },
-            {
-                "Signal": "Previous restructuring",
-                "Value": _rule_status(evidence_by_rule["CP002"])
-                if "CP002" in evidence_by_rule
-                else "NOT_EVALUABLE",
-            },
-            {
-                "Signal": "Business history",
-                "Value": _rule_status(evidence_by_rule["CP003"])
-                if "CP003" in evidence_by_rule
-                else "NOT_EVALUABLE",
-            },
-        ]
-    )
-    st.dataframe(signal_frame, use_container_width=True, hide_index=True)
-
-
-def _render_section_details(section: Any) -> None:
-    """Show findings and limitations without changing deterministic results."""
-    if section.findings:
-        with st.expander("Triggered findings", expanded=True):
-            for finding in section.findings:
-                result = getattr(finding, "result", None)
-                reason = getattr(result, "reason", None) or getattr(
-                    finding, "comment", ""
-                )
-                if reason:
-                    st.write(f"• {reason}")
-
-    if section.limitations:
-        with st.expander("Limitations", expanded=False):
-            for limitation in section.limitations:
-                st.write(f"• {limitation}")
+def _render_limitations(section: Any) -> None:
+    """Keep only limitations here; findings are rendered by area-specific analysis views."""
+    limitations = list(getattr(section, "limitations", []) or [])
+    if not limitations:
+        return
+    with st.expander("Limitations", expanded=False):
+        for limitation in limitations:
+            st.write(f"• {limitation}")
 
 
 def _render_data_quality_overview(credit_case: Any) -> None:
-    """Show evidence coverage and data limitations before interpreting risk."""
+    """Show evidence coverage as a technical/audit view."""
     sections = list(getattr(credit_case, "sections", []) or [])
-    total_evidence = sum(
-        len(getattr(section, "evidence", []) or []) for section in sections
-    )
+    total_evidence = sum(len(getattr(section, "evidence", []) or []) for section in sections)
     evaluable_evidence = sum(
         sum(
-            _rule_status(rule) != "NOT_EVALUABLE"
+            str(getattr(getattr(rule, "status", None), "value", getattr(rule, "status", ""))).upper()
+            != "NOT_EVALUABLE"
             for rule in getattr(section, "evidence", [])
         )
         for section in sections
@@ -235,27 +140,28 @@ def _render_data_quality_overview(credit_case: Any) -> None:
     )
     coverage = evaluable_evidence / total_evidence if total_evidence else 0.0
 
-    st.markdown("### Data & Evidence Quality")
+    st.markdown("**Data & Evidence Quality**")
     st.caption(
-        "Evidence coverage is shown separately from credit risk. Missing or unavailable data are "
-        "explicit limitations and do not become a synthetic risk score."
+        "Technical coverage view for auditability. Missing data remain explicit limitations and do not become a synthetic risk score."
     )
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Evidence items", total_evidence)
     with col2:
-        st.metric("Evaluable", evaluable_evidence)
-    with col3:
         st.metric("Not evaluable", not_evaluable_evidence)
-    with col4:
+    with col3:
         st.metric("Evidence coverage", f"{coverage:.0%}")
 
     quality_rows = []
     for section in sections:
         evidence = list(getattr(section, "evidence", []) or [])
         total = len(evidence)
-        evaluable = sum(_rule_status(rule) != "NOT_EVALUABLE" for rule in evidence)
+        evaluable = sum(
+            str(getattr(getattr(rule, "status", None), "value", getattr(rule, "status", ""))).upper()
+            != "NOT_EVALUABLE"
+            for rule in evidence
+        )
         quality_rows.append(
             {
                 "Macro-area": section.name,
@@ -272,42 +178,31 @@ def _render_data_quality_overview(credit_case: Any) -> None:
         st.info("No evidence items are available for this case.")
         return
 
-    chart_frame = quality_frame.set_index("Macro-area")[["Evaluable", "Not evaluable"]]
-    st.bar_chart(chart_frame, horizontal=True)
-
     display_frame = quality_frame.copy()
     display_frame["Coverage"] = display_frame["Coverage"].map(lambda value: f"{value:.0%}")
     st.dataframe(display_frame, use_container_width=True, hide_index=True)
 
     if sections_with_limitations:
         st.info(
-            f"{sections_with_limitations} of {len(sections)} macro-areas contain explicit data limitations. "
-            "Review these limitations before interpreting the final assessment."
+            f"{sections_with_limitations} of {len(sections)} macro-areas contain explicit data limitations."
         )
 
 
 def render_credit_analysis_case(result: Any) -> None:
-    """Render the macro-area risk analysis and its supporting evidence."""
+    """Render detailed analyst evidence without repeating the executive assessment."""
     credit_case = getattr(result, "credit_case", None)
     if credit_case is None:
         return
 
-    st.markdown("### Risk Analysis by Area")
+    st.markdown("### Detailed Assessment")
     st.caption(
-        "Review data quality first, then inspect the evidence and findings for each macro-area. "
-        "The deterministic Rule Engine remains the source of the assessment outcome."
+        "Analyst and audit detail only. Overall status and macro-area outcomes are presented above; this section focuses on context, indicators, findings and limitations."
     )
 
     _render_data_quality_overview(credit_case)
 
     for section in credit_case.sections:
-        status = _status_value(section.status)
-        status_class = _status_class(status)
-        st.markdown(
-            f"### {section.name} "
-            f"<span class='status-badge {status_class}'>{status}</span>",
-            unsafe_allow_html=True,
-        )
+        st.markdown(f"#### {section.name}")
 
         if section.name == "Financial Analysis":
             render_financial_analysis(section)
@@ -318,4 +213,4 @@ def render_credit_analysis_case(result: Any) -> None:
         elif section.name == "Customer Profile":
             _render_customer_profile(section)
 
-        _render_section_details(section)
+        _render_limitations(section)
