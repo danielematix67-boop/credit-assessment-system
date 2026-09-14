@@ -41,3 +41,16 @@ rules:
     comment_template: >
       Customer business history is {value:.0f} years, indicating limited
       operating or customer track record and increased early-stage credit risk.
+
+  - rule_id: CP004
+    rule_name: Forborne Exposure
+    indicator: Forborne exposure
+    category: customer_profile
+    input_field: forborne
+    trigger_operator: GTE
+    threshold: 1
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    comment_template: >
+      A forborne exposure is present in the customer profile and indicates
+      an elevated credit-risk condition.
