@@ -84,7 +84,9 @@ class CustomerProfileAssessmentService:
                 "relationship_years": data.relationship_years,
                 "business_history_years": data.business_history_years,
                 "historical_facilities": list(data.historical_facilities),
-                "active_ews": data.active_ews,
+                "ews_score_class": (
+                    data.ews_score_class.value if data.ews_score_class else None
+                ),
                 "previous_restructuring": data.previous_restructuring,
             },
         )
@@ -104,7 +106,7 @@ class CustomerProfileAssessmentService:
                 data.relationship_years,
                 data.business_history_years,
                 data.historical_facilities,
-                data.active_ews,
+                data.ews_score_class,
                 data.previous_restructuring,
             )
         )
