@@ -19,7 +19,7 @@ A second architectural concern is maintainability: individual rules may become s
 
 ## Decision
 
-Adopt a strict separation between rule configuration and rule implementation, with **one Python module per concrete rule**.
+Adopt a strict separation between rule configuration and rule implementation, with **one Python module per concrete rule**, using the same structure for every assessment domain.
 
 ```text
 config/*.yaml
@@ -38,23 +38,23 @@ Rule Engine / Domain Assessment Service
 
 ### `src/rules/`
 
-Contains executable deterministic rule implementations. Each concrete rule has its own module and registers itself with `Rule`.
-
-The target structure is:
+Every assessment domain follows the same layout. There are no domain-level `rules.py` aggregation modules and no special financial rule structure.
 
 ```text
 src/rules/
 ├── base/
-├── financial/
-│   ├── revenue/
-│   │   └── revenue_growth.py
-│   ├── margins/
-│   ├── profitability/
-│   └── leverage/
 ├── customer_profile/
 │   ├── cp001.py
 │   ├── cp002.py
 │   └── cp003.py
+├── financial_analysis/
+│   ├── r001.py
+│   ├── r002.py
+│   ├── r003.py
+│   ├── r004.py
+│   ├── r005.py
+│   ├── r006.py
+│   └── r007.py
 ├── behavioural/
 │   ├── b001.py
 │   ├── b002.py
@@ -66,12 +66,18 @@ src/rules/
     └── ds003.py
 ```
 
-Financial rules may retain a meaningful business subdomain grouping where that grouping already exists. The important invariant is that each concrete rule implementation remains independently maintainable and discoverable.
-
-A simple rule can remain a single file. If a rule becomes substantially more complex, its module can evolve into a dedicated package without changing the registry or assessment-service contract, for example:
+The rule identifier is deliberately reflected in the module name. This creates a direct mapping between configuration, implementation and tests:
 
 ```text
-src/rules/financial/r005/
+R001 → config → src/rules/financial_analysis/r001.py → test
+B001 → config → src/rules/behavioural/b001.py        → test
+DS001 → config → src/rules/sustainability/ds001.py   → test
+```
+
+A simple rule remains a single file. If a rule becomes substantially more complex, its module can evolve into a dedicated package without changing the registry or assessment-service contract, for example:
+
+```text
+src/rules/financial_analysis/r005/
 ├── __init__.py
 ├── rule.py
 ├── calculations.py
@@ -99,12 +105,15 @@ Configuration therefore controls **parameters**, while Python controls **rule ex
 
 ### Tests
 
-Rule-specific tests should mirror the implementation structure where practical:
+Rule-specific tests should mirror the same domain/identifier structure:
 
 ```text
 tests/rules/
 ├── customer_profile/
 │   ├── test_cp001.py
+│   └── ...
+├── financial_analysis/
+│   ├── test_r001.py
 │   └── ...
 ├── behavioural/
 │   ├── test_b001.py
@@ -118,14 +127,15 @@ tests/rules/
 
 ### Positive
 
-- Every configured rule has a concrete registered implementation.
+- All four domains use one consistent rule architecture.
+- Every configured rule has one concrete registered implementation.
 - Each rule can evolve independently without enlarging a shared `rules.py` file.
 - Complex rules can gain private helper modules without affecting other rules.
-- Domain services no longer duplicate threshold/comparison/severity logic.
+- Domain services do not duplicate threshold/comparison/severity logic.
 - Rule behaviour has a single deterministic implementation path.
 - Thresholds can be changed without changing Python rule code.
 - Rule discovery and registry validation can detect missing implementations.
-- Rule-specific tests can remain focused and easy to locate.
+- Rule-specific tests remain focused and easy to locate.
 - The architecture remains compatible with the deterministic-first AI boundary.
 
 ### Constraint
