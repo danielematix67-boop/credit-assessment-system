@@ -154,7 +154,10 @@ def test_llm_prompt_contains_safety_constraints(risk_position):
     workflow.run(risk_position)
     prompt = client.last_prompt
     assert prompt is not None
-    assert_prompt_contains_any(prompt, ("deterministic assessment", "rule-based assessment"))
+    assert_prompt_contains_any(
+        prompt,
+        ("sole factual source", "sole source", "source of truth"),
+    )
     assert_prompt_contains_any(prompt, ("only", "exclusively", "solely"))
     assert_prompt_contains_any(prompt, ("do not invent", "do not fabricate", "do not add facts"))
     assert_prompt_contains_any(prompt, ("do not modify", "do not alter", "do not override"))
