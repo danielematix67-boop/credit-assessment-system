@@ -11,3 +11,4 @@ class AnalysisFinding:
     severity: RuleSeverity
     text: str
     status: RuleStatus | None = None
+    assessment_area: str | None = None
