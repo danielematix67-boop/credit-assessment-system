@@ -1,5 +1,6 @@
 import pytest
 
+from src.models.behavioural_data import BehaviouralData
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
@@ -85,8 +86,6 @@ def test_behavioural_assessment_uses_configured_threshold_and_operator(tmp_path)
         """,
         encoding="utf-8",
     )
-
-    from src.models.behavioural_data import BehaviouralData
 
     section = BehaviouralAssessmentService(config_path=config_path).assess(
         BehaviouralData(average_utilization=0.80)
