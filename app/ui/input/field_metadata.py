@@ -55,6 +55,7 @@ def format_field_label(field_name: str) -> str:
     special_terms = {
         "ebitda": "EBITDA",
         "nfp": "NFP",
+        "ews": "EWS",
         "id": "ID",
     }
 
