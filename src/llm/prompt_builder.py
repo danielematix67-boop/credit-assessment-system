@@ -82,8 +82,17 @@ class ReportPromptBuilder:
         )
 
     @staticmethod
-    def _format_structured_value(value: object) -> str:
-        """Format the deterministic structured value without changing its meaning."""
+    def _format_structured_value(value: object, finding: AnalysisFinding) -> str:
+        """Format a deterministic value using the indicator's authoritative unit."""
+        if isinstance(value, bool):
+            return str(value)
+        if isinstance(value, (int, float)):
+            if "%" in finding.text:
+                return f"{value:.1%}"
+            if "€" in finding.text:
+                return f"€{value:,.0f}"
+            if "x" in finding.text.lower():
+                return f"{value:.1f}x"
         if isinstance(value, str):
             return value
         return repr(value)
@@ -98,8 +107,8 @@ class ReportPromptBuilder:
 
         if finding.value is not None:
             lines.append(
-                "  Deterministic structured value: "
-                f"{cls._format_structured_value(finding.value)}"
+                "  Deterministic value: "
+                f"{cls._format_structured_value(finding.value, finding)}"
             )
 
         return "\n".join(lines)
