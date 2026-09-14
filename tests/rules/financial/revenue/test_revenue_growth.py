@@ -6,7 +6,7 @@ from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_direction import SeverityDirection
 from src.rules.base.severity_threshold import SeverityThreshold
 from src.rules.base.status import RuleStatus
-from src.rules.financial.revenue.revenue_growth import RevenueGrowthRule
+from src.rules.financial_analysis.r001 import RevenueGrowthRule
 
 R001_CONFIG = RuleConfig(
     rule_id="R001",
@@ -16,30 +16,19 @@ R001_CONFIG = RuleConfig(
     severity=RuleSeverity.LOW,
     severity_direction=SeverityDirection.LOWER_IS_WORSE,
     severity_thresholds=(
-        SeverityThreshold(
-            threshold=-0.10,
-            severity=RuleSeverity.MEDIUM,
-        ),
-        SeverityThreshold(
-            threshold=-0.20,
-            severity=RuleSeverity.HIGH,
-        ),
+        SeverityThreshold(threshold=-0.10, severity=RuleSeverity.MEDIUM),
+        SeverityThreshold(threshold=-0.20, severity=RuleSeverity.HIGH),
     ),
     input_field="revenue_growth",
     trigger_operator="LT",
 )
 
 
-def create_rule(
-    config: RuleConfig = R001_CONFIG,
-) -> RevenueGrowthRule:
+def create_rule(config: RuleConfig = R001_CONFIG) -> RevenueGrowthRule:
     return RevenueGrowthRule(config)
 
 
-def assert_result_matches_config(
-    result,
-    config: RuleConfig,
-) -> None:
+def assert_result_matches_config(result, config: RuleConfig) -> None:
     assert result.rule_id == config.rule_id
     assert result.rule_name == config.rule_name
     assert result.category == config.category
@@ -47,11 +36,7 @@ def assert_result_matches_config(
 
 
 @pytest.mark.parametrize(
-    (
-        "revenue_growth",
-        "expected_status",
-        "expected_severity",
-    ),
+    ("revenue_growth", "expected_status", "expected_severity"),
     [
         (0.05, RuleStatus.NOT_TRIGGERED, RuleSeverity.LOW),
         (-0.05, RuleStatus.NOT_TRIGGERED, RuleSeverity.LOW),
@@ -62,22 +47,14 @@ def assert_result_matches_config(
     ],
 )
 def test_revenue_growth_rule_evaluates_dynamic_severity(
-    revenue_growth,
-    expected_status,
-    expected_severity,
+    revenue_growth, expected_status, expected_severity
 ):
     position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=revenue_growth,
-        ebitda=250_000,
-        profit_loss=50_000,
-        ebitda_margin=0.10,
-        nfp_to_ebitda=3.5,
+        position_id="POS001", revenue_growth=revenue_growth, ebitda=250_000,
+        profit_loss=50_000, ebitda_margin=0.10, nfp_to_ebitda=3.5,
         interest_expense=40_000,
     )
-
     result = create_rule().evaluate(position)
-
     assert_result_matches_config(result, R001_CONFIG)
     assert result.status == expected_status
     assert result.value == revenue_growth
@@ -86,17 +63,11 @@ def test_revenue_growth_rule_evaluates_dynamic_severity(
 
 def test_revenue_growth_rule_is_not_evaluable_when_none():
     position = CreditPosition(
-        position_id="POS002",
-        revenue_growth=None,
-        ebitda=250_000,
-        profit_loss=50_000,
-        ebitda_margin=0.10,
-        nfp_to_ebitda=3.5,
+        position_id="POS002", revenue_growth=None, ebitda=250_000,
+        profit_loss=50_000, ebitda_margin=0.10, nfp_to_ebitda=3.5,
         interest_expense=40_000,
     )
-
     result = create_rule().evaluate(position)
-
     assert_result_matches_config(result, R001_CONFIG)
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
@@ -105,61 +76,35 @@ def test_revenue_growth_rule_is_not_evaluable_when_none():
 
 def test_revenue_growth_rule_uses_configured_threshold():
     config = RuleConfig(
-        rule_id=f"{R001_CONFIG.rule_id}_CUSTOM",
-        rule_name="Custom revenue deterioration",
-        category=R001_CONFIG.category,
-        threshold=-0.20,
-        severity=RuleSeverity.LOW,
+        rule_id=f"{R001_CONFIG.rule_id}_CUSTOM", rule_name="Custom revenue deterioration",
+        category=R001_CONFIG.category, threshold=-0.20, severity=RuleSeverity.LOW,
         severity_direction=SeverityDirection.LOWER_IS_WORSE,
         severity_thresholds=(
-            SeverityThreshold(
-                threshold=-0.20,
-                severity=RuleSeverity.MEDIUM,
-            ),
-            SeverityThreshold(
-                threshold=-0.30,
-                severity=RuleSeverity.HIGH,
-            ),
+            SeverityThreshold(threshold=-0.20, severity=RuleSeverity.MEDIUM),
+            SeverityThreshold(threshold=-0.30, severity=RuleSeverity.HIGH),
         ),
-        input_field="revenue_growth",
-        trigger_operator="LT",
+        input_field="revenue_growth", trigger_operator="LT",
     )
-
-    revenue_growth = -0.15
-
     position = CreditPosition(
-        position_id="POS003",
-        revenue_growth=revenue_growth,
-        ebitda=250_000,
-        profit_loss=50_000,
-        ebitda_margin=0.10,
-        nfp_to_ebitda=3.5,
+        position_id="POS003", revenue_growth=-0.15, ebitda=250_000,
+        profit_loss=50_000, ebitda_margin=0.10, nfp_to_ebitda=3.5,
         interest_expense=40_000,
     )
-
     result = create_rule(config).evaluate(position)
-
     assert_result_matches_config(result, config)
     assert result.status == RuleStatus.NOT_TRIGGERED
-    assert result.value == revenue_growth
+    assert result.value == -0.15
     assert result.severity == RuleSeverity.LOW
 
 
 def test_revenue_growth_rule_uses_configured_input_field_and_operator():
     config = RuleConfig(
-        rule_id="R001_CUSTOM_INPUT",
-        rule_name="Configured revenue deterioration",
-        category="revenue",
-        threshold=0.10,
-        severity=RuleSeverity.MEDIUM,
+        rule_id="R001_CUSTOM_INPUT", rule_name="Configured revenue deterioration",
+        category="revenue", threshold=0.10, severity=RuleSeverity.MEDIUM,
         severity_direction=SeverityDirection.LOWER_IS_WORSE,
-        input_field="revenue_growth",
-        trigger_operator="GTE",
+        input_field="revenue_growth", trigger_operator="GTE",
     )
-
     position = CreditPosition(position_id="POS004", revenue_growth=0.10)
-
     result = RevenueGrowthRule(config).evaluate(position)
-
     assert result.value == 0.10
     assert result.status == RuleStatus.TRIGGERED
