@@ -6,90 +6,57 @@ Accepted
 
 ## Context
 
-The assessment catalog contains **18 deterministic rules across four domains**:
+The assessment catalogue evolves independently of the application architecture. Rule parameters such as thresholds, operators, severity policy and comments are policy/configuration concerns, while deterministic evaluation is implementation logic.
 
-- Customer Profile: `CP001–CP004`
-- Financial Analysis: `R001–R007`
-- Behavioural Analysis: `B001–B004`
-- Debt Sustainability: `DS001–DS003`
+Keeping the active rule inventory, identifiers and thresholds duplicated in architecture documentation would create a second source of truth and make the documentation stale whenever the catalogue changes.
 
-The YAML catalogs define thresholds, operators, severity policy and comment templates. Rule implementation is maintained in Python and must remain the deterministic source of truth.
-
-A second architectural concern is maintainability: individual rules may become substantially more complex over time. Keeping multiple rules in a single `rules.py` module would create large, coupled files and make rule-specific testing and evolution harder.
+A second maintainability concern is rule isolation: individual rules can become substantially more complex over time. Keeping unrelated rules in shared modules increases coupling and makes rule-specific testing and review harder.
 
 ## Decision
 
-Adopt a strict separation between rule configuration and rule implementation, with **one Python module per concrete rule**, using the same structure for every assessment domain.
+Adopt a strict separation between rule configuration and deterministic rule implementation, with one concrete implementation module per rule in the normal case.
 
 ```text
-config/*.yaml
-    │
-    │ configuration / parameters
-    ▼
-src/rules/<domain>/<rule>.py
-    │
-    │ deterministic implementation
-    ▼
-Rule Registry
-    │
-    ▼
-Rule Engine / Domain Assessment Service
+config/<domain>_rules.yaml
+          ↓
+   RuleConfigLoader
+          ↓
+   Rule configuration
+          ↓
+ Automatic rule discovery
+          ↓
+      Rule registry
+          ↓
+ configured rule_id
+          ↓
+ Concrete Rule implementation
+          ↓
+       RuleResult
+          ↓
+RuleEngine / domain service
 ```
 
-### `src/rules/`
+The documentation does not enumerate the active rule inventory. The YAML catalogues and registered implementations are authoritative.
 
-Every assessment domain follows the same layout. There are no domain-level `rules.py` aggregation modules and no special financial rule structure.
+## Rule implementation
 
-```text
-src/rules/
-├── base/
-├── customer_profile/
-│   ├── cp001.py
-│   ├── cp002.py
-│   ├── cp003.py
-│   └── cp004.py
-├── financial_analysis/
-│   ├── r001.py
-│   ├── r002.py
-│   ├── r003.py
-│   ├── r004.py
-│   ├── r005.py
-│   ├── r006.py
-│   └── r007.py
-├── behavioural/
-│   ├── b001.py
-│   ├── b002.py
-│   ├── b003.py
-│   └── b004.py
-└── sustainability/
-    ├── ds001.py
-    ├── ds002.py
-    └── ds003.py
+Rules live below the rule package, organised by domain. A concrete rule module inherits from the shared `Rule` abstraction and registers its identifier:
+
+```python
+@Rule.register("RXXX")
+class ExampleRule(Rule):
+    ...
 ```
 
-The rule identifier is deliberately reflected in the module name. This creates a direct mapping between configuration, implementation and tests:
+The identifier must match the configured `rule_id` exactly.
 
-```text
-R001 → config → src/rules/financial_analysis/r001.py → test
-B001 → config → src/rules/behavioural/b001.py        → test
-DS001 → config → src/rules/sustainability/ds001.py   → test
-```
+The normal extension mechanism does not require a central import list. Rule discovery recursively imports rule modules, allowing the registry to be populated from the implementation package.
 
-A simple rule remains a single file. If a rule becomes substantially more complex, its module can evolve into a dedicated package without changing the registry or assessment-service contract, for example:
+The module structure should mirror the domain structure used by the repository, but documentation should not hard-code every current filename because those modules are expected to evolve.
 
-```text
-src/rules/financial_analysis/r005/
-├── __init__.py
-├── rule.py
-├── calculations.py
-└── validators.py
-```
+## Configuration
 
-Rule discovery recursively imports rule modules, so adding a new rule does not require a central list of imports.
-
-### `config/`
-
-Contains declarative rule metadata:
+YAML configuration contains declarative rule metadata, including where applicable:
 
 - rule identifier;
 - name and category;
@@ -99,94 +66,126 @@ Contains declarative rule metadata:
 - threshold;
 - severity;
 - severity direction;
-- severity bands;
+- severity thresholds/bands;
 - comment template.
 
-Configuration therefore controls **parameters**, while Python controls **rule execution and specialised business semantics**.
+Configuration controls **parameters**. Python controls **execution and specialised business semantics**.
 
-### Tests
+The generic configuration contract should be preferred whenever it can express the business requirement. Specialised Python logic is justified when the rule requires semantics that cannot be safely represented by the generic calculation/trigger contract.
 
-Rule-specific tests should mirror the same domain/identifier structure:
+## Discovery and registry
+
+The registry provides the mapping:
 
 ```text
-tests/rules/
-├── customer_profile/
-│   ├── test_cp001.py
-│   └── ...
-├── financial_analysis/
-│   ├── test_r001.py
-│   └── ...
-├── behavioural/
-│   ├── test_b001.py
-│   └── ...
-└── sustainability/
-    ├── test_ds001.py
-    └── ...
+configured rule_id
+       ↓
+registered Rule class
+       ↓
+Rule instance configured with RuleConfig
 ```
 
-Tests should cover triggered, not-triggered, boundary, severity, missing/invalid input, calculation edge cases and deterministic evidence. Configuration/registry tests must also ensure that configured rules have registered implementations.
+The architectural invariant is:
 
-## New Rule Change Path
+```text
+Every valid configured rule identifier
+            ↓
+exactly one resolvable deterministic implementation
+```
 
-A complete rule change follows this path:
+A missing implementation or duplicate registration must fail explicitly rather than silently excluding the rule.
+
+## Separation of responsibilities
+
+### Rule implementation
+
+Owns:
+
+- deterministic evaluation;
+- specialised calculations;
+- interpretation of required inputs;
+- production of `RuleResult`.
+
+Does not own:
+
+- final case status;
+- other rules;
+- Streamlit presentation;
+- LLM calls.
+
+### Configuration
+
+Owns policy parameters that can safely be externalised.
+
+### Rule engine / domain service
+
+Owns execution and section-level aggregation, not individual rule semantics.
+
+### Final assessment service
+
+Owns cross-section aggregation using the configured final-assessment policy.
+
+### Analysis/reporting
+
+Owns interpretation and narrative generation from structured deterministic evidence. It must not reimplement rule logic.
+
+### Presentation
+
+Owns rendering only. It must not recalculate business decisions.
+
+## Adding a rule
+
+A complete change follows:
 
 ```text
 Business requirement
        ↓
-CreditPosition input field(s)
+Input contract
        ↓
-Domain YAML configuration
+Configuration
        ↓
-Concrete Rule implementation
+Rule implementation
        ↓
-Automatic discovery + registry
-       ↓
-RuleEngine / Domain Assessment Service
+Discovery / registry
        ↓
 RuleResult
        ↓
-Deterministic analysis
+Section / case aggregation
        ↓
-Reporting + grounding validation
+Analysis evidence
        ↓
-Results UI
+Reporting / grounding
        ↓
-Tests + demo scenarios + documentation
+Demo / UI
+       ↓
+Tests
 ```
 
-The rule itself owns deterministic business semantics. Aggregation, reporting and presentation must remain outside the rule.
+The full operational checklist is maintained in [`rules.md`](rules.md).
 
 ## Consequences
 
 ### Positive
 
-- All four domains use one consistent rule architecture.
-- Every configured rule has one concrete registered implementation.
-- Each rule can evolve independently without enlarging a shared `rules.py` file.
-- Complex rules can gain private helper modules without affecting other rules.
-- Domain services do not duplicate threshold/comparison/severity logic.
-- Rule behaviour has a single deterministic implementation path.
-- Thresholds can be changed without changing Python rule code when the generic rule semantics are sufficient.
-- Rule discovery and registry validation can detect missing implementations.
-- Rule-specific tests remain focused and easy to locate.
-- The architecture remains compatible with the deterministic-first AI boundary.
+- Policy parameters can evolve without changing central services.
+- New rules do not require central rule-specific branching.
+- Individual rules remain independently testable and reviewable.
+- The active catalogue is not duplicated in documentation.
+- Complex rules can grow their own internal helpers without affecting unrelated rules.
+- The architecture remains compatible with deterministic-first AI reporting.
 
-### Constraint
+### Constraints
 
-The existing `get_default_rules()` remains the financial/core catalog used by the financial `RuleEngine`. Domain services load their own YAML catalog and resolve implementations through the same shared registry. A future unified multi-domain engine can therefore be introduced without another rule-model migration.
+- Every configured identifier must have a registered implementation.
+- Rule configuration and implementation must be kept semantically aligned.
+- Specialised rule code must remain deterministic.
+- Configuration changes require corresponding boundary and integration tests.
+- Catalogue-specific examples in documentation must be clearly marked as examples.
 
 ## Validation
 
-The configuration test suite verifies that every rule present in the complete YAML catalog has a registered Python implementation.
+Configuration and registry tests should verify that the active catalogue can be resolved completely.
 
-The architectural invariant is:
+Rule tests should cover positive, negative, boundary, severity, non-evaluable and calculation edge cases. Integration tests should verify propagation into section/case evidence and reporting.
 
-```text
-Every configured rule_id
-        ↓
-one concrete registered Rule implementation
-        ↓
-deterministic RuleResult
-```
-
-No LLM component participates in this path.
+No LLM component participates in deterministic rule registration or evaluation.
