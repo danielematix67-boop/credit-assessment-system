@@ -94,6 +94,43 @@ def test_llm_status_cannot_override_deterministic_status() -> None:
     assert report.executive_summary.count("Assessment Status:") == 1
 
 
+def test_fixed_assessment_area_headings_follow_deterministic_order() -> None:
+    findings = [
+        make_finding("Customer context.", category="Customer Profile"),
+        make_finding("Revenue declined.", category="Financial Analysis"),
+        make_finding("Payment delays increased.", category="Behavioural Analysis"),
+        make_finding("DSCR remains weak.", category="Debt Sustainability"),
+    ]
+    narrative = (
+        "Customer context.\n\n"
+        "Revenue declined.\n\n"
+        "Payment delays increased.\n\n"
+        "DSCR remains weak."
+    )
+    generator, _ = make_generator(response=narrative)
+
+    report = generator.generate(make_analysis(key_findings=findings))
+
+    assert report.executive_summary == (
+        "Assessment Status: Attention\n\n"
+        "### Customer Profile\n\nCustomer context.\n\n"
+        "### Financial Analysis\n\nRevenue declined.\n\n"
+        "### Behavioural Analysis\n\nPayment delays increased.\n\n"
+        "### Debt Sustainability\n\nDSCR remains weak."
+    )
+
+
+def test_fixed_assessment_area_headings_reject_wrong_paragraph_count() -> None:
+    findings = [
+        make_finding("Customer context.", category="Customer Profile"),
+        make_finding("Revenue declined.", category="Financial Analysis"),
+    ]
+    generator, _ = make_generator(response="Only one paragraph.")
+
+    with pytest.raises(ValueError, match="exactly one paragraph per represented"):
+        generator.generate(make_analysis(key_findings=findings))
+
+
 def test_rejects_empty_response() -> None:
     generator, _ = make_generator(response="")
 
