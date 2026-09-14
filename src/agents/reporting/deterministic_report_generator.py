@@ -34,7 +34,7 @@ class DeterministicReportGenerator(ReportGenerator):
         cls,
         analysis: AssessmentAnalysis,
     ) -> str:
-        """Build a concise fallback narrative with fixed assessment-area headings."""
+        """Build the fallback narrative using the authoritative assessment areas."""
         status = f"Assessment Status: {analysis.assessment_status.value.capitalize()}"
         findings = analysis.key_findings
         if not findings:
@@ -42,7 +42,11 @@ class DeterministicReportGenerator(ReportGenerator):
 
         grouped: dict[str, list[AnalysisFinding]] = {}
         for finding in findings:
-            grouped.setdefault(finding.category, []).append(finding)
+            area = finding.assessment_area
+            if area is None:
+                grouped.setdefault(finding.category, []).append(finding)
+            else:
+                grouped.setdefault(area, []).append(finding)
 
         paragraphs: list[tuple[str, str]] = []
         ordered_categories = cls._ordered_categories(grouped)
@@ -67,12 +71,15 @@ class DeterministicReportGenerator(ReportGenerator):
             if sentences:
                 paragraphs.append((category, " ".join(sentences)))
 
-        narrative = "\n\n".join(
-            f"### {category}\n\n{paragraph}"
-            if category.casefold() in {area.casefold() for area in cls._ASSESSMENT_AREA_ORDER}
-            else paragraph
-            for category, paragraph in paragraphs
-        )
+        narrative_parts: list[str] = []
+        canonical = {area.casefold() for area in cls._ASSESSMENT_AREA_ORDER}
+        for category, paragraph in paragraphs:
+            if category.casefold() in canonical:
+                narrative_parts.append(f"### {category}\n\n{paragraph}")
+            else:
+                narrative_parts.append(paragraph)
+
+        narrative = "\n\n".join(narrative_parts)
         return f"{status}\n\n{narrative}"
 
     @classmethod
@@ -80,15 +87,14 @@ class DeterministicReportGenerator(ReportGenerator):
         cls,
         grouped: dict[str, list[AnalysisFinding]],
     ) -> list[str]:
-        """Return production assessment areas first in their authoritative order."""
-        canonical = {
-            area.casefold(): area
-            for area in cls._ASSESSMENT_AREA_ORDER
-        }
+        """Return assessment areas in their authoritative order."""
+        canonical = {area.casefold(): area for area in cls._ASSESSMENT_AREA_ORDER}
         ordered: list[str] = []
-        for category in cls._ASSESSMENT_AREA_ORDER:
-            if category.casefold() in {item.casefold() for item in grouped}:
-                ordered.append(category)
+
+        for area in cls._ASSESSMENT_AREA_ORDER:
+            if area.casefold() in {item.casefold() for item in grouped}:
+                ordered.append(area)
+
         ordered.extend(
             category
             for category in grouped
@@ -120,6 +126,7 @@ class DeterministicReportGenerator(ReportGenerator):
     def _group_findings_by_category(
         findings: list[AnalysisFinding],
     ) -> list[ReportFindingGroup]:
+        """Group deterministic findings by their original category."""
         grouped: dict[str, list[AnalysisFinding]] = {}
 
         for finding in findings:
