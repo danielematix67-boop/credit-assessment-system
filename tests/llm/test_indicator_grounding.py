@@ -18,13 +18,21 @@ def make_analysis(*findings: AnalysisFinding) -> AssessmentAnalysis:
     )
 
 
-def make_finding(text: str, category: str = "Financial Risk") -> AnalysisFinding:
+def make_finding(
+    text: str,
+    category: str = "Financial Risk",
+    *,
+    value: object | None = None,
+    indicator: str = "",
+) -> AnalysisFinding:
     return AnalysisFinding(
         rule_id="R001",
         category=category,
         severity=RuleSeverity.HIGH,
         text=text,
         status=RuleStatus.TRIGGERED,
+        value=value,
+        indicator=indicator,
     )
 
 
@@ -41,6 +49,24 @@ def test_prompt_allows_narrative_synthesis_without_forcing_every_value() -> None
     assert "Do not invent facts, causes, consequences or recommendations" in prompt
     assert "1. revenue" in prompt
     assert "2. profitability" in prompt
+
+
+def test_prompt_preserves_structured_indicator_value() -> None:
+    analysis = make_analysis(
+        make_finding(
+            "Revenue growth declined to -35.0%.",
+            category="Financial Analysis",
+            value=-0.35,
+            indicator="Revenue growth",
+        ),
+    )
+
+    prompt = ReportPromptBuilder().build(analysis)
+
+    assert "Deterministic indicator: Revenue growth" in prompt
+    assert "Deterministic structured value: -0.35" in prompt
+    assert "Revenue growth declined to -35.0%." in prompt
+    assert "rule_id" not in prompt
 
 
 def test_local_llm_accepts_narrative_when_some_source_indicators_are_omitted() -> None:
@@ -83,10 +109,14 @@ def test_local_llm_accepts_equivalent_indicator_formatting() -> None:
 
 def test_local_llm_rejects_unsupported_indicator_values() -> None:
     analysis = make_analysis(
-        make_finding("Revenue growth declined to -20.0%.", category="revenue"),
+        make_finding(
+            "Revenue growth declined to -35.0%.",
+            value=-0.35,
+            indicator="Revenue growth",
+        ),
     )
     generator = LLMReportGenerator(
-        MockLLMClient(response="Revenue growth declined to -35%."),
+        MockLLMClient(response="Revenue growth declined to 35%."),
         require_indicator_values=True,
     )
 
