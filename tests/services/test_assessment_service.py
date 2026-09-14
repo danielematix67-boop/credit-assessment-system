@@ -14,9 +14,45 @@ from src.services.assessment_service import AssessmentService
 
 @pytest.fixture(
     params=[
-        pytest.param({"position_id": "CRITICAL_POSITION", "revenue_growth": -0.15, "ebitda": -50000, "profit_loss": -50000, "ebitda_margin": -0.05, "nfp_to_ebitda": 6.0, "interest_expense": 40000, "expected_status": AssessmentStatus.CRITICAL}, id="critical"),
-        pytest.param({"position_id": "NORMAL_POSITION", "revenue_growth": 0.05, "ebitda": 250000, "profit_loss": 50000, "ebitda_margin": 0.10, "nfp_to_ebitda": 3.5, "interest_expense": 40000, "expected_status": AssessmentStatus.NORMAL}, id="normal"),
-        pytest.param({"position_id": "ATTENTION_POSITION", "revenue_growth": 0.05, "ebitda": 250000, "profit_loss": 50000, "ebitda_margin": 0.10, "nfp_to_ebitda": 6.0, "interest_expense": 40000, "expected_status": AssessmentStatus.ATTENTION}, id="attention"),
+        pytest.param(
+            {
+                "position_id": "CRITICAL_POSITION",
+                "revenue_growth": -0.15,
+                "ebitda": -50000,
+                "profit_loss": -50000,
+                "ebitda_margin": -0.05,
+                "nfp_to_ebitda": 6.0,
+                "interest_expense": 40000,
+                "expected_status": AssessmentStatus.CRITICAL,
+            },
+            id="critical",
+        ),
+        pytest.param(
+            {
+                "position_id": "NORMAL_POSITION",
+                "revenue_growth": 0.05,
+                "ebitda": 250000,
+                "profit_loss": 50000,
+                "ebitda_margin": 0.10,
+                "nfp_to_ebitda": 3.5,
+                "interest_expense": 40000,
+                "expected_status": AssessmentStatus.NORMAL,
+            },
+            id="normal",
+        ),
+        pytest.param(
+            {
+                "position_id": "ATTENTION_POSITION",
+                "revenue_growth": 0.05,
+                "ebitda": 250000,
+                "profit_loss": 50000,
+                "ebitda_margin": 0.10,
+                "nfp_to_ebitda": 6.0,
+                "interest_expense": 40000,
+                "expected_status": AssessmentStatus.ATTENTION,
+            },
+            id="attention",
+        ),
     ]
 )
 def assessment_scenario(request):
@@ -30,7 +66,11 @@ def assessment_position(assessment_scenario):
     return CreditPosition(**scenario)
 
 
-def test_assessment_service_generates_expected_financial_assessment(assessment_service, assessment_position, assessment_scenario):
+def test_assessment_service_generates_expected_financial_assessment(
+    assessment_service,
+    assessment_position,
+    assessment_scenario,
+):
     assessment = assessment_service.assess(assessment_position)
     assert isinstance(assessment, FinancialAssessment)
     assert assessment.position_id == assessment_position.position_id
@@ -38,33 +78,70 @@ def test_assessment_service_generates_expected_financial_assessment(assessment_s
     assert len(assessment.rule_results) == len(assessment_service.rule_engine.rules)
 
 
-def test_assessment_service_creates_findings_for_triggered_rules(assessment_service, assessment_position):
+def test_assessment_service_creates_findings_for_triggered_rules(
+    assessment_service,
+    assessment_position,
+):
     assessment = assessment_service.assess(assessment_position)
-    triggered_rules = {result.rule_id for result in assessment.rule_results if result.status == RuleStatus.TRIGGERED}
+    triggered_rules = {
+        result.rule_id
+        for result in assessment.rule_results
+        if result.status == RuleStatus.TRIGGERED
+    }
     finding_rule_ids = {finding.result.rule_id for finding in assessment.findings}
     assert finding_rule_ids == triggered_rules
     assert len(assessment.findings) == len(triggered_rules)
 
 
-def test_assessment_service_does_not_create_findings_for_non_triggered_rules(assessment_service):
-    position = CreditPosition(position_id="NON_EVALUABLE_POSITION", revenue_growth=None, ebitda=250000, profit_loss=50000, ebitda_margin=0.10, nfp_to_ebitda=3.5, interest_expense=40000)
+def test_assessment_service_does_not_create_findings_for_non_triggered_rules(
+    assessment_service,
+):
+    position = CreditPosition(
+        position_id="NON_EVALUABLE_POSITION",
+        revenue_growth=None,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        nfp_to_ebitda=3.5,
+        interest_expense=40000,
+    )
     assessment = assessment_service.assess(position)
     assert all(result.status != RuleStatus.TRIGGERED for result in assessment.rule_results)
     assert assessment.findings == []
 
 
 def test_assessment_service_builds_financial_assessment_from_dependencies():
-    position = CreditPosition(position_id="TEST_POSITION", revenue_growth=0.05, ebitda=250000, profit_loss=50000, ebitda_margin=0.10, nfp_to_ebitda=3.5, interest_expense=40000)
+    position = CreditPosition(
+        position_id="TEST_POSITION",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        nfp_to_ebitda=3.5,
+        interest_expense=40000,
+    )
     rule_engine = MagicMock()
     comment_engine = MagicMock()
     status_calculator = MagicMock()
-    result = RuleResult(rule_id="TEST_RULE", rule_name="Test rule", category="test", status=RuleStatus.TRIGGERED, value=1.0, threshold=0.0, severity=RuleSeverity.MEDIUM)
+    result = RuleResult(
+        rule_id="TEST_RULE",
+        rule_name="Test rule",
+        category="test",
+        status=RuleStatus.TRIGGERED,
+        value=1.0,
+        threshold=0.0,
+        severity=RuleSeverity.MEDIUM,
+    )
     rule_engine.evaluate.return_value = [result]
     comment = MagicMock()
     comment_engine.generate.return_value = comment
     expected_status = AssessmentStatus.CRITICAL
     status_calculator.calculate.return_value = expected_status
-    service = AssessmentService(rule_engine=rule_engine, comment_engine=comment_engine, status_calculator=status_calculator)
+    service = AssessmentService(
+        rule_engine=rule_engine,
+        comment_engine=comment_engine,
+        status_calculator=status_calculator,
+    )
     assessment = service.assess(position)
     assert isinstance(assessment, FinancialAssessment)
     assert assessment.position_id == position.position_id
@@ -77,7 +154,15 @@ def test_assessment_service_builds_financial_assessment_from_dependencies():
 
 
 def test_assessment_service_skips_results_without_comments():
-    position = CreditPosition(position_id="TEST_POSITION", revenue_growth=0.05, ebitda=250000, profit_loss=50000, ebitda_margin=0.10, nfp_to_ebitda=3.5, interest_expense=40000)
+    position = CreditPosition(
+        position_id="TEST_POSITION",
+        revenue_growth=0.05,
+        ebitda=250000,
+        profit_loss=50000,
+        ebitda_margin=0.10,
+        nfp_to_ebitda=3.5,
+        interest_expense=40000,
+    )
     rule_engine = MagicMock()
     comment_engine = MagicMock()
     status_calculator = MagicMock()
@@ -88,7 +173,11 @@ def test_assessment_service_skips_results_without_comments():
     comment_engine.generate.side_effect = [comment, None]
     expected_status = AssessmentStatus.ATTENTION
     status_calculator.calculate.return_value = expected_status
-    service = AssessmentService(rule_engine=rule_engine, comment_engine=comment_engine, status_calculator=status_calculator)
+    service = AssessmentService(
+        rule_engine=rule_engine,
+        comment_engine=comment_engine,
+        status_calculator=status_calculator,
+    )
     assessment = service.assess(position)
     assert assessment.findings == [RuleFinding(result=result_with_comment, comment=comment)]
     assert comment_engine.generate.call_count == 2
