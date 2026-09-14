@@ -54,7 +54,10 @@ def _render_area_cards(result: Any) -> None:
         indicators = _section_indicators(section)
         with area_columns[index % 2].container(border=True):
             st.markdown(f"**{getattr(section, 'name', 'Assessment area')}**")
-            st.caption(f"{status} · {len(evidence)} rules · {triggered} triggered · {not_evaluable} not evaluable")
+            st.caption(
+                f"{status} · {len(evidence)} rules · {triggered} triggered · "
+                f"{not_evaluable} not evaluable"
+            )
             if indicators:
                 st.caption("Key indicators")
                 st.write(" · ".join(indicators))
@@ -64,19 +67,39 @@ def _render_rule_catalogue(dataframe: pd.DataFrame) -> None:
     """Show filterable deterministic rule evidence."""
     filter_cols = st.columns([1.1, 1.1, 1.4, 1.2])
     with filter_cols[0]:
-        selected_status = st.selectbox("Status", ["All", "TRIGGERED", "NOT_TRIGGERED", "NOT_EVALUABLE"], key="rule_catalogue_status")
+        selected_status = st.selectbox(
+            "Status",
+            ["All", "TRIGGERED", "NOT_TRIGGERED", "NOT_EVALUABLE"],
+            key="rule_catalogue_status",
+        )
     with filter_cols[1]:
         severity_values = sorted(
-            {str(value) for value in dataframe["Severity"].dropna().tolist() if str(value) not in {"", "—"}},
+            {
+                str(value)
+                for value in dataframe["Severity"].dropna().tolist()
+                if str(value) not in {"", "—"}
+            },
             key=severity_rank,
             reverse=True,
         )
-        selected_severity = st.selectbox("Severity", ["All", *severity_values], key="rule_catalogue_severity")
+        selected_severity = st.selectbox(
+            "Severity",
+            ["All", *severity_values],
+            key="rule_catalogue_severity",
+        )
     with filter_cols[2]:
         area_values = sorted(dataframe["Assessment area"].dropna().unique().tolist())
-        selected_area = st.selectbox("Assessment area", ["All", *area_values], key="rule_catalogue_area")
+        selected_area = st.selectbox(
+            "Assessment area",
+            ["All", *area_values],
+            key="rule_catalogue_area",
+        )
     with filter_cols[3]:
-        selected_sort = st.selectbox("Sort by", ["Priority", "Rule ID", "Assessment area", "Status"], key="rule_catalogue_sort")
+        selected_sort = st.selectbox(
+            "Sort by",
+            ["Priority", "Rule ID", "Assessment area", "Status"],
+            key="rule_catalogue_sort",
+        )
 
     filtered = dataframe.copy()
     if selected_status != "All":
@@ -102,7 +125,16 @@ def _render_rule_catalogue(dataframe: pd.DataFrame) -> None:
     }
     filtered = filtered.sort_values(list(sort_map[selected_sort]), ascending=True)
     st.caption(f"Showing {len(filtered)} of {len(dataframe)} rules.")
-    display_columns = ["Assessment area", "Rule", "Indicator", "Actual", "Threshold", "Status", "Severity", "Category"]
+    display_columns = [
+        "Assessment area",
+        "Rule",
+        "Indicator",
+        "Actual",
+        "Threshold",
+        "Status",
+        "Severity",
+        "Category",
+    ]
     with st.container(border=True):
         if filtered.empty:
             st.info("No rules match the selected filters.")
