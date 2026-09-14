@@ -39,6 +39,17 @@ class EwsScoreClassRule(Rule):
         triggered = score_class != EwsScoreClass.GREEN
         status = RuleStatus.TRIGGERED if triggered else RuleStatus.NOT_TRIGGERED
 
+        if score_class is EwsScoreClass.GREEN:
+            return self._result(
+                value=score_class.value,
+                status=status,
+                severity=severity,
+                reason=(
+                    "EWS Score class is GREEN; the colour class does not "
+                    "indicate an elevated credit-risk condition."
+                ),
+            )
+
         return self._result(
             value=score_class.value,
             status=status,
