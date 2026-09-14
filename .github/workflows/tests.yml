@@ -31,7 +31,7 @@ jobs:
 
       - name: Run linting
         run: |
-          python -m ruff check . --fix --diff
+          python -m ruff check .
 
       - name: Run type checking
         run: |
