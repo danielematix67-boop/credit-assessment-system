@@ -115,12 +115,15 @@ class CaseAnalysisAgent:
         if result.status == RuleStatus.TRIGGERED:
             text = triggered_text or result.indicator or result.rule_name
         elif result.status == RuleStatus.NOT_TRIGGERED:
-            value = CaseAnalysisAgent._format_value(result.value)
-            indicator = result.indicator or result.rule_name
-            text = (
-                f"{indicator} is {value}; the observed value does not meet "
-                "the deterministic trigger condition."
-            )
+            if result.reason:
+                text = result.reason
+            else:
+                value = CaseAnalysisAgent._format_value(result.value)
+                indicator = result.indicator or result.rule_name
+                text = (
+                    f"{indicator} is {value}; the observed value does not meet "
+                    "the deterministic trigger condition."
+                )
         else:
             indicator = result.indicator or result.rule_name
             text = (
