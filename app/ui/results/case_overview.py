@@ -19,6 +19,8 @@ def _profile_value(data: Any, field: str, default: str = "Not available") -> str
     value = data.get(field) if isinstance(data, dict) else getattr(data, field, None)
     if value is None or value == "":
         return default
+    if hasattr(value, "value"):
+        return str(value.value)
     if isinstance(value, bool):
         return "Yes" if value else "No"
     return str(value)
@@ -63,6 +65,7 @@ def _render_customer_evidence(section: Any) -> None:
         "Sector": _profile_value(context, "sector"),
         "Size class": _profile_value(context, "size_class"),
         "Geography": _profile_value(context, "geography"),
+        "EWS Score Class": _profile_value(context, "ews_score_class"),
     }])
     st.dataframe(profile_frame, use_container_width=True, hide_index=True)
     relationship_col, ownership_col = st.columns(2)
