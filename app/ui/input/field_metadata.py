@@ -100,6 +100,9 @@ FIELD_DESCRIPTIONS: dict[str, str] = {
     ),
     "interest_expense": "Financial expense related to interest.",
     "revenue_growth": "Year-over-year change in company revenue.",
+    "ews_score_class": (
+        "Early Warning System score class: GREEN, YELLOW, ORANGE or LIGHT_RED."
+    ),
 }
 
 
@@ -158,7 +161,7 @@ def format_field_value(field_name: str, value: Any) -> str:
     if isinstance(value, float):
         return f"{value:,.4f}"
 
-    return str(value)
+    return str(getattr(value, "value", value))
 
 
 FIELD_UNITS: dict[str, str] = {
