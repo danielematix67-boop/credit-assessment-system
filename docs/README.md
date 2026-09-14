@@ -10,6 +10,7 @@ This folder contains the concise technical documentation for the current impleme
 | [`reporting.md`](reporting.md) | Deterministic evidence flow and bounded reporting |
 | [`architecture-decisions.md`](architecture-decisions.md) | Accepted architectural decisions and rationale |
 | [`adr-016-complete-rule-evidence-reporting.md`](adr-016-complete-rule-evidence-reporting.md) | Complete rule-evidence propagation into reporting |
+| [`adr-017-rule-implementation-configuration-separation.md`](adr-017-rule-implementation-configuration-separation.md) | Separation between rule configuration and deterministic implementation |
 | [`validation.md`](validation.md) | Testing, invariants, scenario coverage and CI |
 | [`security-data-handling.md`](security-data-handling.md) | Input integrity, secrets, data minimization and LLM boundary |
 
@@ -35,12 +36,12 @@ docs/security-data-handling.md
 
 The system evaluates four explicit domains:
 
-- Customer Profile — `CP001–CP003`
+- Customer Profile — `CP001–CP004`
 - Financial Analysis — `R001–R007`
 - Behavioural Analysis — `B001–B004`
 - Debt Sustainability — `DS001–DS003`
 
-The **17-rule** inventory is evaluated deterministically. The case-level assessment is produced before reporting. The analysis layer preserves complete rule evidence, including `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` outcomes.
+The **18-rule** inventory is evaluated deterministically. The case-level assessment is produced before reporting. The analysis layer preserves complete rule evidence, including `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` outcomes.
 
 Reporting consumes this evidence. Gemini and Ollama are optional providers; deterministic fallback remains available and LLM output cannot modify the assessment.
 
@@ -55,3 +56,4 @@ Documentation must describe the repository as it exists on `main`.
 - Do not document removed legacy modules or duplicated UI sections.
 - Keep deterministic decisioning separate from reporting.
 - Mark future work as roadmap, not as implemented functionality.
+- When adding or removing a rule, update catalogue counts, affected architecture/ADR references and the README rule-development workflow.
