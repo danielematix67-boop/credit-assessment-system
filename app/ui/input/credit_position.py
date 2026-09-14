@@ -1,6 +1,7 @@
 """Streamlit rendering for complete credit-assessment input data."""
 
-from typing import Any
+from dataclasses import fields
+from typing import Any, get_origin, get_type_hints
 
 import streamlit as st
 
@@ -345,7 +346,7 @@ def _render_generic_dataclass_field(
             key=f"{key_prefix}_value",
         )
 
-    if resolved_type is list:
+    if get_origin(resolved_type) is list:
         default_text = "\n".join(str(item) for item in (default or []))
         raw_value = st.text_area(
             f"{label} (one item per line)",
@@ -368,24 +369,21 @@ def _render_dataclass_input_group(
 ) -> dict[str, Any]:
     """Render every field defined by an additional assessment data model."""
     _render_field_group_header(group_title)
-    model_fields = list(model_type.__dataclass_fields__.values())
-    type_hints = __import__("typing").get_type_hints(model_type)
+    model_fields = fields(model_type)
+    type_hints = get_type_hints(model_type)
     values: dict[str, Any] = {}
 
     columns = st.columns(2, gap="medium")
     for index, field in enumerate(model_fields):
         with columns[index % 2]:
-            default = field.default
-            if field.default_factory is not field.default_factory.__class__:
-                default = field.default_factory()
+            default = get_field_default(field)
             values[field.name] = _render_generic_dataclass_field(
                 model_name=model_name,
                 field_name=field.name,
                 field_type=type_hints[field.name],
                 default=default,
             )
-            description = format_field_description(field.name)
-            st.caption(description)
+            st.caption(format_field_description(field.name))
 
     return values
 
