@@ -9,6 +9,7 @@ from src.models.position import CreditPosition
 from src.models.rule_finding import RuleFinding
 from src.rules.base.status import RuleStatus
 from src.rules.registry import build_rules
+from src.rules.result import RuleResult
 from src.services.assessment_status_calculator import AssessmentStatusCalculator
 
 
@@ -59,7 +60,7 @@ class DebtSustainabilityAssessmentService:
         )
 
     @staticmethod
-    def _section_status(results):
+    def _section_status(results: list[RuleResult]) -> SectionStatus:
         evaluable = [
             result for result in results if result.status != RuleStatus.NOT_EVALUABLE
         ]
