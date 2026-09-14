@@ -85,24 +85,19 @@ class Rule(ABC):
             return self.config.severity
 
         if self.config.severity_direction.value == "HIGHER_IS_WORSE":
-            # Values below the first configured band are on the safe side
-            # of the rule and therefore explicitly LOW.
             severity = RuleSeverity.LOW
             for threshold in thresholds:
                 if value >= threshold.threshold:
                     severity = threshold.severity
             return severity
 
-        # For LOWER_IS_WORSE, the configured rule-level severity is the
-        # baseline for values above the first risk band. More severe bands
-        # are then selected as the value crosses their thresholds.
         severity = self.config.severity
         for threshold in thresholds:
             if value <= threshold.threshold:
                 severity = threshold.severity
         return severity
 
-    def _format_reason(self, value: float) -> str | None:
+    def _format_reason(self, value: object) -> str | None:
         """Format the configured rule comment template, when available."""
         template = self.config.comment_template
         if not template:
@@ -116,7 +111,7 @@ class Rule(ABC):
     def _result(
         self,
         *,
-        value: float | None,
+        value: object | None,
         status: RuleStatus,
         reason: str | None = None,
         severity: RuleSeverity | None = None,
@@ -134,8 +129,8 @@ class Rule(ABC):
         resolved_severity = severity
         if resolved_severity is None:
             resolved_severity = self.config.severity
-            if value is not None:
-                resolved_severity = self._severity(value)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                resolved_severity = self._severity(float(value))
 
         return RuleResult(
             rule_id=self.config.rule_id,
