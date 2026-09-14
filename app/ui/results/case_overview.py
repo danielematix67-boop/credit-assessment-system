@@ -159,7 +159,8 @@ def render_credit_analysis_case(result: Any) -> None:
         return
     st.markdown("### Detailed Assessment")
     st.caption(
-        "Consistent analyst view across the four macro-areas: assessment snapshot, key evidence, findings, and data quality."
+        "Consistent analyst view across the four macro-areas: assessment snapshot, key evidence, "
+        "findings, and data quality."
     )
     sections_by_name = {
         section.name: section for section in getattr(credit_case, "sections", []) or []
