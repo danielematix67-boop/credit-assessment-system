@@ -11,7 +11,7 @@ class RuleResult:
     rule_name: str
     category: str
     status: RuleStatus
-    value: float | None
+    value: object | None
     threshold: float
     severity: RuleSeverity
     reason: str | None = None
