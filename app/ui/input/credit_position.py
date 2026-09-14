@@ -1,6 +1,7 @@
 """Streamlit rendering for complete credit-assessment input data."""
 
 from dataclasses import fields
+from enum import Enum
 from typing import Any, get_origin, get_type_hints
 
 import streamlit as st
@@ -280,6 +281,34 @@ def _render_generic_dataclass_field(
     label = format_field_label(field_name)
     resolved_type, is_optional = unwrap_optional(field_type)
     key_prefix = f"{model_name}_{field_name}"
+
+    if isinstance(resolved_type, type) and issubclass(resolved_type, Enum):
+        options = list(resolved_type)
+        labels = [option.value.replace("_", " ").title() for option in options]
+        if is_optional:
+            options_with_none = [None, *options]
+            labels_with_none = ["Not provided", *labels]
+            default_index = (
+                0 if default is None else options.index(default) + 1
+            )
+            selected = st.selectbox(
+                label,
+                options=range(len(options_with_none)),
+                format_func=lambda index: labels_with_none[index],
+                index=default_index,
+                key=f"{key_prefix}_value",
+            )
+            return options_with_none[selected]
+
+        default_index = options.index(default) if default in options else 0
+        selected = st.selectbox(
+            label,
+            options=range(len(options)),
+            format_func=lambda index: labels[index],
+            index=default_index,
+            key=f"{key_prefix}_value",
+        )
+        return options[selected]
 
     if resolved_type is str:
         if is_optional:
