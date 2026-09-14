@@ -12,7 +12,7 @@ class ReportPromptTemplate:
         "- The supplied Analysis findings are the sole factual source.\n"
         "- Do not reassess the customer or create a new credit assessment.\n"
         "- Do not change, reinterpret or contradict finding status, severity, category or values.\n"
-        "- Do not introduce facts, figures, causes, consequences or recommendations not supported by the findings.\n"
+        "- Do not invent facts, causes, consequences or recommendations not supported by the findings.\n"
         "- Do not calculate, infer, round, convert or derive new indicators."
     )
 
