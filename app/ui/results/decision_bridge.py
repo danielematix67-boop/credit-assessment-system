@@ -37,7 +37,9 @@ def _render_area_trace(sections: list[Any], rule_results: list[Any]) -> None:
         key="decision_path_area_trace",
     )
     selected_section = next(
-        section for section in sections if str(getattr(section, "name", "Unknown")) == selected_name
+        section
+        for section in sections
+        if str(getattr(section, "name", "Unknown")) == selected_name
     )
 
     section_rule_ids = {
@@ -77,7 +79,11 @@ def _render_area_trace(sections: list[Any], rule_results: list[Any]) -> None:
     if findings:
         with st.expander("Findings for selected area", expanded=False):
             for finding in findings:
-                text = getattr(finding, "comment", None) or getattr(finding, "description", None) or str(finding)
+                text = (
+                    getattr(finding, "comment", None)
+                    or getattr(finding, "description", None)
+                    or str(finding)
+                )
                 st.write(f"• {text}")
 
 
@@ -121,19 +127,83 @@ def render_decision_path(result: Any) -> None:
     st.markdown(
         """
         <style>
-        .decision-flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .55rem; margin: .55rem 0 .85rem 0; }
-        .decision-node { min-width: 0; padding: .95rem 1rem; border: 1px solid rgba(128,128,128,.20); border-radius: .85rem; background: rgba(128,128,128,.025); }
-        .decision-node.det { border-color: rgba(37,99,235,.30); background: rgba(37,99,235,.055); }
-        .decision-node.result { border-color: rgba(185,28,28,.25); background: rgba(185,28,28,.045); }
-        .decision-node-kicker { color: rgba(128,128,128,.95); font-size: .68rem; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
-        .decision-node-title { margin-top: .2rem; font-size: .95rem; font-weight: 730; line-height: 1.25; }
-        .decision-node-value { margin-top: .45rem; font-size: 1.35rem; font-weight: 780; line-height: 1.1; }
-        .decision-node-description { margin-top: .35rem; color: rgba(128,128,128,.95); font-size: .74rem; line-height: 1.4; }
-        .decision-evidence { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .6rem; }
-        .decision-chip { display: inline-flex; align-items: center; gap: .25rem; padding: .22rem .48rem; border-radius: 999px; border: 1px solid rgba(185,28,28,.18); background: rgba(185,28,28,.065); font-size: .68rem; font-weight: 650; }
-        .decision-chip-muted { border-color: rgba(128,128,128,.18); background: rgba(128,128,128,.045); }
-        @media (max-width: 900px) { .decision-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (max-width: 600px) { .decision-flow { grid-template-columns: 1fr; } }
+        .decision-flow {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: .55rem;
+            margin: .55rem 0 .85rem 0;
+        }
+        .decision-node {
+            min-width: 0;
+            padding: .95rem 1rem;
+            border: 1px solid rgba(128,128,128,.20);
+            border-radius: .85rem;
+            background: rgba(128,128,128,.025);
+        }
+        .decision-node.det {
+            border-color: rgba(37,99,235,.30);
+            background: rgba(37,99,235,.055);
+        }
+        .decision-node.result {
+            border-color: rgba(185,28,28,.25);
+            background: rgba(185,28,28,.045);
+        }
+        .decision-node-kicker {
+            color: rgba(128,128,128,.95);
+            font-size: .68rem;
+            font-weight: 750;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+        }
+        .decision-node-title {
+            margin-top: .2rem;
+            font-size: .95rem;
+            font-weight: 730;
+            line-height: 1.25;
+        }
+        .decision-node-value {
+            margin-top: .45rem;
+            font-size: 1.35rem;
+            font-weight: 780;
+            line-height: 1.1;
+        }
+        .decision-node-description {
+            margin-top: .35rem;
+            color: rgba(128,128,128,.95);
+            font-size: .74rem;
+            line-height: 1.4;
+        }
+        .decision-evidence {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .3rem;
+            margin-top: .6rem;
+        }
+        .decision-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: .25rem;
+            padding: .22rem .48rem;
+            border-radius: 999px;
+            border: 1px solid rgba(185,28,28,.18);
+            background: rgba(185,28,28,.065);
+            font-size: .68rem;
+            font-weight: 650;
+        }
+        .decision-chip-muted {
+            border-color: rgba(128,128,128,.18);
+            background: rgba(128,128,128,.045);
+        }
+        @media (max-width: 900px) {
+            .decision-flow {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 600px) {
+            .decision-flow {
+                grid-template-columns: 1fr;
+            }
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -146,27 +216,35 @@ def render_decision_path(result: Any) -> None:
                 <div class="decision-node-kicker">01 · Risk signals</div>
                 <div class="decision-node-title">Rule Engine</div>
                 <div class="decision-node-value">{len(triggered_rules)} triggered</div>
-                <div class="decision-node-description">Existing RuleResult outputs; no recalculation in the UI.</div>
+                <div class="decision-node-description">
+                    Existing RuleResult outputs; no recalculation in the UI.
+                </div>
                 <div class="decision-evidence">{signal_chips}</div>
             </div>
             <div class="decision-node det">
                 <div class="decision-node-kicker">02 · Findings</div>
                 <div class="decision-node-title">Case Findings</div>
                 <div class="decision-node-value">{findings_count}</div>
-                <div class="decision-node-description">Findings stored by the deterministic case assessment.</div>
+                <div class="decision-node-description">
+                    Findings stored by the deterministic case assessment.
+                </div>
             </div>
             <div class="decision-node det">
                 <div class="decision-node-kicker">03 · Macro-areas</div>
                 <div class="decision-node-title">Assessment Sections</div>
                 <div class="decision-node-value">{len(sections)}</div>
-                <div class="decision-node-description">Section statuses are read directly from the case.</div>
+                <div class="decision-node-description">
+                    Section statuses are read directly from the case.
+                </div>
                 <div class="decision-evidence">{area_chips}</div>
             </div>
             <div class="decision-node {status_class}">
                 <div class="decision-node-kicker">04 · Final assessment</div>
                 <div class="decision-node-title">Case Decision</div>
                 <div class="decision-node-value">{escape_html(final_status)}</div>
-                <div class="decision-node-description">Final status returned by the deterministic assessment engine.</div>
+                <div class="decision-node-description">
+                    Final status returned by the deterministic assessment engine.
+                </div>
             </div>
         </div>
     """
