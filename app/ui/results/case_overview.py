@@ -11,6 +11,13 @@ from app.ui.results.financial_analysis import (
     render_financial_analysis,
 )
 
+_ASSESSMENT_AREA_ORDER = (
+    "Customer Profile",
+    "Financial Analysis",
+    "Behavioural Analysis",
+    "Debt Sustainability",
+)
+
 
 def _profile_value(data: Any, field: str, default: str = "Not available") -> str:
     if isinstance(data, dict):
@@ -121,7 +128,7 @@ def _render_limitations(section: Any) -> None:
 
 
 def _render_data_quality_overview(credit_case: Any) -> None:
-    """Show evidence coverage as a technical/audit view."""
+    """Show evidence coverage as a compact technical/audit view."""
     sections = list(getattr(credit_case, "sections", []) or [])
     total_evidence = sum(len(getattr(section, "evidence", []) or []) for section in sections)
     evaluable_evidence = sum(
@@ -140,7 +147,7 @@ def _render_data_quality_overview(credit_case: Any) -> None:
 
     st.markdown("**Data & Evidence Quality**")
     st.caption(
-        "Technical coverage view for auditability. Missing data remain explicit limitations and do not become a synthetic risk score."
+        "Technical coverage for auditability. Missing data remain explicit limitations and do not become a synthetic risk score."
     )
 
     col1, col2, col3 = st.columns(3)
@@ -186,6 +193,20 @@ def _render_data_quality_overview(credit_case: Any) -> None:
         )
 
 
+def _render_area(section: Any) -> None:
+    """Render one macro-area without introducing a second assessment hierarchy."""
+    if section.name == "Financial Analysis":
+        render_financial_analysis(section)
+    elif section.name == "Behavioural Analysis":
+        render_behavioural_analysis(section)
+    elif section.name == "Debt Sustainability":
+        render_debt_analysis(section)
+    elif section.name == "Customer Profile":
+        _render_customer_profile(section)
+
+    _render_limitations(section)
+
+
 def render_credit_analysis_case(result: Any) -> None:
     """Render detailed analyst evidence without repeating the executive assessment."""
     credit_case = getattr(result, "credit_case", None)
@@ -194,21 +215,21 @@ def render_credit_analysis_case(result: Any) -> None:
 
     st.markdown("### Detailed Assessment")
     st.caption(
-        "Analyst and audit detail only. Overall status and macro-area outcomes are presented above; this section focuses on context, indicators, findings and limitations."
+        "Analyst and audit detail. Select one macro-area at a time to inspect its indicators, findings, evidence and limitations."
     )
 
+    sections_by_name = {
+        section.name: section for section in getattr(credit_case, "sections", []) or []
+    }
+    available_sections = [
+        name for name in _ASSESSMENT_AREA_ORDER if name in sections_by_name
+    ]
+
+    if available_sections:
+        tabs = st.tabs(available_sections)
+        for tab, area_name in zip(tabs, available_sections):
+            with tab:
+                _render_area(sections_by_name[area_name])
+
+    st.divider()
     _render_data_quality_overview(credit_case)
-
-    for section in credit_case.sections:
-        st.markdown(f"#### {section.name}")
-
-        if section.name == "Financial Analysis":
-            render_financial_analysis(section)
-        elif section.name == "Behavioural Analysis":
-            render_behavioural_analysis(section)
-        elif section.name == "Debt Sustainability":
-            render_debt_analysis(section)
-        elif section.name == "Customer Profile":
-            _render_customer_profile(section)
-
-        _render_limitations(section)
