@@ -5,7 +5,7 @@ from src.rules.base.config import RuleConfig, SeverityThreshold
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_direction import SeverityDirection
 from src.rules.base.status import RuleStatus
-from src.rules.sustainability.leverage.nfp_to_ebitda import NfpToEbitdaRule
+from src.rules.financial_analysis.r004 import NfpToEbitdaRule
 
 R004_CONFIG = RuleConfig(
     rule_id="R004",
@@ -35,52 +35,29 @@ def assert_result_matches_config(result, config: RuleConfig) -> None:
 
 
 def test_nfp_to_ebitda_rule_triggered():
-    nfp_to_ebitda = 6.0
-    position = CreditPosition(
-        position_id="POS001",
-        revenue_growth=0.05,
-        ebitda=250_000,
-        profit_loss=50_000,
-        ebitda_margin=0.10,
-        nfp_to_ebitda=nfp_to_ebitda,
-        interest_expense=40_000,
+    result = create_rule().evaluate(
+        CreditPosition(position_id="POS001", nfp_to_ebitda=6.0)
     )
-    result = create_rule().evaluate(position)
     assert_result_matches_config(result, R004_CONFIG)
     assert result.status == RuleStatus.TRIGGERED
-    assert result.value == nfp_to_ebitda
+    assert result.value == 6.0
     assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_nfp_to_ebitda_rule_not_triggered():
-    nfp_to_ebitda = 3.5
-    position = CreditPosition(
-        position_id="POS002",
-        revenue_growth=0.05,
-        ebitda=250_000,
-        profit_loss=50_000,
-        ebitda_margin=0.10,
-        nfp_to_ebitda=nfp_to_ebitda,
-        interest_expense=40_000,
+    result = create_rule().evaluate(
+        CreditPosition(position_id="POS002", nfp_to_ebitda=3.5)
     )
-    result = create_rule().evaluate(position)
     assert_result_matches_config(result, R004_CONFIG)
     assert result.status == RuleStatus.NOT_TRIGGERED
-    assert result.value == nfp_to_ebitda
+    assert result.value == 3.5
     assert result.severity == RuleSeverity.LOW
 
 
 def test_nfp_to_ebitda_rule_not_evaluable_when_none():
-    position = CreditPosition(
-        position_id="POS003",
-        revenue_growth=0.05,
-        ebitda=250_000,
-        profit_loss=50_000,
-        ebitda_margin=0.10,
-        nfp_to_ebitda=None,
-        interest_expense=40_000,
+    result = create_rule().evaluate(
+        CreditPosition(position_id="POS003", nfp_to_ebitda=None)
     )
-    result = create_rule().evaluate(position)
     assert_result_matches_config(result, R004_CONFIG)
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
@@ -89,7 +66,7 @@ def test_nfp_to_ebitda_rule_not_evaluable_when_none():
 
 def test_nfp_to_ebitda_rule_uses_configured_threshold():
     config = RuleConfig(
-        rule_id=f"{R004_CONFIG.rule_id}_CUSTOM",
+        rule_id="R004_CUSTOM",
         rule_name="Custom nfp / EBITDA threshold",
         category=R004_CONFIG.category,
         threshold=7.0,
@@ -97,20 +74,12 @@ def test_nfp_to_ebitda_rule_uses_configured_threshold():
         severity_direction=SeverityDirection.HIGHER_IS_WORSE,
         input_field="nfp_to_ebitda",
     )
-    nfp_to_ebitda = 6.0
-    position = CreditPosition(
-        position_id="POS004",
-        revenue_growth=0.05,
-        ebitda=250_000,
-        profit_loss=50_000,
-        ebitda_margin=0.10,
-        nfp_to_ebitda=nfp_to_ebitda,
-        interest_expense=40_000,
+    result = create_rule(config).evaluate(
+        CreditPosition(position_id="POS004", nfp_to_ebitda=6.0)
     )
-    result = create_rule(config).evaluate(position)
     assert_result_matches_config(result, config)
     assert result.status == RuleStatus.NOT_TRIGGERED
-    assert result.value == nfp_to_ebitda
+    assert result.value == 6.0
     assert result.severity == RuleSeverity.MEDIUM
 
 
@@ -126,20 +95,11 @@ def test_nfp_to_ebitda_rule_uses_configured_threshold():
     ],
 )
 def test_nfp_to_ebitda_rule_resolves_dynamic_severity(
-    nfp_to_ebitda,
-    expected_severity,
-    expected_status,
+    nfp_to_ebitda, expected_severity, expected_status
 ):
-    position = CreditPosition(
-        position_id="POS_DYNAMIC",
-        revenue_growth=0.05,
-        ebitda=250_000,
-        profit_loss=50_000,
-        ebitda_margin=0.10,
-        nfp_to_ebitda=nfp_to_ebitda,
-        interest_expense=40_000,
+    result = create_rule().evaluate(
+        CreditPosition(position_id="POS_DYNAMIC", nfp_to_ebitda=nfp_to_ebitda)
     )
-    result = create_rule().evaluate(position)
     assert result.status == expected_status
     assert result.value == nfp_to_ebitda
     assert result.severity == expected_severity
