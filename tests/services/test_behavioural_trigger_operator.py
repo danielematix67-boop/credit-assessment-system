@@ -1,7 +1,11 @@
 import pytest
 
-from src.models.behavioural_data import BehaviouralData
+from src.models.position import CreditPosition
+from src.rules.base.config import RuleConfig
+from src.rules.base.severity import RuleSeverity
+from src.rules.base.severity_direction import SeverityDirection
 from src.rules.base.status import RuleStatus
+from src.rules.behavioural.rules import HighCreditUtilizationRule
 from src.services.behavioural_assessment_service import BehaviouralAssessmentService
 
 
@@ -23,15 +27,38 @@ def test_behavioural_trigger_operator_semantics(
     value: float,
     expected: bool,
 ) -> None:
-    assert (
-        BehaviouralAssessmentService._matches_operator(value, 1.0, operator)
-        is expected
+    rule = HighCreditUtilizationRule(
+        RuleConfig(
+            rule_id="B001",
+            rule_name="Test behavioural rule",
+            category="test",
+            input_field="revenue",
+            threshold=1.0,
+            trigger_operator=operator,
+            severity=RuleSeverity.MEDIUM,
+            severity_direction=SeverityDirection.HIGHER_IS_WORSE,
+        )
+    )
+
+    result = rule.evaluate(CreditPosition(position_id="TEST", revenue=value))
+
+    assert result.status == (
+        RuleStatus.TRIGGERED if expected else RuleStatus.NOT_TRIGGERED
     )
 
 
 def test_behavioural_trigger_operator_rejects_unknown_operator() -> None:
-    with pytest.raises(ValueError, match="Unsupported trigger operator"):
-        BehaviouralAssessmentService._matches_operator(1.0, 1.0, "INVALID")
+    with pytest.raises(ValueError, match="trigger_operator must be one of"):
+        RuleConfig(
+            rule_id="B001",
+            rule_name="Test behavioural rule",
+            category="test",
+            input_field="revenue",
+            threshold=1.0,
+            trigger_operator="INVALID",
+            severity=RuleSeverity.MEDIUM,
+            severity_direction=SeverityDirection.HIGHER_IS_WORSE,
+        )
 
 
 def test_behavioural_assessment_uses_configured_threshold_and_operator(tmp_path) -> None:
@@ -58,6 +85,8 @@ def test_behavioural_assessment_uses_configured_threshold_and_operator(tmp_path)
         """,
         encoding="utf-8",
     )
+
+    from src.models.behavioural_data import BehaviouralData
 
     section = BehaviouralAssessmentService(config_path=config_path).assess(
         BehaviouralData(average_utilization=0.80)
