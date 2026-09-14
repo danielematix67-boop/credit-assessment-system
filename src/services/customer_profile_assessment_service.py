@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Any
 
 from src.comments.comment import Comment
 from src.comments.comment_engine import CommentEngine
@@ -7,14 +6,13 @@ from src.config.rule_config_loader import RuleConfigLoader
 from src.models.assessment_section import AssessmentSection, SectionStatus
 from src.models.customer_profile_data import CustomerProfileData
 from src.models.rule_finding import RuleFinding
-from src.rules.base.severity_policy import SeverityPolicy
 from src.rules.base.status import RuleStatus
-from src.rules.result import RuleResult
+from src.rules.registry import build_rules
 from src.services.assessment_status_calculator import AssessmentStatusCalculator
 
 
 class CustomerProfileAssessmentService:
-    """Build the customer-profile assessment from externalized rule configuration."""
+    """Build customer-profile assessment using the shared Rule implementation."""
 
     DEFAULT_CONFIG_PATH = Path("config/customer_profile_rules.yaml")
 
@@ -32,7 +30,7 @@ class CustomerProfileAssessmentService:
 
     def assess(self, data: CustomerProfileData) -> AssessmentSection:
         configs = self.config_loader.load(self.config_path)
-        results = [self._evaluate_rule(config, data) for config in configs]
+        results = [rule.evaluate(data) for rule in build_rules(configs)]
         evaluable_results = [
             result for result in results if result.status != RuleStatus.NOT_EVALUABLE
         ]
@@ -43,24 +41,19 @@ class CustomerProfileAssessmentService:
         elif not evaluable_results:
             status = SectionStatus.NORMAL
         else:
-            status = SectionStatus(
-                self.status_calculator.calculate(evaluable_results).value
-            )
+            status = SectionStatus(self.status_calculator.calculate(evaluable_results).value)
 
         findings = []
         for result in results:
             if result.status != RuleStatus.TRIGGERED:
                 continue
             comment = self.comment_engine.generate(result)
-            if comment is not None:
-                findings.append(RuleFinding(result=result, comment=comment))
-            else:
-                findings.append(
-                    RuleFinding(
-                        result=result,
-                        comment=Comment(result.rule_id, result.reason or ""),
-                    )
+            findings.append(
+                RuleFinding(
+                    result=result,
+                    comment=comment or Comment(result.rule_id, result.reason or ""),
                 )
+            )
 
         limitations = []
         if not has_profile_data:
@@ -109,83 +102,3 @@ class CustomerProfileAssessmentService:
                 data.previous_restructuring,
             )
         )
-
-    @staticmethod
-    def _evaluate_rule(config: Any, data: CustomerProfileData) -> RuleResult:
-        if not config.input_field:
-            raise ValueError(
-                f"Customer profile rule {config.rule_id} requires input_field"
-            )
-
-        if not hasattr(data, config.input_field):
-            raise ValueError(
-                f"Unknown customer profile input field: {config.input_field}"
-            )
-
-        raw_value = getattr(data, config.input_field)
-        if raw_value is None:
-            return RuleResult(
-                rule_id=config.rule_id,
-                rule_name=config.rule_name,
-                category=config.category,
-                status=RuleStatus.NOT_EVALUABLE,
-                value=None,
-                threshold=config.threshold,
-                severity=config.severity,
-                reason=(
-                    f"[{config.rule_id} - {config.rule_name}] "
-                    f"{config.indicator} is not available."
-                ),
-                indicator=config.indicator,
-                direction=config.severity_direction,
-                comment_template=config.comment_template,
-            )
-
-        value = float(raw_value)
-        triggered = CustomerProfileAssessmentService._matches_operator(
-            value,
-            config.threshold,
-            config.trigger_operator,
-        )
-        severity = SeverityPolicy(
-            direction=config.severity_direction,
-            thresholds=config.severity_thresholds,
-        ).evaluate(value) or config.severity
-        status = RuleStatus.TRIGGERED if triggered else RuleStatus.NOT_TRIGGERED
-
-        if triggered:
-            reason = (
-                f"[{config.rule_id} - {config.rule_name}] {config.indicator} "
-                f"is {value:g}, meeting the configured risk condition."
-            )
-        else:
-            reason = (
-                f"[{config.rule_id} - {config.rule_name}] {config.indicator} "
-                "is outside the configured risk condition."
-            )
-
-        return RuleResult(
-            rule_id=config.rule_id,
-            rule_name=config.rule_name,
-            category=config.category,
-            status=status,
-            value=value,
-            threshold=config.threshold,
-            severity=severity,
-            reason=reason,
-            indicator=config.indicator,
-            direction=config.severity_direction,
-            comment_template=config.comment_template,
-        )
-
-    @staticmethod
-    def _matches_operator(value: float, threshold: float, operator: str) -> bool:
-        if operator == "GT":
-            return value > threshold
-        if operator == "GTE":
-            return value >= threshold
-        if operator == "LT":
-            return value < threshold
-        if operator == "LTE":
-            return value <= threshold
-        raise ValueError(f"Unsupported trigger operator: {operator}")
