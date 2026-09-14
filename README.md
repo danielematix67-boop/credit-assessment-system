@@ -17,11 +17,11 @@ Decisioning, analysis, reporting and presentation are separate concerns. Gemini 
 
 ## Assessment Model
 
-The current catalogue contains **17 rules across four domains**:
+The current catalogue contains **18 rules across four domains**:
 
 | Domain | Rule IDs | Count |
 |---|---|---:|
-| Customer Profile | `CP001–CP003` | 3 |
+| Customer Profile | `CP001–CP004` | 4 |
 | Financial Analysis | `R001–R007` | 7 |
 | Behavioural Analysis | `B001–B004` | 4 |
 | Debt Sustainability | `DS001–DS003` | 3 |
@@ -130,7 +130,7 @@ Workflow execution metadata records provenance such as execution ID, UTC timesta
 
 ## Demo Data
 
-Demonstration data is synthetic/anonymized and covers the configured assessment domains. Production or confidential banking data must not be committed to the repository.
+Demonstration data is synthetic/anonymized and covers the configured assessment domains and rule inventory, including the Customer Profile forborne exposure indicator. Production or confidential banking data must not be committed to the repository.
 
 ## Project Structure
 
@@ -243,7 +243,7 @@ python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 ## Roadmap
 
 - [x] Deterministic multi-domain assessment
-- [x] 17 configured rules across four domains
+- [x] 18 configured rules across four domains
 - [x] Configurable thresholds and severity
 - [x] Structural input validation
 - [x] Explicit `NOT_EVALUABLE` handling
@@ -264,7 +264,7 @@ python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 
 ## Current Baseline
 
-The `main` branch is the current thesis-ready baseline: four deterministic assessment domains, 17 configured rules, deterministic case aggregation, synthetic demonstration data, a compact evidence-oriented Results experience and bounded optional LLM reporting.
+The `main` branch is the current thesis-ready baseline: four deterministic assessment domains, 18 configured rules, deterministic case aggregation, synthetic demonstration data, a compact evidence-oriented Results experience and bounded optional LLM reporting.
 
 The architecture keeps assessment independent from Streamlit and from every LLM provider. The application decides first; reporting explains the resulting evidence afterward.
 
