@@ -16,7 +16,15 @@ from src.models.report import Report
 
 @pytest.fixture
 def representative_position():
-    return CreditPosition(position_id="TEST_POSITION", revenue_growth=0.0, ebitda=1.0, profit_loss=1.0, ebitda_margin=0.0, nfp_to_ebitda=0.0, interest_expense=0.0)
+    return CreditPosition(
+        position_id="TEST_POSITION",
+        revenue_growth=0.0,
+        ebitda=1.0,
+        profit_loss=1.0,
+        ebitda_margin=0.0,
+        nfp_to_ebitda=0.0,
+        interest_expense=0.0,
+    )
 
 
 @pytest.fixture
@@ -59,7 +67,10 @@ def test_factory_rejects_missing_llm_client_when_llm_enabled():
 
 @pytest.mark.parametrize("use_llm", [False, True])
 def test_factory_creates_executable_workflow(representative_position, llm_client, use_llm):
-    workflow = create_default_assessment_workflow(use_llm=use_llm, llm_client=llm_client if use_llm else None)
+    workflow = create_default_assessment_workflow(
+        use_llm=use_llm,
+        llm_client=llm_client if use_llm else None,
+    )
     result = workflow.run(representative_position)
     assert isinstance(result, AssessmentWorkflowResult)
     assert result.credit_case.position.position_id == representative_position.position_id
@@ -86,8 +97,15 @@ def test_factory_fallback_preserves_deterministic_findings(representative_positi
     workflow = create_default_assessment_workflow(use_llm=True, llm_client=MockLLMClient())
     workflow.reporting_agent.report_generator = FailingReportGenerator()
     result = workflow.run(representative_position)
-    expected_findings = sorted((f.rule_id, f.category, f.severity.value, f.text) for f in result.analysis.key_findings)
-    fallback_findings = sorted((f.rule_id, f.category, f.severity.value, f.text) for group in result.report.findings_by_category for f in group.findings)
+    expected_findings = sorted(
+        (f.rule_id, f.category, f.severity.value, f.text)
+        for f in result.analysis.key_findings
+    )
+    fallback_findings = sorted(
+        (f.rule_id, f.category, f.severity.value, f.text)
+        for group in result.report.findings_by_category
+        for f in group.findings
+    )
     assert fallback_findings == expected_findings
     assert result.analysis.assessment_status.value == result.report.assessment_status.value
 
@@ -95,8 +113,16 @@ def test_factory_fallback_preserves_deterministic_findings(representative_positi
 def test_factory_does_not_create_findings_not_present_in_case(representative_position):
     workflow = create_default_assessment_workflow(use_llm=False)
     result = workflow.run(representative_position)
-    case_rule_ids = {finding.result.rule_id for section in result.credit_case.sections for finding in section.findings}
-    analysis_rule_ids = {finding.rule_id for finding in result.analysis.key_findings if finding.rule_id != "PROFILE"}
+    case_rule_ids = {
+        finding.result.rule_id
+        for section in result.credit_case.sections
+        for finding in section.findings
+    }
+    analysis_rule_ids = {
+        finding.rule_id
+        for finding in result.analysis.key_findings
+        if finding.rule_id != "PROFILE"
+    }
     assert analysis_rule_ids <= case_rule_ids
 
 
