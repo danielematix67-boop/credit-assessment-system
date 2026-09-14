@@ -146,6 +146,7 @@ class Rule(ABC):
             status=status,
             severity=resolved_severity,
             reason=resolved_reason,
+            direction=self.config.severity_direction,
             comment_template=self.config.comment_template,
         )
 
