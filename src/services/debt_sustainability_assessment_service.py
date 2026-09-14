@@ -4,7 +4,6 @@ from typing import cast
 from src.comments.comment_engine import CommentEngine
 from src.config.rule_config_loader import RuleConfigLoader
 from src.models.assessment_section import AssessmentSection, SectionStatus
-from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.models.position import CreditPosition
 from src.models.rule_finding import RuleFinding
