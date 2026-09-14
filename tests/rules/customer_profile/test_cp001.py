@@ -6,7 +6,18 @@ from src.rules.customer_profile.cp001 import ActiveEwsRule
 
 
 def make_rule() -> ActiveEwsRule:
-    return ActiveEwsRule(RuleConfig(rule_id="CP001", rule_name="Active EWS", category="customer_profile", threshold=1.0, severity=RuleSeverity.HIGH, severity_direction="HIGHER_IS_WORSE", input_field="active_ews", trigger_operator="GTE"))
+    return ActiveEwsRule(
+        RuleConfig(
+            rule_id="CP001",
+            rule_name="Active EWS",
+            category="customer_profile",
+            threshold=1.0,
+            severity=RuleSeverity.HIGH,
+            severity_direction="HIGHER_IS_WORSE",
+            input_field="active_ews",
+            trigger_operator="GTE",
+        )
+    )
 
 
 def test_active_ews_triggers() -> None:
