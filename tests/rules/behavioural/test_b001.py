@@ -6,7 +6,18 @@ from src.rules.behavioural.b001 import HighCreditUtilizationRule
 
 
 def make_rule() -> HighCreditUtilizationRule:
-    return HighCreditUtilizationRule(RuleConfig(rule_id="B001", rule_name="High Credit Utilization", category="utilization", threshold=0.90, severity=RuleSeverity.MEDIUM, severity_direction="HIGHER_IS_WORSE", input_field="average_utilization", trigger_operator="GT"))
+    return HighCreditUtilizationRule(
+        RuleConfig(
+            rule_id="B001",
+            rule_name="High Credit Utilization",
+            category="utilization",
+            threshold=0.90,
+            severity=RuleSeverity.MEDIUM,
+            severity_direction="HIGHER_IS_WORSE",
+            input_field="average_utilization",
+            trigger_operator="GT",
+        )
+    )
 
 
 def test_high_utilization_triggers() -> None:
