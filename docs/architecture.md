@@ -4,16 +4,14 @@
 
 The **Credit Assessment System** is a deterministic, rule-based credit assessment application with an optional AI-assisted reporting layer.
 
-The architecture is organized around a higher-level case assessment that mirrors an analyst-style credit review:
+The architecture mirrors an analyst-style credit review across four explicit domains:
 
 1. Customer Profile
 2. Financial Analysis
 3. Behavioural Analysis
 4. Debt Sustainability
-5. Final Assessment
-6. Executive Synthesis / Reporting
 
-The central boundary is:
+The four domains are consolidated into a deterministic `Final Assessment` before narrative reporting is generated.
 
 > **Deterministic evidence is the source of truth. The LLM is an optional synthesis component and has no decision authority.**
 
@@ -25,65 +23,49 @@ Framework-independent logic lives under `src/`; Streamlit presentation and appli
 
 ```text
 CreditPosition + Case Inputs
-          │
-          ▼
+          ↓
+Structural Validation
+          ↓
 Assessment Workflow
-          │
-          ├── CreditPositionValidator
-          │
-          ├── Customer Profile Service
-          │      └── CP001–CP002
-          │
-          ├── Financial Assessment Service
-          │      └── Rule Engine → R001–R007
-          │
-          ├── Behavioural Assessment Service
-          │      └── B001–B004
-          │
-          └── Debt Sustainability Service
-                 └── DS001–DS003
-          │
-          ▼
-Credit Assessment Case
-          │
-          ▼
+   ┌──────┼──────────┬──────────────┐
+   ↓      ↓          ↓              ↓
+Customer Financial Behavioural  Debt Sustainability
+Profile  Analysis  Analysis      Analysis
+CP001-3  R001-7    B001-4        DS001-3
+   └──────┼──────────┴──────────────┘
+          ↓
+CreditAssessmentCase
+          ↓
 FinalAssessmentService
-          │
-          ▼
+          ↓
 Final Assessment
-          │
-          ├──────────────► Results / Evidence UI
-          │
-          ▼
+          ↓
 Deterministic Analysis
-          │
-          ▼
+          ↓
 Reporting Agent
       ┌───┴─────────────┐
-      ▼                 ▼
+      ↓                 ↓
 Deterministic       Optional LLM
 Generator           Generator
-      │                 │
       └───────┬─────────┘
-              ▼
+              ↓
             Report
-              │
-              ▼
+              ↓
       Execution Metadata
 ```
 
-### Dependency direction
+The dependency direction is:
 
 ```text
-Streamlit / application (`app/`)
-              ↓
-        Workflow / orchestration
-              ↓
-             Services
-              ↓
-        Rules / domain models
-              ↓
-        Configuration / data
+Streamlit / app
+      ↓
+Workflow / orchestration
+      ↓
+Services
+      ↓
+Rules / domain models
+      ↓
+Configuration
 ```
 
 The core domain does not depend on Streamlit.
@@ -92,99 +74,59 @@ The core domain does not depend on Streamlit.
 
 ## 3. Domain Case Structure
 
-The case layer composes the independent assessment domains into a single analyst-oriented object.
+The current configured inventory contains **17 rules**:
+
+| Domain | Rules | Count |
+|---|---|---:|
+| Customer Profile | `CP001–CP003` | 3 |
+| Financial Analysis | `R001–R007` | 7 |
+| Behavioural Analysis | `B001–B004` | 4 |
+| Debt Sustainability | `DS001–DS003` | 3 |
+
+The canonical presentation order is:
 
 ```text
-CreditAssessmentCase
-│
-├── Customer Profile
-├── Financial Analysis
-├── Behavioural Analysis
-├── Debt Sustainability
-└── Final Assessment
-```
-
-Each section exposes structured deterministic status, findings, evidence and limitations where applicable.
-
-`NOT_EVALUABLE` explicitly represents missing or insufficient evidence. It is not silently converted into `NORMAL`.
-
----
-
-## 4. Customer Profile
-
-`CustomerProfileData` contains contextual customer and relationship information, including company identity, legal form, sector, size class, geography, shareholders, management, relationship duration, historical facilities, active EWS and previous restructuring.
-
-`CustomerProfileAssessmentService` evaluates the configured profile flags:
-
-```text
-CP001 — Active EWS
-CP002 — Previous Restructuring
-```
-
-The profile is contextual for final aggregation: an `ATTENTION` profile does not count toward the two-core-area escalation, while a `CRITICAL` profile can still make the final assessment `CRITICAL`.
-
----
-
-## 5. Financial Analysis
-
-The financial domain uses the seven configured deterministic rules in `config/financial_analysis_rules.yaml`:
-
-```text
+Customer Profile
 Financial Analysis
-│
-├── Revenue & Growth
-│   └── R001 Revenue growth deterioration
-├── Profitability
-│   ├── R002 Negative EBITDA
-│   └── R003 EBITDA margin deterioration
-├── Financial Structure
-│   └── R004 NFP / EBITDA leverage
-├── Debt Service Burden
-│   ├── R005 Interest expense / EBITDA
-│   └── R007 Interest coverage ratio
-└── Profitability Quality
-    └── R006 Finished-goods inventory increase / EBITDA
+Behavioural Analysis
+Debt Sustainability
 ```
 
-The case layer groups the existing deterministic results; it does not duplicate rule evaluation logic.
+Each `AssessmentSection` exposes deterministic status, evidence, findings and limitations where applicable. `NOT_EVALUABLE` is explicitly represented and is not silently converted into `NORMAL`.
 
 ---
 
-## 6. Behavioural Analysis
+## 4. Domain Responsibilities
 
-`BehaviouralData` provides synthetic banking-behaviour inputs. The behavioural service evaluates B001–B004 for:
+### Customer Profile
 
-- average utilization;
-- overdraft duration;
-- payment delays;
-- exposure growth.
+`CustomerProfileAssessmentService` evaluates:
 
-Behavioural assessment is independent from the financial rule engine and cannot modify financial rule results.
+- `CP001` — Active EWS;
+- `CP002` — Previous Restructuring;
+- `CP003` — Business history.
 
----
+Customer Profile is contextual for the two-core-area final escalation: `ATTENTION` does not count toward the two-area threshold, while `CRITICAL` can still produce a `CRITICAL` final assessment.
 
-## 7. Debt Sustainability
+### Financial Analysis
 
-`DebtSustainabilityData` provides cash-flow and debt-service inputs. The service evaluates:
+The financial domain uses the deterministic Rule Engine for `R001–R007`, covering growth, profitability, leverage, interest burden and related financial indicators.
 
-```text
-DS001 — Debt Service Coverage Ratio
-        CFADS / Debt Service
+### Behavioural Analysis
 
-DS002 — Debt Service / EBITDA
-        Debt Service / EBITDA
+`BehaviouralAssessmentService` evaluates `B001–B004` for utilization, overdraft duration, payment delays and exposure growth.
 
-DS003 — Cash Flow Debt-Service Buffer
-        CFADS − Debt Service
-```
+### Debt Sustainability
 
-These indicators deliberately address debt-service sustainability without duplicating the existing financial rules R004, R005 and R007.
+`DebtSustainabilityAssessmentService` evaluates `DS001–DS003` using cash-flow and debt-service indicators such as CFADS, debt service and debt-service buffer.
+
+The non-financial domains own their own evidence and cannot modify financial rule results.
 
 ---
 
-## 8. Deterministic Status Policy
+## 5. Deterministic Status Policy
 
-For a rule-based section, status is derived from deterministic rule results:
+For a rule-based section:
 
 ```text
 2+ TRIGGERED
@@ -204,13 +146,9 @@ ALL NOT_EVALUABLE
   ATTENTION
 ```
 
-An empty rule-result collection remains `NORMAL` for backward-compatible service behaviour and is distinct from a configured assessment in which every rule is non-evaluable.
+An empty result collection remains `NORMAL` for backward-compatible service behaviour.
 
----
-
-## 9. Final Aggregation
-
-`FinalAssessmentService` combines section-level statuses through an explicit deterministic policy:
+At case level:
 
 ```text
 Any CRITICAL section       → CRITICAL
@@ -222,67 +160,37 @@ No evaluable sections      → ATTENTION
 
 No averaging, weighted score or LLM judgement is used.
 
-`NOT_EVALUABLE` sections are excluded from positive/negative status counts but remain visible as evidence limitations.
-
 ---
 
-## 10. Validation and Decision Boundary
+## 6. Validation and Decision Boundary
 
-`CreditPositionValidator` performs structural validation before financial rule evaluation. It checks the expected `CreditPosition` type, non-empty identifier, numeric field types, boolean misuse and finite numeric values. `None` remains valid so downstream rules can explicitly return `NOT_EVALUABLE`.
+`CreditPositionValidator` runs before deterministic rule evaluation. It validates the expected object type, non-empty identifier, numeric fields, boolean misuse and finite numeric values. `None` remains valid so downstream rules can explicitly return `NOT_EVALUABLE`.
 
-The validator does not enforce generic financial sign constraints; economic semantics belong to the corresponding rule.
-
-The financial decision path is:
+The decision path is:
 
 ```text
 CreditPosition
       ↓
 CreditPositionValidator
       ↓
-AssessmentService
+Domain Assessment Services
       ↓
-RuleEngine
+Rule Results / Assessment Sections
       ↓
-RuleResult[]
+FinalAssessmentService
       ↓
-CommentEngine / StatusCalculator
-      ↓
-Assessment
+Final Assessment
 ```
 
-No LLM participates in this path.
+No LLM participates in this decision path.
 
 ---
 
-## 11. Workflow and Reporting Boundary
+## 7. Reporting and LLM Boundary
 
-The application workflow composes deterministic case assessment and reporting.
+Reporting consumes structured deterministic evidence after assessment and analysis have completed.
 
-```text
-Input
- ↓
-Validation
- ↓
-Domain assessments
- ↓
-CreditAssessmentCase
- ↓
-FinalAssessment
- ↓
-Deterministic analysis
- ↓
-Reporting
- ├── deterministic generator
- └── optional LLM generator
-        ↓
-   grounding / resilience checks
-        ↓
-   deterministic fallback when required
-        ↓
-      Report
-```
-
-The reporting layer consumes structured assessment evidence. LLM output cannot change:
+The LLM cannot change:
 
 - final status;
 - section status;
@@ -292,32 +200,28 @@ The reporting layer consumes structured assessment evidence. LLM output cannot c
 - finding collection;
 - limitations.
 
----
+Python controls the Executive Narrative titles and canonical macro-area order. Gemini/Ollama provide prose synthesis only.
 
-## 12. LLM Provider Abstraction
+### Provider configuration
 
-LLM access is provider-agnostic through the `LLMClient` abstraction.
+Current conservative generation settings are:
 
 ```text
-Reporting Generator
-        ↓
-     LLMClient
-     /       \
- Gemini      Ollama
+Gemini: temperature=0.1
+        thinking=MINIMAL
+        include_thoughts=false
+        max_output_tokens=8192
+
+Ollama: temperature=0.2
+        think=false
 ```
 
-A mock client is available for deterministic testing. Provider failures are classified and can activate deterministic reporting fallback.
+These settings affect narrative generation only.
 
----
-
-## 13. Grounding and Resilience
-
-When strict indicator grounding is enabled:
+### Grounding and fallback
 
 ```text
 Deterministic findings
-        ↓
-Required indicator values
         ↓
 LLM narrative
         ↓
@@ -328,106 +232,93 @@ Grounding validation
  Narrative  Deterministic fallback
 ```
 
-The grounding control is intentionally narrow: it protects required deterministic numerical evidence and is not presented as a full semantic fact-checker.
-
-The key invariant is:
-
-> **LLM failure or invalid grounding can change the reporting path, but never the deterministic assessment.**
+Provider failure, invalid output or grounding failure can change the reporting path but never the deterministic assessment.
 
 ---
 
-## 14. Results UI Architecture
+## 8. Results UI Architecture
 
-The Streamlit Results experience uses progressive disclosure:
+The current Results page uses progressive disclosure and avoids duplicating deterministic evidence:
 
 ```text
 Executive Credit Assessment
           ↓
-Final Assessment
-          ↓
-Risk Drivers
-          ↓
-Rule Engine Evidence
+Assessment by Macro-Area
           ↓
 Executive Narrative
           ↓
-Detailed Analysis by Macro-area
+Risk Drivers (collapsed)
+          ↓
+Detailed Assessment (collapsed)
+          ↓
+Rule Catalogue & Filters (collapsed)
+          ↓
+Individual Rule Detail (collapsed)
 ```
 
-### Executive Credit Assessment
+### Assessment by Macro-Area
 
-Primary decision surface showing the deterministic final status and compact assessment KPIs.
-
-### Final Assessment
-
-Shows deterministic macro-area consolidation and explicit limitations without duplicating the executive summary.
-
-### Risk Drivers
-
-Shows triggered deterministic indicators across assessment domains, ordered by configured severity priority. This is an evidence-ranking view, not a new risk score.
-
-### Rule Engine Evidence
-
-Shows rule-outcome and severity distributions, a filterable rule catalogue and individual rule details. Technical inspection is progressively disclosed.
+The four `AssessmentSection` objects are the authoritative visible overview of domain outcomes. Each area shows status, evidence counts and relevant indicators.
 
 ### Executive Narrative
 
-Shows management-oriented reporting generated from deterministic evidence. The narrative is not the source of the displayed status.
+Management-oriented prose generated from deterministic evidence. Titles and ordering are application-controlled.
 
-### Detailed Analysis
+### Risk Drivers
 
-Provides deeper macro-area evidence and data-quality information for analyst drill-down.
+Triggered deterministic indicators ranked by configured severity priority. It is an evidence-ranking view, not a new risk score.
 
-All visualizations consume workflow outputs. The UI does not recalculate thresholds, severity or assessment status.
+### Detailed Assessment
+
+An analyst/audit drill-down for customer context, domain-specific evidence, findings, limitations and data-quality information. It intentionally avoids repeating the executive status and macro-area decision summary.
+
+### Rule Catalogue
+
+Technical rule inspection is available on demand through filters and individual rule details. Aggregate charts that duplicated the macro-area overview have been removed from the primary Results flow.
+
+The UI is presentation-only and does not recalculate thresholds, severity or assessment status.
 
 ---
 
-## 15. Demo Data Flow
+## 9. Demo Data Flow
 
-The repository contains a predefined synthetic scenario in `app/demo_scenarios.py`:
+`app/demo_scenarios.py` provides a predefined synthetic **Complete Credit Assessment** scenario:
 
 ```text
-Complete Credit Assessment
-        ↓
 CreditPosition
-        +
-CustomerProfileData
-        +
-BehaviouralData
-        +
-DebtSustainabilityData
-        ↓
+   + CustomerProfileData
+   + BehaviouralData
+   + DebtSustainabilityData
+          ↓
 Assessment Workflow
+          ↓
+17-rule multi-domain evidence
 ```
 
-The scenario intentionally populates all assessment domains so the application can demonstrate the complete configured rule inventory in one end-to-end execution.
-
-No production banking data is required for the demo.
+The scenario populates all four assessment domains so the application can demonstrate the configured rule inventory end-to-end. No production banking data is required.
 
 ---
 
-## 16. Configuration Architecture
-
-Rule and aggregation policy is externalized under `config/`:
+## 10. Configuration Architecture
 
 ```text
 config/
+├── customer_profile_rules.yaml
 ├── financial_analysis_rules.yaml
 ├── behavioural_analysis_rules.yaml
 ├── debt_sustainability_rules.yaml
-├── customer_profile_rules.yaml
 └── final_assessment.yaml
 ```
 
-This separates rule parameters and policy from application presentation and keeps configuration reviewable and reproducible.
+Thresholds, severity and aggregation policy are externalized and reviewable. Domain services remain responsible for business semantics and calculations.
 
 ---
 
-## 17. Execution Observability
+## 11. Execution Observability
 
-Successful workflow executions expose immutable `ExecutionMetadata`, including execution identity, UTC timestamp, reporting mode, generator/fallback state, error category when applicable and phase timings.
+Successful workflows expose immutable `ExecutionMetadata`, including execution identity, UTC timestamp, reporting mode, generator/fallback state, error category where applicable and phase timings.
 
-Observability is intentionally outside the decision path:
+Observability is outside the decision path:
 
 ```text
 Assessment Decision  ──X──> Execution Metadata
@@ -438,29 +329,25 @@ Current execution metadata is workflow-level provenance rather than a persistent
 
 ---
 
-## 18. CI and Quality Boundary
+## 12. CI and Quality Boundary
 
-The GitHub Actions workflow targets Python **3.13 and 3.14** and runs:
+GitHub Actions validates Python **3.13 and 3.14** through:
 
 ```text
-Install dependencies
-        ↓
 Ruff
-        ↓
+  ↓
 Mypy
-        ↓
+  ↓
 Pytest + coverage ≥ 95% for src
 ```
 
-CI therefore validates both implementation quality and the deterministic architectural contracts represented by the test suite.
+The test suite protects both implementation behaviour and the architectural boundary between deterministic decisioning and optional AI reporting.
 
 ---
 
-## 19. Current Architecture Baseline
+## 13. Current Architecture Baseline
 
-The current implementation includes the completed multi-domain case structure, integrated demo data flow, deterministic final aggregation, evidence-oriented Results UI and the simplified Risk Drivers presentation.
-
-Recent UI refactoring removed threshold-distance presentation and related helpers. Risk Drivers now ranks triggered evidence by deterministic severity priority rather than exposing a derived threshold-distance metric.
+The current implementation is the thesis-ready multi-domain baseline: 17 configured rules across four explicit domains, deterministic final aggregation, integrated synthetic demo data, a simplified evidence-oriented Results UI and bounded optional LLM reporting.
 
 The architecture intentionally remains:
 
