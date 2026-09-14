@@ -1,126 +1,116 @@
-# Architecture Decision Records
+# Architecture Decisions
 
-This document records the architectural decisions that define the Credit Assessment System.
-
-## Decision Status
+This document records the decisions that define the current system architecture.
 
 | ID | Decision | Status |
 |---|---|---|
-| ADR-001 | Deterministic Rule Engine as Decision Authority | Accepted |
-| ADR-002 | Separation of Decision and Reporting Layers | Accepted |
-| ADR-003 | Externalized Rule Configuration | Accepted |
-| ADR-004 | Pluggable Rule Architecture and Registry | Accepted |
-| ADR-005 | Provider-Agnostic LLM Abstraction | Accepted |
-| ADR-006 | Deterministic Fallback for AI Reporting | Accepted |
-| ADR-007 | Immutable Domain Models | Accepted |
-| ADR-008 | Thin Presentation Layer | Accepted |
-| ADR-009 | Execution Observability and Provenance | Accepted |
-| ADR-010 | Grounded LLM Narrative Contract | Accepted |
-| ADR-011 | Evidence-Oriented Results UI | Accepted |
-| ADR-012 | Structural Input Validation Before Assessment | Accepted |
-| ADR-013 | Explicit Handling of All-`NOT_EVALUABLE` Assessments | Accepted |
-| ADR-014 | Multi-Domain Case Assessment | Accepted |
-| ADR-015 | Severity-Based Risk Driver Presentation | Superseded |
-| ADR-016 | Application-Controlled Executive Narrative Structure | Accepted |
-| ADR-017 | Compact Macro-Area Results Experience | Accepted |
+| ADR-001 | Deterministic decision authority | Accepted |
+| ADR-002 | Separate decision and reporting layers | Accepted |
+| ADR-003 | Externalized rule configuration | Accepted |
+| ADR-004 | Pluggable rule discovery | Accepted |
+| ADR-005 | Provider-agnostic LLM abstraction | Accepted |
+| ADR-006 | Deterministic reporting fallback | Accepted |
+| ADR-007 | Immutable domain models where appropriate | Accepted |
+| ADR-008 | Thin presentation layer | Accepted |
+| ADR-009 | Execution provenance | Accepted |
+| ADR-010 | Grounded LLM narrative contract | Accepted |
+| ADR-011 | Evidence-oriented Results UI | Accepted |
+| ADR-012 | Structural input validation | Accepted |
+| ADR-013 | Explicit all-`NOT_EVALUABLE` handling | Accepted |
+| ADR-014 | Multi-domain case assessment | Accepted |
+| ADR-015 | Standalone Risk Drivers presentation | Superseded |
+| ADR-016 | Application-controlled Executive Narrative | Accepted |
+| ADR-017 | Compact macro-area Results experience | Accepted |
 
----
+## ADR-001 — Deterministic Decision Authority
 
-# ADR-001 — Deterministic Rule Engine as Decision Authority
+Deterministic assessment services own the credit decision. `FinalAssessmentService` performs cross-domain case aggregation. LLM components cannot modify or override structured assessment results.
 
-**Decision:** Deterministic assessment services are the decision authority. `FinalAssessmentService` is the authority for cross-domain case aggregation. LLM components cannot modify or override either structured decision.
+**Why:** reproducibility, traceability and separation of credit policy from generative AI.
 
-**Rationale:** Determinism, reproducibility, traceability and separation of business logic from generative AI.
+## ADR-002 — Separate Decision and Reporting Layers
 
-> **The system decides; the AI explains.**
+Assessment, deterministic analysis and reporting are separate stages. Reporting consumes structured evidence instead of accessing rule logic directly.
 
-# ADR-002 — Separation of Decision and Reporting Layers
+**Why:** clear responsibilities and independent testing.
 
-**Decision:** Assessment, deterministic analysis and reporting are separate stages. Reporting consumes structured deterministic analysis rather than accessing rule logic directly.
+## ADR-003 — Externalized Rule Configuration
 
-**Rationale:** Focused responsibilities and independently testable components.
+Rule parameters such as thresholds, severity and severity direction are externalized under `config/`.
 
-# ADR-003 — Externalized Rule Configuration
+**Why:** policy changes remain reviewable without changing central services.
 
-**Decision:** Rule parameters such as thresholds, severity and severity direction are externalized under `config/` and loaded through configuration services.
+## ADR-004 — Pluggable Rule Discovery
 
-**Rationale:** Business-policy changes remain separate from implementation logic and are easier to review and reproduce.
+Rules share common abstractions and are resolved through discovery/registry mechanisms using configured rule identifiers.
 
-# ADR-004 — Pluggable Rule Architecture and Registry
+**Why:** new indicators do not require rule-specific branching in central services.
 
-**Decision:** Rules share common abstractions and are resolved through registry/discovery mechanisms using configured rule identifiers.
+## ADR-005 — Provider-Agnostic LLM Abstraction
 
-**Rationale:** New indicators can be added without rule-specific branching in central services.
+LLM access is exposed through a common client abstraction with provider-specific implementations such as Gemini, Ollama and mock clients.
 
-# ADR-005 — Provider-Agnostic LLM Abstraction
+**Why:** provider portability and infrastructure isolation.
 
-**Decision:** LLM access is exposed through `LLMClient`, with provider-specific implementations such as Gemini, Ollama and a mock client.
+## ADR-006 — Deterministic Reporting Fallback
 
-**Rationale:** Provider portability and isolation of infrastructure concerns from reporting-domain logic.
+Reporting falls back to a deterministic generator when the primary LLM path fails or required grounding fails.
 
-# ADR-006 — Deterministic Fallback for AI Reporting
+**Why:** AI is optional and must never become a dependency of credit assessment.
 
-**Decision:** LLM reporting falls back to a deterministic generator when the primary path fails or, when configured, when required indicator grounding fails.
+## ADR-007 — Immutable Domain Models
 
-**Rationale:** AI is an optional enhancement to reporting, not a dependency of credit assessment.
+Core assessment, analysis, report and execution-state objects use immutable structures where appropriate.
 
-# ADR-007 — Immutable Domain Models
+**Why:** downstream components must not silently mutate deterministic facts.
 
-**Decision:** Core assessment, analysis, report and execution-state objects use immutable structures where appropriate.
+## ADR-008 — Thin Presentation Layer
 
-**Rationale:** Downstream components should not silently mutate deterministic facts.
+`app/` owns presentation and application orchestration. Business rules, assessment calculations, models and LLM abstractions remain in `src/`.
 
-# ADR-008 — Thin Presentation Layer
+**Why:** the core remains reusable and testable outside Streamlit.
 
-**Decision:** `app/` owns presentation, interaction and workflow composition. Business rules, assessment calculations, domain models and LLM abstractions remain in `src/`.
+## ADR-009 — Execution Provenance
 
-**Rationale:** The core remains reusable and testable outside Streamlit.
+Workflow executions expose immutable metadata such as execution ID, UTC timestamp, reporting mode, generator/fallback state, error category and timings.
 
-# ADR-009 — Execution Observability and Provenance
+**Why:** traceability without making observability part of decisioning.
 
-**Decision:** Successful workflow executions expose immutable execution metadata containing execution identity, UTC timestamp, reporting mode, generator/fallback state, error category where applicable and phase timings.
+## ADR-010 — Grounded LLM Narrative Contract
 
-**Rationale:** Execution-level traceability without coupling the application to persistent observability infrastructure.
+LLM reporting must preserve supplied material findings and numerical evidence, avoid unsupported claims and never generate the structured assessment status.
 
-> **Observability describes the workflow; it does not decide the credit outcome.**
+**Why:** generative output remains bounded by deterministic evidence.
 
-# ADR-010 — Grounded LLM Narrative Contract
+## ADR-011 — Evidence-Oriented Results UI
 
-**Decision:** LLM reporting must preserve supplied material findings and numerical evidence, avoid unsupported facts and causal explanations, and never generate the structured assessment status. Strict grounding can require supplied indicator values to appear in the narrative.
+The Results view centres on one authoritative deterministic macro-area dashboard, followed by the Executive Narrative. Technical rule inspection is progressively disclosed inside the dashboard.
 
-**Rationale:** A bounded control is needed between deterministic evidence and generative language without transferring decision authority to the model.
+**Why:** avoid duplicated evidence and keep the analyst workflow focused.
 
-# ADR-011 — Evidence-Oriented Results UI
+## ADR-012 — Structural Input Validation
 
-**Decision:** The Results view uses a progressive hierarchy centred on one authoritative deterministic macro-area dashboard, followed by the Executive Narrative. Technical rule inspection is disclosed within the dashboard rather than repeated in separate aggregate views.
+`CreditPositionValidator` runs before deterministic assessment and validates object type, identifiers, numeric fields, boolean misuse and finite numeric values. `None` remains valid for downstream `NOT_EVALUABLE` handling.
 
-**Rationale:** Separates decision evidence from narrative while minimizing duplication and keeping the analyst workflow focused.
+**Why:** separate structural integrity from credit-policy semantics.
 
-# ADR-012 — Structural Input Validation Before Assessment
+## ADR-013 — Explicit All-`NOT_EVALUABLE` Handling
 
-**Decision:** `CreditPositionValidator` is invoked before deterministic assessment. It validates object type, non-empty `position_id`, numeric fields, boolean misuse and finite numeric values. `None` remains valid for downstream `NOT_EVALUABLE` handling.
-
-The validator does not impose generic financial sign constraints; those remain the responsibility of individual rules.
-
-**Rationale:** Separates input integrity from credit-policy semantics and makes malformed-input behaviour independently testable.
-
-# ADR-013 — Explicit Handling of All-`NOT_EVALUABLE` Assessments
-
-**Decision:** An assessment where all configured rules are `NOT_EVALUABLE` is classified as `ATTENTION`. An empty result collection remains `NORMAL` for backward-compatible service behaviour.
+A section where all configured rules are `NOT_EVALUABLE` is `ATTENTION`. An empty result collection remains `NORMAL`.
 
 ```text
-2+ TRIGGERED → CRITICAL
-1 TRIGGERED  → ATTENTION
-0 TRIGGERED + evaluable rule → NORMAL
-ALL NOT_EVALUABLE → ATTENTION
-EMPTY RESULTS → NORMAL
+2+ TRIGGERED                    → CRITICAL
+1 TRIGGERED                     → ATTENTION
+0 TRIGGERED + evaluable         → NORMAL
+ALL NOT_EVALUABLE               → ATTENTION
+EMPTY RESULTS                   → NORMAL
 ```
 
-**Rationale:** Absence of evidence must not be confused with evidence of normal credit quality.
+**Why:** lack of evidence must not be confused with evidence of normality.
 
-# ADR-014 — Multi-Domain Case Assessment
+## ADR-014 — Multi-Domain Case Assessment
 
-**Decision:** The system models a complete credit case across four explicit deterministic domains:
+The system models four deterministic domains:
 
 ```text
 Customer Profile      → CP001–CP003
@@ -131,36 +121,32 @@ Debt Sustainability   → DS001–DS003
                   Final Assessment
 ```
 
-Each domain owns its inputs and rule evaluation. `FinalAssessmentService` performs deterministic cross-domain consolidation.
+Each domain owns its inputs and rule evaluation; `FinalAssessmentService` performs deterministic consolidation.
 
-Customer Profile is contextual for the two-core-area escalation: `ATTENTION` does not count toward the two-area threshold, while `CRITICAL` can still produce a `CRITICAL` final assessment.
+**Why:** the model reflects an analyst-oriented credit review and keeps rule families separated.
 
-**Rationale:** The structure mirrors an analyst-oriented credit review and prevents unrelated rule families from being conflated inside a single financial rule engine.
+## ADR-015 — Standalone Risk Drivers Presentation
 
-# ADR-015 — Severity-Based Risk Driver Presentation
+**Superseded.** The former standalone Risk Drivers section was removed because the macro-area dashboard already exposes the authoritative deterministic evidence.
 
-**Decision:** This decision is **superseded**. The former standalone Risk Drivers presentation was removed from the current Results page because the authoritative macro-area dashboard already exposes deterministic evidence and a separate bottom-of-page risk-driver section created duplication.
+**Why superseded:** avoid duplicate presentation of the same evidence.
 
-The underlying deterministic severity metadata remains part of the assessment model and can still be inspected through rule evidence.
+## ADR-016 — Application-Controlled Executive Narrative
 
-**Rationale for supersession:** Keep one authoritative evidence surface rather than maintaining a second presentation layer for the same triggered indicators.
-
-# ADR-016 — Application-Controlled Executive Narrative Structure
-
-**Decision:** The Executive Narrative always presents the assessment areas in this exact order:
+The Executive Narrative always uses this order:
 
 1. Customer Profile
 2. Financial Analysis
 3. Behavioural Analysis
 4. Debt Sustainability
 
-Python owns the titles and structural order. The LLM supplies narrative prose derived from deterministic evidence and cannot create, remove or reorder assessment categories.
+Python controls titles and order; the LLM supplies prose only.
 
-**Rationale:** The macro-area taxonomy is part of the application's domain model and presentation contract. Keeping it outside the LLM prevents inconsistent headings, missing domains and structural drift between reporting providers.
+**Why:** the domain taxonomy is part of the application contract and must not drift between providers.
 
-# ADR-017 — Compact Macro-Area Results Experience
+## ADR-017 — Compact Macro-Area Results Experience
 
-**Decision:** The current Results page is deliberately reduced to three visible layers:
+The visible Results hierarchy is:
 
 ```text
 Executive Credit Assessment
@@ -170,52 +156,21 @@ Assessment by Macro-Area
 Executive Narrative
 ```
 
-The macro-area dashboard is the single visible deterministic evidence overview. Rule Catalogue & Filters and Individual Rule Detail are progressively disclosed within that dashboard. Separate bottom-of-page Risk Drivers and Detailed Assessment sections are not rendered.
+Rule Catalogue & Filters and Individual Rule Detail are disclosed within the macro-area dashboard. Separate bottom-of-page Risk Drivers and Detailed Assessment sections are not rendered.
 
-**Rationale:** The previous presentation duplicated status, triggered evidence, macro-area outcomes and technical detail across multiple sections. Consolidating deterministic evidence into one dashboard improves scanability and makes the Results page easier to use during an analyst-style review.
+**Why:** one authoritative evidence surface is clearer and avoids repeated information.
 
----
-
-# Current Architectural Principles
-
-The decisions above imply:
+## Architectural Principles
 
 1. Deterministic logic owns credit decisions.
-2. Input integrity is validated before rule evaluation.
-3. Customer profile, financial, behavioural and debt-sustainability domains remain explicit.
+2. Input integrity is validated before assessment.
+3. Four assessment domains remain explicit.
 4. `NOT_EVALUABLE` is distinct from `NOT_TRIGGERED`.
-5. Rule parameters and aggregation policy are configuration-driven.
+5. Rule policy is configuration-driven.
 6. Components communicate through structured domain objects.
 7. LLM providers remain replaceable.
-8. AI is optional and limited to narrative synthesis.
-9. LLM failure cannot invalidate deterministic assessment.
+8. AI is limited to narrative reporting.
+9. LLM failure cannot invalidate the assessment.
 10. Presentation code does not own business logic.
-11. Execution provenance remains separate from decision data.
-12. The UI explains deterministic evidence without reproducing decision logic.
-13. Technical evidence is progressively disclosed rather than presented through duplicated sections.
-14. The Executive Narrative structure is application-controlled and provider-independent.
-15. The Results page has one authoritative macro-area evidence surface.
-
-## Current Architecture
-
-```mermaid
-flowchart LR
-    UI[Streamlit UI] --> WF[Assessment Workflow]
-    WF --> VAL[CreditPosition Validator]
-    VAL --> DOM[Four Domain Assessments]
-    DOM --> CASE[Credit Assessment Case]
-    CASE --> FINAL[Final Assessment]
-    FINAL --> UI
-    WF --> ANA[Deterministic Analysis]
-    ANA --> RP[Reporting]
-    RP --> DRG[Deterministic Generator]
-    RP --> LLMG[Optional LLM Generator]
-    LLMG --> GROUND[Grounding Validation]
-    GROUND -. invalid .-> DRG
-    RP -. provider failure .-> DRG
-    WF --> META[Execution Metadata]
-    CFG[config/*.yaml] --> DOM
-    CFG --> FINAL
-```
-
-The architecture intentionally keeps the **assessment path deterministic**, the **case aggregation deterministic**, the **LLM path optional and bounded**, the **fallback path deterministic**, and **execution metadata observational rather than decisional**.
+11. Execution metadata is observational.
+12. The Results UI has one authoritative macro-area evidence surface.
