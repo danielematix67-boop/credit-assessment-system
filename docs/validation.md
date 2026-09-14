@@ -24,11 +24,11 @@ Validation protects three properties:
 
 ## Rule Coverage
 
-The configured inventory contains **17 rules**:
+The configured inventory contains **18 rules**:
 
 | Domain | Rules | Count |
 |---|---|---:|
-| Customer Profile | `CP001–CP003` | 3 |
+| Customer Profile | `CP001–CP004` | 4 |
 | Financial Analysis | `R001–R007` | 7 |
 | Behavioural Analysis | `B001–B004` | 4 |
 | Debt Sustainability | `DS001–DS003` | 3 |
@@ -108,7 +108,7 @@ The Executive Narrative follows the fixed application-controlled order:
 
 ## Scenario Coverage
 
-Demonstration scenarios use synthetic/anonymized data and exercise the four assessment domains and configured rule inventory. Scenario tests complement, but do not replace, individual rule tests.
+Demonstration scenarios use synthetic/anonymized data and exercise the four assessment domains and configured rule inventory, including Customer Profile forborne exposure. Scenario tests complement, but do not replace, individual rule tests.
 
 ## UI Boundary
 
