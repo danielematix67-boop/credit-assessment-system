@@ -2,6 +2,7 @@ from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_direction import SeverityDirection
+from src.rules.base.severity_threshold import SeverityThreshold
 from src.rules.base.status import RuleStatus
 from src.rules.financial_analysis.r003 import EbitdaMarginRule
 
@@ -15,7 +16,10 @@ def make_rule(**kwargs) -> EbitdaMarginRule:
             threshold=0.0,
             severity=RuleSeverity.MEDIUM,
             severity_direction=SeverityDirection.LOWER_IS_WORSE,
-            severity_thresholds=(),
+            severity_thresholds=(
+                SeverityThreshold(0.0, RuleSeverity.MEDIUM),
+                SeverityThreshold(-0.10, RuleSeverity.HIGH),
+            ),
             input_field="ebitda_margin",
             comment_template="EBITDA margin threshold triggered.",
             trigger_operator="LT",
@@ -24,12 +28,12 @@ def make_rule(**kwargs) -> EbitdaMarginRule:
     )
 
 
-def test_negative_margin_triggers_medium_severity() -> None:
+def test_negative_margin_triggers_high_severity() -> None:
     result = make_rule().evaluate(
-        CreditPosition(position_id="TEST", ebitda_margin=-0.05)
+        CreditPosition(position_id="TEST", ebitda_margin=-0.15)
     )
     assert result.status == RuleStatus.TRIGGERED
-    assert result.severity == RuleSeverity.MEDIUM
+    assert result.severity == RuleSeverity.HIGH
 
 
 def test_positive_margin_does_not_trigger() -> None:
