@@ -54,18 +54,12 @@ class ReportPromptBuilder:
         cls,
         findings: list[AnalysisFinding],
     ) -> dict[str, list[AnalysisFinding]]:
-        """
-        Group findings by assessment macro area.
-
-        The four assessment areas have a fixed authoritative order:
-        Customer Profile, Financial Analysis, Behavioural Analysis and
-        Debt Sustainability. Findings within each area retain the order
-        supplied by the Analysis agent.
-        """
+        """Group deterministic findings by their authoritative assessment area."""
         grouped: dict[str, list[AnalysisFinding]] = defaultdict(list)
 
         for finding in findings:
-            grouped[finding.category].append(finding)
+            area = finding.assessment_area or finding.category
+            grouped[area].append(finding)
 
         ordered_categories = sorted(
             grouped,
