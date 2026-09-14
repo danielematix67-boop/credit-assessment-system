@@ -204,6 +204,7 @@ def test_deterministic_report_allows_profile_summary_without_rule_status(generat
     )
     report = generator.generate(make_analysis(key_findings=[profile]))
 
+    assert "### Customer Profile" in report.executive_summary
     assert "Company: Example S.p.A." in report.executive_summary
 
 
@@ -236,6 +237,40 @@ def test_deterministic_fallback_keeps_all_findings_in_category_paragraphs(genera
         "Revenue growth declined to -20.0%.\n\n"
         "EBITDA is negative at €-120,000. Interest coverage ratio is -0.2x.\n\n"
         "NFP to EBITDA stands at 7.0x."
+    )
+
+
+def test_deterministic_fallback_fixed_assessment_area_headings_follow_canonical_order(
+    generator,
+):
+    findings = [
+        make_analysis_finding(
+            category="Debt Sustainability",
+            text="DSCR remains weak.",
+        ),
+        make_analysis_finding(
+            category="Behavioural Analysis",
+            text="Payment delays increased.",
+        ),
+        make_analysis_finding(
+            category="Customer Profile",
+            text="Customer context.",
+            rule_id="PROFILE",
+            status=None,
+        ),
+        make_analysis_finding(
+            category="Financial Analysis",
+            text="Revenue declined.",
+        ),
+    ]
+    report = generator.generate(make_analysis(key_findings=findings))
+
+    assert report.executive_summary == (
+        "Assessment Status: Attention\n\n"
+        "### Customer Profile\n\nCustomer context.\n\n"
+        "### Financial Analysis\n\nRevenue declined.\n\n"
+        "### Behavioural Analysis\n\nPayment delays increased.\n\n"
+        "### Debt Sustainability\n\nDSCR remains weak."
     )
 
 
