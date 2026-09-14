@@ -4,16 +4,16 @@
 
 The **Credit Assessment System** is a deterministic, rule-based credit assessment application with an optional AI-assisted reporting layer.
 
-The architecture mirrors an analyst-style credit review across four explicit domains:
+The architecture models an analyst-style review across four explicit domains:
 
 1. Customer Profile
 2. Financial Analysis
 3. Behavioural Analysis
 4. Debt Sustainability
 
-The four domains are consolidated into a deterministic `Final Assessment` before narrative reporting is generated.
+The four domains are consolidated into a deterministic `CreditAssessmentCase` and final assessment before narrative reporting.
 
-> **Deterministic evidence is the source of truth. The LLM is an optional synthesis component and has no decision authority.**
+> **Deterministic evidence is the source of truth. The LLM is optional narrative synthesis and has no decision authority.**
 
 Framework-independent logic lives under `src/`; Streamlit presentation and application orchestration remain under `app/`.
 
@@ -54,7 +54,7 @@ Generator           Generator
       Execution Metadata
 ```
 
-The dependency direction is:
+Dependency direction:
 
 ```text
 Streamlit / app
@@ -74,7 +74,7 @@ The core domain does not depend on Streamlit.
 
 ## 3. Domain Case Structure
 
-The current configured inventory contains **17 rules**:
+The configured inventory contains **17 rules**:
 
 | Domain | Rules | Count |
 |---|---|---:|
@@ -83,7 +83,7 @@ The current configured inventory contains **17 rules**:
 | Behavioural Analysis | `B001–B004` | 4 |
 | Debt Sustainability | `DS001–DS003` | 3 |
 
-The canonical presentation order is:
+Canonical presentation order:
 
 ```text
 Customer Profile
@@ -92,7 +92,7 @@ Behavioural Analysis
 Debt Sustainability
 ```
 
-Each `AssessmentSection` exposes deterministic status, evidence, findings and limitations where applicable. `NOT_EVALUABLE` is explicitly represented and is not silently converted into `NORMAL`.
+Each `AssessmentSection` exposes deterministic status, evidence, findings and limitations where applicable. `NOT_EVALUABLE` is explicit and is not silently converted into `NORMAL`.
 
 ---
 
@@ -100,13 +100,9 @@ Each `AssessmentSection` exposes deterministic status, evidence, findings and li
 
 ### Customer Profile
 
-`CustomerProfileAssessmentService` evaluates:
+`CustomerProfileAssessmentService` evaluates `CP001–CP003` for active EWS, restructuring history and business history.
 
-- `CP001` — Active EWS;
-- `CP002` — Previous Restructuring;
-- `CP003` — Business history.
-
-Customer Profile is contextual for the two-core-area final escalation: `ATTENTION` does not count toward the two-area threshold, while `CRITICAL` can still produce a `CRITICAL` final assessment.
+Customer Profile is contextual for the two-core-area final escalation: `ATTENTION` does not count toward that threshold, while `CRITICAL` can still produce a `CRITICAL` final assessment.
 
 ### Financial Analysis
 
@@ -120,13 +116,13 @@ The financial domain uses the deterministic Rule Engine for `R001–R007`, cover
 
 `DebtSustainabilityAssessmentService` evaluates `DS001–DS003` using cash-flow and debt-service indicators such as CFADS, debt service and debt-service buffer.
 
-The non-financial domains own their own evidence and cannot modify financial rule results.
+The non-financial domains own their evidence and cannot modify financial rule results.
 
 ---
 
 ## 5. Deterministic Status Policy
 
-For a rule-based section:
+For rule-based sections:
 
 ```text
 2+ TRIGGERED
@@ -164,9 +160,9 @@ No averaging, weighted score or LLM judgement is used.
 
 ## 6. Validation and Decision Boundary
 
-`CreditPositionValidator` runs before deterministic rule evaluation. It validates the expected object type, non-empty identifier, numeric fields, boolean misuse and finite numeric values. `None` remains valid so downstream rules can explicitly return `NOT_EVALUABLE`.
+`CreditPositionValidator` runs before deterministic rule evaluation. It validates expected object type, non-empty identifier, numeric fields, boolean misuse and finite numeric values. `None` remains valid so downstream rules can explicitly return `NOT_EVALUABLE`.
 
-The decision path is:
+Decision path:
 
 ```text
 CreditPosition
@@ -204,7 +200,7 @@ Python controls the Executive Narrative titles and canonical macro-area order. G
 
 ### Provider configuration
 
-Current conservative generation settings are:
+Current conservative generation settings:
 
 ```text
 Gemini: temperature=0.1
@@ -223,11 +219,11 @@ These settings affect narrative generation only.
 ```text
 Deterministic findings
         ↓
-LLM narrative
+Primary generator
         ↓
 Grounding validation
      /       \
-  valid     invalid
+  valid     invalid/failure
     ↓          ↓
  Narrative  Deterministic fallback
 ```
@@ -238,7 +234,7 @@ Provider failure, invalid output or grounding failure can change the reporting p
 
 ## 8. Results UI Architecture
 
-The current Results page uses progressive disclosure and avoids duplicating deterministic evidence:
+The current Results page intentionally has a compact hierarchy:
 
 ```text
 Executive Credit Assessment
@@ -246,35 +242,40 @@ Executive Credit Assessment
 Assessment by Macro-Area
           ↓
 Executive Narrative
-          ↓
-Risk Drivers (collapsed)
-          ↓
-Detailed Assessment (collapsed)
-          ↓
-Rule Catalogue & Filters (collapsed)
-          ↓
-Individual Rule Detail (collapsed)
 ```
+
+### Executive Credit Assessment
+
+The page begins with the final deterministic status and three compact KPIs: rules evaluated, triggered and not evaluable. Reporting provenance is lightweight metadata only.
 
 ### Assessment by Macro-Area
 
-The four `AssessmentSection` objects are the authoritative visible overview of domain outcomes. Each area shows status, evidence counts and relevant indicators.
+The four `AssessmentSection` objects are the authoritative visible deterministic overview. Each area shows status, evidence counts and relevant indicators.
+
+The dashboard also exposes technical inspection on demand through:
+
+```text
+Rule Catalogue & Filters
+          ↓
+Individual Rule Detail
+```
+
+Redundant aggregate charts have been removed.
 
 ### Executive Narrative
 
-Management-oriented prose generated from deterministic evidence. Titles and ordering are application-controlled.
+The Executive Narrative is management-oriented prose generated from deterministic evidence. The visible title is application-controlled and the macro-area order is fixed:
 
-### Risk Drivers
+```text
+Customer Profile
+Financial Analysis
+Behavioural Analysis
+Debt Sustainability
+```
 
-Triggered deterministic indicators ranked by configured severity priority. It is an evidence-ranking view, not a new risk score.
+### Removed secondary sections
 
-### Detailed Assessment
-
-An analyst/audit drill-down for customer context, domain-specific evidence, findings, limitations and data-quality information. It intentionally avoids repeating the executive status and macro-area decision summary.
-
-### Rule Catalogue
-
-Technical rule inspection is available on demand through filters and individual rule details. Aggregate charts that duplicated the macro-area overview have been removed from the primary Results flow.
+The current Results page does not render separate bottom-of-page **Risk Drivers** or **Detailed Assessment** sections. Their removal is deliberate: deterministic macro-area evidence is already visible in the authoritative dashboard, while technical inspection is progressively disclosed within that dashboard.
 
 The UI is presentation-only and does not recalculate thresholds, severity or assessment status.
 
@@ -295,7 +296,7 @@ Assessment Workflow
 17-rule multi-domain evidence
 ```
 
-The scenario populates all four assessment domains so the application can demonstrate the configured rule inventory end-to-end. No production banking data is required.
+The scenario populates all four assessment domains. No production banking data is required.
 
 ---
 
@@ -347,9 +348,9 @@ The test suite protects both implementation behaviour and the architectural boun
 
 ## 13. Current Architecture Baseline
 
-The current implementation is the thesis-ready multi-domain baseline: 17 configured rules across four explicit domains, deterministic final aggregation, integrated synthetic demo data, a simplified evidence-oriented Results UI and bounded optional LLM reporting.
+The current implementation is the thesis-ready multi-domain baseline: 17 configured rules across four explicit domains, deterministic final aggregation, integrated synthetic demo data, a compact evidence-oriented Results UI and bounded optional LLM reporting.
 
-The architecture intentionally remains:
+The intended flow is:
 
 ```text
 Deterministic Core
