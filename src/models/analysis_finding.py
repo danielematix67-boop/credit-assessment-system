@@ -12,3 +12,5 @@ class AnalysisFinding:
     text: str
     status: RuleStatus | None = None
     assessment_area: str | None = None
+    value: object | None = None
+    indicator: str = ""
