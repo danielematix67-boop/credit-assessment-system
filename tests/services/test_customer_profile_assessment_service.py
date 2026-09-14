@@ -18,6 +18,7 @@ def test_customer_profile_preserves_context_data() -> None:
             relationship_years=8,
             business_history_years=8,
             ews_score_class=EwsScoreClass.YELLOW,
+            forborne=True,
         )
     )
 
@@ -26,6 +27,7 @@ def test_customer_profile_preserves_context_data() -> None:
     assert section.context["relationship_years"] == 8
     assert section.context["business_history_years"] == 8
     assert section.context["ews_score_class"] == "YELLOW"
+    assert section.context["forborne"] is True
 
 
 def test_yellow_ews_score_triggers_medium_attention() -> None:
@@ -84,6 +86,44 @@ def test_green_ews_score_does_not_trigger() -> None:
     assert section.status == SectionStatus.NORMAL
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.severity == RuleSeverity.LOW
+
+
+def test_forborne_exposure_triggers_medium_attention() -> None:
+    section = CustomerProfileAssessmentService().assess(
+        CustomerProfileData(company_name="Synthetic Co.", forborne=True)
+    )
+
+    result = section.evidence[3]
+    assert section.status == SectionStatus.ATTENTION
+    assert result.rule_id == "CP004"
+    assert result.status == RuleStatus.TRIGGERED
+    assert result.severity == RuleSeverity.MEDIUM
+    assert result.value is True
+    assert len(section.findings) == 1
+
+
+def test_non_forborne_exposure_does_not_trigger() -> None:
+    section = CustomerProfileAssessmentService().assess(
+        CustomerProfileData(company_name="Synthetic Co.", forborne=False)
+    )
+
+    result = section.evidence[3]
+    assert section.status == SectionStatus.NORMAL
+    assert result.rule_id == "CP004"
+    assert result.status == RuleStatus.NOT_TRIGGERED
+    assert result.severity == RuleSeverity.LOW
+
+
+def test_forborne_missing_is_not_evaluable() -> None:
+    section = CustomerProfileAssessmentService().assess(
+        CustomerProfileData(company_name="Synthetic Co.")
+    )
+
+    result = section.evidence[3]
+    assert result.rule_id == "CP004"
+    assert result.status == RuleStatus.NOT_EVALUABLE
+    assert result.value is None
+    assert result.severity == RuleSeverity.MEDIUM
 
 
 def test_two_profile_risk_flags_trigger_critical() -> None:
