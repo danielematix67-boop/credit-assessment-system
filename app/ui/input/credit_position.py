@@ -1,4 +1,4 @@
-"""Streamlit rendering for CreditPosition input."""
+"""Streamlit rendering for complete credit-assessment input data."""
 
 from typing import Any
 
@@ -16,6 +16,9 @@ from app.ui.input.field_metadata import (
     unwrap_optional,
 )
 from app.ui.responsive_table import render_responsive_position_table
+from src.models.behavioural_data import BehaviouralData
+from src.models.customer_profile_data import CustomerProfileData
+from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.models.position import CreditPosition
 
 
@@ -204,7 +207,7 @@ def _render_field_group(
 
 
 def _render_input_introduction() -> None:
-    """Render the introduction card for manual CreditPosition input."""
+    """Render the introduction card for complete manual assessment input."""
     st.html(
         """
         <div class="input-introduction">
@@ -212,15 +215,14 @@ def _render_input_introduction() -> None:
                 Credit Position Data
             </div>
             <div class="input-introduction-description">
-                Enter the financial information used by the
-                deterministic assessment engine. The fields below
-                correspond directly to the
-                <strong>CreditPosition</strong> data model.
+                Enter the information available for the credit review.
+                The manual input covers every field exposed by the
+                <strong>CreditPosition</strong> model and the three
+                additional domain data models used by the assessment workflow.
             </div>
             <div class="input-introduction-note">
                 Assessment results are calculated separately by the
-                deterministic rule engine and are not entered
-                manually here.
+                deterministic rule engine and are never entered manually.
             </div>
         </div>
         """
@@ -264,3 +266,162 @@ def build_credit_position_from_ui() -> dict[str, Any]:
         )
 
     return position_data
+
+
+def _render_generic_dataclass_field(
+    *,
+    model_name: str,
+    field_name: str,
+    field_type: Any,
+    default: Any,
+) -> Any:
+    """Render a field from one of the additional domain input models."""
+    label = format_field_label(field_name)
+    resolved_type, is_optional = unwrap_optional(field_type)
+    key_prefix = f"{model_name}_{field_name}"
+
+    if resolved_type is str:
+        if is_optional:
+            provided = st.checkbox(
+                f"Provide {label}",
+                value=default is not None,
+                key=f"{key_prefix}_provided",
+            )
+            if not provided:
+                return None
+        return st.text_input(
+            label,
+            value="" if default is None else str(default),
+            key=f"{key_prefix}_value",
+        )
+
+    if resolved_type is int:
+        if is_optional:
+            provided = st.checkbox(
+                f"Provide {label}",
+                value=default is not None,
+                key=f"{key_prefix}_provided",
+            )
+            if not provided:
+                return None
+        return st.number_input(
+            label,
+            value=0 if default is None else int(default),
+            step=1,
+            key=f"{key_prefix}_value",
+        )
+
+    if resolved_type is float:
+        if is_optional:
+            provided = st.checkbox(
+                f"Provide {label}",
+                value=default is not None,
+                key=f"{key_prefix}_provided",
+            )
+            if not provided:
+                return None
+        return st.number_input(
+            label,
+            value=0.0 if default is None else float(default),
+            step=0.01,
+            format="%.4f",
+            key=f"{key_prefix}_value",
+        )
+
+    if resolved_type is bool:
+        if is_optional:
+            options = ["Not provided", "Yes", "No"]
+            default_index = 0 if default is None else (1 if default else 2)
+            selected = st.selectbox(
+                label,
+                options=options,
+                index=default_index,
+                key=f"{key_prefix}_value",
+            )
+            return None if selected == "Not provided" else selected == "Yes"
+        return st.checkbox(
+            label,
+            value=bool(default),
+            key=f"{key_prefix}_value",
+        )
+
+    if resolved_type is list:
+        default_text = "\n".join(str(item) for item in (default or []))
+        raw_value = st.text_area(
+            f"{label} (one item per line)",
+            value=default_text,
+            key=f"{key_prefix}_value",
+            height=100,
+        )
+        return [item.strip() for item in raw_value.splitlines() if item.strip()]
+
+    raise TypeError(
+        f"Unsupported manual input type: {model_name}.{field_name} -> {field_type}"
+    )
+
+
+def _render_dataclass_input_group(
+    *,
+    group_title: str,
+    model_name: str,
+    model_type: type,
+) -> dict[str, Any]:
+    """Render every field defined by an additional assessment data model."""
+    _render_field_group_header(group_title)
+    model_fields = list(model_type.__dataclass_fields__.values())
+    type_hints = __import__("typing").get_type_hints(model_type)
+    values: dict[str, Any] = {}
+
+    columns = st.columns(2, gap="medium")
+    for index, field in enumerate(model_fields):
+        with columns[index % 2]:
+            default = field.default
+            if field.default_factory is not field.default_factory.__class__:
+                default = field.default_factory()
+            values[field.name] = _render_generic_dataclass_field(
+                model_name=model_name,
+                field_name=field.name,
+                field_type=type_hints[field.name],
+                default=default,
+            )
+            description = format_field_description(field.name)
+            st.caption(description)
+
+    return values
+
+
+def build_manual_case_data_from_ui() -> tuple[
+    CustomerProfileData,
+    BehaviouralData,
+    DebtSustainabilityData,
+]:
+    """Render and build every additional domain model used by the workflow."""
+    st.subheader("Assessment Domain Data")
+    st.caption(
+        "Complete the fields available for Customer Profile, Behavioural Analysis "
+        "and Debt Sustainability. Leave unavailable optional values unprovided."
+    )
+
+    customer_profile = CustomerProfileData(
+        **_render_dataclass_input_group(
+            group_title="Customer Profile",
+            model_name="customer_profile",
+            model_type=CustomerProfileData,
+        )
+    )
+    behavioural = BehaviouralData(
+        **_render_dataclass_input_group(
+            group_title="Behavioural Analysis",
+            model_name="behavioural",
+            model_type=BehaviouralData,
+        )
+    )
+    debt_sustainability = DebtSustainabilityData(
+        **_render_dataclass_input_group(
+            group_title="Debt Sustainability",
+            model_name="debt_sustainability",
+            model_type=DebtSustainabilityData,
+        )
+    )
+
+    return customer_profile, behavioural, debt_sustainability
