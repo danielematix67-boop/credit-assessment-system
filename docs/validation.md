@@ -6,11 +6,11 @@ Validation protects three properties:
 
 1. deterministic credit decisioning;
 2. complete and traceable evidence;
-3. bounded, resilient reporting.
+3. bounded and resilient reporting.
 
 > **LLM output is never the source of truth for the credit assessment.**
 
-## Validation Levels
+## Validation levels
 
 | Level | Scope |
 |---|---|
@@ -18,24 +18,31 @@ Validation protects three properties:
 | Integration | Cross-layer evidence and case aggregation |
 | Workflow | Assessment → analysis → reporting propagation |
 | Reporting | Prompt contract, grounding and fallback |
-| Scenario | End-to-end domain/rule coverage |
+| Scenario | End-to-end representative domain/rule coverage |
 | UI | Read-only presentation boundary |
-| CI | Ruff, Mypy and Pytest/coverage |
+| CI | Repository lint, type checking and test gates |
 
-## Rule Coverage
+## Rule and configuration validation
 
-The configured inventory contains **18 rules**:
+The active rule inventory is defined by the valid configuration files under `config/` together with the registered implementations discovered under `src/rules/`.
 
-| Domain | Rules | Count |
-|---|---|---:|
-| Customer Profile | `CP001–CP004` | 4 |
-| Financial Analysis | `R001–R007` | 7 |
-| Behavioural Analysis | `B001–B004` | 4 |
-| Debt Sustainability | `DS001–DS003` | 3 |
+Validation must protect the following invariant:
 
-Tests cover rule registration/discovery, configuration loading, thresholds, severity, boundary conditions and `NOT_EVALUABLE` inputs.
+```text
+Configured rule identifier
+            ↓
+exactly one resolvable deterministic implementation
+            ↓
+RuleResult
+```
 
-Deterministic invariant:
+Tests cover configuration loading, required fields, duplicate identifiers, supported calculations/operators, severity configuration, registration/discovery and non-evaluable inputs.
+
+The documentation deliberately does not duplicate the complete rule inventory. This avoids making the validation contract stale when the catalogue evolves.
+
+## Determinism
+
+For a fixed input and fixed configuration, rule evaluation must be reproducible:
 
 ```text
 Same Input + Same Configuration
@@ -43,108 +50,104 @@ Same Input + Same Configuration
         Same RuleResult
 ```
 
-## Status Validation
+The deterministic path must not depend on LLM availability, provider responses or Streamlit state.
 
-For rule-based sections:
+## Status validation
 
-| Condition | Status |
-|---|---|
-| 2+ `TRIGGERED` | `CRITICAL` |
-| 1 `TRIGGERED` | `ATTENTION` |
-| 0 triggered + evaluable evidence | `NORMAL` |
-| All `NOT_EVALUABLE` | `ATTENTION` |
-| Empty result set | `NORMAL` |
+Section and case status are derived by deterministic services. Their policy is externalised where configured and must be tested from the actual policy contract rather than reproduced as independent constants in the UI or reporting layer.
 
-At case level:
+The tests should cover:
 
-```text
-Any CRITICAL section       → CRITICAL
-2+ core ATTENTION sections → CRITICAL
-1 core ATTENTION section   → ATTENTION
-All evaluable NORMAL       → NORMAL
-No evaluable sections      → ATTENTION
-```
+- no triggered rule with evaluable evidence;
+- one or more triggered rules;
+- multiple triggered rules;
+- all rules not evaluable;
+- partial section evaluation;
+- empty result collections where supported;
+- final aggregation with critical, attention, normal and non-evaluable sections;
+- configured core/contextual section behaviour;
+- minimum evidence requirements for a normal final assessment.
 
-Customer Profile is contextual for the two-core-area escalation: `ATTENTION` does not count toward that threshold, while `CRITICAL` can still produce `CRITICAL`.
+The exact thresholds and section membership belong to the configuration under `config/final_assessment.yaml`.
 
-## Workflow Invariant
+## Workflow invariant
 
 ```text
 Input
  ↓
-Validation
+Structural validation
  ↓
-Four Domain Assessments
+Domain assessments
  ↓
 CreditAssessmentCase
  ↓
-Final Assessment
+Final assessment
  ↓
-Deterministic Analysis
+Deterministic analysis
  ↓
 Reporting
 ```
 
-Reporting consumes the deterministic result; it does not recreate or modify it.
+Reporting consumes deterministic results; it does not recreate or modify them.
 
-## Reporting Validation
+## Reporting validation
 
 Tests verify that:
 
-- all four domains reach `AssessmentAnalysis`;
-- `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` are preserved;
-- `risk_factors` contains only high-severity triggered evidence;
-- the prompt receives the complete evidence set;
-- material indicators are preserved when grounding is required;
+- evidence from all configured domains reaches `AssessmentAnalysis`;
+- `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` remain distinguishable;
+- high-severity triggered evidence is represented correctly in the reporting view;
+- the prompt receives the evidence required by its structured contract;
+- material indicators remain grounded;
+- unsupported or altered evidence is rejected where grounding applies;
 - provider or grounding failure activates deterministic fallback;
 - fallback failure is propagated rather than silently hidden.
 
-The Executive Narrative follows the fixed application-controlled order:
+Reporting tests should refer to representative configured rules rather than hard-coding the complete production inventory.
 
-1. Customer Profile
-2. Financial Analysis
-3. Behavioural Analysis
-4. Debt Sustainability
+## Scenario coverage
 
-## Scenario Coverage
+Demonstration scenarios use synthetic/anonymized data. Scenario tests should exercise representative combinations of domains and rule outcomes and should evolve when the input contract or assessment policy changes.
 
-Demonstration scenarios use synthetic/anonymized data and exercise the four assessment domains and configured rule inventory, including Customer Profile forborne exposure. Scenario tests complement, but do not replace, individual rule tests.
+Scenario coverage complements, but does not replace, focused rule tests.
 
-## UI Boundary
+## UI boundary
 
-The Results hierarchy is:
+The Results layer renders workflow evidence and does not recalculate:
 
-```text
-Executive Credit Assessment
-          ↓
-Assessment by Macro-Area
-          ↓
-Executive Narrative
-```
+- rule thresholds;
+- rule severity;
+- rule status;
+- section status;
+- final assessment status.
 
-The UI renders workflow evidence and does not recalculate thresholds, severity or assessment status.
+Any UI test that asserts a business decision should preferably derive the expected value from the deterministic contract or a dedicated test fixture rather than copying policy constants into presentation tests.
 
-## Execution Metadata
+## Execution metadata
 
-`ExecutionMetadata` is provenance only. Tests verify execution identity, UTC timestamp, reporting mode, generator/fallback state, error classification and timing consistency. Metadata does not participate in decisioning.
+Execution metadata is provenance only. Tests verify execution identity, timestamp semantics, reporting mode, generator/fallback state, error classification and timing consistency.
 
-## CI Gates
+Metadata does not participate in decisioning.
 
-GitHub Actions targets **Python 3.14**:
+## CI gates
+
+The repository workflow is the authoritative definition of CI. Local commands in `README.md` are convenience equivalents and should be kept aligned with the workflow.
+
+A typical pipeline is:
 
 ```text
 Install dependencies
         ↓
-Ruff
+Lint
         ↓
-Mypy
+Type checking
         ↓
-Pytest + coverage
+Test suite + coverage
 ```
 
-The coverage threshold is **95% for `src`**.
+Do not treat a hard-coded coverage percentage in documentation as the source of truth; the CI configuration is authoritative.
 
-## Validation Philosophy
+## Validation philosophy
 
 ```text
 Valid input
@@ -161,3 +164,23 @@ Read-only presentation
 ```
 
 LLM failure must never invalidate a deterministic assessment.
+
+## Change impact
+
+When the rule catalogue changes, the minimum validation impact should be assessed across:
+
+```text
+Configuration
+Implementation
+Discovery / registry
+Rule tests
+Section aggregation
+Case aggregation
+Analysis evidence
+Reporting / grounding
+Demo scenarios
+UI presentation
+Documentation
+```
+
+A rule addition should not require modifications to unrelated reporting or presentation logic merely because its identifier is new.
