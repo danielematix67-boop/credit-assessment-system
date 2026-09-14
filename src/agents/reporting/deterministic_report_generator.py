@@ -6,6 +6,13 @@ from src.rules.base.status import RuleStatus
 
 
 class DeterministicReportGenerator(ReportGenerator):
+    _ASSESSMENT_AREA_ORDER = (
+        "Customer Profile",
+        "Financial Analysis",
+        "Behavioural Analysis",
+        "Debt Sustainability",
+    )
+
     def generate(
         self,
         analysis: AssessmentAnalysis,
@@ -22,11 +29,12 @@ class DeterministicReportGenerator(ReportGenerator):
             limitations=analysis.limitations,
         )
 
-    @staticmethod
+    @classmethod
     def _generate_summary(
+        cls,
         analysis: AssessmentAnalysis,
     ) -> str:
-        """Build a concise, professional fallback narrative from deterministic evidence."""
+        """Build a concise fallback narrative with fixed assessment-area headings."""
         status = f"Assessment Status: {analysis.assessment_status.value.capitalize()}"
         findings = analysis.key_findings
         if not findings:
@@ -36,8 +44,10 @@ class DeterministicReportGenerator(ReportGenerator):
         for finding in findings:
             grouped.setdefault(finding.category, []).append(finding)
 
-        paragraphs: list[str] = []
-        for category_findings in grouped.values():
+        paragraphs: list[tuple[str, str]] = []
+        ordered_categories = cls._ordered_categories(grouped)
+        for category in ordered_categories:
+            category_findings = grouped[category]
             profile = [
                 finding
                 for finding in category_findings
@@ -47,7 +57,7 @@ class DeterministicReportGenerator(ReportGenerator):
                 finding
                 for finding in category_findings
                 if finding.rule_id != "PROFILE"
-                and DeterministicReportGenerator._is_triggered(finding)
+                and cls._is_triggered(finding)
             ]
 
             sentences: list[str] = []
@@ -55,10 +65,36 @@ class DeterministicReportGenerator(ReportGenerator):
             sentences.extend(finding.text.rstrip(".") + "." for finding in triggered)
 
             if sentences:
-                paragraphs.append(" ".join(sentences))
+                paragraphs.append((category, " ".join(sentences)))
 
-        narrative = "\n\n".join(paragraphs)
+        narrative = "\n\n".join(
+            f"### {category}\n\n{paragraph}"
+            if category.casefold() in {area.casefold() for area in cls._ASSESSMENT_AREA_ORDER}
+            else paragraph
+            for category, paragraph in paragraphs
+        )
         return f"{status}\n\n{narrative}"
+
+    @classmethod
+    def _ordered_categories(
+        cls,
+        grouped: dict[str, list[AnalysisFinding]],
+    ) -> list[str]:
+        """Return production assessment areas first in their authoritative order."""
+        canonical = {
+            area.casefold(): area
+            for area in cls._ASSESSMENT_AREA_ORDER
+        }
+        ordered: list[str] = []
+        for category in cls._ASSESSMENT_AREA_ORDER:
+            if category.casefold() in {item.casefold() for item in grouped}:
+                ordered.append(category)
+        ordered.extend(
+            category
+            for category in grouped
+            if category.casefold() not in canonical
+        )
+        return ordered
 
     @staticmethod
     def _validate_rule_evidence(findings: list[AnalysisFinding]) -> None:
