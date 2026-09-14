@@ -43,7 +43,7 @@ The assessment is organised into macro-areas. Each domain owns its inputs, rule 
 
 This is intentional: adding or removing a rule should not require rewriting the architecture document.
 
-The repository currently uses four macro-areas, but the architecture should be read in terms of the domain/configuration contract rather than fixed rule counts or identifier ranges.
+The architecture is catalogue-independent: the number of domains, rule identifiers and rule counts may evolve without changing the architectural model described here.
 
 ## Rule architecture
 
