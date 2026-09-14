@@ -45,11 +45,11 @@ source .venv/bin/activate
 ### Windows PowerShell
 
 ```powershell
-py -3.14 -m venv .venv
+py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-If Python 3.14 is not available on Windows, install a Python version supported by the repository CI before creating the environment.
+Use a Python version supported by the repository's CI workflow. The workflow configuration is the authoritative compatibility reference; this guide intentionally does not duplicate a specific runtime version.
 
 ## 4. Install dependencies
 
@@ -59,7 +59,7 @@ pip install -r requirements.txt
 
 ## 5. Run the quality checks
 
-Before changing the project, establish a clean baseline:
+Before changing the project, establish a clean baseline using the commands defined by the repository CI:
 
 ```bash
 python -m ruff check .
@@ -67,7 +67,7 @@ python -m mypy src
 python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 ```
 
-The CI workflow is the authoritative source for the exact quality gates.
+The CI workflow is the authoritative source for the exact quality gates and supported runtime.
 
 ## 6. Start the application
 
