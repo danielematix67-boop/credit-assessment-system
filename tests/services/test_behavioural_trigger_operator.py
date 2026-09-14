@@ -6,7 +6,7 @@ from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_direction import SeverityDirection
 from src.rules.base.status import RuleStatus
-from src.rules.behavioural.rules import HighCreditUtilizationRule
+from src.rules.behavioural.b001 import HighCreditUtilizationRule
 from src.services.behavioural_assessment_service import BehaviouralAssessmentService
 
 
