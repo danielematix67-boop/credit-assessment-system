@@ -1,114 +1,207 @@
 # Credit Assessment System
 
-> Deterministic, multi-domain credit-risk assessment with controlled AI-assisted reporting.
+> **A deterministic credit-risk assessment engine with controlled AI-assisted reporting.**
 
 [![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/UI-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![Testing](https://img.shields.io/badge/Tested_with-pytest-0A9EDC?logo=pytest)](https://pytest.org/)
 [![Linting](https://img.shields.io/badge/Linting-ruff-D7FF64)](https://docs.astral.sh/ruff/)
 
-## Overview
-
-**Credit Assessment System** evaluates a credit position through explicit, configurable deterministic rules organised by assessment domain and presents the resulting evidence through Streamlit.
+**Credit Risk · Python · Rule Engine · YAML Configuration · Data Analytics · AI-assisted Reporting**
 
 > **The deterministic system decides; AI explains.**
 
-Decisioning, analysis, reporting and presentation are separate concerns. Optional LLM providers can generate narrative, but cannot change the structured assessment.
+[**▶ Open the Streamlit demo**](https://credit-assessment-system.streamlit.app/)
 
-The repository is designed so that the rule catalogue can evolve without requiring rule-specific changes in central services, reporting or presentation code.
+---
 
-## Architecture
+## 🎯 What is this project?
+
+Credit Assessment System is a prototype credit-risk platform designed to evaluate a credit position through **explicit, configurable and testable deterministic rules** and then turn the resulting evidence into a concise assessment and executive-oriented report.
+
+The project combines four perspectives:
+
+- **Credit Risk:** financial, behavioural, customer and debt-sustainability evidence.
+- **Data Analytics:** indicators, thresholds, severity and structured evidence.
+- **Software Engineering:** configuration-driven rules, automatic discovery, validation and testing.
+- **AI:** optional narrative generation that remains strictly downstream of the deterministic assessment.
+
+The important architectural principle is simple:
+
+> **AI can explain the assessment, but it cannot make or modify the assessment.**
+
+---
+
+## 👀 Understand it in 30 seconds
 
 ```text
+                         CREDIT POSITION
+                                │
+                                ▼
+                     Structural Validation
+                                │
+                                ▼
+                     Deterministic Rule Engine
+                                │
+                     ┌──────────┴──────────┐
+                     ▼                     ▼
+              Rule Results          Domain Statuses
+                     │                     │
+                     └──────────┬──────────┘
+                                ▼
+                      Final Assessment Policy
+                                │
+                                ▼
+                     Deterministic Evidence
+                                │
+                                ▼
+                       Reporting Agent
+                         ↙           ↘
+                  LLM generator    Fallback
+                         ↘           ↙
+                            Report
+```
+
+The deterministic path is the **source of truth**. The reporting path consumes its structured evidence and produces narrative only.
+
+---
+
+## 🧭 Project at a glance
+
+| Area | Role |
+|---|---|
+| **Business domain** | Credit Risk / Credit Assessment |
+| **Core engine** | Deterministic Rule Engine |
+| **Configuration** | YAML-driven rule and assessment policy |
+| **Backend** | Python |
+| **Application** | Streamlit |
+| **Testing** | pytest |
+| **Quality** | Ruff + mypy + coverage gate |
+| **AI** | Optional reporting layer |
+| **Data** | Synthetic / anonymized demonstration data |
+| **Deployment** | Streamlit-compatible |
+
+---
+
+## 🏦 Business problem
+
+Credit assessment requires combining heterogeneous evidence while keeping the final judgement **traceable, reproducible and explainable**.
+
+A useful system therefore needs to answer questions such as:
+
+1. Which indicators were evaluated?
+2. Which rules were triggered?
+3. Which evidence could not be evaluated?
+4. How did domain-level results contribute to the overall assessment?
+5. Can the result be reproduced from the same inputs and configuration?
+6. Can an executive report be generated without allowing a language model to alter the underlying decision?
+
+This project addresses those requirements through a deterministic assessment layer followed by a bounded reporting layer.
+
+---
+
+## 🧠 Why this architecture?
+
+### 1. Deterministic first
+
+Credit assessment is performed by explicit, testable business rules. The same input and configuration produce the same deterministic result.
+
+### 2. AI second
+
+AI is useful for interpretation and communication, but it is not authoritative for the credit decision. A reporting failure must not change the assessment.
+
+### 3. Configuration-driven
+
+Rule parameters and assessment policy are externalised where they can be expressed declaratively. This allows the catalogue to evolve without duplicating thresholds throughout the application.
+
+### 4. Evidence-preserving
+
+Structured rule results remain available throughout the workflow so that the final report can be traced back to deterministic evidence.
+
+---
+
+## 🔄 Assessment workflow
+
+```text
+Input
+  ↓
 CreditPosition
-     ↓
-Structural Validation
-     ↓
-Domain Assessments
-     ↓
-CreditAssessmentCase
-     ↓
-FinalAssessmentService
-     ↓
-Deterministic Analysis
-     ↓
-Reporting Agent
-   ↙          ↘
-Deterministic  Optional LLM
- Generator       Provider
-      ↘          ↙
-        Report
-```
-
-The core implementation is under `src/`. Streamlit presentation and application orchestration are under `app/`.
-
-### Deterministic boundary
-
-```text
-Rule configuration
-       ↓
-Rule implementation
-       ↓
-Automatic discovery / registry
-       ↓
+  ↓
+Structural validation
+  ↓
+Configured rules
+  ↓
 RuleResult
-       ↓
+  ↓
 Domain assessment
-       ↓
+  ↓
 Final assessment
+  ↓
+Deterministic analysis
+  ↓
+Reporting
+  ↓
+Executive output
 ```
 
-The deterministic path is the source of truth for credit evidence and status.
+Rules explicitly distinguish:
 
-### Reporting boundary
+- `TRIGGERED`
+- `NOT_TRIGGERED`
+- `NOT_EVALUABLE`
+
+Missing evidence is therefore not silently interpreted as a normal result.
+
+---
+
+## 🤖 Deterministic assessment vs AI reporting
+
+This separation is the central design decision of the project.
+
+| Responsibility | Deterministic layer | AI/reporting layer |
+|---|:---:|:---:|
+| Evaluate indicators | ✅ | ❌ |
+| Apply thresholds | ✅ | ❌ |
+| Determine rule severity | ✅ | ❌ |
+| Determine assessment status | ✅ | ❌ |
+| Preserve limitations | ✅ | ✅ |
+| Explain findings | — | ✅ |
+| Generate narrative | — | ✅ |
+| Change the decision | ❌ | ❌ |
+
+The reporting component is therefore a **consumer of assessment evidence**, not a second assessment engine.
+
+---
+
+## 📊 What the application presents
+
+The Streamlit application exposes the workflow through a compact hierarchy:
 
 ```text
-Deterministic Evidence
-        ↓
-Primary Reporting Generator
-        ↓
-Grounding Validation
-    ↙           ↘
- valid        invalid/failure
-   ↓               ↓
- Report      Deterministic Fallback
+Executive Credit Assessment
+          ↓
+Assessment by Macro-Area
+          ↓
+Executive Narrative
 ```
 
-An LLM or grounding failure affects only the reporting path. It cannot invalidate or replace the deterministic assessment.
+The UI presents structured results but does not recalculate thresholds, severity or assessment status.
 
-## Rule catalogue
+For technical inspection, the same underlying rule results remain available to the workflow and reporting layers.
 
-Rules are organised by assessment domain. The active inventory is defined by the YAML catalogues under `config/` and the registered implementations discovered under `src/rules/`.
+---
 
-The README deliberately does **not** maintain a duplicated list of rule IDs, rule counts or thresholds. Those values are catalogue data and can change independently of the architecture.
+## 🖥️ Try the application
 
-The rule contract is:
+**Live demo:** [credit-assessment-system.streamlit.app](https://credit-assessment-system.streamlit.app/)
 
-```text
-Configured rule identifier
-            ↓
-Registered deterministic implementation
-            ↓
-RuleResult
-```
+The demonstration environment uses synthetic/anonymized data. It is intended to show the assessment workflow and reporting architecture, not to process confidential banking information.
 
-Every configured identifier must resolve to one concrete implementation. Missing or duplicate registrations should fail validation rather than silently dropping a rule.
+> Screenshots and additional visual documentation can be added to this section as the UI stabilises, so that the README remains aligned with the actual application rather than becoming a static catalogue of screens.
 
-See **[`docs/rules.md`](docs/rules.md)** for the complete procedure for designing and adding a rule.
+---
 
-## Configuration
-
-```text
-config/
-├── <domain>_rules.yaml
-└── final_assessment.yaml
-```
-
-Rule configuration contains declarative parameters such as input fields, calculation type, trigger operator, threshold, severity, severity direction, severity bands and comment templates.
-
-The final-assessment configuration contains aggregation policy. Keeping policy outside the presentation layer makes changes reviewable and prevents thresholds from being duplicated across the application.
-
-## Adding a New Rule
+## ➕ Adding a new rule
 
 Adding a rule is an **end-to-end change**, not a YAML-only change:
 
@@ -138,57 +231,33 @@ Demo / UI
 Tests
 ```
 
-The complete checklist is maintained in [`docs/rules.md`](docs/rules.md). It covers business semantics, input modelling, configuration, implementation, discovery, `NOT_EVALUABLE`, severity, aggregation, reporting, grounding, demo data, UI, tests and documentation.
+The application uses automatic discovery and a registry, so new rules should not require central branching in the Rule Engine, Reporting Agent or Streamlit presentation.
 
-## Rule design principles
+See [`docs/rules.md`](docs/rules.md) for the complete development checklist, including configuration, implementation, `NOT_EVALUABLE`, severity, aggregation, reporting, grounding, demo data and tests.
 
-- **Deterministic:** a rule produces the same result for the same input and configuration.
-- **Explicit:** `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` remain distinct.
-- **Configurable:** thresholds and other policy parameters are externalised when generic configuration is sufficient.
-- **Extensible:** new rules use the registry/discovery mechanism instead of central branching.
-- **Traceable:** rule evidence remains available to downstream analysis and reporting.
-- **Isolated:** individual rules do not own section or case aggregation.
-- **AI-independent:** no LLM participates in deterministic rule evaluation.
+---
 
-## Results UI
+## 🧩 Rule catalogue
 
-The Results experience presents workflow output through a compact hierarchy:
+The active rule inventory is defined by the valid YAML catalogues under `config/` together with registered implementations discovered under `src/rules/`.
+
+The README deliberately does **not** maintain a duplicated list of rule IDs, rule counts or thresholds. Those are catalogue data and can evolve independently of the architecture.
+
+The rule contract is:
 
 ```text
-Executive Credit Assessment
-          ↓
-Assessment by Macro-Area
-          ↓
-Executive Narrative
+Configured rule identifier
+            ↓
+Registered deterministic implementation
+            ↓
+RuleResult
 ```
 
-The macro-area evidence surface is authoritative for presentation. Technical rule inspection uses the same structured results.
+Every configured identifier must resolve to one concrete implementation. Missing or duplicate registrations should fail validation rather than silently dropping a rule.
 
-The UI does not recalculate rule thresholds, severity or assessment status.
+---
 
-## AI-assisted reporting
-
-The application supports a deterministic reporting path and can expose configured external or local LLM providers depending on the execution environment.
-
-The reporting layer:
-
-- consumes deterministic evidence;
-- generates narrative only;
-- preserves material findings and indicators;
-- applies grounding validation where required;
-- falls back deterministically when the primary reporting path fails.
-
-The reporting layer must never become a second decision engine.
-
-## Data and security
-
-Demonstration data is synthetic/anonymized. Production or confidential banking data must not be committed to the repository.
-
-Credentials must be supplied through environment/secret configuration rather than source code. External LLM use must comply with the applicable data-classification and governance requirements.
-
-See [`docs/security-data-handling.md`](docs/security-data-handling.md).
-
-## Project structure
+## 🗂️ Project structure
 
 ```text
 credit-assessment-system/
@@ -210,15 +279,19 @@ credit-assessment-system/
 └── README.md
 ```
 
-The repository tree is authoritative. Documentation avoids enumerating individual source files that are expected to evolve.
+The repository tree is authoritative. Documentation intentionally avoids enumerating individual source files that are expected to evolve.
 
-## Installation
+---
+
+## 🚀 Quick start
 
 ### Requirements
 
-- Python version supported by the repository CI (currently Python 3.14)
+- Python version supported by the repository CI
 - Git
 - Optional local LLM runtime when using local reporting
+
+### Linux / macOS
 
 ```bash
 git clone https://github.com/danielematix67-boop/credit-assessment-system.git
@@ -226,25 +299,27 @@ cd credit-assessment-system
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-Windows PowerShell:
-
-```powershell
-py -3.14 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
-
-Run the application:
-
-```bash
 streamlit run app/streamlit_app.py
 ```
 
-LLM credentials and provider settings are environment/deployment configuration. Do not commit secrets.
+### Windows PowerShell
 
-## Testing and CI
+```powershell
+git clone https://github.com/danielematix67-boop/credit-assessment-system.git
+cd credit-assessment-system
+py -3.14 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+streamlit run app/streamlit_app.py
+```
+
+For a more detailed setup and first-run walkthrough, see [`docs/getting-started.md`](docs/getting-started.md).
+
+LLM credentials and provider settings are environment/deployment configuration. Never commit secrets.
+
+---
+
+## 🧪 Testing and quality
 
 Run the repository quality checks locally:
 
@@ -254,34 +329,51 @@ python -m mypy src
 python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 ```
 
-The CI workflow is the authoritative definition of supported Python versions, commands and coverage requirements. If those settings change, update this section accordingly rather than treating README values as policy.
+The CI workflow is the authoritative definition of supported Python versions, commands and quality requirements. README values should be updated if the workflow changes.
 
-## Documentation
+---
 
-- [`docs/README.md`](docs/README.md) — documentation map and maintenance principles.
-- [`docs/architecture.md`](docs/architecture.md) — system architecture and boundaries.
-- [`docs/rules.md`](docs/rules.md) — complete rule-development lifecycle.
-- [`docs/reporting.md`](docs/reporting.md) — reporting and evidence contract.
-- [`docs/architecture-decisions.md`](docs/architecture-decisions.md) — architectural decision index and rationale.
-- [`docs/adr-016-complete-rule-evidence-reporting.md`](docs/adr-016-complete-rule-evidence-reporting.md) — complete rule-evidence reporting decision.
-- [`docs/adr-017-rule-implementation-configuration-separation.md`](docs/adr-017-rule-implementation-configuration-separation.md) — rule configuration/implementation separation.
-- [`docs/validation.md`](docs/validation.md) — validation strategy and quality gates.
-- [`docs/security-data-handling.md`](docs/security-data-handling.md) — security and data-handling principles.
+## 🔐 Data and security
 
-## Design principles
+Demonstration data is synthetic/anonymized. Production or confidential banking data must not be committed to the repository.
 
-1. Deterministic decision logic owns credit assessment.
-2. Rule policy is externalised where it can be expressed declaratively.
-3. Individual rules do not implement final case aggregation.
-4. Missing evidence is explicit and never silently treated as normal evidence.
-5. Structured evidence is preserved across workflow boundaries.
-6. LLMs are bounded reporting components, not decision engines.
-7. Generated narrative is grounded and treated as untrusted output.
-8. Deterministic fallback preserves reporting resilience.
-9. Streamlit remains a presentation/application layer.
-10. Documentation describes stable contracts rather than duplicating volatile catalogue data.
+Credentials must be supplied through environment or secret configuration rather than source code. External LLM use must comply with applicable data-classification and governance requirements.
 
-## Roadmap
+See [`docs/security-data-handling.md`](docs/security-data-handling.md).
+
+---
+
+## 📚 Documentation
+
+| Document | Purpose |
+|---|---|
+| [`docs/getting-started.md`](docs/getting-started.md) | First-run guide for new contributors/readers |
+| [`docs/architecture.md`](docs/architecture.md) | System architecture and boundaries |
+| [`docs/rules.md`](docs/rules.md) | Complete rule-development lifecycle |
+| [`docs/reporting.md`](docs/reporting.md) | Reporting and evidence contract |
+| [`docs/validation.md`](docs/validation.md) | Validation strategy and quality gates |
+| [`docs/security-data-handling.md`](docs/security-data-handling.md) | Security and data-handling principles |
+| [`docs/architecture-decisions.md`](docs/architecture-decisions.md) | Architectural decision index and rationale |
+
+Recommended reading:
+
+```text
+README
+  ↓
+Getting Started
+  ↓
+Architecture
+  ↓
+Rules
+  ↓
+Reporting / Validation
+  ↓
+ADRs
+```
+
+---
+
+## 🗺️ Roadmap
 
 - [x] Deterministic multi-domain assessment
 - [x] Externalised rule configuration
@@ -299,7 +391,9 @@ The CI workflow is the authoritative definition of supported Python versions, co
 - [ ] Expanded monitoring/evaluation metrics
 - [ ] Additional rule families and external data sources
 
-## Author
+---
+
+## 👤 Author
 
 **Daniele Ottelli**
 
