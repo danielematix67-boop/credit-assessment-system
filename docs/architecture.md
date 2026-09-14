@@ -22,7 +22,7 @@ CreditPosition + Domain Inputs
    ↓          ↓          ↓              ↓
 Customer   Financial  Behavioural   Debt Sustainability
 Profile    Analysis   Analysis
-CP001–3    R001–7     B001–4        DS001–3
+CP001–4    R001–7     B001–4        DS001–3
    └──────────┼──────────┴──────────────┘
               ↓
     CreditAssessmentCase
@@ -45,11 +45,11 @@ No LLM participates in the decision path.
 
 ## Assessment Domains
 
-The current catalogue contains **17 rules**:
+The current catalogue contains **18 rules**:
 
 | Domain | Rules | Count |
 |---|---|---:|
-| Customer Profile | `CP001–CP003` | 3 |
+| Customer Profile | `CP001–CP004` | 4 |
 | Financial Analysis | `R001–R007` | 7 |
 | Behavioural Analysis | `B001–B004` | 4 |
 | Debt Sustainability | `DS001–DS003` | 3 |
@@ -206,7 +206,7 @@ The old legacy rule trees, `tests/ui/` and `app/ui/credit_position.py` compatibi
 
 ## Demo Data
 
-Demo scenarios are synthetic/anonymized and exercise the four assessment domains. Production or confidential banking data must not be committed to the repository.
+Demo scenarios are synthetic/anonymized and exercise the four assessment domains and configured rule inventory, including Customer Profile forborne exposure. Production or confidential banking data must not be committed to the repository.
 
 ## Execution Metadata
 
