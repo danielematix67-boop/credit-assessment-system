@@ -9,15 +9,14 @@ from src.models.report import Report, ReportFindingGroup
 
 
 class LLMReportGenerator(ReportGenerator):
-    """Generate the executive narrative from deterministic findings."""
+    """Generate qualitative executive narrative from deterministic findings."""
 
     _INDICATOR_PATTERN = re.compile(
         r"€\s*-?\d(?:[\d,.]*\d)?|-?\d[\d,.]*\s*%|-?\d[\d,.]*\s*x\b",
         re.IGNORECASE,
     )
     _STATUS_PREFIX_PATTERN = re.compile(
-        r"^\s*Assessment status:\s*[^.\n]+\.?(?:\s*\n)?",
-        re.IGNORECASE,
+        r"^\s*Assessment status:\s*[^.\n]+\.?(?:\s*\n)?", re.IGNORECASE
     )
     _CATEGORY_PREFIX_PATTERN = re.compile(
         r"^\s*(?:Revenue|Profitability|Leverage|Liquidity|Capital|Cash Flow|Limitations)\s*:\s*",
@@ -28,6 +27,7 @@ class LLMReportGenerator(ReportGenerator):
         re.IGNORECASE,
     )
     _NUMERIC_SPACING_PATTERN = re.compile(r"(?<=\d)\s*\.\s*(?=\d)")
+    _SENTENCE_PATTERN = re.compile(r"(?<=[.!?])\s+")
     _ASSESSMENT_AREA_ORDER = (
         "Customer Profile",
         "Financial Analysis",
@@ -35,247 +35,114 @@ class LLMReportGenerator(ReportGenerator):
         "Debt Sustainability",
     )
 
-    def __init__(
-        self,
-        llm_client: LLMClient,
-        prompt_builder: ReportPromptBuilder | None = None,
-        require_indicator_values: bool = False,
-    ) -> None:
+    def __init__(self, llm_client: LLMClient, prompt_builder: ReportPromptBuilder | None = None, require_indicator_values: bool = False) -> None:
         self.llm_client = llm_client
-        self.prompt_builder = (
-            prompt_builder if prompt_builder is not None else ReportPromptBuilder()
-        )
+        self.prompt_builder = prompt_builder if prompt_builder is not None else ReportPromptBuilder()
         self.require_indicator_values = require_indicator_values
 
     def generate(self, analysis: AssessmentAnalysis) -> Report:
-        """Generate a report from a deterministic assessment."""
-        prompt = self.prompt_builder.build(analysis)
-        response = self.llm_client.generate(prompt)
-        validated_response = self._validate_response(response)
-
+        response = self.llm_client.generate(self.prompt_builder.build(analysis))
+        narrative = self._validate_response(response)
         if self.require_indicator_values:
-            validated_response = self._validate_indicator_grounding(
-                narrative=validated_response,
-                findings=analysis.key_findings,
-            )
-
-        executive_summary = self._build_executive_summary(
-            analysis=analysis,
-            narrative=validated_response,
-        )
-
+            narrative = self._sanitize_indicator_grounding(narrative, analysis.key_findings)
         return Report(
             position_id=analysis.position_id,
             assessment_status=analysis.assessment_status,
-            executive_summary=executive_summary,
-            findings_by_category=self._group_findings_by_category(
-                analysis.key_findings,
-            ),
+            executive_summary=self._build_executive_summary(analysis, narrative),
+            findings_by_category=self._group_findings_by_category(analysis.key_findings),
             limitations=analysis.limitations,
         )
 
     @classmethod
-    def _build_executive_summary(
-        cls,
-        analysis: AssessmentAnalysis,
-        narrative: str,
-    ) -> str:
-        """Build status plus fixed assessment-area sections around the LLM prose."""
-        status_value = getattr(
-            analysis.assessment_status,
-            "value",
-            str(analysis.assessment_status),
-        )
-        status_label = str(status_value).capitalize()
+    def _build_executive_summary(cls, analysis: AssessmentAnalysis, narrative: str) -> str:
+        status_value = getattr(analysis.assessment_status, "value", str(analysis.assessment_status))
         sections = cls._format_assessment_area_sections(analysis, narrative)
-        return f"Assessment Status: {status_label}\n\n{sections}"
+        return f"Assessment Status: {str(status_value).capitalize()}\n\n{sections}"
 
     @classmethod
-    def _format_assessment_area_sections(
-        cls,
-        analysis: AssessmentAnalysis,
-        narrative: str,
-    ) -> str:
-        """Add deterministic bold assessment-area labels around the LLM prose."""
+    def _format_assessment_area_sections(cls, analysis: AssessmentAnalysis, narrative: str) -> str:
         findings = analysis.rule_evidence or analysis.key_findings
         categories = cls._ordered_assessment_areas(findings)
-
         if not categories:
             return narrative
-
-        paragraphs = [
-            paragraph.strip()
-            for paragraph in narrative.split("\n\n")
-            if paragraph.strip()
-        ]
+        paragraphs = [part.strip() for part in narrative.split("\n\n") if part.strip()]
         if len(paragraphs) != len(categories):
-            raise ValueError(
-                "LLM narrative must contain exactly one paragraph per represented "
-                "assessment area."
-            )
-
+            raise ValueError("LLM narrative must contain exactly one paragraph per represented assessment area.")
         return "\n\n".join(
             f"**{category}**\n\n{paragraph}"
             for category, paragraph in zip(categories, paragraphs, strict=True)
         )
 
     @classmethod
-    def _ordered_assessment_areas(
-        cls,
-        findings: list[AnalysisFinding],
-    ) -> list[str]:
-        """Return represented macro areas in the deterministic canonical order."""
-        represented = {
-            (finding.assessment_area or finding.category).casefold()
-            for finding in findings
-        }
-        return [
-            category
-            for category in cls._ASSESSMENT_AREA_ORDER
-            if category.casefold() in represented
-        ]
+    def _ordered_assessment_areas(cls, findings: list[AnalysisFinding]) -> list[str]:
+        represented = {(f.assessment_area or f.category).casefold() for f in findings}
+        return [area for area in cls._ASSESSMENT_AREA_ORDER if area.casefold() in represented]
 
     @classmethod
     def _extract_indicator_values(cls, findings: list[AnalysisFinding]) -> list[str]:
-        """Extract supplied numerical indicator values in source order."""
-        return cls._extract_indicator_values_from_text(
-            " ".join(finding.text for finding in findings)
-        )
+        return cls._INDICATOR_PATTERN.findall(" ".join(finding.text for finding in findings))
 
     @classmethod
-    def _extract_indicator_values_from_text(cls, text: str) -> list[str]:
-        """Extract and normalise numerical indicator values in text order."""
-        values: list[str] = []
-        normalized_text = cls._NUMERIC_SPACING_PATTERN.sub(".", text)
-
-        for match in cls._INDICATOR_PATTERN.finditer(normalized_text):
-            value = " ".join(match.group(0).split()).rstrip(".,;:")
-            if value not in values:
-                values.append(value)
-
-        return values
+    def _sanitize_indicator_grounding(cls, narrative: str, findings: list[AnalysisFinding]) -> str:
+        """Keep numeric rendering deterministic; discard sentences with LLM numeric claims."""
+        source_values = cls._extract_indicator_values(findings)
+        source_normalized = {cls._normalise_indicator(v) for v in source_values}
+        sentences = [s.strip() for s in cls._SENTENCE_PATTERN.split(narrative) if s.strip()]
+        safe: list[str] = []
+        for sentence in sentences:
+            values = cls._INDICATOR_PATTERN.findall(sentence)
+            if not values or all(cls._normalise_indicator(v) in source_normalized for v in values):
+                safe.append(sentence)
+        return " ".join(safe).strip() or "The assessment findings are summarised below."
 
     @staticmethod
-    def _normalise_indicator_value(value: str) -> tuple[str, float]:
-        """Return an indicator's unit and numeric value independent of formatting."""
+    def _normalise_indicator(value: str) -> tuple[str, float]:
         compact = value.replace(" ", "").replace("€", "")
         unit = ""
         if compact.endswith("%"):
-            unit = "%"
-            compact = compact[:-1]
+            unit, compact = "%", compact[:-1]
         elif compact.lower().endswith("x"):
-            unit = "x"
-            compact = compact[:-1]
-
+            unit, compact = "x", compact[:-1]
         if "," in compact and "." in compact:
-            if compact.rfind(",") > compact.rfind("."):
-                compact = compact.replace(".", "").replace(",", ".")
-            else:
-                compact = compact.replace(",", "")
+            compact = compact.replace(".", "").replace(",", ".") if compact.rfind(",") > compact.rfind(".") else compact.replace(",", "")
         elif "," in compact:
-            fractional_digits = len(compact.rsplit(",", 1)[1])
-            compact = compact.replace(",", "." if fractional_digits <= 2 else "")
-        elif compact.count(".") > 1:
-            compact = compact.replace(".", "")
-
+            digits = len(compact.rsplit(",", 1)[1])
+            compact = compact.replace(",", "." if digits <= 2 else "")
         return unit, float(compact)
 
     @classmethod
-    def _contains_equivalent_indicator(cls, narrative: str, source_value: str) -> bool:
-        """Check an indicator numerically, allowing harmless formatting differences."""
-        source_unit, source_number = cls._normalise_indicator_value(source_value)
-        for candidate in cls._extract_indicator_values_from_text(narrative):
-            candidate_unit, candidate_number = cls._normalise_indicator_value(candidate)
-            if candidate_unit == source_unit and candidate_number == source_number:
-                return True
-        return False
+    def _validate_indicator_grounding(cls, narrative: str, findings: list[AnalysisFinding]) -> str:
+        return cls._sanitize_indicator_grounding(narrative, findings)
 
     @classmethod
-    def _validate_indicator_grounding(
-        cls,
-        narrative: str,
-        findings: list[AnalysisFinding],
-    ) -> str:
-        """Validate factual grounding without forcing literal numeric repetition.
-
-        The deterministic assessment remains authoritative. The LLM may summarise,
-        omit, or reformat individual indicators; it must not introduce numerical
-        values that are absent from the deterministic evidence. Formatting such as
-        ``20.0%`` versus ``20%`` and decimal comma versus decimal point is treated
-        as equivalent. Validation failures propagate to ReportingAgent, where the
-        deterministic fallback is applied.
-        """
-        narrative = cls._NUMERIC_SPACING_PATTERN.sub(".", narrative).strip()
-        source_values = cls._extract_indicator_values(findings)
-        narrative_values = cls._extract_indicator_values_from_text(narrative)
-
-        for candidate in narrative_values:
-            if not any(
-                cls._contains_equivalent_indicator(candidate, source_value)
-                for source_value in source_values
-            ):
-                raise ValueError(
-                    "LLM narrative introduced an unsupported indicator value: "
-                    f"{candidate!r}"
-                )
-
-        return narrative
-
-    @classmethod
-    def _ensure_indicator_values(
-        cls,
-        narrative: str,
-        findings: list[AnalysisFinding],
-    ) -> str:
-        """Backward-compatible alias for indicator grounding validation."""
-        return cls._validate_indicator_grounding(narrative, findings)
+    def _ensure_indicator_values(cls, narrative: str, findings: list[AnalysisFinding]) -> str:
+        return cls._sanitize_indicator_grounding(narrative, findings)
 
     @staticmethod
-    def _group_findings_by_category(
-        findings: list[AnalysisFinding],
-    ) -> list[ReportFindingGroup]:
-        """Group deterministic findings by category."""
+    def _group_findings_by_category(findings: list[AnalysisFinding]) -> list[ReportFindingGroup]:
         grouped: dict[str, list[AnalysisFinding]] = {}
         for finding in findings:
             grouped.setdefault(finding.category, []).append(finding)
-        return [
-            ReportFindingGroup(category=category, findings=category_findings)
-            for category, category_findings in grouped.items()
-        ]
+        return [ReportFindingGroup(category=category, findings=items) for category, items in grouped.items()]
 
     @classmethod
     def _validate_response(cls, response: str) -> str:
-        """Normalise the LLM narrative without deleting valid findings."""
         if not response or not response.strip():
             raise ValueError("LLM returned an empty response")
-
         narrative = response.strip()
         narrative = cls._STATUS_PREFIX_PATTERN.sub("", narrative, count=1).strip()
         narrative = cls._NUMERIC_SPACING_PATTERN.sub(".", narrative)
         narrative = cls._remove_category_prefixes(narrative)
-
         if not narrative:
             raise ValueError("LLM returned an empty narrative")
         return narrative
 
     @classmethod
     def _remove_category_prefixes(cls, narrative: str) -> str:
-        """Remove accidental category labels without altering narrative content."""
-        paragraphs = [
-            part.strip()
-            for part in narrative.split("\n\n")
-            if part.strip()
-        ]
-        cleaned = [
+        paragraphs = [part.strip() for part in narrative.split("\n\n") if part.strip()]
+        return "\n\n".join(
             cls._ASSESSMENT_AREA_PREFIX_PATTERN.sub(
-                "",
-                cls._CATEGORY_PREFIX_PATTERN.sub(
-                    "",
-                    paragraph,
-                    count=1,
-                ).strip(),
-                count=1,
+                "", cls._CATEGORY_PREFIX_PATTERN.sub("", paragraph, count=1).strip(), count=1
             ).strip()
             for paragraph in paragraphs
-        ]
-        return "\n\n".join(part for part in cleaned if part)
+        )
