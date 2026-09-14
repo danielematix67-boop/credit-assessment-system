@@ -81,6 +81,29 @@ class ReportPromptBuilder:
             for index, category in enumerate(categories, start=1)
         )
 
+    @staticmethod
+    def _format_structured_value(value: object) -> str:
+        """Format the deterministic structured value without changing its meaning."""
+        if isinstance(value, str):
+            return value
+        return repr(value)
+
+    @classmethod
+    def _format_finding(cls, finding: AnalysisFinding) -> str:
+        """Format one finding while preserving deterministic structured evidence."""
+        lines = [f"- [{finding.severity.value.upper()}] {finding.text}"]
+
+        if finding.indicator:
+            lines.append(f"  Deterministic indicator: {finding.indicator}")
+
+        if finding.value is not None:
+            lines.append(
+                "  Deterministic structured value: "
+                f"{cls._format_structured_value(finding.value)}"
+            )
+
+        return "\n".join(lines)
+
     @classmethod
     def _format_grouped_findings(
         cls,
@@ -101,7 +124,7 @@ class ReportPromptBuilder:
             lines = [f"{category}:"]
 
             for finding in findings:
-                lines.append(f"- [{finding.severity.value.upper()}] {finding.text}")
+                lines.append(cls._format_finding(finding))
 
             sections.append("\n".join(lines))
 
