@@ -27,13 +27,13 @@ def _section_indicators(section: Any) -> list[str]:
         if rule_status(rule_result) == "TRIGGERED"
     ]
     if triggered:
-        return triggered[:3]
+        return triggered[:4]
     ranked = sorted(
         evidence,
         key=lambda rule_result: severity_rank(rule_severity(rule_result)),
         reverse=True,
     )
-    return [rule_indicator(rule_result) for rule_result in ranked[:3]]
+    return [rule_indicator(rule_result) for rule_result in ranked[:4]]
 
 
 def _render_area_cards(result: Any) -> None:
