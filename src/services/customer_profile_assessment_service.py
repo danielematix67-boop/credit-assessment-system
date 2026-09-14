@@ -1,10 +1,13 @@
 from pathlib import Path
+from typing import cast
 
 from src.comments.comment import Comment
 from src.comments.comment_engine import CommentEngine
 from src.config.rule_config_loader import RuleConfigLoader
 from src.models.assessment_section import AssessmentSection, SectionStatus
+from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.customer_profile_data import CustomerProfileData
+from src.models.position import CreditPosition
 from src.models.rule_finding import RuleFinding
 from src.rules.base.status import RuleStatus
 from src.rules.registry import build_rules
@@ -30,7 +33,9 @@ class CustomerProfileAssessmentService:
 
     def assess(self, data: CustomerProfileData) -> AssessmentSection:
         configs = self.config_loader.load(self.config_path)
-        results = [rule.evaluate(data) for rule in build_rules(configs)]
+        results = [
+            rule.evaluate(cast(CreditPosition, data)) for rule in build_rules(configs)
+        ]
         evaluable_results = [
             result for result in results if result.status != RuleStatus.NOT_EVALUABLE
         ]
