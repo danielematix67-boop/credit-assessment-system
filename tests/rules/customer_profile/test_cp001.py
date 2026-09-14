@@ -20,6 +20,10 @@ def make_rule() -> EwsScoreClassRule:
             severity_direction="HIGHER_IS_WORSE",
             input_field="ews_score_class",
             trigger_operator="GTE",
+            comment_template=(
+                "EWS Score class is {value} and indicates the corresponding "
+                "Early Warning System risk condition."
+            ),
         )
     )
 
@@ -40,6 +44,7 @@ def test_risk_ews_classes_trigger_with_expected_severity(
 
     assert result.status == RuleStatus.TRIGGERED
     assert result.severity == expected_severity
+    assert result.value == score_class.value
     assert score_class.value in (result.reason or "")
 
 
@@ -50,7 +55,9 @@ def test_green_ews_class_does_not_trigger() -> None:
 
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.severity == RuleSeverity.LOW
+    assert result.value == "GREEN"
     assert "GREEN" in (result.reason or "")
+    assert "does not indicate an elevated" in (result.reason or "")
 
 
 def test_string_ews_class_is_supported() -> None:
@@ -58,15 +65,18 @@ def test_string_ews_class_is_supported() -> None:
 
     assert result.status == RuleStatus.TRIGGERED
     assert result.severity == RuleSeverity.MEDIUM
+    assert result.value == "ORANGE"
 
 
 def test_missing_ews_score_class_is_not_evaluable() -> None:
     result = make_rule().evaluate(SimpleNamespace(ews_score_class=None))
 
     assert result.status == RuleStatus.NOT_EVALUABLE
+    assert result.value is None
 
 
 def test_invalid_ews_score_class_is_not_evaluable() -> None:
     result = make_rule().evaluate(SimpleNamespace(ews_score_class="PURPLE"))
 
     assert result.status == RuleStatus.NOT_EVALUABLE
+    assert result.value is None
