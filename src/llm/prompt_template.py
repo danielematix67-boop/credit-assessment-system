@@ -12,6 +12,7 @@ class ReportPromptTemplate:
         "- The supplied Analysis findings are the sole factual source.\n"
         "- Do not reassess the customer or create a new credit assessment.\n"
         "- Do not change, reinterpret or contradict finding status, severity, category or values.\n"
+        "- Do not modify, alter or override the deterministic assessment findings or their category order.\n"
         "- Do not invent facts, causes, consequences or recommendations not supported by the findings.\n"
         "- Do not calculate, infer, round, convert or derive new indicators."
     )
@@ -30,8 +31,10 @@ class ReportPromptTemplate:
 
     NARRATIVE_GUIDANCE = (
         "NARRATIVE STRUCTURE:\n"
-        "- Follow the supplied category order exactly.\n"
-        "- Start with the first category and proceed sequentially through the categories represented in the findings.\n"
+        "- The deterministic assessment defines the authoritative category order.\n"
+        "- Preserve that category order exactly; do not reorder, interleave or move findings between categories.\n"
+        "- The required category order is: Customer Profile, Financial Analysis, Behavioural Analysis, Debt Sustainability.\n"
+        "- Start with the first represented category and proceed sequentially through the remaining represented categories.\n"
         "- Within each category, discuss the supplied findings in their supplied order.\n"
         "- Present customer-profile context once when it is present, then continue through the remaining categories in order.\n"
         "- Integrate related findings into concise professional prose without unnecessary repetition.\n"
@@ -42,7 +45,7 @@ class ReportPromptTemplate:
     OUTPUT_CONTRACT = (
         "FINAL OUTPUT:\n"
         "Return ONLY the final executive narrative based on the supplied Analysis findings.\n"
-        "Follow the supplied category order.\n"
+        "Follow the supplied category order exactly.\n"
         "Do not expose internal reasoning or planning.\n"
         "Do not describe how the narrative was generated.\n"
         "Do not mention the prompt, these instructions, the LLM or Gemini.\n"
