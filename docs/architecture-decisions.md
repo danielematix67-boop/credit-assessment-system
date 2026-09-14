@@ -20,8 +20,9 @@ This document records the architectural decisions that define the Credit Assessm
 | ADR-012 | Structural Input Validation Before Assessment | Accepted |
 | ADR-013 | Explicit Handling of All-`NOT_EVALUABLE` Assessments | Accepted |
 | ADR-014 | Multi-Domain Case Assessment | Accepted |
-| ADR-015 | Severity-Based Risk Driver Presentation | Accepted |
+| ADR-015 | Severity-Based Risk Driver Presentation | Superseded |
 | ADR-016 | Application-Controlled Executive Narrative Structure | Accepted |
+| ADR-017 | Compact Macro-Area Results Experience | Accepted |
 
 ---
 
@@ -91,27 +92,9 @@ This document records the architectural decisions that define the Credit Assessm
 
 # ADR-011 — Evidence-Oriented Results UI
 
-**Decision:** The Results view follows a progressive hierarchy:
+**Decision:** The Results view uses a progressive hierarchy centred on one authoritative deterministic macro-area dashboard, followed by the Executive Narrative. Technical rule inspection is disclosed within the dashboard rather than repeated in separate aggregate views.
 
-```text
-Executive Credit Assessment
-          ↓
-Assessment by Macro-Area
-          ↓
-Executive Narrative
-          ↓
-Risk Drivers (collapsed)
-          ↓
-Detailed Assessment (collapsed)
-          ↓
-Rule Catalogue & Filters (collapsed)
-          ↓
-Individual Rule Detail (collapsed)
-```
-
-The four macro-area sections are the authoritative visible deterministic overview. Technical detail is progressively disclosed rather than repeated through multiple aggregate views.
-
-**Rationale:** Separates decision, domain evidence, narrative and technical drill-down while reducing duplication.
+**Rationale:** Separates decision evidence from narrative while minimizing duplication and keeping the analyst workflow focused.
 
 # ADR-012 — Structural Input Validation Before Assessment
 
@@ -156,9 +139,11 @@ Customer Profile is contextual for the two-core-area escalation: `ATTENTION` doe
 
 # ADR-015 — Severity-Based Risk Driver Presentation
 
-**Decision:** Risk Drivers presents triggered deterministic indicators across macro-areas and orders them by configured severity priority. The UI does not calculate a secondary risk score or expose the removed threshold-distance metric.
+**Decision:** This decision is **superseded**. The former standalone Risk Drivers presentation was removed from the current Results page because the authoritative macro-area dashboard already exposes deterministic evidence and a separate bottom-of-page risk-driver section created duplication.
 
-**Rationale:** Severity is an existing deterministic property and provides a clear, defensible prioritization without introducing a second scoring mechanism.
+The underlying deterministic severity metadata remains part of the assessment model and can still be inspected through rule evidence.
+
+**Rationale for supersession:** Keep one authoritative evidence surface rather than maintaining a second presentation layer for the same triggered indicators.
 
 # ADR-016 — Application-Controlled Executive Narrative Structure
 
@@ -172,6 +157,22 @@ Customer Profile is contextual for the two-core-area escalation: `ATTENTION` doe
 Python owns the titles and structural order. The LLM supplies narrative prose derived from deterministic evidence and cannot create, remove or reorder assessment categories.
 
 **Rationale:** The macro-area taxonomy is part of the application's domain model and presentation contract. Keeping it outside the LLM prevents inconsistent headings, missing domains and structural drift between reporting providers.
+
+# ADR-017 — Compact Macro-Area Results Experience
+
+**Decision:** The current Results page is deliberately reduced to three visible layers:
+
+```text
+Executive Credit Assessment
+          ↓
+Assessment by Macro-Area
+          ↓
+Executive Narrative
+```
+
+The macro-area dashboard is the single visible deterministic evidence overview. Rule Catalogue & Filters and Individual Rule Detail are progressively disclosed within that dashboard. Separate bottom-of-page Risk Drivers and Detailed Assessment sections are not rendered.
+
+**Rationale:** The previous presentation duplicated status, triggered evidence, macro-area outcomes and technical detail across multiple sections. Consolidating deterministic evidence into one dashboard improves scanability and makes the Results page easier to use during an analyst-style review.
 
 ---
 
@@ -191,8 +192,9 @@ The decisions above imply:
 10. Presentation code does not own business logic.
 11. Execution provenance remains separate from decision data.
 12. The UI explains deterministic evidence without reproducing decision logic.
-13. Technical evidence is progressively disclosed rather than presented all at once.
+13. Technical evidence is progressively disclosed rather than presented through duplicated sections.
 14. The Executive Narrative structure is application-controlled and provider-independent.
+15. The Results page has one authoritative macro-area evidence surface.
 
 ## Current Architecture
 
