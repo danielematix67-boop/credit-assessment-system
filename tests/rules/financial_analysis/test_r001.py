@@ -7,11 +7,18 @@ from src.rules.base.status import RuleStatus
 from src.rules.financial_analysis.r001 import RevenueGrowthRule
 
 CONFIG = RuleConfig(
-    rule_id="R001", rule_name="Revenue deterioration", category="revenue",
-    threshold=-0.10, severity=RuleSeverity.LOW,
+    rule_id="R001",
+    rule_name="Revenue deterioration",
+    category="revenue",
+    threshold=-0.10,
+    severity=RuleSeverity.LOW,
     severity_direction=SeverityDirection.LOWER_IS_WORSE,
-    severity_thresholds=(SeverityThreshold(threshold=-0.10, severity=RuleSeverity.MEDIUM), SeverityThreshold(threshold=-0.20, severity=RuleSeverity.HIGH)),
-    input_field="revenue_growth", trigger_operator="LT",
+    severity_thresholds=(
+        SeverityThreshold(threshold=-0.10, severity=RuleSeverity.MEDIUM),
+        SeverityThreshold(threshold=-0.20, severity=RuleSeverity.HIGH),
+    ),
+    input_field="revenue_growth",
+    trigger_operator="LT",
 )
 
 
@@ -29,12 +36,25 @@ def test_r001_dynamic_severity_and_trigger():
 
 
 def test_r001_none_is_not_evaluable():
-    result = RevenueGrowthRule(CONFIG).evaluate(CreditPosition(position_id="P", revenue_growth=None))
+    result = RevenueGrowthRule(CONFIG).evaluate(
+        CreditPosition(position_id="P", revenue_growth=None)
+    )
     assert result.status == RuleStatus.NOT_EVALUABLE
     assert result.value is None
 
 
 def test_r001_uses_configured_operator():
-    config = RuleConfig(rule_id="R001_CUSTOM", rule_name="Custom", category="revenue", threshold=0.10, severity=RuleSeverity.MEDIUM, severity_direction=SeverityDirection.LOWER_IS_WORSE, input_field="revenue_growth", trigger_operator="GTE")
-    result = RevenueGrowthRule(config).evaluate(CreditPosition(position_id="P", revenue_growth=0.10))
+    config = RuleConfig(
+        rule_id="R001_CUSTOM",
+        rule_name="Custom",
+        category="revenue",
+        threshold=0.10,
+        severity=RuleSeverity.MEDIUM,
+        severity_direction=SeverityDirection.LOWER_IS_WORSE,
+        input_field="revenue_growth",
+        trigger_operator="GTE",
+    )
+    result = RevenueGrowthRule(config).evaluate(
+        CreditPosition(position_id="P", revenue_growth=0.10)
+    )
     assert result.status == RuleStatus.TRIGGERED
