@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
 
+from src.models.ews_score import EwsScoreClass
+
 
 @dataclass(frozen=True)
 class CustomerProfileData:
@@ -15,5 +17,5 @@ class CustomerProfileData:
     relationship_years: int | None = None
     business_history_years: int | None = None
     historical_facilities: list[str] = field(default_factory=list)
-    active_ews: bool | None = None
+    ews_score_class: EwsScoreClass | None = None
     previous_restructuring: bool | None = None
