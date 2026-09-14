@@ -20,12 +20,14 @@ def make_finding(
     *,
     rule_id: str = "TEST_RULE",
     category: str = "Test Category",
+    assessment_area: str | None = None,
     severity: RuleSeverity = RuleSeverity.MEDIUM,
     status: RuleStatus = RuleStatus.TRIGGERED,
 ) -> AnalysisFinding:
     return AnalysisFinding(
         rule_id=rule_id,
         category=category,
+        assessment_area=assessment_area,
         severity=severity,
         text=text,
         status=status,
@@ -94,7 +96,7 @@ def test_llm_status_cannot_override_deterministic_status() -> None:
     assert report.executive_summary.count("Assessment Status:") == 1
 
 
-def test_fixed_assessment_area_headings_follow_deterministic_order() -> None:
+def test_fixed_assessment_area_labels_follow_deterministic_order() -> None:
     findings = [
         make_finding("Customer context.", category="Customer Profile"),
         make_finding("Revenue declined.", category="Financial Analysis"),
@@ -102,10 +104,10 @@ def test_fixed_assessment_area_headings_follow_deterministic_order() -> None:
         make_finding("DSCR remains weak.", category="Debt Sustainability"),
     ]
     narrative = (
-        "Customer context.\n\n"
-        "Revenue declined.\n\n"
-        "Payment delays increased.\n\n"
-        "DSCR remains weak."
+        "Customer Profile: Customer context.\n\n"
+        "Financial Analysis: Revenue declined.\n\n"
+        "Behavioural Analysis: Payment delays increased.\n\n"
+        "Debt Sustainability: DSCR remains weak."
     )
     generator, _ = make_generator(response=narrative)
 
@@ -113,14 +115,37 @@ def test_fixed_assessment_area_headings_follow_deterministic_order() -> None:
 
     assert report.executive_summary == (
         "Assessment Status: Attention\n\n"
-        "### Customer Profile\n\nCustomer context.\n\n"
-        "### Financial Analysis\n\nRevenue declined.\n\n"
-        "### Behavioural Analysis\n\nPayment delays increased.\n\n"
-        "### Debt Sustainability\n\nDSCR remains weak."
+        "**Customer Profile**\n\nCustomer context.\n\n"
+        "**Financial Analysis**\n\nRevenue declined.\n\n"
+        "**Behavioural Analysis**\n\nPayment delays increased.\n\n"
+        "**Debt Sustainability**\n\nDSCR remains weak."
     )
 
 
-def test_fixed_assessment_area_headings_reject_wrong_paragraph_count() -> None:
+def test_fixed_assessment_area_labels_use_authoritative_assessment_area() -> None:
+    findings = [
+        make_finding(
+            "Customer context.",
+            category="Company Information",
+            assessment_area="Customer Profile",
+        ),
+        make_finding(
+            "Revenue declined.",
+            category="Revenue",
+            assessment_area="Financial Analysis",
+        ),
+    ]
+    narrative = "Customer context.\n\nRevenue declined."
+    generator, _ = make_generator(response=narrative)
+
+    report = generator.generate(make_analysis(key_findings=findings))
+
+    assert "**Customer Profile**" in report.executive_summary
+    assert "**Financial Analysis**" in report.executive_summary
+    assert "###" not in report.executive_summary
+
+
+def test_fixed_assessment_area_labels_reject_wrong_paragraph_count() -> None:
     findings = [
         make_finding("Customer context.", category="Customer Profile"),
         make_finding("Revenue declined.", category="Financial Analysis"),
