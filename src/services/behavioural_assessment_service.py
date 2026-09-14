@@ -1,10 +1,12 @@
 from pathlib import Path
+from typing import cast
 
 from src.comments.comment import Comment
 from src.comments.comment_engine import CommentEngine
 from src.config.rule_config_loader import RuleConfigLoader
 from src.models.assessment_section import AssessmentSection, SectionStatus
 from src.models.behavioural_data import BehaviouralData
+from src.models.position import CreditPosition
 from src.models.rule_finding import RuleFinding
 from src.rules.base.status import RuleStatus
 from src.rules.registry import build_rules
@@ -30,7 +32,9 @@ class BehaviouralAssessmentService:
 
     def assess(self, data: BehaviouralData) -> AssessmentSection:
         configs = self.config_loader.load(self.config_path)
-        results = [rule.evaluate(data) for rule in build_rules(configs)]
+        results = [
+            rule.evaluate(cast(CreditPosition, data)) for rule in build_rules(configs)
+        ]
         findings = []
 
         for result in results:
