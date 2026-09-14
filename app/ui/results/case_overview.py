@@ -55,9 +55,8 @@ def _profile_list(data: Any, field: str) -> list[Any]:
 def _render_customer_profile(section: Any) -> None:
     """Render customer context without duplicating Rule Engine evidence."""
     context = getattr(section, "context", {}) or {}
-    evidence = list(getattr(section, "evidence", []) or [])
 
-    if not context and not evidence:
+    if not context:
         st.info("Customer profile information is not available.")
         return
 
@@ -90,7 +89,6 @@ def _render_customer_profile(section: Any) -> None:
         st.markdown("**Banking relationship**")
         facilities = _profile_list(context, "historical_facilities")
         if facilities:
-            st.write("Historical facilities")
             for facility in facilities:
                 st.write(f"• {facility}")
         else:
@@ -113,13 +111,13 @@ def _render_customer_profile(section: Any) -> None:
 
 
 def _render_limitations(section: Any) -> None:
-    """Keep only limitations here; findings are rendered by area-specific analysis views."""
+    """Render limitations inline because the parent already controls disclosure."""
     limitations = list(getattr(section, "limitations", []) or [])
     if not limitations:
         return
-    with st.expander("Limitations", expanded=False):
-        for limitation in limitations:
-            st.write(f"• {limitation}")
+    st.markdown("**Limitations**")
+    for limitation in limitations:
+        st.write(f"• {limitation}")
 
 
 def _render_data_quality_overview(credit_case: Any) -> None:
