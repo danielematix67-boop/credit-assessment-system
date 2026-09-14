@@ -13,55 +13,72 @@ The assessment catalog contains 17 deterministic rules across four domains:
 - Behavioural Analysis: `B001–B004`
 - Debt Sustainability: `DS001–DS003`
 
-The YAML catalogs already define thresholds, operators, severity policy and comment templates. Previously, however, the non-financial domains still contained duplicated rule-evaluation logic inside their assessment services.
+The YAML catalogs define thresholds, operators, severity policy and comment templates. Rule implementation is maintained in Python and must remain the deterministic source of truth.
 
-That created two competing implementation paths:
-
-```text
-Financial rules → src/rules/* → RuleEngine
-Other domains   → service-local evaluation logic
-```
-
-This made the rule registry incomplete from an implementation perspective and allowed the same deterministic policy to be expressed in multiple places.
+A second architectural concern is maintainability: individual rules may become substantially more complex over time. Keeping multiple rules in a single `rules.py` module would create large, coupled files and make rule-specific testing and evolution harder.
 
 ## Decision
 
-Adopt a strict two-layer rule architecture:
+Adopt a strict separation between rule configuration and rule implementation, with **one Python module per concrete rule**.
 
 ```text
 config/*.yaml
     │
-    │ configuration
+    │ configuration / parameters
     ▼
-src/rules/
+src/rules/<domain>/<rule>.py
     │
-    │ implementation
+    │ deterministic implementation
     ▼
 Rule Registry
     │
     ▼
-Domain Assessment Services / Rule Engine
+Rule Engine / Domain Assessment Service
 ```
 
 ### `src/rules/`
 
-Contains the executable deterministic rule implementations and their registration with `Rule`.
+Contains executable deterministic rule implementations. Each concrete rule has its own module and registers itself with `Rule`.
 
-Current domain packages include:
+The target structure is:
 
 ```text
 src/rules/
 ├── base/
 ├── financial/
+│   ├── revenue/
+│   │   └── revenue_growth.py
+│   ├── margins/
+│   ├── profitability/
+│   └── leverage/
 ├── customer_profile/
-│   └── rules.py
+│   ├── cp001.py
+│   ├── cp002.py
+│   └── cp003.py
 ├── behavioural/
-│   └── rules.py
+│   ├── b001.py
+│   ├── b002.py
+│   ├── b003.py
+│   └── b004.py
 └── sustainability/
-    └── rules.py
+    ├── ds001.py
+    ├── ds002.py
+    └── ds003.py
 ```
 
-The new domain implementations delegate threshold comparison, severity resolution, calculations and result construction to the common `Rule` base behaviour.
+Financial rules may retain a meaningful business subdomain grouping where that grouping already exists. The important invariant is that each concrete rule implementation remains independently maintainable and discoverable.
+
+A simple rule can remain a single file. If a rule becomes substantially more complex, its module can evolve into a dedicated package without changing the registry or assessment-service contract, for example:
+
+```text
+src/rules/financial/r005/
+├── __init__.py
+├── rule.py
+├── calculations.py
+└── validators.py
+```
+
+Rule discovery recursively imports rule modules, so adding a new rule does not require a central list of imports.
 
 ### `config/`
 
@@ -80,15 +97,35 @@ Contains declarative rule metadata:
 
 Configuration therefore controls **parameters**, while Python controls **rule execution**.
 
+### Tests
+
+Rule-specific tests should mirror the implementation structure where practical:
+
+```text
+tests/rules/
+├── customer_profile/
+│   ├── test_cp001.py
+│   └── ...
+├── behavioural/
+│   ├── test_b001.py
+│   └── ...
+└── sustainability/
+    ├── test_ds001.py
+    └── ...
+```
+
 ## Consequences
 
 ### Positive
 
 - Every configured rule has a concrete registered implementation.
+- Each rule can evolve independently without enlarging a shared `rules.py` file.
+- Complex rules can gain private helper modules without affecting other rules.
 - Domain services no longer duplicate threshold/comparison/severity logic.
 - Rule behaviour has a single deterministic implementation path.
 - Thresholds can be changed without changing Python rule code.
 - Rule discovery and registry validation can detect missing implementations.
+- Rule-specific tests can remain focused and easy to locate.
 - The architecture remains compatible with the deterministic-first AI boundary.
 
 ### Constraint
@@ -97,14 +134,14 @@ The existing `get_default_rules()` remains the financial/core catalog used by th
 
 ## Validation
 
-The configuration test suite now verifies that every rule present in the complete YAML catalog has a registered Python implementation.
+The configuration test suite verifies that every rule present in the complete YAML catalog has a registered Python implementation.
 
 The architectural invariant is:
 
 ```text
 Every configured rule_id
         ↓
-registered Rule implementation
+one concrete registered Rule implementation
         ↓
 deterministic RuleResult
 ```
