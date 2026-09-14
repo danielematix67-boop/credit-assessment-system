@@ -42,7 +42,7 @@ class GeminiClient(LLMClient):
                 temperature=self.temperature,
                 max_output_tokens=self.max_output_tokens,
                 thinking_config=types.ThinkingConfig(
-                    thinking_level="minimal",
+                    thinking_level=types.ThinkingLevel.MINIMAL,
                     include_thoughts=False,
                 ),
             ),
