@@ -23,6 +23,10 @@ class LLMReportGenerator(ReportGenerator):
         r"^\s*(?:Revenue|Profitability|Leverage|Liquidity|Capital|Cash Flow|Limitations)\s*:\s*",
         re.IGNORECASE,
     )
+    _ASSESSMENT_AREA_PREFIX_PATTERN = re.compile(
+        r"^\s*(?:Customer Profile|Financial Analysis|Behavioural Analysis|Debt Sustainability)\s*:\s*",
+        re.IGNORECASE,
+    )
     _NUMERIC_SPACING_PATTERN = re.compile(r"(?<=\d)\s*\.\s*(?=\d)")
     _ASSESSMENT_AREA_ORDER = (
         "Customer Profile",
@@ -92,7 +96,7 @@ class LLMReportGenerator(ReportGenerator):
         analysis: AssessmentAnalysis,
         narrative: str,
     ) -> str:
-        """Add deterministic assessment-area headings without asking the LLM to format them."""
+        """Add deterministic bold assessment-area labels around the LLM prose."""
         findings = analysis.rule_evidence or analysis.key_findings
         categories = cls._ordered_assessment_areas(findings)
 
@@ -111,7 +115,7 @@ class LLMReportGenerator(ReportGenerator):
             )
 
         return "\n\n".join(
-            f"### {category}\n\n{paragraph}"
+            f"**{category}**\n\n{paragraph}"
             for category, paragraph in zip(categories, paragraphs, strict=True)
         )
 
@@ -263,9 +267,13 @@ class LLMReportGenerator(ReportGenerator):
             if part.strip()
         ]
         cleaned = [
-            cls._CATEGORY_PREFIX_PATTERN.sub(
+            cls._ASSESSMENT_AREA_PREFIX_PATTERN.sub(
                 "",
-                paragraph,
+                cls._CATEGORY_PREFIX_PATTERN.sub(
+                    "",
+                    paragraph,
+                    count=1,
+                ).strip(),
                 count=1,
             ).strip()
             for paragraph in paragraphs
