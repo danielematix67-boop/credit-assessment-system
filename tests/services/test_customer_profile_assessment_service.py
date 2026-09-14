@@ -22,7 +22,7 @@ def test_customer_profile_preserves_context_data() -> None:
         )
     )
 
-    assert section.status == SectionStatus.ATTENTION
+    assert section.status == SectionStatus.CRITICAL
     assert section.context["company_name"] == "Synthetic Manufacturing S.p.A."
     assert section.context["relationship_years"] == 8
     assert section.context["business_history_years"] == 8
