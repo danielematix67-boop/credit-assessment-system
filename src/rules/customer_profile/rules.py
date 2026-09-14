@@ -13,7 +13,11 @@ class CustomerProfileRule(Rule):
         if error is not None:
             return self._not_evaluable(error)
         assert value is not None
-        status = RuleStatus.TRIGGERED if self._is_triggered(value) else RuleStatus.NOT_TRIGGERED
+        status = (
+            RuleStatus.TRIGGERED
+            if self._is_triggered(value)
+            else RuleStatus.NOT_TRIGGERED
+        )
         return self._result(value=value, status=status)
 
 
