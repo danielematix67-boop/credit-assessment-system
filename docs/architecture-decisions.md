@@ -1,6 +1,6 @@
 # Architecture Decisions
 
-This document records the decisions that define the current system architecture.
+This document records the decisions that define the current system architecture. Individual rule identifiers, thresholds and provider/model choices are intentionally not duplicated here unless they are part of the decision itself.
 
 | ID | Decision | Status |
 |---|---|---|
@@ -48,7 +48,7 @@ Rules share common abstractions and are resolved through discovery/registry mech
 
 ## ADR-005 — Provider-Agnostic LLM Abstraction
 
-LLM access is exposed through a common client abstraction with provider-specific implementations such as Gemini, Ollama and mock clients.
+LLM access is exposed through a common client abstraction with provider-specific implementations.
 
 **Why:** provider portability and infrastructure isolation.
 
@@ -86,44 +86,25 @@ LLM reporting must preserve supplied material findings and numerical evidence, a
 
 The Results view centres on one authoritative deterministic macro-area dashboard, followed by the Executive Narrative. Technical rule inspection is progressively disclosed inside the dashboard.
 
-**Why:** avoid duplicated evidence and keep the analyst workflow focused.
+**Why:** avoid duplicated presentation of the same evidence.
 
 ## ADR-012 — Structural Input Validation
 
-`CreditPositionValidator` runs before deterministic assessment and validates object type, identifiers, numeric fields, boolean misuse and finite numeric values. `None` remains valid for downstream `NOT_EVALUABLE` handling.
+`CreditPositionValidator` runs before deterministic assessment and validates structural input integrity. `None` remains valid where downstream rules can return `NOT_EVALUABLE`.
 
 **Why:** separate structural integrity from credit-policy semantics.
 
 ## ADR-013 — Explicit All-`NOT_EVALUABLE` Handling
 
-A section where all configured rules are `NOT_EVALUABLE` is `ATTENTION`. An empty result collection remains `NORMAL`.
-
-```text
-2+ TRIGGERED                    → CRITICAL
-1 TRIGGERED                     → ATTENTION
-0 TRIGGERED + evaluable         → NORMAL
-ALL NOT_EVALUABLE               → ATTENTION
-EMPTY RESULTS                   → NORMAL
-```
+A section in which all configured rules are `NOT_EVALUABLE` is treated as insufficient evidence rather than normal evidence. Empty-result behaviour is defined separately by the section-status contract.
 
 **Why:** lack of evidence must not be confused with evidence of normality.
 
 ## ADR-014 — Multi-Domain Case Assessment
 
-The system models four deterministic domains:
+The system separates assessment into multiple deterministic macro-areas. Each domain owns its inputs and rule evaluation; `FinalAssessmentService` performs deterministic consolidation using the configured final-assessment policy.
 
-```text
-Customer Profile      → CP001–CP004
-Financial Analysis    → R001–R007
-Behavioural Analysis  → B001–B004
-Debt Sustainability   → DS001–DS003
-                         ↓
-                  Final Assessment
-```
-
-Each domain owns its inputs and rule evaluation; `FinalAssessmentService` performs deterministic consolidation.
-
-**Why:** the model reflects an analyst-oriented credit review and keeps rule families separated.
+**Why:** the model reflects an analyst-oriented credit review and keeps rule families separated without coupling individual rules to final case logic.
 
 ## ADR-015 — Standalone Risk Drivers Presentation
 
@@ -133,7 +114,7 @@ Each domain owns its inputs and rule evaluation; `FinalAssessmentService` perfor
 
 ## ADR-016 — Complete Rule-Evidence Reporting
 
-The reporting pipeline preserves complete deterministic rule evidence from all four domains, including `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` outcomes. The analysis layer exposes the complete evidence set to reporting, while narrower `risk_factors` contains high-severity triggered evidence.
+The reporting pipeline preserves complete deterministic rule evidence from all assessment domains, including `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` outcomes. The analysis layer exposes the complete evidence set to reporting, while `risk_factors` remains a narrower reporting view.
 
 The LLM may generate prose only. It cannot change rule results, thresholds, severity, findings, limitations or final assessment status. Grounding validation can reject unsupported narrative and activate deterministic fallback.
 
@@ -144,35 +125,30 @@ The LLM may generate prose only. It cannot change rule results, thresholds, seve
 Rule configuration and deterministic implementation are deliberately separated:
 
 ```text
-config/*.yaml
-    ↓
+config/<domain>_rules.yaml
+        ↓
+RuleConfigLoader
+        ↓
 src/rules/<domain>/<rule>.py
-    ↓
+        ↓
 Automatic discovery + shared registry
-    ↓
+        ↓
 RuleEngine / Domain Assessment Service
 ```
 
-The current catalogue contains 18 rules:
-
-- Customer Profile: `CP001–CP004`
-- Financial Analysis: `R001–R007`
-- Behavioural Analysis: `B001–B004`
-- Debt Sustainability: `DS001–DS003`
-
-There is one concrete Python module per rule. Rule modules self-register with `@Rule.register("<RULE_ID>")`, and automatic discovery imports rule modules recursively. Adding a rule therefore does not require a central import list.
+There is one concrete implementation module per rule in the normal case. Rule modules self-register with `@Rule.register("<RULE_ID>")`, and automatic discovery imports rule modules recursively. Adding a rule therefore does not require a central import list.
 
 YAML controls declarative parameters such as inputs, calculation, trigger operator, threshold, severity, severity direction, severity bands and comment template. Python owns rule execution and specialised business semantics.
 
 **Why:** consistent extensibility across domains, isolated rule testing, reviewable policy parameters and a single deterministic implementation path.
 
-See [`adr-017-rule-implementation-configuration-separation.md`](adr-017-rule-implementation-configuration-separation.md) for the detailed decision.
+See [`adr-017-rule-implementation-configuration-separation.md`](adr-017-rule-implementation-configuration-separation.md) and [`rules.md`](rules.md) for the implementation contract.
 
 ## Architectural Principles
 
 1. Deterministic logic owns credit decisions.
 2. Input integrity is validated before assessment.
-3. Four assessment domains remain explicit.
+3. Domain boundaries remain explicit without coupling rules to the final decision.
 4. `NOT_EVALUABLE` is distinct from `NOT_TRIGGERED`.
 5. Rule policy is configuration-driven.
 6. Components communicate through structured domain objects.
