@@ -26,6 +26,7 @@ class CaseAnalysisAgent:
                     category="Customer Profile",
                     severity=RuleSeverity.MEDIUM,
                     text=summary,
+                    assessment_area="Customer Profile",
                 )
                 rule_evidence.append(profile_finding)
                 key_findings.append(profile_finding)
@@ -38,6 +39,7 @@ class CaseAnalysisAgent:
             section_rule_evidence = [
                 self._rule_evidence_finding(
                     result,
+                    assessment_area=section.name,
                     triggered_text=triggered_text_by_rule.get(result.rule_id),
                 )
                 for result in section.evidence
@@ -51,6 +53,7 @@ class CaseAnalysisAgent:
                         severity=finding.result.severity,
                         text=finding.comment.text,
                         status=finding.result.status,
+                        assessment_area=section.name,
                     )
                     for finding in section.findings
                 ]
@@ -78,6 +81,7 @@ class CaseAnalysisAgent:
                         category=section.name,
                         severity=RuleSeverity.MEDIUM,
                         text=limitation,
+                        assessment_area=section.name,
                     )
                 )
 
@@ -104,6 +108,7 @@ class CaseAnalysisAgent:
     def _rule_evidence_finding(
         result: RuleResult,
         *,
+        assessment_area: str,
         triggered_text: str | None = None,
     ) -> AnalysisFinding:
         """Expose every deterministic rule result in reporting-safe language."""
@@ -129,6 +134,7 @@ class CaseAnalysisAgent:
             severity=result.severity,
             text=text,
             status=result.status,
+            assessment_area=assessment_area,
         )
 
     @staticmethod
