@@ -8,6 +8,9 @@ rules:
     threshold: 0
     severity: MEDIUM
     severity_direction: HIGHER_IS_WORSE
+    comment_template: >
+      EWS Score class is {value} and indicates the corresponding Early Warning
+      System risk condition.
 
   - rule_id: CP002
     rule_name: Previous Restructuring
