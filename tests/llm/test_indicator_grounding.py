@@ -36,9 +36,9 @@ def test_prompt_allows_narrative_synthesis_without_forcing_every_value() -> None
 
     prompt = ReportPromptBuilder().build(analysis)
 
-    assert "Use material numerical indicators when they strengthen the narrative" in prompt
-    assert "do not force every supplied value to be repeated" in prompt
-    assert "Do not invent facts, figures" in prompt
+    assert "Equivalent numeric formatting is allowed" in prompt
+    assert "Report only what is contained in the supplied Analysis findings" in prompt
+    assert "Do not invent facts, causes, consequences or recommendations" in prompt
     assert "1. revenue" in prompt
     assert "2. profitability" in prompt
 
