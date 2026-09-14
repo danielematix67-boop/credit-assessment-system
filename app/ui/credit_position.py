@@ -14,7 +14,6 @@ from app.ui.input.credit_position import (
 )
 from app.ui.input.field_metadata import (
     FIELD_GROUPS,
-    build_scenario_data_table,
     format_field_description,
     format_field_label,
     format_field_value,
