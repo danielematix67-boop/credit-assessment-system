@@ -31,7 +31,7 @@ Deterministic   Optional LLM
 
 The analysis layer preserves complete rule evidence from all four domains:
 
-- Customer Profile — `CP001–CP003`
+- Customer Profile — `CP001–CP004`
 - Financial Analysis — `R001–R007`
 - Behavioural Analysis — `B001–B004`
 - Debt Sustainability — `DS001–DS003`
