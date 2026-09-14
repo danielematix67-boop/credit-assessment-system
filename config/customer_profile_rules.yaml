@@ -1,15 +1,16 @@
 rules:
   - rule_id: CP001
-    rule_name: Active EWS
-    indicator: Active EWS
+    rule_name: EWS Score Class
+    indicator: EWS Score class
     category: customer_profile
-    input_field: active_ews
+    input_field: ews_score_class
     trigger_operator: GTE
-    threshold: 1
-    severity: HIGH
+    threshold: 0
+    severity: MEDIUM
     severity_direction: HIGHER_IS_WORSE
     comment_template: >
-      An active Early Warning System flag is present for the customer profile.
+      EWS Score class is {value} and indicates the corresponding Early Warning
+      System risk condition.
 
   - rule_id: CP002
     rule_name: Previous Restructuring
