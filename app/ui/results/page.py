@@ -2,11 +2,9 @@ from typing import Any
 
 import streamlit as st
 
-from app.ui.results.case_overview import render_credit_analysis_case
 from app.ui.results.dashboard import render_risk_indicator_dashboard
 from app.ui.results.executive_synthesis import render_executive_synthesis
 from app.ui.results.helpers import get_rule_results, rule_status
-from app.ui.results.risk_drivers import render_risk_driver_overview
 
 
 def _status_class(status: str) -> str:
@@ -125,25 +123,7 @@ def render_results(result: Any, assessment_position: Any, selected_reporting_mod
     render_results_header(result)
     render_reporting_provenance(result)
 
-    credit_case = getattr(result, "credit_case", None)
-    if credit_case is None:
-        render_risk_indicator_dashboard(result)
-        return
-
-    # Single source of truth for the visible deterministic macro-area overview.
+    # Single, compact deterministic view: the macro-area dashboard is the detailed
+    # evidence surface, while the narrative remains the only reporting layer.
     render_risk_indicator_dashboard(result)
-
-    # Narrative interprets the same deterministic evidence; it does not add a second assessment.
     render_executive_synthesis(result)
-
-    rules = get_rule_results(result)
-    triggered = [rule for rule in rules if rule_status(rule) == "TRIGGERED"]
-    if triggered:
-        with st.expander("Risk drivers", expanded=False):
-            st.caption("Triggered indicators ranked by deterministic distance from their configured threshold.")
-            render_risk_driver_overview(credit_case)
-
-    # Supporting material stays available without competing with the executive view.
-    with st.expander("Detailed assessment", expanded=False):
-        st.caption("Context, evidence, findings and limitations for each macro-area.")
-        render_credit_analysis_case(type("CaseResult", (), {"credit_case": credit_case})())
