@@ -9,313 +9,150 @@
 
 ## Overview
 
-**Credit Assessment System** evaluates a synthetic credit position through explicit, configurable rules across four assessment domains and presents the resulting evidence through Streamlit.
+**Credit Assessment System** evaluates a credit position through explicit, configurable deterministic rules organised by assessment domain and presents the resulting evidence through Streamlit.
 
 > **The deterministic system decides; AI explains.**
 
-Decisioning, analysis, reporting and presentation are separate concerns. Gemini and local Ollama are optional reporting providers and cannot change status, thresholds, severity, findings, limitations or the final decision.
+Decisioning, analysis, reporting and presentation are separate concerns. Optional LLM providers can generate narrative, but cannot change the structured assessment.
 
-## Assessment Model
-
-The current catalogue contains **18 rules across four domains**:
-
-| Domain | Rule IDs | Count |
-|---|---|---:|
-| Customer Profile | `CP001–CP004` | 4 |
-| Financial Analysis | `R001–R007` | 7 |
-| Behavioural Analysis | `B001–B004` | 4 |
-| Debt Sustainability | `DS001–DS003` | 3 |
-
-Canonical order: **Customer Profile → Financial Analysis → Behavioural Analysis → Debt Sustainability**.
-
-For rule-based sections:
-
-| Condition | Status |
-|---|---|
-| 2+ triggered rules | `CRITICAL` |
-| Exactly 1 triggered rule | `ATTENTION` |
-| No triggered rules + evaluable evidence | `NORMAL` |
-| All rules `NOT_EVALUABLE` | `ATTENTION` |
-| Empty result set | `NORMAL` |
-
-At case level, `CRITICAL` propagates directly; two or more core `ATTENTION` sections escalate to `CRITICAL`; one core `ATTENTION` produces `ATTENTION`; otherwise the case is `NORMAL`. If no section is evaluable, the case is `ATTENTION`.
-
-Customer Profile is contextual for the two-core-area escalation: `ATTENTION` does not count toward that threshold, while `CRITICAL` can still produce a `CRITICAL` case.
-
-`NOT_EVALUABLE` is distinct from `NOT_TRIGGERED`.
+The repository is designed so that the rule catalogue can evolve without requiring rule-specific changes in central services, reporting or presentation code.
 
 ## Architecture
 
 ```text
 CreditPosition
      ↓
-Input Validation
+Structural Validation
      ↓
-Four Domain Assessments
+Domain Assessments
      ↓
 CreditAssessmentCase
      ↓
-Final Assessment
+FinalAssessmentService
      ↓
 Deterministic Analysis
      ↓
 Reporting Agent
-   ↙       ↘
+   ↙          ↘
 Deterministic  Optional LLM
- Generator     Gemini / Ollama
-      ↘       ↙
+ Generator       Provider
+      ↘          ↙
         Report
 ```
 
-The core implementation is under `src/`; Streamlit presentation and application orchestration are under `app/`.
+The core implementation is under `src/`. Streamlit presentation and application orchestration are under `app/`.
+
+### Deterministic boundary
+
+```text
+Rule configuration
+       ↓
+Rule implementation
+       ↓
+Automatic discovery / registry
+       ↓
+RuleResult
+       ↓
+Domain assessment
+       ↓
+Final assessment
+```
+
+The deterministic path is the source of truth for credit evidence and status.
+
+### Reporting boundary
+
+```text
+Deterministic Evidence
+        ↓
+Primary Reporting Generator
+        ↓
+Grounding Validation
+    ↙           ↘
+ valid        invalid/failure
+   ↓               ↓
+ Report      Deterministic Fallback
+```
+
+An LLM or grounding failure affects only the reporting path. It cannot invalidate or replace the deterministic assessment.
+
+## Rule catalogue
+
+Rules are organised by assessment domain. The active inventory is defined by the YAML catalogues under `config/` and the registered implementations discovered under `src/rules/`.
+
+The README deliberately does **not** maintain a duplicated list of rule IDs, rule counts or thresholds. Those values are catalogue data and can change independently of the architecture.
+
+The rule contract is:
+
+```text
+Configured rule identifier
+            ↓
+Registered deterministic implementation
+            ↓
+RuleResult
+```
+
+Every configured identifier must resolve to one concrete implementation. Missing or duplicate registrations should fail validation rather than silently dropping a rule.
+
+See **[`docs/rules.md`](docs/rules.md)** for the complete procedure for designing and adding a rule.
 
 ## Configuration
 
-Rules are configured by domain under `config/`:
-
 ```text
 config/
-├── customer_profile_rules.yaml
-├── financial_analysis_rules.yaml
-├── behavioural_analysis_rules.yaml
-├── debt_sustainability_rules.yaml
+├── <domain>_rules.yaml
 └── final_assessment.yaml
 ```
 
-Thresholds, severity and severity direction are configuration-driven. Rule and domain implementations contain the corresponding business semantics.
+Rule configuration contains declarative parameters such as input fields, calculation type, trigger operator, threshold, severity, severity direction, severity bands and comment templates.
+
+The final-assessment configuration contains aggregation policy. Keeping policy outside the presentation layer makes changes reviewable and prevents thresholds from being duplicated across the application.
 
 ## Adding a New Rule
 
-Adding a rule must update the **complete deterministic evidence path**, not only the YAML catalogue:
+Adding a rule is an **end-to-end change**, not a YAML-only change:
 
 ```text
-Business definition
-      ↓
-CreditPosition input field(s)
-      ↓
-config/<domain>_rules.yaml
-      ↓
-src/rules/<domain>/<rule_id>.py
-      ↓
-Automatic discovery + shared registry
-      ↓
-Domain assessment / RuleEngine
-      ↓
-RuleResult
-      ↓
-Deterministic analysis
-      ↓
-Reporting + grounding validation
-      ↓
-Results UI
-      ↓
-Tests + demo data + documentation
-```
-
-### 1. Define the business rule
-
-Specify before coding:
-
-- **Rule ID**: unique and stable (`CPxxx`, `Rxxx`, `Bxxx`, `DSxxx`).
-- **Domain**: Customer Profile, Financial Analysis, Behavioural Analysis or Debt Sustainability.
-- **Business meaning**: the credit-risk condition detected and its rationale.
-- **Input field(s)**: data required for evaluation.
-- **Calculation**: `direct`, `ratio` or `difference`, when generic support is sufficient.
-- **Trigger operator**: `GT`, `GTE`, `LT` or `LTE`.
-- **Threshold**: trigger boundary.
-- **Severity**: `LOW`, `MEDIUM` or `HIGH`.
-- **Severity direction**: `HIGHER_IS_WORSE` or `LOWER_IS_WORSE`.
-- **Severity bands**: optional `severity_thresholds` for additional severity boundaries.
-- **Comment**: deterministic evidence text via `comment_template`.
-- **Non-evaluable conditions**: when the rule cannot be assessed reliably.
-
-The expected behaviour must be explicit for **triggered**, **not triggered** and **not evaluable** cases.
-
-### 2. Add the required input to `CreditPosition`
-
-If a new field is required, add it to the appropriate position model and ensure its type and structural validation are correct.
-
-```python
-revenue_growth: float | None
-previous_restructuring: bool | None
-```
-
-Use `None` when missing information must remain distinguishable from a valid value. Missing or invalid evidence should normally result in `NOT_EVALUABLE`, not an implicit normal value.
-
-### 3. Add the YAML configuration
-
-Add the rule to the YAML catalogue for its domain, for example:
-
-```yaml
-- rule_id: R008
-  rule_name: Example deterioration rule
-  indicator: Example indicator
-  category: profitability
-  input_field: example_value
-  trigger_operator: LT
-  threshold: 0.0
-  severity: MEDIUM
-  severity_direction: LOWER_IS_WORSE
-  severity_thresholds:
-    - threshold: 0.0
-      severity: MEDIUM
-    - threshold: -0.10
-      severity: HIGH
-  comment_template: >-
-    Example indicator stands at {value:.1%}, indicating deterioration.
-```
-
-The loader validates required fields, duplicate IDs, thresholds, operators, calculation types, severity values, severity directions and severity bands. Supported calculations are `direct`, `ratio` and `difference`.
-
-For a two-input ratio:
-
-```yaml
-input_fields:
-  - numerator_field
-  - denominator_field
-calculation: ratio
-```
-
-The generic base rule handles missing inputs and prevents division by zero. Use specialised Python logic when the business semantics require it.
-
-### 4. Implement the deterministic rule
-
-Create **one Python module per concrete rule**:
-
-```text
-src/rules/<domain>/<rule_id_lowercase>.py
-```
-
-The implementation inherits from `Rule` and registers itself with the exact configured ID:
-
-```python
-from src.rules.base.rule import Rule
-from src.rules.base.status import RuleStatus
-from src.rules.result import RuleResult
-
-
-@Rule.register("R008")
-class ExampleRule(Rule):
-    def evaluate(self, position) -> RuleResult:
-        value, error = self._configured_value(position)
-        if error is not None or value is None:
-            return self._not_evaluable(
-                error or "Required evidence is unavailable."
-            )
-
-        status = (
-            RuleStatus.TRIGGERED
-            if self._is_triggered(value)
-            else RuleStatus.NOT_TRIGGERED
-        )
-        return self._result(value=value, status=status)
-```
-
-For specialised rules, override `evaluate()` and use the base helpers where appropriate: `_configured_value`, `_is_triggered`, `_severity`, `_result` and `_not_evaluable`.
-
-Keep credit-risk semantics in the rule implementation. Do **not** put rule logic in the `RuleEngine`, Streamlit or LLM layer.
-
-**No central import list is required.** `discover_rules()` recursively imports rule modules under `src.rules`, while `build_rules()` resolves each configured `rule_id` through the shared registry. The implementation therefore only needs to exist and register correctly.
-
-### 5. Verify registration and configuration consistency
-
-The architectural invariant is:
-
-```text
-Every configured rule_id
+Business requirement
         ↓
-one concrete registered Rule implementation
+Input contract
         ↓
-deterministic RuleResult
-```
-
-A missing implementation, duplicate ID or invalid configuration must fail validation rather than silently dropping the rule.
-
-### 6. Add rule-specific tests
-
-Mirror the source structure under `tests/rules/`:
-
-```text
-tests/rules/<domain>/test_<rule_id_lowercase>.py
-```
-
-At minimum cover:
-
-1. **Triggered** behaviour.
-2. **Not triggered** behaviour.
-3. **Boundary** behaviour, especially `GT` vs `GTE` and `LT` vs `LTE`.
-4. **Severity**, including every configured severity band.
-5. **Missing input** → `NOT_EVALUABLE`.
-6. **Invalid input** handling.
-7. **Calculation edge cases**, especially zero denominators for ratios.
-8. **Evidence**, including rule ID, value, threshold, status, severity and reason.
-
-Also update configuration/registry tests when the catalogue or discovery contract changes.
-
-### 7. Verify domain and final aggregation
-
-A new rule can change the number of triggered rules and therefore the domain and case status:
-
-```text
+Domain configuration
+        ↓
+Concrete Rule implementation
+        ↓
+Automatic discovery + registry
+        ↓
+RuleEngine / domain service
+        ↓
 RuleResult
-   ↓
-Domain status
-   ↓
-Final case status
+        ↓
+Section / case aggregation
+        ↓
+Analysis evidence
+        ↓
+Reporting / grounding
+        ↓
+Demo / UI
+        ↓
+Tests
 ```
 
-Check whether the rule changes `NORMAL`, `ATTENTION` or `CRITICAL`, and whether it affects the core-area escalation policy. Aggregation logic must remain outside the rule.
+The complete checklist is maintained in [`docs/rules.md`](docs/rules.md). It covers business semantics, input modelling, configuration, implementation, discovery, `NOT_EVALUABLE`, severity, aggregation, reporting, grounding, demo data, UI, tests and documentation.
 
-### 8. Verify deterministic analysis and reporting
+## Rule design principles
 
-The rule must reach the analysis and reporting layers as deterministic evidence. Reporting may explain evidence but must not invent, alter, suppress or reinterpret the deterministic decision.
-
-Check that:
-
-- the rule result reaches deterministic analysis;
-- triggered findings are available to reporting;
-- high-severity results are handled as risk factors where applicable;
-- `NOT_EVALUABLE` remains a limitation rather than normal evidence;
-- indicator values used in narrative generation are grounded in deterministic evidence;
-- grounding validation rejects unsupported or altered numeric evidence;
-- deterministic fallback still produces a valid report if the LLM fails.
-
-No prompt or LLM provider should contain the rule's decision logic.
-
-### 9. Update demo data and UI when necessary
-
-If the rule requires new input data, update synthetic/anonymized demo scenarios so the rule is exercised. Where useful, demonstrate both triggered and non-triggered outcomes.
-
-Streamlit must consume the assessment and rule catalogue; it must not duplicate rule logic or thresholds. Verify that the rule appears in the authoritative macro-area evidence surface and technical rule inspection.
-
-Never commit production or confidential banking data.
-
-### 10. Update documentation and catalogue counts
-
-When adding a rule, update documentation that lists:
-
-- total rule count;
-- domain rule ranges/counts;
-- rule inventory examples;
-- architecture/source-tree examples;
-- affected ADRs or validation documentation;
-- roadmap/baseline statements that are no longer accurate.
-
-The active catalogue is defined by YAML configuration plus registered deterministic implementations. Documentation must describe `main` as it actually exists.
-
-### 11. Run the complete quality gate
-
-```bash
-python -m ruff check .
-python -m mypy src
-python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=95
-```
-
-A new rule is complete only when configuration, implementation, discovery, deterministic assessment, evidence propagation, tests, demo coverage and documentation are consistent.
+- **Deterministic:** a rule produces the same result for the same input and configuration.
+- **Explicit:** `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` remain distinct.
+- **Configurable:** thresholds and other policy parameters are externalised when generic configuration is sufficient.
+- **Extensible:** new rules use the registry/discovery mechanism instead of central branching.
+- **Traceable:** rule evidence remains available to downstream analysis and reporting.
+- **Isolated:** individual rules do not own section or case aggregation.
+- **AI-independent:** no LLM participates in deterministic rule evaluation.
 
 ## Results UI
 
-The Results page follows a compact hierarchy:
+The Results experience presents workflow output through a compact hierarchy:
 
 ```text
 Executive Credit Assessment
@@ -325,83 +162,63 @@ Assessment by Macro-Area
 Executive Narrative
 ```
 
-The macro-area dashboard is the authoritative deterministic evidence surface. Technical inspection is progressively disclosed through **Rule Catalogue & Filters** and **Individual Rule Detail**.
+The macro-area evidence surface is authoritative for presentation. Technical rule inspection uses the same structured results.
 
-Separate bottom-of-page Risk Drivers and Detailed Assessment sections are not rendered. The UI does not recalculate rules or decisions.
+The UI does not recalculate rule thresholds, severity or assessment status.
 
-## AI-Assisted Reporting
+## AI-assisted reporting
 
-| Mode | Behaviour |
-|---|---|
-| **Deterministic** | Model-independent deterministic narrative |
-| **Gemini + Fallback** | Gemini narrative with deterministic fallback |
-| **Ollama + Fallback** | Local Ollama narrative with deterministic fallback |
+The application supports a deterministic reporting path and can expose configured external or local LLM providers depending on the execution environment.
 
-The LLM receives deterministic evidence and generates prose only. Grounding validation can reject an invalid narrative and activate deterministic fallback.
+The reporting layer:
 
-```text
-Deterministic Evidence
-        ↓
-Primary Generator
-        ↓
-Grounding Validation
-    ↙           ↘
- valid        invalid/failure
-   ↓               ↓
- Report      Deterministic Fallback
-```
+- consumes deterministic evidence;
+- generates narrative only;
+- preserves material findings and indicators;
+- applies grounding validation where required;
+- falls back deterministically when the primary reporting path fails.
 
-The Executive Narrative always follows the application-controlled order of the four domains.
+The reporting layer must never become a second decision engine.
 
-## Execution Metadata
+## Data and security
 
-Workflow execution metadata records provenance such as execution ID, UTC timestamp, reporting mode, generator/fallback state, error category and timings. It is observational and does not participate in decisioning.
+Demonstration data is synthetic/anonymized. Production or confidential banking data must not be committed to the repository.
 
-## Demo Data
+Credentials must be supplied through environment/secret configuration rather than source code. External LLM use must comply with the applicable data-classification and governance requirements.
 
-Demonstration data is synthetic/anonymized and covers the configured assessment domains and rule inventory, including the Customer Profile forborne exposure indicator. Production or confidential banking data must not be committed to the repository.
+See [`docs/security-data-handling.md`](docs/security-data-handling.md).
 
-## Project Structure
+## Project structure
 
 ```text
 credit-assessment-system/
-├── app/
-│   ├── streamlit_app.py
-│   ├── demo_scenarios.py
-│   ├── ui/
-│   │   ├── input/
-│   │   └── results/
-│   └── workflow/
-├── config/
+├── app/                 # UI and application orchestration
+├── config/              # Declarative assessment configuration
 ├── src/
-│   ├── agents/
-│   ├── comments/
-│   ├── config/
-│   ├── engine/
-│   ├── llm/
-│   ├── models/
-│   ├── rules/
-│   │   ├── base/
-│   │   ├── customer_profile/
-│   │   ├── financial_analysis/
-│   │   ├── behavioural/
-│   │   └── sustainability/
-│   └── services/
-├── docs/
-├── tests/
+│   ├── agents/          # Analysis and reporting orchestration
+│   ├── comments/        # Deterministic comments/evidence support
+│   ├── config/          # Configuration and policy models/loaders
+│   ├── engine/          # Rule execution
+│   ├── llm/             # LLM abstraction and providers
+│   ├── models/          # Domain/workflow models
+│   ├── rules/           # Rule base, discovery, registry and implementations
+│   └── services/        # Assessment and workflow services
+├── docs/                # Architecture, rules, validation, security and ADRs
+├── tests/               # Unit/integration/workflow/reporting/UI tests
+├── pyproject.toml
 ├── requirements.txt
 └── README.md
 ```
 
-Legacy rule trees and compatibility UI/test paths are not part of the current architecture.
+The repository tree is authoritative. Documentation avoids enumerating individual source files that are expected to evolve.
 
 ## Installation
 
 ### Requirements
 
-- Python **3.14**
+- Python version supported by the repository CI (currently Python 3.14)
 - Git
-- Optional: Ollama for local reporting
+- Optional local LLM runtime when using local reporting
 
 ```bash
 git clone https://github.com/danielematix67-boop/credit-assessment-system.git
@@ -425,21 +242,11 @@ Run the application:
 streamlit run app/streamlit_app.py
 ```
 
-Configure `GEMINI_API_KEY` through an environment variable or Streamlit secrets when Gemini reporting is enabled. Configure Ollama according to the local installation when local reporting is enabled.
+LLM credentials and provider settings are environment/deployment configuration. Do not commit secrets.
 
 ## Testing and CI
 
-The test suite mirrors the source architecture and covers rules, models, services, agents, workflow, reporting, application UI and integration boundaries.
-
-GitHub Actions targets **Python 3.14** and runs:
-
-```text
-Ruff → Mypy → Pytest + coverage
-```
-
-The coverage gate is **95% for `src`**.
-
-Local checks:
+Run the repository quality checks locally:
 
 ```bash
 python -m ruff check .
@@ -447,56 +254,50 @@ python -m mypy src
 python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 ```
 
+The CI workflow is the authoritative definition of supported Python versions, commands and coverage requirements. If those settings change, update this section accordingly rather than treating README values as policy.
+
 ## Documentation
 
-- [`docs/README.md`](docs/README.md) — documentation map and maintenance rules.
-- [`docs/architecture.md`](docs/architecture.md) — current architecture, domains, workflow, configuration and UI.
-- [`docs/reporting.md`](docs/reporting.md) — deterministic evidence flow and bounded reporting.
-- [`docs/architecture-decisions.md`](docs/architecture-decisions.md) — architectural decisions and rationale.
-- [`docs/adr-016-complete-rule-evidence-reporting.md`](docs/adr-016-complete-rule-evidence-reporting.md) — complete rule-evidence propagation into reporting.
-- [`docs/adr-017-rule-implementation-configuration-separation.md`](docs/adr-017-rule-implementation-configuration-separation.md) — separation between rule configuration, deterministic implementation and automatic discovery.
-- [`docs/validation.md`](docs/validation.md) — validation strategy, testing and CI.
+- [`docs/README.md`](docs/README.md) — documentation map and maintenance principles.
+- [`docs/architecture.md`](docs/architecture.md) — system architecture and boundaries.
+- [`docs/rules.md`](docs/rules.md) — complete rule-development lifecycle.
+- [`docs/reporting.md`](docs/reporting.md) — reporting and evidence contract.
+- [`docs/architecture-decisions.md`](docs/architecture-decisions.md) — architectural decision index and rationale.
+- [`docs/adr-016-complete-rule-evidence-reporting.md`](docs/adr-016-complete-rule-evidence-reporting.md) — complete rule-evidence reporting decision.
+- [`docs/adr-017-rule-implementation-configuration-separation.md`](docs/adr-017-rule-implementation-configuration-separation.md) — rule configuration/implementation separation.
+- [`docs/validation.md`](docs/validation.md) — validation strategy and quality gates.
 - [`docs/security-data-handling.md`](docs/security-data-handling.md) — security and data-handling principles.
 
-## Design Principles
+## Design principles
 
-- **Deterministic decision logic** — rules own the credit judgement.
-- **Domain separation** — four assessment domains remain explicit.
-- **Configuration over hard-coding** — policy parameters are externalized.
-- **Explicit data availability** — `NOT_EVALUABLE` is not normal evidence.
-- **Explainability** — rule evidence remains traceable.
-- **AI as bounded reporting** — LLMs generate narrative, not decisions.
-- **Grounded generation** — narrative is constrained by deterministic evidence.
-- **Resilience** — reporting can fall back deterministically.
-- **Thin presentation** — Streamlit consumes assessment results rather than implementing credit logic.
+1. Deterministic decision logic owns credit assessment.
+2. Rule policy is externalised where it can be expressed declaratively.
+3. Individual rules do not implement final case aggregation.
+4. Missing evidence is explicit and never silently treated as normal evidence.
+5. Structured evidence is preserved across workflow boundaries.
+6. LLMs are bounded reporting components, not decision engines.
+7. Generated narrative is grounded and treated as untrusted output.
+8. Deterministic fallback preserves reporting resilience.
+9. Streamlit remains a presentation/application layer.
+10. Documentation describes stable contracts rather than duplicating volatile catalogue data.
 
 ## Roadmap
 
 - [x] Deterministic multi-domain assessment
-- [x] 18 configured rules across four domains
-- [x] Configurable thresholds and severity
+- [x] Externalised rule configuration
+- [x] Automatic rule discovery and registry
 - [x] Structural input validation
-- [x] Explicit `NOT_EVALUABLE` handling
-- [x] Deterministic final aggregation
-- [x] Explainable rule evidence
-- [x] Compact macro-area Results dashboard
-- [x] Application-controlled Executive Narrative
-- [x] Gemini integration
-- [x] Local Ollama integration
-- [x] Deterministic LLM fallback
-- [x] LLM grounding validation
-- [x] Execution observability
-- [x] CI on Python 3.14
+- [x] Explicit non-evaluable handling
+- [x] Deterministic final assessment policy
+- [x] Complete rule evidence for reporting
+- [x] Grounded optional LLM reporting
+- [x] Deterministic reporting fallback
+- [x] Execution provenance
+- [x] Automated quality checks
 - [ ] Persistent assessment history
 - [ ] Rule-set versioning and auditability
 - [ ] Expanded monitoring/evaluation metrics
 - [ ] Additional rule families and external data sources
-
-## Current Baseline
-
-The `main` branch is the current thesis-ready baseline: four deterministic assessment domains, 18 configured rules, deterministic case aggregation, synthetic demonstration data, a compact evidence-oriented Results experience and bounded optional LLM reporting.
-
-The architecture keeps assessment independent from Streamlit and from every LLM provider. The application decides first; reporting explains the resulting evidence afterward.
 
 ## Author
 
