@@ -9,14 +9,14 @@ SCENARIO_NAME = "01 · Complete Credit Assessment"
 EXPECTED_FINAL_STATUS = "CRITICAL"
 
 EXPECTED_TRIGGERED_RULES = {
-    "CP001", "CP002", "CP003",
+    "CP001", "CP002", "CP003", "CP004",
     "R001", "R002", "R003", "R007",
     "B001", "B002", "B003", "B004",
     "DS001", "DS002", "DS003",
 }
 
 EXPECTED_UI_RULE_IDS = {
-    "CP001", "CP002", "CP003",
+    "CP001", "CP002", "CP003", "CP004",
     "B001", "B002", "B003", "B004",
     "DS001", "DS002", "DS003",
     "R001", "R002", "R003", "R004", "R005", "R006", "R007",
@@ -64,6 +64,7 @@ def test_demo_scenario_builder_produces_complete_inputs() -> None:
     assert profile is not None
     assert behavioural is not None
     assert debt is not None
+    assert profile.forborne is True
 
 
 def test_demo_scenario_covers_expected_triggered_rule_ids(assessment_service) -> None:
