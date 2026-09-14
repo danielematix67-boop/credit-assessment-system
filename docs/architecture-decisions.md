@@ -19,8 +19,8 @@ This document records the decisions that define the current system architecture.
 | ADR-013 | Explicit all-`NOT_EVALUABLE` handling | Accepted |
 | ADR-014 | Multi-domain case assessment | Accepted |
 | ADR-015 | Standalone Risk Drivers presentation | Superseded |
-| ADR-016 | Application-controlled Executive Narrative | Accepted |
-| ADR-017 | Compact macro-area Results experience | Accepted |
+| ADR-016 | Complete rule-evidence reporting | Accepted |
+| ADR-017 | Rule implementation/configuration separation | Accepted |
 
 ## ADR-001 — Deterministic Decision Authority
 
@@ -113,7 +113,7 @@ EMPTY RESULTS                   → NORMAL
 The system models four deterministic domains:
 
 ```text
-Customer Profile      → CP001–CP003
+Customer Profile      → CP001–CP004
 Financial Analysis    → R001–R007
 Behavioural Analysis  → B001–B004
 Debt Sustainability   → DS001–DS003
@@ -131,34 +131,42 @@ Each domain owns its inputs and rule evaluation; `FinalAssessmentService` perfor
 
 **Why superseded:** avoid duplicate presentation of the same evidence.
 
-## ADR-016 — Application-Controlled Executive Narrative
+## ADR-016 — Complete Rule-Evidence Reporting
 
-The Executive Narrative always uses this order:
+The reporting pipeline preserves complete deterministic rule evidence from all four domains, including `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` outcomes. The analysis layer exposes the complete evidence set to reporting, while narrower `risk_factors` contains high-severity triggered evidence.
 
-1. Customer Profile
-2. Financial Analysis
-3. Behavioural Analysis
-4. Debt Sustainability
+The LLM may generate prose only. It cannot change rule results, thresholds, severity, findings, limitations or final assessment status. Grounding validation can reject unsupported narrative and activate deterministic fallback.
 
-Python controls titles and order; the LLM supplies prose only.
+**Why:** reporting must remain traceable to the deterministic assessment and must not become a second decision engine.
 
-**Why:** the domain taxonomy is part of the application contract and must not drift between providers.
+## ADR-017 — Rule Implementation / Configuration Separation
 
-## ADR-017 — Compact Macro-Area Results Experience
-
-The visible Results hierarchy is:
+Rule configuration and deterministic implementation are deliberately separated:
 
 ```text
-Executive Credit Assessment
-          ↓
-Assessment by Macro-Area
-          ↓
-Executive Narrative
+config/*.yaml
+    ↓
+src/rules/<domain>/<rule>.py
+    ↓
+Automatic discovery + shared registry
+    ↓
+RuleEngine / Domain Assessment Service
 ```
 
-Rule Catalogue & Filters and Individual Rule Detail are disclosed within the macro-area dashboard. Separate bottom-of-page Risk Drivers and Detailed Assessment sections are not rendered.
+The current catalogue contains 18 rules:
 
-**Why:** one authoritative evidence surface is clearer and avoids repeated information.
+- Customer Profile: `CP001–CP004`
+- Financial Analysis: `R001–R007`
+- Behavioural Analysis: `B001–B004`
+- Debt Sustainability: `DS001–DS003`
+
+There is one concrete Python module per rule. Rule modules self-register with `@Rule.register("<RULE_ID>")`, and automatic discovery imports rule modules recursively. Adding a rule therefore does not require a central import list.
+
+YAML controls declarative parameters such as inputs, calculation, trigger operator, threshold, severity, severity direction, severity bands and comment template. Python owns rule execution and specialised business semantics.
+
+**Why:** consistent extensibility across domains, isolated rule testing, reviewable policy parameters and a single deterministic implementation path.
+
+See [`adr-017-rule-implementation-configuration-separation.md`](adr-017-rule-implementation-configuration-separation.md) for the detailed decision.
 
 ## Architectural Principles
 
@@ -174,3 +182,4 @@ Rule Catalogue & Filters and Individual Rule Detail are disclosed within the mac
 10. Presentation code does not own business logic.
 11. Execution metadata is observational.
 12. The Results UI has one authoritative macro-area evidence surface.
+13. Every configured rule must resolve to one registered deterministic implementation.
