@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from src.config.rule_config_loader import RuleConfigLoader
-from src.rules.registry import get_default_rules
+from src.rules.registry import build_rules, get_default_rules
 
 EXPECTED_RULE_IDS = {
     "CP001",
@@ -45,3 +45,10 @@ def test_rule_configuration_loads_all_rule_catalogs() -> None:
 
     assert rule_ids == EXPECTED_RULE_IDS
     assert len(configs) == len(EXPECTED_RULE_IDS)
+
+
+def test_all_rule_catalog_entries_have_registered_implementations() -> None:
+    configs = RuleConfigLoader().load(Path("config"))
+    rules = build_rules(configs)
+
+    assert {rule.config.rule_id for rule in rules} == EXPECTED_RULE_IDS
