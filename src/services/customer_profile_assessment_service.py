@@ -5,7 +5,6 @@ from src.comments.comment import Comment
 from src.comments.comment_engine import CommentEngine
 from src.config.rule_config_loader import RuleConfigLoader
 from src.models.assessment_section import AssessmentSection, SectionStatus
-from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.customer_profile_data import CustomerProfileData
 from src.models.position import CreditPosition
 from src.models.rule_finding import RuleFinding
@@ -46,7 +45,9 @@ class CustomerProfileAssessmentService:
         elif not evaluable_results:
             status = SectionStatus.NORMAL
         else:
-            status = SectionStatus(self.status_calculator.calculate(evaluable_results).value)
+            status = SectionStatus(
+                self.status_calculator.calculate(evaluable_results).value
+            )
 
         findings = []
         for result in results:
