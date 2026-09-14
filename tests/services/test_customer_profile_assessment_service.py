@@ -2,6 +2,7 @@ from pathlib import Path
 
 from src.models.assessment_section import SectionStatus
 from src.models.customer_profile_data import CustomerProfileData
+from src.models.ews_score import EwsScoreClass
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.services.customer_profile_assessment_service import CustomerProfileAssessmentService
@@ -16,31 +17,80 @@ def test_customer_profile_preserves_context_data() -> None:
             shareholders=["Shareholder A", "Shareholder B"],
             relationship_years=8,
             business_history_years=8,
+            ews_score_class=EwsScoreClass.YELLOW,
         )
     )
 
-    assert section.status == SectionStatus.NORMAL
+    assert section.status == SectionStatus.ATTENTION
     assert section.context["company_name"] == "Synthetic Manufacturing S.p.A."
     assert section.context["relationship_years"] == 8
     assert section.context["business_history_years"] == 8
+    assert section.context["ews_score_class"] == "YELLOW"
 
 
-def test_active_ews_triggers_customer_profile_attention() -> None:
+def test_yellow_ews_score_triggers_medium_attention() -> None:
     section = CustomerProfileAssessmentService().assess(
-        CustomerProfileData(company_name="Synthetic Co.", active_ews=True)
+        CustomerProfileData(
+            company_name="Synthetic Co.",
+            ews_score_class=EwsScoreClass.YELLOW,
+        )
     )
 
+    result = section.evidence[0]
     assert section.status == SectionStatus.ATTENTION
-    assert section.evidence[0].rule_id == "CP001"
-    assert section.evidence[0].status == RuleStatus.TRIGGERED
+    assert result.rule_id == "CP001"
+    assert result.status == RuleStatus.TRIGGERED
+    assert result.severity == RuleSeverity.MEDIUM
+    assert "YELLOW" in (result.reason or "")
     assert len(section.findings) == 1
+
+
+def test_orange_ews_score_triggers_medium_attention() -> None:
+    section = CustomerProfileAssessmentService().assess(
+        CustomerProfileData(
+            company_name="Synthetic Co.",
+            ews_score_class=EwsScoreClass.ORANGE,
+        )
+    )
+
+    result = section.evidence[0]
+    assert section.status == SectionStatus.ATTENTION
+    assert result.severity == RuleSeverity.MEDIUM
+
+
+def test_light_red_ews_score_triggers_high_attention() -> None:
+    section = CustomerProfileAssessmentService().assess(
+        CustomerProfileData(
+            company_name="Synthetic Co.",
+            ews_score_class=EwsScoreClass.LIGHT_RED,
+        )
+    )
+
+    result = section.evidence[0]
+    assert section.status == SectionStatus.ATTENTION
+    assert result.status == RuleStatus.TRIGGERED
+    assert result.severity == RuleSeverity.HIGH
+
+
+def test_green_ews_score_does_not_trigger() -> None:
+    section = CustomerProfileAssessmentService().assess(
+        CustomerProfileData(
+            company_name="Synthetic Co.",
+            ews_score_class=EwsScoreClass.GREEN,
+        )
+    )
+
+    result = section.evidence[0]
+    assert section.status == SectionStatus.NORMAL
+    assert result.status == RuleStatus.NOT_TRIGGERED
+    assert result.severity == RuleSeverity.LOW
 
 
 def test_two_profile_risk_flags_trigger_critical() -> None:
     section = CustomerProfileAssessmentService().assess(
         CustomerProfileData(
             company_name="Synthetic Co.",
-            active_ews=True,
+            ews_score_class=EwsScoreClass.LIGHT_RED,
             previous_restructuring=True,
         )
     )
