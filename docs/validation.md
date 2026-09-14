@@ -8,7 +8,7 @@ The assessment layer is deterministic; AI is optional and limited to reporting. 
 
 > **The deterministic assessment is the source of truth. The LLM can generate narrative content, but it cannot determine, modify or override the structured credit assessment.**
 
-Validation therefore covers input integrity, configuration, all four assessment domains, final aggregation, analysis, reporting, LLM grounding, fallback behaviour, workflow propagation, execution metadata, scenario coverage and CI quality gates.
+Validation covers input integrity, configuration, all four assessment domains, final aggregation, analysis, reporting, LLM grounding, fallback behaviour, workflow propagation, execution metadata, scenario coverage, presentation boundaries and CI quality gates.
 
 ---
 
@@ -37,6 +37,7 @@ Validation therefore covers input integrity, configuration, all four assessment 
 | Workflow | Assessment-to-report propagation |
 | LLM / grounding | Narrative constraints and evidence preservation |
 | Scenario | End-to-end demonstration of configured domains/rules |
+| UI boundary | Read-only presentation of deterministic evidence |
 | CI | Repeatable lint, type and coverage gates |
 
 ---
@@ -89,7 +90,7 @@ Execution metadata describes provenance and timing. It does not participate in a
 
 ## 4. Rule and Configuration Testing
 
-The current configured inventory contains **17 rules**:
+The configured inventory contains **17 rules**:
 
 | Domain | Rule IDs | Count |
 |---|---|---:|
@@ -104,10 +105,10 @@ Tests cover:
 - severity direction and thresholds;
 - YAML configuration loading and validation;
 - rule registration/discovery;
-- financial rules R001–R007;
-- behavioural rules B001–B004;
-- debt-sustainability rules DS001–DS003;
-- customer-profile rules CP001–CP003;
+- financial rules `R001–R007`;
+- behavioural rules `B001–B004`;
+- debt-sustainability rules `DS001–DS003`;
+- customer-profile rules `CP001–CP003`;
 - threshold boundaries;
 - missing/non-evaluable inputs.
 
@@ -151,7 +152,7 @@ Customer Profile is contextual for the two-core-area escalation: `ATTENTION` doe
 
 The predefined synthetic scenario is expected to exercise all four assessment domains and provide the inputs required by the configured rule inventory.
 
-The target coverage contract is:
+Target coverage contract:
 
 ```text
 4 assessment domains
@@ -165,7 +166,7 @@ End-to-end Streamlit demonstration
 
 Scenario data is synthetic/anonymized and must not contain production banking information.
 
-Scenario coverage is a demonstration concern and does not replace the unit/integration tests that validate individual rule semantics.
+Scenario coverage is a demonstration concern and does not replace unit/integration tests that validate individual rule semantics.
 
 ---
 
@@ -294,7 +295,7 @@ Metadata is diagnostic information and does not participate in assessment-status
 
 ## 13. Presentation Validation Boundary
 
-The current Streamlit Results hierarchy is:
+The current Streamlit Results hierarchy is deliberately compact:
 
 ```text
 Executive Credit Assessment
@@ -302,26 +303,19 @@ Executive Credit Assessment
 Assessment by Macro-Area
           ↓
 Executive Narrative
-          ↓
-Risk Drivers (collapsed)
-          ↓
-Detailed Assessment (collapsed)
-          ↓
-Rule Catalogue & Filters (collapsed)
-          ↓
-Individual Rule Detail (collapsed)
 ```
 
-The presentation layer consumes structured workflow objects and renders progressively deeper evidence:
+The presentation layer consumes structured workflow objects and renders progressively deeper evidence within the macro-area dashboard:
 
-- **Executive Credit Assessment** — final status and compact KPIs;
+- **Executive Credit Assessment** — final status and three compact KPIs;
 - **Assessment by Macro-Area** — authoritative four-domain overview;
 - **Executive Narrative** — management-level prose from deterministic evidence;
-- **Risk Drivers** — triggered evidence ranked by severity;
-- **Detailed Assessment** — analyst/audit drill-down and data quality;
-- **Rule Catalogue / Detail** — technical inspection on demand.
+- **Rule Catalogue & Filters** — technical inspection on demand;
+- **Individual Rule Detail** — rule-level inspection on demand.
 
-The UI does not recalculate thresholds, severity or assessment status. Aggregate views that duplicated the macro-area evidence were removed.
+Separate bottom-of-page **Risk Drivers** and **Detailed Assessment** sections are no longer rendered. This prevents repeated evidence and keeps the Results flow focused on the authoritative macro-area dashboard and executive narrative.
+
+The UI does not recalculate thresholds, severity or assessment status.
 
 ---
 
@@ -367,7 +361,7 @@ The pytest command enforces minimum coverage of **95% for `src`**.
 | Terminal failure | Reporting/workflow tests | Fallback failure is propagated |
 | Workflow propagation | Integration tests | Deterministic assessment remains unchanged |
 | Execution metadata | Workflow tests | Provenance and timings are consistent |
-| Presentation boundary | UI architecture tests/review | UI remains read-only |
+| Presentation boundary | UI architecture tests/review | UI remains read-only and non-decisional |
 | CI | GitHub Actions | Ruff, Mypy and pytest/coverage pass on supported Python versions |
 
 ---
