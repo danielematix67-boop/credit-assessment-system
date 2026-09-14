@@ -7,6 +7,7 @@ structure.
 
 from app.ui.input.credit_position import (
     build_credit_position_from_ui,
+    build_manual_case_data_from_ui,
     create_optional_numeric_field,
     create_streamlit_field,
     display_position_table,
@@ -27,7 +28,7 @@ from app.ui.input.field_metadata import (
 __all__ = [
     "FIELD_GROUPS",
     "build_credit_position_from_ui",
-    "build_scenario_data_table",
+    "build_manual_case_data_from_ui",
     "create_optional_numeric_field",
     "create_streamlit_field",
     "display_position_table",
