@@ -52,7 +52,5 @@ def render_risk_driver_overview(credit_case: Any) -> None:
         return
 
     st.markdown("### Risk Drivers")
-    st.caption("Triggered indicators grouped by macro-area and existing rule severity.")
-
-    with st.expander("View triggered indicators", expanded=False):
-        st.dataframe(frame, use_container_width=True, hide_index=True)
+    st.caption("Triggered indicators ranked by existing deterministic rule severity.")
+    st.dataframe(frame, use_container_width=True, hide_index=True)
