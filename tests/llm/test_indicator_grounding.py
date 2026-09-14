@@ -64,7 +64,7 @@ def test_prompt_preserves_structured_indicator_value() -> None:
     prompt = ReportPromptBuilder().build(analysis)
 
     assert "Deterministic indicator: Revenue growth" in prompt
-    assert "Deterministic structured value: -0.35" in prompt
+    assert "Deterministic value: -35.0%" in prompt
     assert "Revenue growth declined to -35.0%." in prompt
     assert "rule_id" not in prompt
 
