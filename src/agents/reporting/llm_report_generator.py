@@ -51,7 +51,7 @@ class LLMReportGenerator(ReportGenerator):
         response = self.llm_client.generate(self.prompt_builder.build(analysis))
         narrative = self._validate_response(response)
         if self.require_indicator_values:
-            narrative = self._sanitize_indicator_grounding(
+            narrative = self._validate_indicator_grounding(
                 narrative,
                 analysis.key_findings,
             )
@@ -120,9 +120,11 @@ class LLMReportGenerator(ReportGenerator):
         cls,
         findings: list[AnalysisFinding],
     ) -> list[str]:
-        return cls._INDICATOR_PATTERN.findall(
+        """Extract unique source indicators while preserving their source order."""
+        values = cls._INDICATOR_PATTERN.findall(
             " ".join(finding.text for finding in findings)
         )
+        return list(dict.fromkeys(values))
 
     @classmethod
     def _sanitize_indicator_grounding(
@@ -130,7 +132,7 @@ class LLMReportGenerator(ReportGenerator):
         narrative: str,
         findings: list[AnalysisFinding],
     ) -> str:
-        """Keep numeric rendering deterministic without activating fallback."""
+        """Keep only sentences whose numeric indicators are grounded in findings."""
         source_values = {
             cls._normalise_indicator(value)
             for value in cls._extract_indicator_values(findings)
@@ -183,7 +185,15 @@ class LLMReportGenerator(ReportGenerator):
         narrative: str,
         findings: list[AnalysisFinding],
     ) -> str:
-        return cls._sanitize_indicator_grounding(narrative, findings)
+        """Reject numeric indicators that are not grounded in deterministic findings."""
+        source_values = {
+            cls._normalise_indicator(value)
+            for value in cls._extract_indicator_values(findings)
+        }
+        for value in cls._INDICATOR_PATTERN.findall(narrative):
+            if cls._normalise_indicator(value) not in source_values:
+                raise ValueError(f"unsupported indicator value: {value}")
+        return narrative
 
     @classmethod
     def _ensure_indicator_values(
@@ -191,7 +201,7 @@ class LLMReportGenerator(ReportGenerator):
         narrative: str,
         findings: list[AnalysisFinding],
     ) -> str:
-        return cls._sanitize_indicator_grounding(narrative, findings)
+        return cls._validate_indicator_grounding(narrative, findings)
 
     @staticmethod
     def _group_findings_by_category(
