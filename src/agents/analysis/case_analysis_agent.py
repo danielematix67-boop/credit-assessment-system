@@ -54,6 +54,8 @@ class CaseAnalysisAgent:
                         text=finding.comment.text,
                         status=finding.result.status,
                         assessment_area=section.name,
+                        value=finding.result.value,
+                        indicator=finding.result.indicator,
                     )
                     for finding in section.findings
                 ]
@@ -138,6 +140,8 @@ class CaseAnalysisAgent:
             text=text,
             status=result.status,
             assessment_area=assessment_area,
+            value=result.value,
+            indicator=result.indicator,
         )
 
     @staticmethod
