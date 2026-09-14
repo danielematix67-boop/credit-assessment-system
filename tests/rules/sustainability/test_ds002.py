@@ -6,7 +6,19 @@ from src.rules.sustainability.ds002 import DebtServiceToEbitdaRule
 
 
 def make_rule() -> DebtServiceToEbitdaRule:
-    return DebtServiceToEbitdaRule(RuleConfig(rule_id="DS002", rule_name="Debt Service / EBITDA", category="Debt Sustainability", threshold=1.0, severity=RuleSeverity.MEDIUM, severity_direction="HIGHER_IS_WORSE", input_fields=("debt_service", "ebitda"), calculation="ratio", trigger_operator="GT"))
+    return DebtServiceToEbitdaRule(
+        RuleConfig(
+            rule_id="DS002",
+            rule_name="Debt Service / EBITDA",
+            category="Debt Sustainability",
+            threshold=1.0,
+            severity=RuleSeverity.MEDIUM,
+            severity_direction="HIGHER_IS_WORSE",
+            input_fields=("debt_service", "ebitda"),
+            calculation="ratio",
+            trigger_operator="GT",
+        )
+    )
 
 
 def test_above_threshold_triggers() -> None:
