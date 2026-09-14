@@ -11,10 +11,11 @@ class ForborneExposureRule(Rule):
     """Evaluate whether the customer has a forborne exposure."""
 
     def evaluate(self, position: Any) -> RuleResult:
-        value, error = self._configured_value(position)
-        if error is not None:
-            return self._not_evaluable(error)
-        assert value is not None
+        value = getattr(position, self.config.input_field, None)
+        if value is None:
+            return self._not_evaluable(
+                f"Required input field is not available: {self.config.input_field}."
+            )
 
         if not isinstance(value, bool):
             return self._not_evaluable(
