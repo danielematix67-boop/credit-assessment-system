@@ -7,8 +7,8 @@ from src.llm.gemini_client import GeminiClient
 # ============================================================
 
 DEFAULT_MODEL = "gemini-3.5-flash"
-DEFAULT_TEMPERATURE = 0.2
-DEFAULT_MAX_OUTPUT_TOKENS = 2048
+DEFAULT_TEMPERATURE = 0.1
+DEFAULT_MAX_OUTPUT_TOKENS = 8192
 
 
 # ============================================================
@@ -57,6 +57,7 @@ def test_gemini_client_initializes_with_custom_configuration():
     assert client.model == "custom-model"
     assert client.temperature == 0.0
     assert client.max_output_tokens == 4096
+
 
 
 def test_gemini_client_requires_api_key():
