@@ -96,8 +96,6 @@ class LLMReportGenerator(ReportGenerator):
         findings = analysis.rule_evidence or analysis.key_findings
         categories = cls._ordered_assessment_areas(findings)
 
-        # Keep lightweight/unit-test analyses backward compatible when they do not
-        # use the four production assessment areas.
         if not categories:
             return narrative
 
@@ -123,7 +121,10 @@ class LLMReportGenerator(ReportGenerator):
         findings: list[AnalysisFinding],
     ) -> list[str]:
         """Return represented macro areas in the deterministic canonical order."""
-        represented = {finding.category.casefold() for finding in findings}
+        represented = {
+            (finding.assessment_area or finding.category).casefold()
+            for finding in findings
+        }
         return [
             category
             for category in cls._ASSESSMENT_AREA_ORDER
