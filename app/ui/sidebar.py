@@ -9,7 +9,7 @@ def render_sidebar() -> str:
 
     with st.sidebar:
         st.title("Configuration")
-        st.caption("Choose how the Executive Report should be generated.")
+        st.caption("Choose how the Executive Narrative should be generated.")
 
         reporting_mode = st.radio(
             "Reporting mode",
