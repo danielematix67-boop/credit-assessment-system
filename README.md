@@ -197,8 +197,6 @@ For technical inspection, the same underlying rule results remain available to t
 
 The demonstration environment uses synthetic/anonymized data. It is intended to show the assessment workflow and reporting architecture, not to process confidential banking information.
 
-> Screenshots and additional visual documentation can be added to this section as the UI stabilises, so that the README remains aligned with the actual application rather than becoming a static catalogue of screens.
-
 ---
 
 ## ➕ Adding a new rule
