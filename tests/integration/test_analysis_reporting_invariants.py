@@ -79,6 +79,65 @@ def _case() -> CreditAssessmentCase:
     )
 
 
+def test_analysis_agent_preserves_complete_rule_evidence_states() -> None:
+    case = _case()
+    financial = AssessmentSection(
+        name="Financial Analysis",
+        status=SectionStatus.ATTENTION,
+        findings=[_finding("R001", RuleSeverity.HIGH)],
+        evidence=[
+            RuleResult(
+                rule_id="R001",
+                rule_name="Triggered rule",
+                category="Financial Analysis",
+                status=RuleStatus.TRIGGERED,
+                value=1.0,
+                threshold=0.5,
+                severity=RuleSeverity.HIGH,
+                indicator="Triggered indicator",
+            ),
+            RuleResult(
+                rule_id="R002",
+                rule_name="Normal rule",
+                category="Financial Analysis",
+                status=RuleStatus.NOT_TRIGGERED,
+                value=0.4,
+                threshold=0.5,
+                severity=RuleSeverity.MEDIUM,
+                reason="Observed value does not meet the trigger condition.",
+                indicator="Normal indicator",
+            ),
+            RuleResult(
+                rule_id="R003",
+                rule_name="Unavailable rule",
+                category="Financial Analysis",
+                status=RuleStatus.NOT_EVALUABLE,
+                value=None,
+                threshold=0.5,
+                severity=RuleSeverity.MEDIUM,
+                indicator="Unavailable indicator",
+            ),
+        ],
+        limitations=["Financial limitation."],
+    )
+    case = CreditAssessmentCase(
+        position=case.position,
+        customer_profile=case.customer_profile,
+        financial_analysis=financial,
+        behavioural_analysis=case.behavioural_analysis,
+        debt_sustainability=case.debt_sustainability,
+        final_assessment=case.final_assessment,
+    )
+
+    analysis = CaseAnalysisAgent().run(case)
+
+    assert [(item.rule_id, item.status) for item in analysis.rule_evidence] == [
+        ("R001", RuleStatus.TRIGGERED),
+        ("R002", RuleStatus.NOT_TRIGGERED),
+        ("R003", RuleStatus.NOT_EVALUABLE),
+    ]
+
+
 def test_analysis_agent_preserves_deterministic_final_status_and_evidence() -> None:
     analysis = CaseAnalysisAgent().run(_case())
     assert analysis.assessment_status == AssessmentStatus.ATTENTION
