@@ -14,7 +14,7 @@ A second maintainability concern is rule isolation: individual rules can become 
 
 ## Decision
 
-Adopt a strict separation between rule configuration and deterministic rule implementation, with one concrete implementation module per rule in the normal case.
+Adopt a strict separation between rule configuration and deterministic rule implementation. In the normal project convention, each rule has its own concrete implementation module. This improves isolation, reviewability and rule-specific testing, but the architectural invariant is the registry mapping between a configured rule_id and exactly one resolvable deterministic implementation.
 
 ```text
 config/<domain>_rules.yaml
