@@ -10,11 +10,9 @@
 
 ## What data should be used?
 
-The repository is intended to contain only synthetic/anonymized demonstration data. Production credit data must not be committed to Git or packaged with the application.
+The repository is intended to contain only synthetic demonstration data. Production credit data must not be committed to Git or packaged with the application.
 
 **Synthetic data** is artificially created data used for demonstration or testing.
-
-**Anonymized data** has been transformed according to an applicable anonymisation standard so that individuals or organisations cannot be identified from the resulting data. Simply removing a name or identifier is not necessarily sufficient to make data anonymous.
 
 ## Input integrity
 
@@ -94,7 +92,7 @@ Avoid logging credentials, complete customer records, unnecessary financial data
 
 ## Data retention
 
-The repository should contain only synthetic/anonymized demonstration data.
+The repository should contain only synthetic demonstration data.
 
 If persistent storage is introduced, retention and deletion requirements must be defined before implementation and aligned with the applicable organisational and regulatory framework.
 
@@ -129,7 +127,7 @@ Metadata        ≠ Decision Evidence
 
 - [ ] No credentials are committed.
 - [ ] Local secret/environment files are ignored.
-- [ ] Demo data is synthetic/anonymized.
+- [ ] Demo data is synthetic.
 - [ ] Input validation rejects malformed and non-finite values.
 - [ ] External LLM use is approved for the intended data class.
 - [ ] Prompts contain only required assessment information.
