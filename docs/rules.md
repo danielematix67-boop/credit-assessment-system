@@ -252,7 +252,7 @@ If the rule exposes material numeric evidence, add or update grounding tests so 
 
 ## 9. Demo scenarios and UI
 
-If the rule introduces new required inputs, update synthetic/anonymized demo scenarios so the application can exercise the new path.
+If the rule introduces new required inputs, update synthetic demo scenarios so the application can exercise the new path.
 
 Prefer scenario coverage that demonstrates meaningful combinations of outcomes rather than one scenario per rule when that would create redundant data.
 
