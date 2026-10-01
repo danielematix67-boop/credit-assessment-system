@@ -78,7 +78,7 @@ The deterministic path is the **source of truth**. The reporting path consumes i
 | **Testing** | pytest |
 | **Quality** | Ruff + mypy + coverage gate |
 | **AI** | Optional reporting layer |
-| **Data** | Synthetic / anonymized demonstration data |
+| **Data** | Synthetic demonstration data |
 | **Deployment** | Streamlit-compatible |
 
 ---
@@ -195,7 +195,7 @@ For technical inspection, the same underlying rule results remain available to t
 
 **Live demo:** [credit-assessment-system.streamlit.app](https://credit-assessment-system.streamlit.app/)
 
-The demonstration environment uses synthetic/anonymized data. It is intended to show the assessment workflow and reporting architecture, not to process confidential banking information.
+The demonstration environment uses synthetic data. It is intended to show the assessment workflow and reporting architecture, not to process confidential banking information.
 
 ---
 
@@ -333,7 +333,7 @@ The CI workflow is the authoritative definition of supported Python versions, co
 
 ## 🔐 Data and security
 
-Demonstration data is synthetic/anonymized. Production or confidential banking data must not be committed to the repository.
+Demonstration data is synthetic. Production or confidential banking data must not be committed to the repository.
 
 Credentials must be supplied through environment or secret configuration rather than source code. External LLM use must comply with applicable data-classification and governance requirements.
 
