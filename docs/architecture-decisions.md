@@ -78,7 +78,7 @@ Workflow executions expose immutable metadata such as execution ID, UTC timestam
 
 ## ADR-010 — Grounded LLM Narrative Contract
 
-LLM reporting must preserve supplied material findings and numerical evidence, avoid unsupported claims and never generate the structured assessment status.
+LLM reporting must preserve supplied material findings and numerical evidence, avoid unsupported claims and never generate the structured assessment status. Where grounding validation is enabled by the selected report generator, unsupported generated content may cause the primary reporting path to fail and activate the deterministic fallback.
 
 **Why:** generative output remains bounded by deterministic evidence.
 
