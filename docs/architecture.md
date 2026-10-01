@@ -110,6 +110,8 @@ The policy defines, among other things:
 - the status used when evidence is insufficient;
 - limitation messages for partial evaluation.
 
+The policy distinguishes **core** sections from **contextual** sections. Core sections participate explicitly in the current escalation logic, while contextual sections provide additional assessment context without introducing a separate escalation rule in the current implementation.
+
 ```text
 Section assessments
         ↓
@@ -206,7 +208,7 @@ The authoritative structure is the repository tree itself. Documentation intenti
 
 ## Demo data
 
-Demonstration scenarios are synthetic/anonymized. They exist to exercise representative assessment paths and should evolve with the input contract and catalogue.
+Demonstration scenarios are synthetic. They exist to exercise representative assessment paths and should evolve with the input contract and catalogue.
 
 Production or confidential banking data must not be committed to the repository.
 
