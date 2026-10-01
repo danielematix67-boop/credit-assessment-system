@@ -133,7 +133,7 @@ Tests should use representative configured rules rather than maintaining a dupli
 
 ## Scenario coverage
 
-Demonstration scenarios use synthetic/anonymized data.
+Demonstration scenarios use synthetic data.
 
 **In simple terms:** scenarios are realistic examples used to check that several parts of the system behave correctly together.
 
