@@ -24,15 +24,6 @@ class CaseAnalysisAgent:
             summary = self._profile_summary(case.customer_profile.context)
             if summary:
                 customer_profile_analysis = self._customer_profile_analysis(summary)
-                profile_finding = AnalysisFinding(
-                    rule_id="PROFILE",
-                    category="Customer Profile",
-                    severity=RuleSeverity.MEDIUM,
-                    text=summary,
-                    assessment_area="Customer Profile",
-                )
-                rule_evidence.append(profile_finding)
-                key_findings.append(profile_finding)
 
         for section in case.sections:
             triggered_text_by_rule = {
