@@ -172,9 +172,10 @@ CaseAnalysisAgent
           Reporting / Executive Narrative
 ```
 
-The LLM does not select, rank or otherwise redefine profile materiality. It receives the deterministic material context and is limited to narrative generation. The deterministic report generator follows the same materiality boundary.
+The LLM does not select, rank or otherwise redefine profile materiality. It receives the deterministic material context and is limited to narrative generation. The materiality policy excludes facts already covered by deterministic Customer Profile rules, preventing overlap. Both the LLM and deterministic report generator follow the same materiality boundary, and both reporting paths consolidate Customer Profile rule evidence and material contextual information into a single Customer Profile Executive Narrative section.
 
-**Why:** keep descriptive customer context available for analyst review, prevent the Executive Summary from becoming a full data dump, and preserve a strict separation between deterministic credit evidence and generative narrative.
+**Why:** keep descriptive customer context available for analyst review, prevent the Executive Summary from becoming a full data dump or duplicate the same evidence, and preserve a strict separation between deterministic credit evidence and generative narrative.
+
 ## Architectural Principles
 
 1. Deterministic logic owns credit decisions.
