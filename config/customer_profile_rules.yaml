@@ -54,3 +54,17 @@ rules:
     comment_template: >
       A forborne exposure is present in the customer profile and indicates
       an elevated credit-risk condition.
+
+
+  - rule_id: CP005
+    rule_name: Short Banking Relationship
+    indicator: Banking relationship (years)
+    category: customer_profile
+    input_field: relationship_years
+    trigger_operator: LTE
+    threshold: 2
+    severity: MEDIUM
+    severity_direction: LOWER_IS_WORSE
+    comment_template: >
+      The banking relationship has lasted {value:.0f} years, indicating a
+      limited observable relationship history with the customer.
