@@ -375,6 +375,8 @@ See [`docs/security-data-handling.md`](docs/security-data-handling.md).
 | [`docs/architecture.md`](docs/architecture.md) | System architecture and boundaries |
 | [`docs/rules.md`](docs/rules.md) | Complete rule-development lifecycle |
 | [`docs/reporting.md`](docs/reporting.md) | Reporting and evidence contract |
+| [`docs/customer-profile.md`](docs/customer-profile.md) | Customer Profile fields and materiality policy |
+| [`docs/application-workflow.md`](docs/application-workflow.md) | Current Streamlit workflow and results interface |
 | [`docs/validation.md`](docs/validation.md) | Validation strategy and quality gates |
 | [`docs/security-data-handling.md`](docs/security-data-handling.md) | Security and data-handling principles |
 | [`docs/architecture-decisions.md`](docs/architecture-decisions.md) | Architectural decision index and rationale |
