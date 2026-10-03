@@ -51,6 +51,50 @@ AssessmentAnalysis
 
 `NOT_EVALUABLE` means required evidence was unavailable or insufficient. It must remain distinguishable from an evaluated rule that did not trigger.
 
+## Customer Profile reporting
+
+Customer Profile is a structured contextual input to reporting and is deliberately separated from rule-level evidence.
+
+`AssessmentAnalysis.customer_profile` contains the full structured profile used for the detailed Customer Profile presentation. It is represented through four ordered sections:
+
+1. General Information
+2. Risk Profile & Predictiveness
+3. Relationship & Counterparty Context
+4. Relevant Events
+
+`AssessmentAnalysis.material_customer_profile` contains the subset selected for Executive Summary reporting. The selection is performed by `CustomerProfileMaterialityPolicy` in the deterministic analysis layer.
+
+The materiality boundary is:
+
+```text
+Full CustomerProfileData
+        ↓
+CaseAnalysisAgent
+        ↓
+CustomerProfileMaterialityPolicy
+        ↓
+material_customer_profile
+        ↓
+ReportPromptBuilder / DeterministicReportGenerator
+        ↓
+Executive Narrative
+```
+
+Materiality is therefore **not an LLM decision**. The reporting layer receives an already-selected contextual subset and can only format, organise or verbalise it.
+
+Deterministic customer-profile rules remain in `rule_evidence` and retain their normal `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` semantics. Contextual fields such as active EWIs, business information, rating context or historical events are not converted into pseudo-rule findings merely because they are relevant to the Executive Summary.
+
+The detailed profile and the Executive Summary intentionally have different scopes:
+
+| Output | Customer-profile scope |
+|---|---|
+| Detailed Customer Profile | Full available structured context |
+| Executive Summary | Deterministically selected material context |
+| Rule evidence | Only deterministic rule results |
+| LLM narrative | Prose generated from supplied evidence/context |
+
+This prevents descriptive customer information from contaminating the deterministic rule-evidence contract while still making material customer context available to management-level reporting.
+
 ## Reporting boundary
 
 The Reporting Agent may:
@@ -58,6 +102,7 @@ The Reporting Agent may:
 - organise supplied evidence;
 - synthesise narrative;
 - preserve material indicators and findings;
+- verbalise the deterministic material customer-profile context supplied to it;
 - use deterministic fallback.
 
 It may not:
@@ -147,8 +192,8 @@ Reporting tests should verify:
 1. configured domain evidence is propagated;
 2. all supported rule outcomes remain distinguishable;
 3. high-severity triggered evidence is correctly represented as a risk factor;
-4. prompts receive the complete evidence set required by the contract;
-5. generated prose cannot alter deterministic status;
+4. prompts receive the complete evidence set required by the contract, including the selected material customer-profile context;
+5. generated prose cannot alter deterministic status or customer-profile materiality selection;
 6. unsupported or altered material evidence is rejected by grounding;
 7. provider and grounding failures activate deterministic fallback;
 8. fallback failure is surfaced rather than silently hidden.
