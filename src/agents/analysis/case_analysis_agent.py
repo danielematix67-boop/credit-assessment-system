@@ -236,6 +236,14 @@ class CaseAnalysisAgent:
             risk_parts.append(
                 f"the minimum regulatory risk grade is {as_text(get('minimum_regulatory_risk_grade'))}"
             )
+        if present(get("previous_risk_grade"), "previous_risk_grade"):
+            risk_parts.append(
+                f"the previous risk grade was {as_text(get('previous_risk_grade'))}"
+            )
+        if present(get("risk_grade_change"), "risk_grade_change"):
+            risk_parts.append(
+                f"the risk-grade change is {as_text(get('risk_grade_change'))}"
+            )
         if present(get("past_due_count"), "past_due_count"):
             count = get("past_due_count")
             risk_parts.append(f"{count} past-due positions are reported")
