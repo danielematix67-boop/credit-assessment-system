@@ -121,10 +121,13 @@ Each stage has a different responsibility. Reporting consumes deterministic resu
 Reporting tests verify that:
 
 - evidence from all configured domains reaches the analysis model;
+- Customer Profile rule evidence and material contextual profile information are kept as separate structured concepts;
+- Customer Profile rule findings and material contextual information are rendered as one consolidated Executive Narrative section;
 - `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` remain distinguishable;
 - high-severity triggered evidence is represented correctly;
 - the prompt receives the evidence required by its structured contract;
 - material indicators remain grounded in authoritative evidence;
+- Customer Profile materiality excludes facts already represented by deterministic Customer Profile rules, preventing duplicate narrative evidence;
 - unsupported or altered evidence is rejected where grounding applies;
 - provider or grounding failure activates the deterministic fallback where configured;
 - fallback failure is propagated rather than silently hidden.
@@ -217,4 +220,4 @@ Presentation
 Documentation
 ```
 
-A rule addition should not require unrelated rule-specific branches in reporting or presentation logic merely because a new identifier has been introduced.
+A rule addition should not require unrelated rule-specific branches in reporting or presentation logic merely because a new identifier has been introduced. Conversely, adding descriptive Customer Profile context should not require creating a pseudo-rule when no deterministic risk condition is being evaluated.
