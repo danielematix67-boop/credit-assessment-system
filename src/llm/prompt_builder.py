@@ -3,6 +3,7 @@ from collections import defaultdict
 from src.llm.prompt_template import ReportPromptTemplate
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
+from src.models.customer_profile_analysis import CustomerProfileAnalysis
 
 
 class ReportPromptBuilder:
@@ -45,7 +46,10 @@ class ReportPromptBuilder:
         category_order = list(grouped_findings.keys())
 
         return self.template.render(
-            findings=self._format_grouped_findings(grouped_findings),
+            findings=self._format_grouped_findings(
+                grouped_findings,
+                analysis.customer_profile,
+            ),
             category_order=self._format_category_order(category_order),
         )
 
@@ -117,6 +121,7 @@ class ReportPromptBuilder:
     def _format_grouped_findings(
         cls,
         grouped_findings: dict[str, list[AnalysisFinding]],
+        customer_profile: CustomerProfileAnalysis | None = None,
     ) -> str:
         """
         Format grouped deterministic findings for the LLM.
@@ -132,7 +137,19 @@ class ReportPromptBuilder:
         for category, findings in grouped_findings.items():
             lines = [f"{category}:"]
 
+            if category.casefold() == "customer profile" and customer_profile is not None:
+                for section_name, section_text in customer_profile.sections():
+                    if section_text:
+                        lines.append(f"  {section_name}:")
+                        lines.append(f"    {section_text}")
+
             for finding in findings:
+                if (
+                    category.casefold() == "customer profile"
+                    and finding.rule_id == "PROFILE"
+                    and customer_profile is not None
+                ):
+                    continue
                 lines.append(cls._format_finding(finding))
 
             sections.append("\n".join(lines))
