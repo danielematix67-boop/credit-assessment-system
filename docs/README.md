@@ -34,6 +34,7 @@ The [glossary](glossary.md) is useful whenever a technical or credit-risk term i
 | [`architecture.md`](architecture.md) | How the system is organised and how information moves through it |
 | [`rules.md`](rules.md) | How a credit-risk rule is defined, implemented, tested and extended |
 | [`reporting.md`](reporting.md) | How deterministic assessment evidence becomes a human-readable report |
+| [`customer-profile.md`](customer-profile.md) | Current Customer Profile input fields, deterministic rules and executive materiality selection |
 | [`validation.md`](validation.md) | What the system validates and how correctness is tested |
 | [`security-data-handling.md`](security-data-handling.md) | How input integrity, credentials, data minimisation and AI boundaries are handled |
 | [`architecture-decisions.md`](architecture-decisions.md) | Important architectural decisions and the reasons behind them |
