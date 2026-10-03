@@ -26,6 +26,8 @@ class CustomerProfileMaterialityPolicy:
             "rating_elementary_modules",
             "pd",
             "minimum_regulatory_risk_grade",
+            "previous_risk_grade",
+            "risk_grade_change",
             "risk_group_interdependence",
             "risk_group_independence",
             "forborne_non_performing_exit",
