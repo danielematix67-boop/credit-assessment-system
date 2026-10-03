@@ -52,6 +52,8 @@ _BASE_CASE_DATA: dict[str, dict[str, Any]] = {
         "monitoring_period_days": 90,
         "probation_period_days": 180,
         "minimum_regulatory_risk_grade": "Substandard",
+        "previous_risk_grade": "Performing",
+        "risk_grade_change": "Downgrade",
         "ews_score_class": EwsScoreClass.LIGHT_RED,
         "ews_score_notching": -2,
         "ews_score_variation": -0.18,
