@@ -1,8 +1,8 @@
 from src.llm.prompt_builder import ReportPromptBuilder
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
-from src.models.customer_profile_analysis import CustomerProfileAnalysis
 from src.models.assessment_status import AssessmentStatus
+from src.models.customer_profile_analysis import CustomerProfileAnalysis
 from src.rules.base.severity import RuleSeverity
 
 
