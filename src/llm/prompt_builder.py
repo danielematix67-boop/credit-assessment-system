@@ -44,7 +44,7 @@ class ReportPromptBuilder:
         findings = analysis.rule_evidence or analysis.key_findings
         grouped_findings = self._group_findings(findings)
 
-        if analysis.customer_profile is not None and not any(
+        if analysis.material_customer_profile is not None and not any(
             category.casefold() == "customer profile"
             for category in grouped_findings
         ):
@@ -57,7 +57,7 @@ class ReportPromptBuilder:
         return self.template.render(
             findings=self._format_grouped_findings(
                 grouped_findings,
-                analysis.customer_profile,
+                analysis.material_customer_profile,
             ),
             category_order=self._format_category_order(category_order),
         )
