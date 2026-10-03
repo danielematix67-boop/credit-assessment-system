@@ -304,7 +304,7 @@ A new rule should not be considered complete if only its unit tests pass while r
 
 ## 12. Documentation maintenance
 
-The documentation should describe **contracts and mechanisms**, not maintain a manually duplicated rule inventory.
+The documentation should describe **contracts and mechanisms**, not maintain a manually duplicated rule inventory. Customer Profile requires an additional distinction: not every profile field is a rule. Descriptive/contextual information belongs to `CustomerProfileData` and `CustomerProfileAnalysis`; only deterministic risk checks belong in the rule catalogue.
 
 Avoid statements such as:
 
@@ -345,4 +345,6 @@ Before merging a new rule:
 - [ ] Demo scenarios updated if required.
 - [ ] UI verified without duplicating business logic.
 - [ ] Full lint/type/test/coverage gate passes.
+- [ ] Customer Profile contextual fields are not converted into pseudo-rules merely to expose them in reporting.
+- [ ] If Executive Summary profile context changes, `CustomerProfileMaterialityPolicy` and its tests are updated.
 - [ ] Documentation updated only where architecture, policy or examples changed.
