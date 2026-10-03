@@ -209,7 +209,7 @@ def test_deterministic_report_renders_structured_customer_profile(generator):
         key_findings=[],
         risk_factors=[],
         limitations=[],
-        customer_profile=profile,
+        material_customer_profile=profile,
     )
 
     report = generator.generate(analysis)
