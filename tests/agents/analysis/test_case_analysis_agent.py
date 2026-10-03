@@ -83,14 +83,17 @@ def test_case_analysis_agent_includes_customer_profile_context() -> None:
         ),
     )
     analysis = CaseAnalysisAgent().run(case)
-    assert analysis.assessment_status == AssessmentStatus.NORMAL
-    assert analysis.key_findings[0].category == "Customer Profile"
-    assert analysis.key_findings[0].status is None
-    text = analysis.key_findings[0].text
-    normalized_text = text.casefold()
 
-    # Validate source context and narrative structure without coupling the test
-    # to the exact wording of the presentation template.
+    assert analysis.assessment_status == AssessmentStatus.NORMAL
+    assert analysis.customer_profile is not None
+    assert all(finding.rule_id != "PROFILE" for finding in analysis.key_findings)
+    assert all(finding.rule_id != "PROFILE" for finding in analysis.rule_evidence)
+
+    profile_text = " ".join(
+        text for _, text in analysis.customer_profile.sections() if text
+    )
+    normalized_text = profile_text.casefold()
+
     for value in profile.context.values():
         if value not in (None, "", [], {}):
             if isinstance(value, list):
@@ -101,5 +104,5 @@ def test_case_analysis_agent_includes_customer_profile_context() -> None:
             else:
                 assert str(value).casefold() in normalized_text
 
-    assert ";" not in text
-    assert len(text.split("\n\n")) >= 2
+    assert ";" not in profile_text
+    assert len(analysis.customer_profile.sections()) == 4
