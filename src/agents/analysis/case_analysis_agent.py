@@ -291,7 +291,7 @@ class CaseAnalysisAgent:
 
         relationship = ""
         if relationship_parts:
-            relationship = "The broader relationship and counterparty context includes " + "; ".join(relationship_parts) + "."
+            relationship = (\n                "The broader relationship and counterparty context includes " +\n                "; ".join(relationship_parts) + "."\n            )
 
         event_parts: list[str] = []
         if get("previous_restructuring") is True:
