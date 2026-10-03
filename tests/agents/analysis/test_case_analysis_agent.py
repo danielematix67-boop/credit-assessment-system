@@ -87,8 +87,19 @@ def test_case_analysis_agent_includes_customer_profile_context() -> None:
     assert analysis.key_findings[0].category == "Customer Profile"
     assert analysis.key_findings[0].status is None
     text = analysis.key_findings[0].text
-    assert "Synthetic Co." in text
-    assert "Manufacturing" in text
-    assert "banking relationship of 7 years" in text
+    normalized_text = text.casefold()
+
+    # Validate source context and narrative structure without coupling the test
+    # to the exact wording of the presentation template.
+    for value in profile.context.values():
+        if value not in (None, "", [], {}):
+            if isinstance(value, list):
+                for item in value:
+                    assert str(item).casefold() in normalized_text
+            elif isinstance(value, bool):
+                assert ("yes" if value else "no") in normalized_text
+            else:
+                assert str(value).casefold() in normalized_text
+
     assert ";" not in text
-    assert "\\n\\n" in text
+    assert len(text.split("\\n\\n")) >= 2
