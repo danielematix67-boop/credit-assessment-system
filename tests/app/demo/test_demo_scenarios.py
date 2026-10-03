@@ -9,7 +9,7 @@ SCENARIO_NAME = "01 · Complete Credit Assessment"
 EXPECTED_FINAL_STATUS = "CRITICAL"
 
 EXPECTED_TRIGGERED_RULES = {
-    "CP001", "CP002", "CP003", "CP004",
+    "CP001", "CP002", "CP003", "CP004", "CP005", "CP005",
     "R001", "R002", "R003", "R007",
     "B001", "B002", "B003", "B004",
     "DS001", "DS002", "DS003",
