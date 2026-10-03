@@ -24,6 +24,8 @@ class CustomerProfileData:
     monitoring_period_days: int | None = None
     probation_period_days: int | None = None
     minimum_regulatory_risk_grade: str | None = None
+    previous_risk_grade: str | None = None
+    risk_grade_change: str | None = None
 
     # Statistical predictiveness
     ews_score_class: EwsScoreClass | None = None
