@@ -102,4 +102,4 @@ def test_case_analysis_agent_includes_customer_profile_context() -> None:
                 assert str(value).casefold() in normalized_text
 
     assert ";" not in text
-    assert len(text.split("\\n\\n")) >= 2
+    assert len(text.split("\n\n")) >= 2
