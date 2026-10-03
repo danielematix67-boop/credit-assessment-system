@@ -162,13 +162,61 @@ class CaseAnalysisAgent:
 
     @staticmethod
     def _profile_summary(profile: dict[str, object]) -> str:
+        """Build contextual customer-profile information for the executive summary."""
         fields = (
             ("Company", profile.get("company_name")),
+            ("Counterparty type", profile.get("counterparty_type")),
             ("Legal form", profile.get("legal_form")),
             ("Sector", profile.get("sector")),
             ("Size class", profile.get("size_class")),
             ("Geography", profile.get("geography")),
-            ("Relationship years", profile.get("relationship_years")),
+            ("Business history", profile.get("business_history_years")),
+            ("Operations", profile.get("operations")),
+            ("Minimum regulatory risk grade", profile.get("minimum_regulatory_risk_grade")),
+            ("Past due count", profile.get("past_due_count")),
             ("EWS Score class", profile.get("ews_score_class")),
+            ("EWS notching", profile.get("ews_score_notching")),
+            ("EWS variation", profile.get("ews_score_variation")),
+            ("Active EWIs", profile.get("active_ewis")),
+            ("Rating", profile.get("rating")),
+            ("Rating increments", profile.get("rating_increments")),
+            ("Rating influential factors", profile.get("rating_influential_factors")),
+            ("Rating elementary modules", profile.get("rating_elementary_modules")),
+            ("PD", profile.get("pd")),
+            ("Risk-group interdependence", profile.get("risk_group_interdependence")),
+            ("Risk-group independence", profile.get("risk_group_independence")),
+            ("Shareholders", profile.get("shareholders")),
+            ("Shareholder roles", profile.get("shareholder_roles")),
+            ("Management", profile.get("management_members")),
+            ("Generational transition", profile.get("generational_transition")),
+            ("Employment contract", profile.get("employment_contract_type")),
+            ("Economic-family context", profile.get("economic_family_context")),
+            ("Banking relationship years", profile.get("relationship_years")),
+            ("Historical facilities", profile.get("historical_facilities")),
+            ("Previous restructuring", profile.get("previous_restructuring")),
+            ("Forborne", profile.get("forborne")),
+            ("Forborne/NPE exit", profile.get("forborne_non_performing_exit")),
+            ("Cure period", profile.get("cure_period_days")),
+            ("Monitoring period", profile.get("monitoring_period_days")),
+            ("Probation period", profile.get("probation_period_days")),
+            ("Protests", profile.get("protests")),
+            ("Bankruptcies", profile.get("bankruptcies")),
+            ("Litigation", profile.get("litigation")),
+            ("Significant historical events", profile.get("significant_historical_events")),
         )
-        return "; ".join(f"{label}: {value}" for label, value in fields if value not in (None, ""))
+
+        def present(value: object) -> bool:
+            return value not in (None, "", [], {})
+
+        def format_value(value: object) -> str:
+            if isinstance(value, list):
+                return ", ".join(str(item) for item in value)
+            if isinstance(value, bool):
+                return "Yes" if value else "No"
+            return str(value)
+
+        return "; ".join(
+            f"{label}: {format_value(value)}"
+            for label, value in fields
+            if present(value)
+        )
