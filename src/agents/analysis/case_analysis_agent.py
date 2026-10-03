@@ -4,12 +4,12 @@ from src.models.assessment_status import AssessmentStatus
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.customer_profile_analysis import CustomerProfileAnalysis
 from src.models.final_assessment import FinalAssessment
-from src.services.customer_profile_materiality_policy import (
-    CustomerProfileMaterialityPolicy,
-)
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
+from src.services.customer_profile_materiality_policy import (
+    CustomerProfileMaterialityPolicy,
+)
 
 
 class CaseAnalysisAgent:
