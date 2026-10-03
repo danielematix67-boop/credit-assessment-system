@@ -268,9 +268,7 @@ class CaseAnalysisAgent:
             )
         if present(get("risk_group_interdependence")):
             relationship_parts.append(
-                f"moderate interdependence with the risk group"
-                if str(get("risk_group_interdependence")).lower() == "moderate"
-                else f"{as_text(get('risk_group_interdependence')).lower()} interdependence with the risk group"
+                f"{as_text(get('risk_group_interdependence'))} interdependence with the risk group"
             )
         if present(get("risk_group_independence")):
             relationship_parts.append(
