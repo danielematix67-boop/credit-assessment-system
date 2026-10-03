@@ -2,11 +2,21 @@ from typing import ClassVar
 
 
 class CustomerProfileMaterialityPolicy:
-    """Deterministically select customer-profile context for executive reporting."""
+    """Deterministically select non-rule customer-profile context for executive reporting."""
+
+    # These fields are already represented by CP001-CP005 deterministic findings.
+    _RULE_BACKED_FIELDS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "ews_score_class",
+            "previous_restructuring",
+            "forborne",
+            "business_history_years",
+            "relationship_years",
+        }
+    )
 
     _ALWAYS_MATERIAL: ClassVar[frozenset[str]] = frozenset(
         {
-            "ews_score_class",
             "ews_score_notching",
             "ews_score_variation",
             "active_ewis",
@@ -18,8 +28,6 @@ class CustomerProfileMaterialityPolicy:
             "minimum_regulatory_risk_grade",
             "risk_group_interdependence",
             "risk_group_independence",
-            "previous_restructuring",
-            "forborne",
             "forborne_non_performing_exit",
             "protests",
             "bankruptcies",
@@ -39,9 +47,11 @@ class CustomerProfileMaterialityPolicy:
 
     @classmethod
     def material_fields(cls, profile: dict[str, object]) -> set[str]:
-        """Return fields that should enter the executive summary."""
+        """Return material contextual fields not already covered by deterministic rules."""
         fields: set[str] = set()
         for key, value in profile.items():
+            if key in cls._RULE_BACKED_FIELDS:
+                continue
             if value in (None, "", [], {}):
                 continue
             if key in cls._ALWAYS_MATERIAL:
