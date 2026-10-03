@@ -52,27 +52,15 @@ class DeterministicReportGenerator(ReportGenerator):
         ordered_categories = cls._ordered_categories(grouped)
         for category in ordered_categories:
             category_findings = grouped[category]
-            profile = [
-                finding
-                for finding in category_findings
-                if finding.rule_id == "PROFILE"
-            ]
             triggered = [
                 finding
                 for finding in category_findings
-                if finding.rule_id != "PROFILE"
-                and cls._is_triggered(finding)
+                if cls._is_triggered(finding)
             ]
 
-            sentences: list[str] = []
-            if not (
-                category.casefold() == "customer profile"
-                and analysis.customer_profile is not None
-            ):
-                sentences.extend(
-                    finding.text.rstrip(".") + "." for finding in profile
-                )
-            sentences.extend(finding.text.rstrip(".") + "." for finding in triggered)
+            sentences: list[str] = [
+                finding.text.rstrip(".") + "." for finding in triggered
+            ]
 
             if sentences:
                 paragraphs.append((category, " ".join(sentences)))
@@ -130,7 +118,7 @@ class DeterministicReportGenerator(ReportGenerator):
         missing_status = [
             finding.rule_id
             for finding in findings
-            if finding.rule_id != "PROFILE" and finding.status is None
+            if finding.status is None
         ]
         if missing_status:
             rule_ids = ", ".join(missing_status)
