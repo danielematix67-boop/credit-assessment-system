@@ -73,6 +73,39 @@ A configured rule must resolve to a registered implementation. Central services 
 
 See [`rules.md`](rules.md) for the complete rule-development lifecycle.
 
+## Customer Profile context and materiality
+
+Customer Profile combines two complementary layers:
+
+```text
+CustomerProfileData
+        ↓
+Customer Profile Assessment
+        ├── deterministic RuleResult evidence
+        └── contextual profile information
+                    ↓
+          CaseAnalysisAgent
+             ↙           ↘
+      full profile    material profile
+                          ↓
+            CustomerProfileMaterialityPolicy
+                          ↓
+                 Executive Summary
+```
+
+The contextual profile is represented by `CustomerProfileAnalysis`, rather than by pseudo-rules. This model preserves four reporting areas:
+
+- General Information;
+- Risk Profile & Predictiveness;
+- Relationship & Counterparty Context;
+- Relevant Events.
+
+Deterministic customer-profile rules remain part of the authoritative assessment path and can contribute to the Customer Profile section status. Descriptive fields such as business activity, ownership context, active EWIs and historical context do not automatically become `RuleResult` objects.
+
+For Executive Summary generation, `CustomerProfileMaterialityPolicy` deterministically selects material profile fields before reporting. The full profile remains available for the detailed profile presentation, while only the selected material context is exposed to the Executive Narrative. The reporting/LLM layer therefore does not decide what is material; it only organises or verbalises the deterministic selection.
+
+This separation is important because **customer context is broader than rule evidence**, while executive reporting requires a bounded subset of that context.
+
 ## Input validation boundary
 
 `CreditPositionValidator` runs before assessment and protects structural input integrity. Business-specific constraints remain in the relevant rule/domain implementation.
@@ -250,3 +283,5 @@ Documentation should not hard-code coverage percentages or runtime versions unle
 10. Streamlit does not own business logic.
 11. Execution metadata is observational.
 12. The Results UI consumes workflow results rather than recalculating them.
+13. Customer Profile context is separated from deterministic rule evidence.
+14. Executive Summary customer-profile materiality is selected deterministically before reporting.
