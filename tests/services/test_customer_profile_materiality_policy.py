@@ -8,6 +8,8 @@ def test_materiality_selects_non_rule_risk_and_event_context() -> None:
         {
             "sector": "Manufacturing",
             "ews_score_class": "LIGHT_RED",
+            "previous_risk_grade": "Performing",
+            "risk_grade_change": "Downgrade",
             "ews_score_notching": -2,
             "active_ewis": ["Revenue deterioration"],
             "rating": "BB-",
@@ -21,6 +23,8 @@ def test_materiality_selects_non_rule_risk_and_event_context() -> None:
 
     assert "ews_score_class" not in fields
     assert "active_ewis" in fields
+    assert "previous_risk_grade" in fields
+    assert "risk_grade_change" in fields
     assert "rating" in fields
     assert "pd" in fields
     assert "past_due_count" in fields
