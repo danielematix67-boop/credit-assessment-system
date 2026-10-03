@@ -21,6 +21,7 @@ This document records the decisions that define the current system architecture.
 | ADR-015 | Standalone Risk Drivers presentation | Superseded |
 | ADR-016 | Complete rule-evidence reporting | Accepted |
 | ADR-017 | Rule implementation/configuration separation | Accepted |
+| ADR-018 | Structured Customer Profile and deterministic materiality | Accepted |
 
 ## ADR-001 — Deterministic Decision Authority
 
@@ -144,6 +145,36 @@ YAML controls declarative parameters such as inputs, calculation, trigger operat
 
 See [`adr-017-rule-implementation-configuration-separation.md`](adr-017-rule-implementation-configuration-separation.md) and [`rules.md`](rules.md) for the implementation contract.
 
+## ADR-018 — Structured Customer Profile and Deterministic Materiality
+
+Customer Profile is modelled as a broader contextual information layer rather than as a collection of rule findings. `CustomerProfileData` can contain descriptive information, risk-grade evolution, EWS/EWI and rating context, risk-group context, relationship information, counterparty-specific information and relevant events.
+
+`CustomerProfileAnalysis` organises this context into four ordered reporting sections:
+
+- General Information;
+- Risk Profile & Predictiveness;
+- Relationship & Counterparty Context;
+- Relevant Events.
+
+Deterministic customer-profile rules continue to produce normal `RuleResult` evidence and participate in the assessment status contract. Descriptive fields do not automatically become pseudo-rules.
+
+For Executive Summary reporting, `CustomerProfileMaterialityPolicy` deterministically selects the profile fields considered material. `AssessmentAnalysis` therefore exposes both the full `customer_profile` and the bounded `material_customer_profile` representation.
+
+```text
+CustomerProfileData
+       ↓
+CaseAnalysisAgent
+       ├── customer_profile
+       └── CustomerProfileMaterialityPolicy
+                    ↓
+          material_customer_profile
+                    ↓
+          Reporting / Executive Narrative
+```
+
+The LLM does not select, rank or otherwise redefine profile materiality. It receives the deterministic material context and is limited to narrative generation. The deterministic report generator follows the same materiality boundary.
+
+**Why:** keep descriptive customer context available for analyst review, prevent the Executive Summary from becoming a full data dump, and preserve a strict separation between deterministic credit evidence and generative narrative.
 ## Architectural Principles
 
 1. Deterministic logic owns credit decisions.
@@ -159,3 +190,5 @@ See [`adr-017-rule-implementation-configuration-separation.md`](adr-017-rule-imp
 11. Execution metadata is observational.
 12. The Results UI has one authoritative macro-area evidence surface.
 13. Every configured rule must resolve to one registered deterministic implementation.
+14. Customer Profile context is structurally separated from deterministic rule evidence.
+15. Executive Summary profile materiality is selected deterministically before reporting.
