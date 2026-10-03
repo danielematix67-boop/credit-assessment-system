@@ -37,7 +37,7 @@ class DeterministicReportGenerator(ReportGenerator):
         """Build the fallback narrative using the authoritative assessment areas."""
         status = f"Assessment Status: {analysis.assessment_status.value.capitalize()}"
         findings = analysis.key_findings
-        if not findings and analysis.customer_profile is None:
+        if not findings and analysis.material_customer_profile is None:
             return status
 
         grouped: dict[str, list[AnalysisFinding]] = {}
@@ -65,10 +65,10 @@ class DeterministicReportGenerator(ReportGenerator):
             if sentences:
                 paragraphs.append((category, " ".join(sentences)))
 
-        if analysis.customer_profile is not None:
+        if analysis.material_customer_profile is not None:
             profile_text = " ".join(
                 text
-                for _, text in analysis.customer_profile.sections()
+                for _, text in analysis.material_customer_profile.sections()
                 if text
             )
             if profile_text:
