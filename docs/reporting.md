@@ -62,7 +62,7 @@ Customer Profile is a structured contextual input to reporting and is deliberate
 3. Relationship & Counterparty Context
 4. Relevant Events
 
-`AssessmentAnalysis.material_customer_profile` contains the subset selected for Executive Summary reporting. The selection is performed by `CustomerProfileMaterialityPolicy` in the deterministic analysis layer.
+`AssessmentAnalysis.material_customer_profile` contains the subset selected for Executive Summary reporting. The selection is performed by `CustomerProfileMaterialityPolicy` in the deterministic analysis layer. The policy deliberately excludes profile fields already represented by deterministic Customer Profile rules (currently CP001–CP005), so the same fact is not rendered twice in the Executive Narrative.
 
 The materiality boundary is:
 
@@ -93,7 +93,7 @@ The detailed profile and the Executive Summary intentionally have different scop
 | Rule evidence | Only deterministic rule results |
 | LLM narrative | Prose generated from supplied evidence/context |
 
-This prevents descriptive customer information from contaminating the deterministic rule-evidence contract while still making material customer context available to management-level reporting.
+This prevents descriptive customer information from contaminating the deterministic rule-evidence contract while still making material customer context available to management-level reporting. The deterministic and AI reporting paths also merge Customer Profile rule findings and material contextual information into a single `Customer Profile` Executive Narrative section; they must not emit duplicate Customer Profile headings.
 
 ## Reporting boundary
 
