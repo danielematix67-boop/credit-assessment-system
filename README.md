@@ -173,6 +173,28 @@ The reporting component is therefore a **consumer of assessment evidence**, not 
 
 ---
 
+## 👤 Customer Profile
+
+Customer Profile is treated as a **contextual information layer**, not merely as a list of deterministic risk rules. It combines descriptive customer information, risk-profile evolution, statistical predictiveness, relationship context and relevant historical events.
+
+The profile is organised into four reporting sections:
+
+1. **General Information** — identity, counterparty type, business activity and operating context.
+2. **Risk Profile & Predictiveness** — EWS score information, active EWIs, rating/PD information and risk-grade evolution.
+3. **Relationship & Counterparty Context** — banking relationship, ownership/management and counterparty-specific context.
+4. **Relevant Events** — protests, bankruptcies, litigation and significant historical events.
+
+The distinction between **contextual profile information** and **deterministic rule evidence** is intentional:
+
+- deterministic customer-profile rules produce authoritative `RuleResult` objects and can affect section status;
+- descriptive profile fields provide context and do not automatically become pseudo-rules;
+- the Executive Summary receives only the profile information selected as material by the deterministic `CustomerProfileMaterialityPolicy`;
+- the LLM receives that already-selected material context and may only verbalise it.
+
+This prevents the Executive Summary from becoming either a dump of all available customer data or a second decision engine.
+
+---
+
 ## 📊 What the application presents
 
 The Streamlit application exposes the workflow through a compact hierarchy:
