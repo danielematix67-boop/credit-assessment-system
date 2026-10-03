@@ -8,6 +8,7 @@ EXPECTED_RULE_IDS = {
     "CP002",
     "CP003",
     "CP004",
+    "CP005",
     "R001",
     "R002",
     "R003",
