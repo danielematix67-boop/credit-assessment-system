@@ -77,6 +77,8 @@ streamlit run app/streamlit_app.py
 
 The browser interface is the presentation layer. It should display results produced by the assessment workflow rather than implement credit logic itself.
 
+The current interface loads one complete synthetic demo case covering all four assessment areas. You can review the inputs, select a reporting mode in the sidebar and run the assessment. A complete manual-entry workflow is not currently exposed in the input-source screen. See [`application-workflow.md`](application-workflow.md) for the current UI and execution details.
+
 A hosted demonstration may also be available at:
 
 <https://credit-assessment-system.streamlit.app/>
