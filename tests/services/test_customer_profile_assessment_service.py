@@ -234,3 +234,81 @@ def test_missing_customer_profile_is_not_evaluable() -> None:
 
     assert section.status == SectionStatus.NOT_EVALUABLE
     assert section.limitations == ["Customer profile data are not available."]
+
+
+def test_short_banking_relationship_triggers_medium_risk() -> None:
+    section = CustomerProfileAssessmentService().assess(
+        CustomerProfileData(company_name="Synthetic Co.", relationship_years=2)
+    )
+
+    result = section.evidence[4]
+    assert section.status == SectionStatus.ATTENTION
+    assert result.rule_id == "CP005"
+    assert result.status == RuleStatus.TRIGGERED
+    assert result.severity == RuleSeverity.MEDIUM
+    assert result.value == 2.0
+    assert result.threshold == 2.0
+    assert len(section.findings) == 1
+
+
+def test_banking_relationship_above_threshold_is_not_triggered() -> None:
+    section = CustomerProfileAssessmentService().assess(
+        CustomerProfileData(company_name="Synthetic Co.", relationship_years=3)
+    )
+
+    result = section.evidence[4]
+    assert section.status == SectionStatus.NORMAL
+    assert result.rule_id == "CP005"
+    assert result.status == RuleStatus.NOT_TRIGGERED
+    assert result.severity == RuleSeverity.MEDIUM
+
+
+def test_banking_relationship_missing_is_not_evaluable() -> None:
+    section = CustomerProfileAssessmentService().assess(
+        CustomerProfileData(company_name="Synthetic Co.")
+    )
+
+    result = section.evidence[4]
+    assert result.rule_id == "CP005"
+    assert result.status == RuleStatus.NOT_EVALUABLE
+    assert result.value is None
+    assert result.severity == RuleSeverity.MEDIUM
+
+
+def test_banking_relationship_trigger_uses_configured_comment() -> None:
+    section = CustomerProfileAssessmentService().assess(
+        CustomerProfileData(company_name="Synthetic Co.", relationship_years=1)
+    )
+
+    assert section.findings[0].comment.text == (
+        "The banking relationship has lasted 1 years, indicating a limited "
+        "observable relationship history with the customer."
+    )
+
+
+def test_banking_relationship_rule_is_configuration_driven(tmp_path: Path) -> None:
+    config_path = tmp_path / "customer_profile_rules.yaml"
+    config_path.write_text(
+        "rules:\n"
+        "  - rule_id: CP005\n"
+        "    rule_name: Short Banking Relationship\n"
+        "    indicator: Banking relationship (years)\n"
+        "    category: customer_profile\n"
+        "    input_field: relationship_years\n"
+        "    trigger_operator: LTE\n"
+        "    threshold: 3\n"
+        "    severity: MEDIUM\n"
+        "    severity_direction: LOWER_IS_WORSE\n"
+        "    comment_template: 'Configured relationship: {value:.0f} years.'\n",
+        encoding="utf-8",
+    )
+
+    section = CustomerProfileAssessmentService(config_path=config_path).assess(
+        CustomerProfileData(company_name="Synthetic Co.", relationship_years=3)
+    )
+
+    result = section.evidence[0]
+    assert result.rule_id == "CP005"
+    assert result.threshold == 3.0
+    assert result.status == RuleStatus.TRIGGERED
+    assert section.findings[0].comment.text == "Configured relationship: 3 years."
