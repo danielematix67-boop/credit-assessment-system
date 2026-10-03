@@ -214,10 +214,39 @@ def test_deterministic_report_renders_structured_customer_profile(generator):
 
     report = generator.generate(analysis)
 
-    assert "### Customer Profile" in report.executive_summary
+    assert report.executive_summary.count("### Customer Profile") == 1
     assert "The company operates in manufacturing." in report.executive_summary
     assert "The EWS Score is LIGHT_RED." in report.executive_summary
     assert "A previous restructuring is reported." in report.executive_summary
+
+
+def test_deterministic_fallback_merges_customer_profile_context_and_findings(
+    generator,
+):
+    profile = CustomerProfileAnalysis(
+        general_information="The company operates in manufacturing.",
+        risk_profile="The EWS Score is LIGHT_RED.",
+    )
+    finding = make_analysis_finding(
+        rule_id="CP001",
+        category="Customer Profile",
+        text="EWS Score class is LIGHT_RED.",
+        status=RuleStatus.TRIGGERED,
+    )
+    analysis = AssessmentAnalysis(
+        position_id="TEST_POSITION",
+        assessment_status=AssessmentStatus.ATTENTION,
+        key_findings=[finding],
+        risk_factors=[],
+        limitations=[],
+        material_customer_profile=profile,
+    )
+
+    report = generator.generate(analysis)
+
+    assert report.executive_summary.count("### Customer Profile") == 1
+    assert "EWS Score class is LIGHT_RED." in report.executive_summary
+    assert "The company operates in manufacturing." in report.executive_summary
 
 
 def test_deterministic_fallback_keeps_all_findings_in_category_paragraphs(generator):
