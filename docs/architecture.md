@@ -102,9 +102,9 @@ The contextual profile is represented by `CustomerProfileAnalysis`, rather than 
 
 Deterministic customer-profile rules remain part of the authoritative assessment path and can contribute to the Customer Profile section status. Descriptive fields such as business activity, ownership context, active EWIs and historical context do not automatically become `RuleResult` objects.
 
-For Executive Summary generation, `CustomerProfileMaterialityPolicy` deterministically selects material profile fields before reporting. The full profile remains available for the detailed profile presentation, while only the selected material context is exposed to the Executive Narrative. The reporting/LLM layer therefore does not decide what is material; it only organises or verbalises the deterministic selection.
+For Executive Summary generation, `CustomerProfileMaterialityPolicy` deterministically selects material contextual fields before reporting. Fields already represented by deterministic Customer Profile rules (currently CP001–CP005) are excluded from the material contextual subset, preventing duplicate facts. The full profile remains available for detailed profile presentation, while only the selected material context is exposed to the Executive Narrative. The reporting/LLM layer therefore does not decide what is material; it only organises or verbalises the deterministic selection.
 
-This separation is important because **customer context is broader than rule evidence**, while executive reporting requires a bounded subset of that context.
+This separation is important because **customer context is broader than rule evidence**, while executive reporting requires a bounded subset of that context. The Executive Narrative must render the Customer Profile rule evidence and material contextual profile in one consolidated Customer Profile section rather than as duplicate sections.
 
 ## Input validation boundary
 
