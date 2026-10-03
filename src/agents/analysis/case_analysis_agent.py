@@ -3,8 +3,10 @@ from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.customer_profile_analysis import CustomerProfileAnalysis
-from src.services.customer_profile_materiality_policy import CustomerProfileMaterialityPolicy
 from src.models.final_assessment import FinalAssessment
+from src.services.customer_profile_materiality_policy import (
+    CustomerProfileMaterialityPolicy,
+)
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
 from src.rules.result import RuleResult
@@ -303,10 +305,12 @@ class CaseAnalysisAgent:
             relationship_parts.append(
                 f"management comprising {as_text(get('management_members'))}"
             )
-        if present(get("generational_transition"), "generational_transition") and get("generational_transition") is True:
-            relationship_parts.append("a generational transition")
-        elif present(get("generational_transition"), "generational_transition") and get("generational_transition") is False:
-            relationship_parts.append("no reported generational transition")
+        generational_transition = get("generational_transition")
+        if present(generational_transition, "generational_transition"):
+            if generational_transition is True:
+                relationship_parts.append("a generational transition")
+            elif generational_transition is False:
+                relationship_parts.append("no reported generational transition")
         if present(get("employment_contract_type"), "employment_contract_type"):
             relationship_parts.append(
                 f"an employment contract described as {as_text(get('employment_contract_type'))}"
@@ -329,10 +333,14 @@ class CaseAnalysisAgent:
             event_parts.append("a previous restructuring")
         if present(get("forborne"), "forborne") and get("forborne") is True:
             event_parts.append("a forborne exposure")
-        if present(get("forborne_non_performing_exit"), "forborne_non_performing_exit") and get("forborne_non_performing_exit") is True:
-            event_parts.append("an exit from a forborne non-performing exposure")
-        elif present(get("forborne_non_performing_exit"), "forborne_non_performing_exit") and get("forborne_non_performing_exit") is False:
-            event_parts.append("no reported exit from a forborne non-performing exposure")
+        forborne_exit = get("forborne_non_performing_exit")
+        if present(forborne_exit, "forborne_non_performing_exit"):
+            if forborne_exit is True:
+                event_parts.append("an exit from a forborne non-performing exposure")
+            elif forborne_exit is False:
+                event_parts.append(
+                    "no reported exit from a forborne non-performing exposure"
+                )
         if present(get("cure_period_days"), "cure_period_days"):
             event_parts.append(f"a cure period of {as_text(get('cure_period_days'))} days")
         if present(get("monitoring_period_days"), "monitoring_period_days"):
