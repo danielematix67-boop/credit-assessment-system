@@ -188,10 +188,12 @@ The distinction between **contextual profile information** and **deterministic r
 
 - deterministic customer-profile rules produce authoritative `RuleResult` objects and can affect section status;
 - descriptive profile fields provide context and do not automatically become pseudo-rules;
-- the Executive Summary receives only the profile information selected as material by the deterministic `CustomerProfileMaterialityPolicy`;
+- the Executive Summary receives only the contextual information selected as material by the deterministic `CustomerProfileMaterialityPolicy`;
+- profile facts already represented by deterministic Customer Profile rules are excluded from that contextual subset;
+- the reporting paths merge rule evidence and material context into a single `Customer Profile` Executive Narrative section;
 - the LLM receives that already-selected material context and may only verbalise it.
 
-This prevents the Executive Summary from becoming either a dump of all available customer data or a second decision engine.
+This prevents the Executive Summary from becoming either a dump of all available customer data, a duplicate of rule evidence, or a second decision engine.
 
 ---
 
