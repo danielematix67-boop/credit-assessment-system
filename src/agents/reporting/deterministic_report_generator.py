@@ -48,6 +48,14 @@ class DeterministicReportGenerator(ReportGenerator):
             else:
                 grouped.setdefault(area, []).append(finding)
 
+        profile_text = ""
+        if analysis.material_customer_profile is not None:
+            profile_text = " ".join(
+                text
+                for _, text in analysis.material_customer_profile.sections()
+                if text
+            )
+
         paragraphs: list[tuple[str, str]] = []
         ordered_categories = cls._ordered_categories(grouped)
         for category in ordered_categories:
@@ -57,22 +65,20 @@ class DeterministicReportGenerator(ReportGenerator):
                 for finding in category_findings
                 if cls._is_triggered(finding)
             ]
-
             sentences: list[str] = [
                 finding.text.rstrip(".") + "." for finding in triggered
             ]
 
+            if category.casefold() == "customer profile" and profile_text:
+                sentences.append(profile_text)
+
             if sentences:
                 paragraphs.append((category, " ".join(sentences)))
 
-        if analysis.material_customer_profile is not None:
-            profile_text = " ".join(
-                text
-                for _, text in analysis.material_customer_profile.sections()
-                if text
-            )
-            if profile_text:
-                paragraphs.append(("Customer Profile", profile_text))
+        if profile_text and "Customer Profile".casefold() not in {
+            category.casefold() for category in ordered_categories
+        }:
+            paragraphs.append(("Customer Profile", profile_text))
 
         narrative_parts: list[str] = []
         canonical = {area.casefold() for area in cls._ASSESSMENT_AREA_ORDER}
