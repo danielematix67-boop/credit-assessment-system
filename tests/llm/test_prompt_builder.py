@@ -1,6 +1,7 @@
 from src.llm.prompt_builder import ReportPromptBuilder
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
+from src.models.customer_profile_analysis import CustomerProfileAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.rules.base.severity import RuleSeverity
 
@@ -97,6 +98,41 @@ class TestReportPromptBuilder:
         assert category_order.index("3. Behavioural Analysis") < category_order.index(
             "4. Debt Sustainability"
         )
+
+    def test_build_formats_structured_customer_profile_context(self) -> None:
+        profile = CustomerProfileAnalysis(
+            general_information="The company operates in manufacturing.",
+            risk_profile="The EWS Score is LIGHT_RED.",
+            relationship_context="The banking relationship is two years.",
+            relevant_events="A previous restructuring is reported.",
+        )
+        finding = make_finding(
+            "PROFILE",
+            "Customer Profile",
+            RuleSeverity.MEDIUM,
+            "Legacy profile summary.",
+        )
+        analysis = make_analysis(
+            key_findings=[finding],
+        )
+        analysis = AssessmentAnalysis(
+            position_id=analysis.position_id,
+            assessment_status=analysis.assessment_status,
+            key_findings=analysis.key_findings,
+            risk_factors=analysis.risk_factors,
+            limitations=analysis.limitations,
+            rule_evidence=analysis.rule_evidence,
+            customer_profile=profile,
+        )
+
+        prompt = ReportPromptBuilder().build(analysis)
+
+        assert "General Information:" in prompt
+        assert "Risk Profile & Predictiveness:" in prompt
+        assert "Relationship & Counterparty Context:" in prompt
+        assert "Relevant Events:" in prompt
+        assert "The EWS Score is LIGHT_RED." in prompt
+        assert "Legacy profile summary." not in prompt
 
     def test_build_preserves_finding_order_within_macro_area(self) -> None:
         findings = [
