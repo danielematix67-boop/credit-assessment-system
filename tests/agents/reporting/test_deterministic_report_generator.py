@@ -7,6 +7,7 @@ from src.agents.reporting.report_generator import ReportGenerator
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
+from src.models.customer_profile_analysis import CustomerProfileAnalysis
 from src.models.report import ReportFindingGroup
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
@@ -195,17 +196,28 @@ def test_deterministic_report_rejects_rule_evidence_without_status(generator):
         generator.generate(analysis)
 
 
-def test_deterministic_report_allows_profile_summary_without_rule_status(generator):
-    profile = make_analysis_finding(
-        rule_id="PROFILE",
-        category="Customer Profile",
-        text="Company: Example S.p.A.",
-        status=None,
+def test_deterministic_report_renders_structured_customer_profile(generator):
+    profile = CustomerProfileAnalysis(
+        general_information="The company operates in manufacturing.",
+        risk_profile="The EWS Score is LIGHT_RED.",
+        relationship_context="The banking relationship is two years.",
+        relevant_events="A previous restructuring is reported.",
     )
-    report = generator.generate(make_analysis(key_findings=[profile]))
+    analysis = AssessmentAnalysis(
+        position_id="TEST_POSITION",
+        assessment_status=AssessmentStatus.ATTENTION,
+        key_findings=[],
+        risk_factors=[],
+        limitations=[],
+        customer_profile=profile,
+    )
+
+    report = generator.generate(analysis)
 
     assert "### Customer Profile" in report.executive_summary
-    assert "Company: Example S.p.A." in report.executive_summary
+    assert "The company operates in manufacturing." in report.executive_summary
+    assert "The EWS Score is LIGHT_RED." in report.executive_summary
+    assert "A previous restructuring is reported." in report.executive_summary
 
 
 def test_deterministic_fallback_keeps_all_findings_in_category_paragraphs(generator):
@@ -255,8 +267,6 @@ def test_deterministic_fallback_fixed_assessment_area_headings_follow_canonical_
         make_analysis_finding(
             category="Customer Profile",
             text="Customer context.",
-            rule_id="PROFILE",
-            status=None,
         ),
         make_analysis_finding(
             category="Financial Analysis",
