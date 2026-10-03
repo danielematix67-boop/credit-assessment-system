@@ -245,7 +245,7 @@ class CaseAnalysisAgent:
 
         risk = ""
         if risk_parts:
-            risk = "The available risk-profile information indicates that " + "; ".join(risk_parts) + "."
+            risk = "The available risk-profile information indicates that " + ", ".join(risk_parts) + "."
 
         relationship_parts: list[str] = []
         if present(get("relationship_years")):
@@ -291,7 +291,7 @@ class CaseAnalysisAgent:
 
         relationship = ""
         if relationship_parts:
-            relationship = (\n                "The broader relationship and counterparty context includes " +\n                "; ".join(relationship_parts) + "."\n            )
+            relationship = (\n                "The broader relationship and counterparty context includes " +\n                ", ".join(relationship_parts) + "."\n            )
 
         event_parts: list[str] = []
         if get("previous_restructuring") is True:
@@ -319,6 +319,6 @@ class CaseAnalysisAgent:
 
         events = ""
         if event_parts:
-            events = "Relevant events and credit-history information include " + "; ".join(event_parts) + "."
+            events = "Relevant events and credit-history information include " + ", ".join(event_parts) + "."
 
         return "\n\n".join(part for part in (identity, risk, relationship, events) if part)
