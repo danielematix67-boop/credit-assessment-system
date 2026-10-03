@@ -45,7 +45,7 @@ _BASE_CASE_DATA: dict[str, dict[str, Any]] = {
         "geography": "Northern Italy",
         "shareholders": ["Family holding", "Management shareholders"],
         "management_members": ["CEO", "CFO"],
-        "relationship_years": 8,
+        "relationship_years": 2,
         "business_history_years": 1,
         "historical_facilities": ["Revolving credit", "Term loan"],
         "ews_score_class": EwsScoreClass.LIGHT_RED,
