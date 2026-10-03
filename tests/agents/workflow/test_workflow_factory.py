@@ -121,7 +121,6 @@ def test_factory_does_not_create_findings_not_present_in_case(representative_pos
     analysis_rule_ids = {
         finding.rule_id
         for finding in result.analysis.key_findings
-        if finding.rule_id != "PROFILE"
     }
     assert analysis_rule_ids <= case_rule_ids
 
