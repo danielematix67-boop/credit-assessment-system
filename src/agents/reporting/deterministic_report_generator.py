@@ -88,6 +88,13 @@ class DeterministicReportGenerator(ReportGenerator):
 
         narrative_parts: list[str] = []
         canonical = {area.casefold() for area in cls._ASSESSMENT_AREA_ORDER}
+        paragraphs.sort(
+            key=lambda item: (
+                cls._ASSESSMENT_AREA_ORDER.index(item[0])
+                if item[0] in cls._ASSESSMENT_AREA_ORDER
+                else len(cls._ASSESSMENT_AREA_ORDER)
+            )
+        )
         for category, paragraph in paragraphs:
             if category.casefold() in canonical:
                 narrative_parts.append(f"### {category}\n\n{paragraph}")
