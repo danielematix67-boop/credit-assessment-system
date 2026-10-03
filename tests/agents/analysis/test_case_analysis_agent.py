@@ -86,6 +86,7 @@ def test_case_analysis_agent_includes_customer_profile_context() -> None:
 
     assert analysis.assessment_status == AssessmentStatus.NORMAL
     assert analysis.customer_profile is not None
+    assert analysis.material_customer_profile is not None
     assert all(finding.rule_id != "PROFILE" for finding in analysis.key_findings)
     assert all(finding.rule_id != "PROFILE" for finding in analysis.rule_evidence)
 
