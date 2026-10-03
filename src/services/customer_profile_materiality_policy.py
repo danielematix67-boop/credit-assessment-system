@@ -40,13 +40,22 @@ class CustomerProfileMaterialityPolicy:
     @classmethod
     def material_fields(cls, profile: dict[str, object]) -> set[str]:
         """Return fields that should enter the executive summary."""
-        fields = {
-            key
-            for key, value in profile.items()
-            if value not in (None, "", [], {})
-            and (
-                key in cls._ALWAYS_MATERIAL
-                or key in cls._POSITIVE_MATERIAL
-            )
-        }
+        fields: set[str] = set()
+        for key, value in profile.items():
+            if value in (None, "", [], {}):
+                continue
+            if key in cls._ALWAYS_MATERIAL:
+                if isinstance(value, bool) and not value:
+                    continue
+                fields.add(key)
+                continue
+            if key in cls._POSITIVE_MATERIAL:
+                if isinstance(value, bool):
+                    if value:
+                        fields.add(key)
+                elif isinstance(value, (int, float)):
+                    if value > 0:
+                        fields.add(key)
+                elif value:
+                    fields.add(key)
         return fields
