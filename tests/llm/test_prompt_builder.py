@@ -24,6 +24,7 @@ def make_analysis(
     key_findings: list[AnalysisFinding] | None = None,
     rule_evidence: list[AnalysisFinding] | None = None,
     customer_profile: CustomerProfileAnalysis | None = None,
+    material_customer_profile: CustomerProfileAnalysis | None = None,
 ) -> AssessmentAnalysis:
     return AssessmentAnalysis(
         position_id="TEST-001",
@@ -33,6 +34,7 @@ def make_analysis(
         limitations=[],
         rule_evidence=rule_evidence or [],
         customer_profile=customer_profile,
+        material_customer_profile=material_customer_profile,
     )
 
 
@@ -116,7 +118,7 @@ class TestReportPromptBuilder:
         )
         analysis = make_analysis(
             key_findings=[finding],
-            customer_profile=profile,
+            material_customer_profile=profile,
         )
 
         prompt = ReportPromptBuilder().build(analysis)
