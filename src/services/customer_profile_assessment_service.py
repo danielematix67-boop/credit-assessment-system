@@ -88,6 +88,8 @@ class CustomerProfileAssessmentService:
                 "monitoring_period_days": data.monitoring_period_days,
                 "probation_period_days": data.probation_period_days,
                 "minimum_regulatory_risk_grade": data.minimum_regulatory_risk_grade,
+                "previous_risk_grade": data.previous_risk_grade,
+                "risk_grade_change": data.risk_grade_change,
                 "ews_score_class": (
                     data.ews_score_class.value if data.ews_score_class else None
                 ),
@@ -137,6 +139,8 @@ class CustomerProfileAssessmentService:
                 data.monitoring_period_days,
                 data.probation_period_days,
                 data.minimum_regulatory_risk_grade,
+                data.previous_risk_grade,
+                data.risk_grade_change,
                 data.ews_score_class,
                 data.ews_score_notching,
                 data.ews_score_variation,
