@@ -23,6 +23,7 @@ def make_finding(
 def make_analysis(
     key_findings: list[AnalysisFinding] | None = None,
     rule_evidence: list[AnalysisFinding] | None = None,
+    customer_profile: CustomerProfileAnalysis | None = None,
 ) -> AssessmentAnalysis:
     return AssessmentAnalysis(
         position_id="TEST-001",
@@ -31,6 +32,7 @@ def make_analysis(
         risk_factors=[],
         limitations=[],
         rule_evidence=rule_evidence or [],
+        customer_profile=customer_profile,
     )
 
 
@@ -107,21 +109,13 @@ class TestReportPromptBuilder:
             relevant_events="A previous restructuring is reported.",
         )
         finding = make_finding(
-            "PROFILE",
+            "CP001",
             "Customer Profile",
             RuleSeverity.MEDIUM,
-            "Legacy profile summary.",
+            "Customer profile rule finding.",
         )
         analysis = make_analysis(
             key_findings=[finding],
-        )
-        analysis = AssessmentAnalysis(
-            position_id=analysis.position_id,
-            assessment_status=analysis.assessment_status,
-            key_findings=analysis.key_findings,
-            risk_factors=analysis.risk_factors,
-            limitations=analysis.limitations,
-            rule_evidence=analysis.rule_evidence,
             customer_profile=profile,
         )
 
@@ -132,7 +126,7 @@ class TestReportPromptBuilder:
         assert "Relationship & Counterparty Context:" in prompt
         assert "Relevant Events:" in prompt
         assert "The EWS Score is LIGHT_RED." in prompt
-        assert "Legacy profile summary." not in prompt
+        assert "Customer profile rule finding." in prompt
 
     def test_build_preserves_finding_order_within_macro_area(self) -> None:
         findings = [
