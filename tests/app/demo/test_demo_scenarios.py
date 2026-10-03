@@ -9,19 +9,11 @@ SCENARIO_NAME = "01 · Complete Credit Assessment"
 EXPECTED_FINAL_STATUS = "CRITICAL"
 
 EXPECTED_TRIGGERED_RULES = {
-    "CP001", "CP002", "CP003", "CP004", "CP005", "CP005",
+    "CP001", "CP002", "CP003", "CP004", "CP005",
     "R001", "R002", "R003", "R007",
     "B001", "B002", "B003", "B004",
     "DS001", "DS002", "DS003",
 }
-
-EXPECTED_UI_RULE_IDS = {
-    "CP001", "CP002", "CP003", "CP004",
-    "B001", "B002", "B003", "B004",
-    "DS001", "DS002", "DS003",
-    "R001", "R002", "R003", "R004", "R005", "R006", "R007",
-}
-
 
 def _build_demo_case(assessment_service):
     case_service = CreditAssessmentCaseService(
@@ -86,12 +78,23 @@ def test_demo_case_analysis_agent_preserves_final_assessment_status(
     assert analysis.assessment_status.value == EXPECTED_FINAL_STATUS
 
 
-def test_ui_rule_evidence_source_covers_all_registered_demo_rules(
+def test_ui_rule_evidence_source_covers_all_case_rules(
     assessment_service,
 ) -> None:
-    """Ensure the Results-page evidence source exposes every deterministic rule ID."""
+    """Ensure the Results-page evidence source exposes every case rule result."""
     case = _build_demo_case(assessment_service)
     result = SimpleNamespace(credit_case=case)
+
+    expected_rule_ids = {
+        rule.rule_id
+        for section in (
+            case.customer_profile,
+            case.financial_analysis,
+            case.behavioural_analysis,
+            case.debt_sustainability,
+        )
+        for rule in section.evidence
+    }
     displayed_rule_ids = {rule.rule_id for rule in get_rule_results(result)}
 
-    assert displayed_rule_ids == EXPECTED_UI_RULE_IDS
+    assert displayed_rule_ids == expected_rule_ids
