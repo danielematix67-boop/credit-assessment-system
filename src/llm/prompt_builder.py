@@ -43,6 +43,16 @@ class ReportPromptBuilder:
         """
         findings = analysis.rule_evidence or analysis.key_findings
         grouped_findings = self._group_findings(findings)
+
+        if analysis.customer_profile is not None:
+            grouped_findings.setdefault("Customer Profile", [])
+            grouped_findings = self._group_findings(
+                [
+                    finding
+                    for category_findings in grouped_findings.values()
+                    for finding in category_findings
+                ]
+            )
         category_order = list(grouped_findings.keys())
 
         return self.template.render(
@@ -127,7 +137,8 @@ class ReportPromptBuilder:
         Format grouped deterministic findings for the LLM.
 
         Rule IDs are intentionally excluded from the narrative input
-        because they are internal implementation details.
+        because they are internal implementation details. Customer-profile
+        context is supplied separately from deterministic rule evidence.
         """
         if not grouped_findings:
             return "None."
@@ -144,12 +155,6 @@ class ReportPromptBuilder:
                         lines.append(f"    {section_text}")
 
             for finding in findings:
-                if (
-                    category.casefold() == "customer profile"
-                    and finding.rule_id == "PROFILE"
-                    and customer_profile is not None
-                ):
-                    continue
                 lines.append(cls._format_finding(finding))
 
             sections.append("\n".join(lines))
