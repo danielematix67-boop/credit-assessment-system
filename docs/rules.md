@@ -2,7 +2,7 @@
 
 This document describes the complete lifecycle of a deterministic assessment rule.
 
-The guide is intentionally **catalogue-independent**: the active rule set is discovered from the configuration and registry at runtime. Documentation should not need to be rewritten merely because a rule is added, removed or renamed. Only architectural changes, policy changes or examples that become inaccurate require documentation updates.
+The guide is intentionally **catalogue-independent**: the active rule set is discovered from the configuration and registry at runtime. Documentation should not need to be rewritten merely because the rule catalogue changes.
 
 ## Source of truth
 
@@ -18,7 +18,7 @@ Registered rule identifier
 Deterministic RuleResult
 ```
 
-The YAML catalogue is the source of truth for declarative rule parameters. The Python implementation is the source of truth for deterministic execution and specialised business semantics. The registry is the source of truth for resolving a configured identifier to an implementation.
+The YAML catalogue is the source of truth for declarative rule parameters. The Python implementation is the source of truth for deterministic execution and specialised business semantics. The registry binds them together at runtime.
 
 No LLM component is part of this chain.
 
@@ -125,7 +125,7 @@ input_fields:
 calculation: ratio
 ```
 
-The generic calculation contract supports `direct`, `ratio` and `difference`. Trigger operators are `GT`, `GTE`, `LT` and `LTE`. Severity values and severity direction are represented by the domain enums/configuration contract.
+The generic calculation contract supports `direct`, `ratio` and `difference`. Trigger operators are `GT`, `GTE`, `LT` and `LTE`. Severity values and severity direction are represented by the domain policy and must be validated by the deterministic rule execution path.
 
 Use the generic configuration path whenever the business semantics are expressible through it. Do not add Python branches solely to duplicate configurable thresholds or comparison operators.
 
@@ -160,7 +160,7 @@ class ExampleRule(Rule):
         return self._result(value=value, status=status)
 ```
 
-The base `Rule` abstraction provides reusable behaviour for configured values, trigger operators, severity, reason formatting and `NOT_EVALUABLE` results. Specialised rules may override `evaluate()` when the business calculation cannot be expressed by the generic configuration contract.
+The base `Rule` abstraction provides reusable behaviour for configured values, trigger operators, severity, reason formatting and `NOT_EVALUABLE` results. Specialised rules may override `evaluate` only when the business semantics cannot be expressed through the generic contract.
 
 ### Implementation rules
 
@@ -204,7 +204,7 @@ A new rule must not be silently ignored because its implementation is missing.
 
 ## 6. Rule result and evidence
 
-`RuleResult` is the deterministic boundary object. It carries the rule identity, category, evaluated value where available, threshold, status, severity, reason, direction and configured comment information.
+`RuleResult` is the deterministic boundary object. It carries the rule identity, category, evaluated value where available, threshold, status, severity, reason, direction and configured comment template.
 
 The result must preserve the distinction between:
 
@@ -214,13 +214,23 @@ The result must preserve the distinction between:
 
 This distinction must survive section aggregation, case analysis and reporting.
 
+The status values are not interchangeable. `NOT_EVALUABLE` must never be silently converted into `NOT_TRIGGERED` or treated as a normal, low-risk result.
+
+| Status | Meaning | Example |
+|---|---|---|
+| `TRIGGERED` | The configured risk condition is satisfied | Debt ratio exceeds the threshold |
+| `NOT_TRIGGERED` | The rule was evaluated and the condition was not met | Debt ratio is below the threshold |
+| `NOT_EVALUABLE` | Required evidence was unavailable or invalid | No debt-service data was supplied |
+
+These statuses propagate through the whole assessment pipeline: rule result, section aggregation, final assessment, and reporting. That is what preserves explainability and prevents missing data from becoming a false negative.
+
 ## 7. Section and case aggregation
 
 The rule must be tested in the context of the section that contains it. Adding a rule can change the section status because status is derived from its rule results.
 
 The final assessment is then produced by `FinalAssessmentService` using `FinalAssessmentPolicy` loaded from configuration.
 
-The exact aggregation policy is therefore **not a documentation constant**. If the policy changes, update `config/final_assessment.yaml` and the policy tests first; then update the architecture documentation describing the policy conceptually.
+The exact aggregation policy is therefore **not a documentation constant**. If the policy changes, update `config/final_assessment.yaml` and the policy tests first; then update the architecture document if the behavioural contract is still meant to be described in prose.
 
 This separation allows a rule to be added without embedding knowledge of unrelated sections or the final decision policy into the rule itself.
 
@@ -313,7 +323,7 @@ Rules are loaded from the domain catalogues under config/.
 The active inventory is the set of valid configured identifiers with registered implementations.
 ```
 
-If a concrete rule is shown in an example, label it as an example (`RXXX`, `EXAMPLE_RULE`) rather than using a production identifier. This prevents future rule additions from making the documentation appear stale.
+If a concrete rule is shown in an example, label it as an example (`RXXX`, `EXAMPLE_RULE`) rather than using a production identifier. This prevents future rule additions from making the documentation stale.
 
 ## Change checklist
 

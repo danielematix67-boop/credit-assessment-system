@@ -39,7 +39,7 @@ The rule evaluation path is deterministic. Reporting is a separate concern.
 
 ## Domains and rule catalogue
 
-The assessment is organised into macro-areas. Each domain owns its inputs, rule catalogue and rule evidence. The active rule inventory is **not duplicated in this document**; it is defined by the YAML catalogues under `config/` and the registered implementations under `src/rules/`.
+The assessment is organised into macro-areas. Each domain owns its inputs, rule catalogue and rule evidence. The active rule inventory is **not duplicated in this document**; it is defined by the valid configuration catalogues and registered implementations at runtime.
 
 This is intentional: adding or removing a rule should not require rewriting the architecture document.
 
@@ -58,16 +58,16 @@ config/<domain>_rules.yaml
           ↓
       Rule registry
           ↓
- configured rule_id
+  configured rule_id
           ↓
- Concrete Rule implementation
+  Concrete Rule implementation
           ↓
        RuleResult
 ```
 
 Configuration contains declarative policy parameters such as input fields, calculation, trigger operator, threshold, severity, severity direction, severity bands and comment templates.
 
-Concrete Python rule classes implement deterministic execution and specialised business semantics. The shared `Rule` base class provides reusable value resolution, trigger comparison, severity resolution, reason formatting and `NOT_EVALUABLE` handling.
+Concrete Python rule classes implement deterministic execution and specialised business semantics. The shared `Rule` base class provides reusable value resolution, trigger comparison, severity resolution and `NOT_EVALUABLE` handling.
 
 A configured rule must resolve to a registered implementation. Central services must not contain rule-specific branches.
 
@@ -79,17 +79,23 @@ See [`rules.md`](rules.md) for the complete rule-development lifecycle.
 
 ```text
 Input
- ↓
+  ↓
 Structural validation
- ↓
+  ↓
 Rule evaluation
- ↓
+  ↓
 Section results
- ↓
+  ↓
 Case aggregation
 ```
 
 Missing evidence can remain represented as `None` so a rule can explicitly return `NOT_EVALUABLE` rather than treating absence as a normal observation.
+
+## Deterministic comments and evidence
+
+The `src/comments` package is intentionally separate from the LLM reporting layer. `CommentEngine` creates deterministic explanatory text for triggered rules from the same `RuleResult` objects used by the assessment pipeline.
+
+These comments are evidence-preserving and traceable; they explain what happened, but they do not decide the credit outcome. They are part of the deterministic evidence chain, not a second adjudication layer.
 
 ## Section assessment
 
@@ -110,7 +116,7 @@ The policy defines, among other things:
 - the status used when evidence is insufficient;
 - limitation messages for partial evaluation.
 
-The policy distinguishes **core** sections from **contextual** sections. Core sections participate explicitly in the current escalation logic, while contextual sections provide additional assessment context without introducing a separate escalation rule in the current implementation.
+The policy distinguishes **core** sections from **contextual** sections. Core sections participate explicitly in the current escalation logic, while contextual sections provide additional assessment context without necessarily driving the final status.
 
 ```text
 Section assessments
@@ -132,7 +138,7 @@ config/
 └── final_assessment.yaml
 ```
 
-The concrete filenames are implementation details. The important architectural contract is that rule parameters and final-assessment policy are externalised and loaded before deterministic execution.
+The concrete filenames are implementation details. The important architectural contract is that rule parameters and final-assessment policy are externalised and loaded before deterministic execution begins.
 
 ## Reporting boundary
 
@@ -183,6 +189,12 @@ The macro-area evidence surface is authoritative for the UI. Technical rule insp
 
 The UI does not recalculate thresholds, severity, section status or final status.
 
+## UI and workflow boundaries
+
+The `app/` layer is separated into interface and orchestration responsibilities. `app/ui/` contains Streamlit forms, layouts, result renderers and presentation components, while `app/workflow/` and related application orchestration manage execution flow, state and assessment sequencing.
+
+This boundary matters because business logic remains in `src/`; the UI layer is responsible for presentation and user interaction only.
+
 ## Project structure
 
 The source tree is organised by responsibility rather than by a manually maintained list of individual rules:
@@ -194,12 +206,12 @@ credit-assessment-system/
 ├── src/
 │   ├── agents/          # Analysis/reporting orchestration
 │   ├── comments/        # Deterministic comments/evidence support
-│   ├── config/           # Configuration loading and policy objects
-│   ├── engine/           # Rule execution
-│   ├── llm/              # Provider abstractions/integrations
-│   ├── models/           # Domain and workflow models
-│   ├── rules/            # Rule abstractions, discovery and implementations
-│   └── services/         # Assessment and workflow services
+│   ├── config/          # Configuration loading and policy objects
+│   ├── engine/          # Rule execution
+│   ├── llm/             # Provider abstractions/integrations
+│   ├── models/          # Domain and workflow models
+│   ├── rules/           # Rule abstractions, discovery and implementations
+│   └── services/        # Assessment and workflow services
 ├── docs/                # Technical documentation and ADRs
 └── tests/               # Unit, integration, workflow, reporting and UI tests
 ```
