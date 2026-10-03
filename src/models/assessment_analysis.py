@@ -16,3 +16,4 @@ class AssessmentAnalysis:
     # and non-evaluable rules across every assessment macro-area.
     rule_evidence: list[AnalysisFinding] = field(default_factory=list)
     customer_profile: CustomerProfileAnalysis | None = None
+    material_customer_profile: CustomerProfileAnalysis | None = None
