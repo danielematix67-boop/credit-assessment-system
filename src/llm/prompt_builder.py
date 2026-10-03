@@ -44,15 +44,14 @@ class ReportPromptBuilder:
         findings = analysis.rule_evidence or analysis.key_findings
         grouped_findings = self._group_findings(findings)
 
-        if analysis.customer_profile is not None:
-            grouped_findings.setdefault("Customer Profile", [])
-            grouped_findings = self._group_findings(
-                [
-                    finding
-                    for category_findings in grouped_findings.values()
-                    for finding in category_findings
-                ]
-            )
+        if analysis.customer_profile is not None and not any(
+            category.casefold() == "customer profile"
+            for category in grouped_findings
+        ):
+            grouped_findings = {
+                "Customer Profile": [],
+                **grouped_findings,
+            }
         category_order = list(grouped_findings.keys())
 
         return self.template.render(
