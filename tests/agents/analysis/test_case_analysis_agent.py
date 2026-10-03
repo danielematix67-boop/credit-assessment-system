@@ -86,4 +86,9 @@ def test_case_analysis_agent_includes_customer_profile_context() -> None:
     assert analysis.assessment_status == AssessmentStatus.NORMAL
     assert analysis.key_findings[0].category == "Customer Profile"
     assert analysis.key_findings[0].status is None
-    assert "Synthetic Co." in analysis.key_findings[0].text
+    text = analysis.key_findings[0].text
+    assert "Synthetic Co." in text
+    assert "Manufacturing" in text
+    assert "banking relationship of 7 years" in text
+    assert ";" not in text
+    assert "\\n\\n" in text
