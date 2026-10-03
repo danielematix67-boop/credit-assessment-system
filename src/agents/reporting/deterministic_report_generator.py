@@ -37,7 +37,7 @@ class DeterministicReportGenerator(ReportGenerator):
         """Build the fallback narrative using the authoritative assessment areas."""
         status = f"Assessment Status: {analysis.assessment_status.value.capitalize()}"
         findings = analysis.key_findings
-        if not findings:
+        if not findings and analysis.customer_profile is None:
             return status
 
         grouped: dict[str, list[AnalysisFinding]] = {}
@@ -65,11 +65,26 @@ class DeterministicReportGenerator(ReportGenerator):
             ]
 
             sentences: list[str] = []
-            sentences.extend(finding.text.rstrip(".") + "." for finding in profile)
+            if not (
+                category.casefold() == "customer profile"
+                and analysis.customer_profile is not None
+            ):
+                sentences.extend(
+                    finding.text.rstrip(".") + "." for finding in profile
+                )
             sentences.extend(finding.text.rstrip(".") + "." for finding in triggered)
 
             if sentences:
                 paragraphs.append((category, " ".join(sentences)))
+
+        if analysis.customer_profile is not None:
+            profile_text = " ".join(
+                text
+                for _, text in analysis.customer_profile.sections()
+                if text
+            )
+            if profile_text:
+                paragraphs.append(("Customer Profile", profile_text))
 
         narrative_parts: list[str] = []
         canonical = {area.casefold() for area in cls._ASSESSMENT_AREA_ORDER}
