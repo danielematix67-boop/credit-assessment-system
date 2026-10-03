@@ -3,6 +3,7 @@ from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.models.credit_assessment_case import CreditAssessmentCase
 from src.models.customer_profile_analysis import CustomerProfileAnalysis
+from src.services.customer_profile_materiality_policy import CustomerProfileMaterialityPolicy
 from src.models.final_assessment import FinalAssessment
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
@@ -19,11 +20,23 @@ class CaseAnalysisAgent:
         risk_factors: list[AnalysisFinding] = []
         limitations: list[AnalysisFinding] = []
         customer_profile_analysis: CustomerProfileAnalysis | None = None
+        material_customer_profile_analysis: CustomerProfileAnalysis | None = None
 
         if case.customer_profile.context:
             summary = self._profile_summary(case.customer_profile.context)
             if summary:
                 customer_profile_analysis = self._customer_profile_analysis(summary)
+                material_fields = CustomerProfileMaterialityPolicy.material_fields(
+                    case.customer_profile.context
+                )
+                material_summary = self._profile_summary(
+                    case.customer_profile.context,
+                    fields=material_fields,
+                )
+                if material_summary:
+                    material_customer_profile_analysis = self._customer_profile_analysis(
+                        material_summary
+                    )
 
         for section in case.sections:
             triggered_text_by_rule = {
@@ -99,6 +112,7 @@ class CaseAnalysisAgent:
             limitations=limitations,
             rule_evidence=rule_evidence,
             customer_profile=customer_profile_analysis,
+            material_customer_profile=material_customer_profile_analysis,
         )
 
     @staticmethod
@@ -168,10 +182,16 @@ class CaseAnalysisAgent:
         )
 
     @staticmethod
-    def _profile_summary(profile: dict[str, object]) -> str:
+    def _profile_summary(
+        profile: dict[str, object],
+        fields: set[str] | None = None,
+    ) -> str:
         """Build a discursive contextual customer-profile narrative for reporting."""
-        def present(value: object) -> bool:
-            return value not in (None, "", [], {})
+        def present(value: object, key: str | None = None) -> bool:
+            return (
+                value not in (None, "", [], {})
+                and (fields is None or key is None or key in fields)
+            )
 
         def as_text(value: object) -> str:
             if isinstance(value, list):
@@ -185,13 +205,13 @@ class CaseAnalysisAgent:
 
         company = get("company_name")
         identity_parts: list[str] = []
-        if present(get("size_class")):
+        if present(get("size_class"), "size_class"):
             identity_parts.append(f"a {as_text(get('size_class')).lower()} company")
-        if present(get("sector")):
+        if present(get("sector"), "sector"):
             identity_parts.append(
                 f"operating in the {as_text(get('sector')).lower()} sector"
             )
-        if present(get("geography")):
+        if present(get("geography"), "geography"):
             identity_parts.append(f"based in {as_text(get('geography'))}")
 
         if identity_parts:
@@ -202,52 +222,52 @@ class CaseAnalysisAgent:
         else:
             identity = ""
 
-        if present(get("operations")):
+        if present(get("operations"), "operations"):
             identity += f" Its activities include {as_text(get('operations'))}."
-        if present(get("business_history_years")):
+        if present(get("business_history_years"), "business_history_years"):
             years = get("business_history_years")
             unit = "year" if years == 1 else "years"
             identity += f" The business has an operating history of {years} {unit}."
 
         risk_parts: list[str] = []
-        if present(get("minimum_regulatory_risk_grade")):
+        if present(get("minimum_regulatory_risk_grade"), "minimum_regulatory_risk_grade"):
             risk_parts.append(
                 f"the minimum regulatory risk grade is {as_text(get('minimum_regulatory_risk_grade'))}"
             )
-        if present(get("past_due_count")):
+        if present(get("past_due_count"), "past_due_count"):
             count = get("past_due_count")
             risk_parts.append(f"{count} past-due positions are reported")
-        if present(get("ews_score_class")):
+        if present(get("ews_score_class"), "ews_score_class"):
             risk_parts.append(
                 f"the EWS Score class is {as_text(get('ews_score_class'))}"
             )
-        if present(get("ews_score_notching")):
+        if present(get("ews_score_notching"), "ews_score_notching"):
             risk_parts.append(
                 f"EWS notching is {as_text(get('ews_score_notching'))}"
             )
-        if present(get("ews_score_variation")):
+        if present(get("ews_score_variation"), "ews_score_variation"):
             risk_parts.append(
                 f"EWS variation is {as_text(get('ews_score_variation'))}"
             )
-        if present(get("active_ewis")):
+        if present(get("active_ewis"), "active_ewis"):
             risk_parts.append(
                 f"active EWIs include {as_text(get('active_ewis'))}"
             )
-        if present(get("rating")):
+        if present(get("rating"), "rating"):
             risk_parts.append(f"the rating is {as_text(get('rating'))}")
-        if present(get("rating_increments")):
+        if present(get("rating_increments"), "rating_increments"):
             risk_parts.append(
                 f"rating increments include {as_text(get('rating_increments'))}"
             )
-        if present(get("rating_influential_factors")):
+        if present(get("rating_influential_factors"), "rating_influential_factors"):
             risk_parts.append(
                 f"the main influential rating factors include {as_text(get('rating_influential_factors'))}"
             )
-        if present(get("rating_elementary_modules")):
+        if present(get("rating_elementary_modules"), "rating_elementary_modules"):
             risk_parts.append(
                 f"the elementary rating modules include {as_text(get('rating_elementary_modules'))}"
             )
-        if present(get("pd")):
+        if present(get("pd"), "pd"):
             risk_parts.append(f"the reported PD is {as_text(get('pd'))}")
 
         risk = ""
@@ -255,43 +275,43 @@ class CaseAnalysisAgent:
             risk = "The available risk-profile information indicates that " + ", ".join(risk_parts) + "."
 
         relationship_parts: list[str] = []
-        if present(get("relationship_years")):
+        if present(get("relationship_years"), "relationship_years"):
             years = get("relationship_years")
             unit = "year" if years == 1 else "years"
             relationship_parts.append(f"a banking relationship of {years} {unit}")
-        if present(get("historical_facilities")):
+        if present(get("historical_facilities"), "historical_facilities"):
             relationship_parts.append(
                 f"historical facilities including {as_text(get('historical_facilities'))}"
             )
-        if present(get("risk_group_interdependence")):
+        if present(get("risk_group_interdependence"), "risk_group_interdependence"):
             relationship_parts.append(
                 f"{as_text(get('risk_group_interdependence'))} interdependence with the risk group"
             )
-        if present(get("risk_group_independence")):
+        if present(get("risk_group_independence"), "risk_group_independence"):
             relationship_parts.append(
                 f"{as_text(get('risk_group_independence')).lower()} independence within the risk group"
             )
-        if present(get("shareholders")):
+        if present(get("shareholders"), "shareholders"):
             relationship_parts.append(
                 f"shareholders including {as_text(get('shareholders'))}"
             )
-        if present(get("shareholder_roles")):
+        if present(get("shareholder_roles"), "shareholder_roles"):
             relationship_parts.append(
                 f"shareholder roles including {as_text(get('shareholder_roles'))}"
             )
-        if present(get("management_members")):
+        if present(get("management_members"), "management_members"):
             relationship_parts.append(
                 f"management comprising {as_text(get('management_members'))}"
             )
-        if get("generational_transition") is True:
+        if present(get("generational_transition"), "generational_transition") and get("generational_transition") is True:
             relationship_parts.append("a generational transition")
-        elif get("generational_transition") is False:
+        elif present(get("generational_transition"), "generational_transition") and get("generational_transition") is False:
             relationship_parts.append("no reported generational transition")
-        if present(get("employment_contract_type")):
+        if present(get("employment_contract_type"), "employment_contract_type"):
             relationship_parts.append(
                 f"an employment contract described as {as_text(get('employment_contract_type'))}"
             )
-        if present(get("economic_family_context")):
+        if present(get("economic_family_context"), "economic_family_context"):
             relationship_parts.append(
                 f"an economic-family context described as {as_text(get('economic_family_context'))}"
             )
@@ -305,19 +325,19 @@ class CaseAnalysisAgent:
             )
 
         event_parts: list[str] = []
-        if get("previous_restructuring") is True:
+        if present(get("previous_restructuring"), "previous_restructuring") and get("previous_restructuring") is True:
             event_parts.append("a previous restructuring")
-        if get("forborne") is True:
+        if present(get("forborne"), "forborne") and get("forborne") is True:
             event_parts.append("a forborne exposure")
-        if get("forborne_non_performing_exit") is True:
+        if present(get("forborne_non_performing_exit"), "forborne_non_performing_exit") and get("forborne_non_performing_exit") is True:
             event_parts.append("an exit from a forborne non-performing exposure")
-        elif get("forborne_non_performing_exit") is False:
+        elif present(get("forborne_non_performing_exit"), "forborne_non_performing_exit") and get("forborne_non_performing_exit") is False:
             event_parts.append("no reported exit from a forborne non-performing exposure")
-        if present(get("cure_period_days")):
+        if present(get("cure_period_days"), "cure_period_days"):
             event_parts.append(f"a cure period of {as_text(get('cure_period_days'))} days")
-        if present(get("monitoring_period_days")):
+        if present(get("monitoring_period_days"), "monitoring_period_days"):
             event_parts.append(f"a monitoring period of {as_text(get('monitoring_period_days'))} days")
-        if present(get("probation_period_days")):
+        if present(get("probation_period_days"), "probation_period_days"):
             event_parts.append(f"a probation period of {as_text(get('probation_period_days'))} days")
         for label, key in (
             ("protests", "protests"),
@@ -325,7 +345,7 @@ class CaseAnalysisAgent:
             ("litigation", "litigation"),
             ("significant historical events", "significant_historical_events"),
         ):
-            if present(get(key)):
+            if present(get(key), key):
                 event_parts.append(f"{label}: {as_text(get(key))}")
 
         events = ""
