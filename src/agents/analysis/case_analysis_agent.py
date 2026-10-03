@@ -2,6 +2,7 @@ from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.models.credit_assessment_case import CreditAssessmentCase
+from src.models.customer_profile_analysis import CustomerProfileAnalysis
 from src.models.final_assessment import FinalAssessment
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
@@ -17,10 +18,12 @@ class CaseAnalysisAgent:
         key_findings: list[AnalysisFinding] = []
         risk_factors: list[AnalysisFinding] = []
         limitations: list[AnalysisFinding] = []
+        customer_profile_analysis: CustomerProfileAnalysis | None = None
 
         if case.customer_profile.context:
             summary = self._profile_summary(case.customer_profile.context)
             if summary:
+                customer_profile_analysis = self._customer_profile_analysis(summary)
                 profile_finding = AnalysisFinding(
                     rule_id="PROFILE",
                     category="Customer Profile",
@@ -104,6 +107,7 @@ class CaseAnalysisAgent:
             risk_factors=risk_factors,
             limitations=limitations,
             rule_evidence=rule_evidence,
+            customer_profile=customer_profile_analysis,
         )
 
     @staticmethod
@@ -159,6 +163,18 @@ class CaseAnalysisAgent:
     @staticmethod
     def _to_assessment_status(final_assessment: FinalAssessment) -> AssessmentStatus:
         return AssessmentStatus(final_assessment.status.value)
+
+    @staticmethod
+    def _customer_profile_analysis(summary: str) -> CustomerProfileAnalysis:
+        """Map the deterministic profile narrative into stable reporting sections."""
+        sections = [part.strip() for part in summary.split("\n\n") if part.strip()]
+        padded = sections + [""] * (4 - len(sections))
+        return CustomerProfileAnalysis(
+            general_information=padded[0],
+            risk_profile=padded[1],
+            relationship_context=padded[2],
+            relevant_events=padded[3],
+        )
 
     @staticmethod
     def _profile_summary(profile: dict[str, object]) -> str:
