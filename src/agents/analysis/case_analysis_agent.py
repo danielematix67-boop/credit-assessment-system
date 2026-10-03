@@ -177,36 +177,26 @@ class CaseAnalysisAgent:
             return profile.get(key)
 
         company = get("company_name")
-        identity_parts = [
-            f"{company}" if present(company) else None,
-            (
-                f"a {as_text(get('size_class')).lower()} company"
-                if present(get("size_class"))
-                else None
-            ),
-            (
+        identity_parts: list[str] = []
+        if present(get("size_class")):
+            identity_parts.append(f"a {as_text(get('size_class')).lower()} company")
+        if present(get("sector")):
+            identity_parts.append(
                 f"operating in the {as_text(get('sector')).lower()} sector"
-                if present(get("sector"))
-                else None
-            ),
-            (
-                f"based in {as_text(get('geography'))}"
-                if present(get("geography"))
-                else None
-            ),
-        ]
-        identity_parts = [part for part in identity_parts if part]
-        identity = (
-            identity_parts[0]
-            + (" is " + ", ".join(identity_parts[1:]) + "." if len(identity_parts) > 1 else ".")
-            if identity_parts
-            else ""
-        )
+            )
+        if present(get("geography")):
+            identity_parts.append(f"based in {as_text(get('geography'))}")
+
+        if identity_parts:
+            subject = as_text(company) if present(company) else "The customer"
+            identity = f"{subject} is {', '.join(identity_parts)}."
+        elif present(company):
+            identity = f"{as_text(company)} is the customer under assessment."
+        else:
+            identity = ""
 
         if present(get("operations")):
-            identity += (
-                f" Its activities include {as_text(get('operations'))}."
-            )
+            identity += f" Its activities include {as_text(get('operations'))}."
         if present(get("business_history_years")):
             years = get("business_history_years")
             unit = "year" if years == 1 else "years"
