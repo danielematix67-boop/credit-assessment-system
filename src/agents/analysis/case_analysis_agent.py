@@ -172,8 +172,8 @@ class CaseAnalysisAgent:
     @staticmethod
     def _customer_profile_analysis(summary: str) -> CustomerProfileAnalysis:
         """Map the deterministic profile narrative into stable reporting sections."""
-        sections = [part.strip() for part in summary.split("\n\n") if part.strip()]
-        padded = sections + [""] * (4 - len(sections))
+        sections = [part.strip() for part in summary.split("\n\n")]
+        padded = (sections + [""] * 4)[:4]
         return CustomerProfileAnalysis(
             general_information=padded[0],
             risk_profile=padded[1],
@@ -352,4 +352,4 @@ class CaseAnalysisAgent:
         if event_parts:
             events = "Relevant events and credit-history information include " + ", ".join(event_parts) + "."
 
-        return "\n\n".join(part for part in (identity, risk, relationship, events) if part)
+        return "\n\n".join((identity, risk, relationship, events))
