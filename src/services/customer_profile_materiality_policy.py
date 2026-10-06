@@ -16,7 +16,13 @@ class CustomerProfileMaterialityPolicy:
         }
     )
     _POSITIVE_MATERIAL: ClassVar[frozenset[str]] = frozenset(
-        {"past_due_count", "cure_period_days", "monitoring_period_days", "probation_period_days", "generational_transition"}
+        {
+            "past_due_count",
+            "cure_period_days",
+            "monitoring_period_days",
+            "probation_period_days",
+            "generational_transition",
+        }
     )
 
     @classmethod
