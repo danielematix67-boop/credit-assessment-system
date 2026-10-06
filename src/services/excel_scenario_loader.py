@@ -2,7 +2,7 @@ from dataclasses import fields
 from io import BytesIO
 from typing import Any, BinaryIO
 
-import pandas as pd
+import pandas as pd  # type: ignore[import-untyped]
 
 from src.models.behavioural_data import BehaviouralData
 from src.models.customer_profile_data import CustomerProfileData, REGULATORY_RISK_GRADES
