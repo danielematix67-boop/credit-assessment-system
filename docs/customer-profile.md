@@ -39,7 +39,7 @@ All scalar fields are optional unless a run supplies them. Collection fields def
 |---|---|
 | General information | `company_name`, `counterparty_type`, `legal_form`, `sector`, `size_class`, `geography`, `business_history_years`, `operations` |
 | Risk-grade evolution | `forborne_non_performing_exit`, `past_due_count`, `cure_period_days`, `monitoring_period_days`, `probation_period_days`, `minimum_regulatory_risk_grade`, `previous_risk_grade`, `risk_grade_change` |
-| Statistical predictiveness | `ews_score_class`, `ews_score_notching`, `ews_score_variation`, `active_ewis`, `rating`, `rating_increments`, `rating_influential_factors`, `rating_elementary_modules`, `pd` |
+| Statistical predictiveness | `ews_score_class`, `ews_score_notching`, `ews_score_variation`, `active_ewis`, `rating`, `rating_notching`, `rating_influential_factors`, `rating_elementary_modules`, `pd` |
 | Risk group | `risk_group_interdependence`, `risk_group_independence` |
 | Ownership, management and counterparty context | `shareholders`, `shareholder_roles`, `management_members`, `generational_transition`, `employment_contract_type`, `economic_family_context` |
 | Banking relationship and credit history | `relationship_years`, `historical_facilities`, `previous_restructuring`, `forborne` |
@@ -173,12 +173,15 @@ Both the LLM-backed and deterministic reporting paths receive the same bounded m
 
 ## Risk-grade evolution
 
-The input contract distinguishes the previous grade from the change descriptor:
+The regulatory-grade context uses categorical credit-status values rather than numeric scores:
 
-- `previous_risk_grade`: previously assigned risk grade;
-- `risk_grade_change`: supplied descriptor of the change in the risk profile.
+- `minimum_regulatory_risk_grade`: minimum/current regulatory grade represented by the case, using the controlled vocabulary **Bonis, Past Due, Unlikely to Pay, Bad Loan**;
+- `previous_risk_grade`: previous regulatory grade, using the same vocabulary;
+- `risk_grade_change`: the observed transition between regulatory grades, expressed as a categorical transition such as `Bonis to Past Due`.
 
-These are contextual fields, not independent rule outcomes. Their interpretation must remain grounded in the supplied values; reporting must not infer a numeric migration, regulatory consequence or causal explanation that is not present in the input.
+These are contextual fields, not independent rule outcomes. Reporting must preserve the supplied categories and must not convert them into numeric scores or infer a migration that is not present in the input.
+
+EWS notching and rating notching are also categorical/contextual fields. They are optional and are represented as descriptive text when present; they are **not numeric notch counts**.
 
 ## Reporting and UI implications
 
