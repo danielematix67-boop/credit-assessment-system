@@ -75,12 +75,12 @@ def execute_assessment(
                 result = run_assessment(
                     workflow,
                     position,
-                    behavioural_data=st.session_state.get("manual_behavioural_data"),
+                    behavioural_data=st.session_state.get("assessment_behavioural_data"),
                     debt_sustainability_data=st.session_state.get(
-                        "manual_debt_sustainability_data"
+                        "assessment_debt_sustainability_data"
                     ),
                     customer_profile_data=st.session_state.get(
-                        "manual_customer_profile_data"
+                        "assessment_customer_profile_data"
                     ),
                 )
 
