@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-
 from src.models.ews_score import EwsScoreClass
 
 
