@@ -10,16 +10,37 @@ The application is a presentation and orchestration layer. It delegates assessme
 
 ## Current input experience
 
-The current Streamlit input source is a single complete synthetic demonstration case, named **Complete Credit Assessment**. It supplies inputs for all four assessment areas:
+The current Streamlit input source supports two modes:
+
+- **Demo Scenario** — a built-in synthetic complete case.
+- **Excel Upload** — a user-provided `.xlsx` workbook containing one or more structured scenarios.
+
+Both paths ultimately provide the same domain input objects:
 
 - Customer Profile
 - Financial Analysis
 - Behavioural Analysis
 - Debt Sustainability
 
-The page shows domain availability and provides expandable, tabbed previews of the synthetic input objects. The scenario is defined in `app/demo_scenarios.py`; its inputs are constructed as `CreditPosition`, `CustomerProfileData`, `BehaviouralData` and `DebtSustainabilityData` objects.
+### Demo Scenario
 
-Although parts of the application retain helper functions and state keys for manual input, the current input-source renderer selects the demo scenario. The presence of those helpers should not be interpreted as a currently exposed, complete manual-entry workflow.
+The built-in demo supplies one complete synthetic case. It is useful for quickly inspecting the end-to-end workflow without preparing an external file.
+
+### Excel Upload
+
+The Excel path is scenario-driven. The loader reads a workbook containing a mandatory `Credit_Position` sheet and optional `Customer_Profile`, `Behavioural` and `Debt_Sustainability` sheets.
+
+Each domain sheet uses `scenario_id` to identify the case. The UI loads all valid scenarios, presents a scenario selector, previews the mapped domain inputs and then executes only the selected scenario.
+
+The repository includes `examples/excel/demo_scenarios.xlsx` as a reference workbook with three synthetic scenarios:
+
+- `DEMO-NORMAL`
+- `DEMO-ATTENTION`
+- `DEMO-CRITICAL`
+
+The workbook also contains a documentation-only `README` sheet. Customer Profile and Behavioural inputs are deliberately stable across scenarios so that the main differences are attributable to financial inputs.
+
+See [`excel-scenario-input.md`](excel-scenario-input.md) for the workbook contract, supported fields and validation rules.
 
 ## Reporting modes
 
