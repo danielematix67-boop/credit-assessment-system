@@ -146,7 +146,7 @@ class CustomerProfileAssessmentService:
                 data.ews_score_variation,
                 data.active_ewis,
                 data.rating,
-                data.rating_increments,
+                data.rating_notching,
                 data.rating_influential_factors,
                 data.rating_elementary_modules,
                 data.pd,
