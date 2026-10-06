@@ -5,11 +5,10 @@ from typing import Any, BinaryIO
 import pandas as pd  # type: ignore[import-untyped]
 
 from src.models.behavioural_data import BehaviouralData
-from src.models.customer_profile_data import CustomerProfileData, REGULATORY_RISK_GRADES
+from src.models.customer_profile_data import REGULATORY_RISK_GRADES, CustomerProfileData
 from src.models.debt_sustainability_data import DebtSustainabilityData
 from src.models.ews_score import EwsScoreClass
 from src.models.position import CreditPosition
-
 
 SHEET_MODELS = {
     "Credit_Position": CreditPosition,

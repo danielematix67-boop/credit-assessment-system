@@ -4,9 +4,9 @@ import pandas as pd
 import streamlit as st
 
 from app.demo_scenarios import DEMO_SCENARIOS, build_demo_case_data, build_demo_position
-from src.services.excel_scenario_loader import ExcelScenarioError, load_excel_scenarios
 from app.ui.input import display_position_table
 from src.models.position import CreditPosition
+from src.services.excel_scenario_loader import ExcelScenarioError, load_excel_scenarios
 
 _DEMO_SCENARIO = "01 · Complete Credit Assessment"
 
