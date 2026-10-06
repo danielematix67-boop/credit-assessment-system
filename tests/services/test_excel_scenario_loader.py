@@ -3,7 +3,11 @@ from io import BytesIO
 import openpyxl
 import pytest
 
-from src.services.excel_scenario_loader import ExcelScenarioError, load_excel_scenarios
+from src.services.excel_scenario_loader import (
+    ExcelScenarioError,
+    _convert_value,
+    load_excel_scenarios,
+)
 
 
 def _workbook_bytes(
@@ -194,22 +198,8 @@ def test_multiple_rows_for_same_scenario_in_optional_sheet_are_rejected() -> Non
 def test_invalid_typed_values_are_rejected(
     field: str, value: str, message: str
 ) -> None:
-    workbook = openpyxl.Workbook()
-    credit = workbook.active
-    credit.title = "Credit_Position"
-    credit.append(["scenario_id", field])
-    credit.append(["TEST-001", value])
-
-    if field in {"generational_transition", "relationship_years"}:
-        sheet = workbook.create_sheet("Customer_Profile")
-        sheet.append(["scenario_id", field])
-        sheet.append(["TEST-001", value])
-
-    buffer = BytesIO()
-    workbook.save(buffer)
-
     with pytest.raises(ExcelScenarioError, match=message):
-        load_excel_scenarios(buffer.getvalue())
+        _convert_value(field, value)
 
 
 def test_blank_scenario_id_is_rejected() -> None:
