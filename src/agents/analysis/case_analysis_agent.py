@@ -265,9 +265,9 @@ class CaseAnalysisAgent:
             )
         if present(get("rating"), "rating"):
             risk_parts.append(f"the rating is {as_text(get('rating'))}")
-        if present(get("rating_increments"), "rating_increments"):
+        if present(get("rating_notching"), "rating_notching"):
             risk_parts.append(
-                f"rating increments include {as_text(get('rating_increments'))}"
+                f"rating notching is {as_text(get('rating_increments'))}"
             )
         if present(get("rating_influential_factors"), "rating_influential_factors"):
             risk_parts.append(
