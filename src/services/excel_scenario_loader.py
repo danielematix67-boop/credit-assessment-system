@@ -51,7 +51,8 @@ INT_FIELDS = {
 
 FLOAT_FIELDS = {
     field.name
-    for field in fields(CreditPosition)
+    for model in (CreditPosition, BehaviouralData, DebtSustainabilityData)
+    for field in fields(model)
     if field.name != "position_id"
 } | {
     "ews_score_variation",
