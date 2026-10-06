@@ -1,20 +1,39 @@
 # Customer Profile: Implementation Reference
 
-This document describes the Customer Profile contract currently implemented in `src/models/customer_profile_data.py`, its assessment and materiality services, and its use by the application/reporting workflow.
+This document describes the Customer Profile contract currently implemented in `src/models/customer_profile_data.py`, its deterministic assessment service, its materiality policy and its use by the application/reporting workflow.
 
 ## Purpose and boundaries
 
-Customer Profile is a contextual information layer alongside deterministic rule evidence. It is not a second rule engine.
+Customer Profile is a contextual information layer alongside deterministic rule evidence. It is **not a second rule engine**.
 
 - `CustomerProfileData` is the input contract.
-- The Customer Profile assessment service evaluates the configured CP rules and constructs the structured profile context.
-- `CustomerProfileMaterialityPolicy` selects contextual fields for the Executive Narrative.
-- The detailed profile can retain the full available context; the Executive Narrative receives the material subset.
+- `CustomerProfileAssessmentService` loads `config/customer_profile_rules.yaml`, evaluates the configured CP rules and constructs the Customer Profile section and context.
+- `CustomerProfileMaterialityPolicy` deterministically selects contextual fields for Executive Narrative reporting.
+- `CustomerProfileAnalysis` organises the profile into four reporting sections.
+- `AssessmentAnalysis` keeps both the full `customer_profile` and the bounded `material_customer_profile` representation.
 - Rule findings remain deterministic and retain their own statuses. Context fields do not become findings merely because they are informative.
+
+The boundary is therefore:
+
+```text
+CustomerProfileData
+        ↓
+CustomerProfileAssessmentService
+        ├── RuleResult evidence
+        └── profile context
+                    ↓
+             CaseAnalysisAgent
+                ↙        ↘
+       full profile    material context
+                            ↓
+              CustomerProfileMaterialityPolicy
+                            ↓
+                    Executive Narrative
+```
 
 ## Input contract
 
-All fields are optional unless represented by a collection with an empty-list default. Missing scalar values use `None`; list fields default to an empty list.
+All scalar fields are optional unless a run supplies them. Collection fields default to empty lists.
 
 | Group | Fields in `CustomerProfileData` |
 |---|---|
@@ -26,21 +45,64 @@ All fields are optional unless represented by a collection with an empty-list de
 | Banking relationship and credit history | `relationship_years`, `historical_facilities`, `previous_restructuring`, `forborne` |
 | Relevant events | `protests`, `bankruptcies`, `litigation`, `significant_historical_events` |
 
-The model is intentionally descriptive. Presence in the input model does not imply that a field is currently collected through a dedicated UI control or used in a rule. The demo scenarios and the active application input path determine which values are supplied in a given run.
+The model is intentionally descriptive. Presence in the input model does not imply that a field is currently exposed as a dedicated UI control or used by a rule. The active application input path and synthetic demo scenario determine which values are supplied in a run.
+
+## Deterministic Customer Profile rules
+
+The active Customer Profile catalogue currently contains CP001–CP005. These identifiers are loaded from `config/customer_profile_rules.yaml` and resolved through the normal rule discovery/registry mechanism.
+
+| Rule | Current implementation | Input | Deterministic meaning |
+|---|---|---|---|
+| CP001 | `EwsScoreClassRule` | `ews_score_class` | Triggers for a non-GREEN EWS class; YELLOW/ORANGE are MEDIUM and LIGHT_RED is HIGH |
+| CP002 | `PreviousRestructuringRule` | `previous_restructuring` | Triggers when a previous restructuring is present |
+| CP003 | `BusinessHistoryRule` | `business_history_years` | Triggers when business history is at or below the configured threshold; severity is configuration-driven |
+| CP004 | `ForborneExposureRule` | `forborne` | Triggers when the forborne flag is `True`; MEDIUM severity when triggered |
+| CP005 | `ShortBankingRelationshipRule` | `relationship_years` | Triggers when the banking relationship is at or below the configured threshold |
+
+The rule implementations preserve the standard three-way outcome:
+
+```text
+TRIGGERED
+NOT_TRIGGERED
+NOT_EVALUABLE
+```
+
+In particular:
+
+- CP001 explicitly validates the EWS enum/value;
+- CP004 explicitly validates that the forborne input is boolean;
+- the other current CP rules use the shared configured-value comparison path;
+- missing or invalid required evidence produces `NOT_EVALUABLE` rather than an assumed normal result.
+
+The exact thresholds and declarative parameters remain in `config/customer_profile_rules.yaml`, rather than being duplicated in this document.
+
+## Customer Profile section behaviour
+
+`CustomerProfileAssessmentService` evaluates all configured CP rules and retains their complete results in the section evidence.
+
+Only triggered results become `RuleFinding` objects and receive deterministic comments for the findings presentation. The complete evidence list still contains non-triggered and non-evaluable results so that reporting can distinguish:
+
+- a condition that was evaluated and did not trigger;
+- a condition that triggered;
+- a condition that could not be evaluated.
+
+If no profile data are supplied, the Customer Profile section is `NOT_EVALUABLE`. If profile data exist but none of the configured rules can be evaluated, the service records that limitation rather than interpreting the situation as evidence of normality.
+
+The service also propagates the structured profile context into the assessment case. This context is what later feeds detailed profile presentation and deterministic materiality selection.
 
 ## Deterministic rules versus contextual fields
 
-The Customer Profile rule family currently uses identifiers CP001–CP005. These rules are evaluated through the normal deterministic rule path and their results can contribute to the Customer Profile section assessment.
+The materiality policy treats the following attributes as already represented by rule evidence and therefore excludes them from the separate contextual subset:
 
-The materiality policy treats the following profile attributes as already represented by rule evidence and excludes them from the separate contextual subset:
+- `ews_score_class`;
+- `previous_restructuring`;
+- `forborne`;
+- `business_history_years`;
+- `relationship_years`.
 
-- `ews_score_class`
-- `previous_restructuring`
-- `forborne`
-- `business_history_years`
-- `relationship_years`
+This prevents the same fact from appearing once as a deterministic rule finding and again as contextual profile text.
 
-This avoids duplicating the same facts in the Executive Narrative. The rule findings remain available as rule evidence.
+This does **not** mean that these fields disappear from the full Customer Profile. They remain part of the structured profile context and can be represented through the deterministic rule evidence and detailed profile views.
 
 ## Executive materiality selection
 
@@ -48,39 +110,75 @@ Materiality is selected before report generation by `CustomerProfileMaterialityP
 
 ### Always-material fields
 
-When populated, these fields are selected:
+When populated, the policy selects:
 
-- EWS notching and variation, active EWIs;
-- rating, rating increments, influential factors and elementary modules, PD;
+- EWS notching and variation;
+- active EWIs;
+- rating, rating increments, influential factors and elementary modules;
+- PD;
 - minimum regulatory risk grade, previous risk grade and risk-grade change;
 - risk-group interdependence and independence;
 - forborne non-performing exit;
 - protests, bankruptcies, litigation and significant historical events.
 
-A boolean value of `False` is not selected as material.
+A boolean value of `False` is not selected.
 
 ### Conditionally material fields
 
-The following fields are selected only when they indicate a positive/non-zero condition:
+The policy selects the following only when they indicate a positive/non-zero condition:
 
-- `past_due_count`
-- `cure_period_days`
-- `monitoring_period_days`
-- `probation_period_days`
-- `generational_transition`
+- `past_due_count`;
+- `cure_period_days`;
+- `monitoring_period_days`;
+- `probation_period_days`;
+- `generational_transition`.
 
-For numeric fields, the condition is a value greater than zero; for the boolean field, it is `True`.
+For numeric fields, the condition is a value greater than zero. For `generational_transition`, the condition is `True`.
 
-Other descriptive fields are available in the full profile but are not automatically included in the Executive Summary material subset by this policy.
+Other descriptive fields remain available in the full profile but are not automatically selected for the Executive Summary by the current materiality policy.
+
+## Customer Profile reporting model
+
+`CustomerProfileAnalysis` presents the profile through four ordered sections:
+
+1. **General Information**
+2. **Risk Profile & Predictiveness**
+3. **Relationship & Counterparty Context**
+4. **Relevant Events**
+
+`AssessmentAnalysis` exposes two profile views:
+
+| Field | Scope | Purpose |
+|---|---|---|
+| `customer_profile` | Full available structured profile | Detailed Customer Profile presentation |
+| `material_customer_profile` | Policy-selected contextual subset | Executive Narrative |
+
+The analysis layer therefore performs the materiality decision before the reporting layer is invoked.
+
+The reporting boundary is:
+
+```text
+Full profile context
+        ↓
+CustomerProfileMaterialityPolicy
+        ↓
+material_customer_profile
+        ↓
+ReportPromptBuilder / DeterministicReportGenerator
+        ↓
+One consolidated Customer Profile section
+```
+
+Both the LLM-backed and deterministic reporting paths receive the same bounded material contextual profile. Neither path decides independently which profile fields are material.
 
 ## Risk-grade evolution
 
-The input contract distinguishes the prior grade from the direction/change descriptor:
+The input contract distinguishes the previous grade from the change descriptor:
 
-- `previous_risk_grade`: the previously assigned risk grade;
-- `risk_grade_change`: a descriptor of the change in the risk profile.
+- `previous_risk_grade`: previously assigned risk grade;
+- `risk_grade_change`: supplied descriptor of the change in the risk profile.
 
-These are contextual fields, not independent rule outcomes. They are included in material executive context when supplied. Their interpretation in narrative must remain grounded in the supplied values; the reporting layer must not infer a numeric migration or regulatory consequence that is not present in the evidence.
+These are contextual fields, not independent rule outcomes. Their interpretation must remain grounded in the supplied values; reporting must not infer a numeric migration, regulatory consequence or causal explanation that is not present in the input.
 
 ## Reporting and UI implications
 
@@ -88,20 +186,23 @@ The reporting contract distinguishes:
 
 | Surface | Information |
 |---|---|
-| Deterministic rule evidence | Results of CP rules, including status, severity and evidence |
+| Deterministic rule evidence | Complete CP rule results, including status, severity and evidence |
 | Detailed Customer Profile | Structured profile context available for the run |
-| Executive Narrative | CP rule evidence combined with the policy-selected material context in one Customer Profile section |
+| Executive Narrative | CP rule evidence combined with policy-selected material context in one Customer Profile section |
 
-The Streamlit Results UI presents workflow output. It must not independently decide materiality or recompute CP rule outcomes. If a field is added, changed or removed, review the model, service propagation, materiality policy, analysis/reporting contract, demo input and tests together.
+The Streamlit Results UI presents workflow output. It does not independently decide materiality or recompute CP rule outcomes.
 
 ## Maintenance checklist
 
 When changing Customer Profile:
 
 - [ ] Update `CustomerProfileData` and its tests.
-- [ ] Verify propagation through the Customer Profile assessment service.
-- [ ] Decide explicitly whether the field is rule-backed, always material, conditionally material, or full-profile-only.
-- [ ] Update `CustomerProfileMaterialityPolicy` and policy tests if executive selection changes.
-- [ ] Update analysis/reporting tests and narrative grounding where applicable.
+- [ ] Verify propagation through `CustomerProfileAssessmentService`.
+- [ ] If a rule changes, update the YAML catalogue and corresponding implementation/tests.
+- [ ] Decide explicitly whether a new field is rule-backed, always material, conditionally material, or full-profile-only.
+- [ ] Update `CustomerProfileMaterialityPolicy` and its tests if Executive Summary selection changes.
+- [ ] Verify `AssessmentAnalysis.customer_profile` and `material_customer_profile` remain correctly populated.
+- [ ] Update analysis/reporting tests and grounding tests where applicable.
 - [ ] Update synthetic demo scenarios and UI input handling if the field is exposed there.
 - [ ] Keep contextual facts separate from deterministic `RuleResult` evidence.
+- [ ] Update documentation only where the implementation contract or user-visible behaviour actually changes.
