@@ -97,7 +97,7 @@ class CustomerProfileAssessmentService:
                 "ews_score_variation": data.ews_score_variation,
                 "active_ewis": list(data.active_ewis),
                 "rating": data.rating,
-                "rating_increments": list(data.rating_increments),
+                "rating_notching": data.rating_notching,
                 "rating_influential_factors": list(data.rating_influential_factors),
                 "rating_elementary_modules": list(data.rating_elementary_modules),
                 "pd": data.pd,
