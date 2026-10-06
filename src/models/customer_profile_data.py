@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
-from src.models.ews_score import EwsScoreClass
 
+from src.models.ews_score import EwsScoreClass
 
 # Regulatory risk-grade vocabulary used by the Customer Profile context.
 REGULATORY_RISK_GRADES = ("Bonis", "Past Due", "Unlikely to Pay", "Bad Loan")
