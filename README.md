@@ -154,6 +154,29 @@ Missing evidence is therefore not silently interpreted as a normal result.
 
 ---
 
+## 📥 Input sources
+
+The Streamlit application supports two input sources:
+
+- **Demo Scenario** — the built-in synthetic demonstration case.
+- **Excel Upload** — an `.xlsx` workbook containing one or more structured assessment scenarios.
+
+For Excel input, `Credit_Position` is mandatory. `Customer_Profile`, `Behavioural` and `Debt_Sustainability` are optional domain sheets. Each domain sheet uses a shared `scenario_id` to identify the same case across domains.
+
+The repository includes the reference workbook `examples/excel/demo_scenarios.xlsx`. It contains a documentation-only `README` sheet plus the four loader-compatible domain sheets. The three synthetic scenarios are:
+
+| Scenario | Purpose |
+|---|---|
+| `DEMO-NORMAL` | baseline case with no significant financial triggers |
+| `DEMO-ATTENTION` | isolated MEDIUM financial deterioration |
+| `DEMO-CRITICAL` | multiple HIGH financial deterioration indicators |
+
+Customer Profile and Behavioural inputs are deliberately kept stable across the three scenarios so that the main differences are attributable to the financial inputs. The workbook is formatted as a user-facing demonstration artifact while preserving the loader contract.
+
+See [`docs/excel-scenario-input.md`](docs/excel-scenario-input.md) for the complete workbook contract and validation behaviour.
+
+---
+
 ## 🤖 Deterministic assessment vs AI reporting
 
 This separation is the central design decision of the project.
@@ -294,6 +317,7 @@ credit-assessment-system/
 │   ├── models/          # Domain/workflow models
 │   ├── rules/           # Rule base, discovery, registry and implementations
 │   └── services/        # Assessment and workflow services
+├── examples/            # Synthetic demonstration inputs, including Excel
 ├── docs/                # Architecture, rules, validation, security and ADRs
 ├── tests/               # Unit/integration/workflow/reporting/UI tests
 ├── pyproject.toml
@@ -376,6 +400,7 @@ See [`docs/security-data-handling.md`](docs/security-data-handling.md).
 | [`docs/rules.md`](docs/rules.md) | Complete rule-development lifecycle |
 | [`docs/reporting.md`](docs/reporting.md) | Reporting and evidence contract |
 | [`docs/customer-profile.md`](docs/customer-profile.md) | Customer Profile fields and materiality policy |
+| [`docs/excel-scenario-input.md`](docs/excel-scenario-input.md) | Excel workbook contract, validation and demo scenarios |
 | [`docs/application-workflow.md`](docs/application-workflow.md) | Current Streamlit workflow and results interface |
 | [`docs/validation.md`](docs/validation.md) | Validation strategy and quality gates |
 | [`docs/security-data-handling.md`](docs/security-data-handling.md) | Security and data-handling principles |
@@ -412,6 +437,7 @@ ADRs
 - [x] Deterministic reporting fallback
 - [x] Execution provenance
 - [x] Automated quality checks
+- [x] Excel scenario input
 - [ ] Persistent assessment history
 - [ ] Rule-set versioning and auditability
 - [ ] Expanded monitoring/evaluation metrics
