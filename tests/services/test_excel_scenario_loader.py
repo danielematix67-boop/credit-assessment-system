@@ -90,3 +90,154 @@ def test_required_credit_position_sheet_is_rejected_when_missing() -> None:
 
     with pytest.raises(ExcelScenarioError, match="Credit_Position"):
         load_excel_scenarios(buffer.getvalue())
+
+
+def test_invalid_workbook_is_rejected() -> None:
+    with pytest.raises(ExcelScenarioError, match="valid .xlsx"):
+        load_excel_scenarios(b"not an excel workbook")
+
+
+def test_sheet_without_scenario_id_is_rejected() -> None:
+    workbook = openpyxl.Workbook()
+    credit = workbook.active
+    credit.title = "Credit_Position"
+    credit.append(["revenue"])
+    credit.append([100])
+    buffer = BytesIO()
+    workbook.save(buffer)
+
+    with pytest.raises(ExcelScenarioError, match="scenario_id"):
+        load_excel_scenarios(buffer.getvalue())
+
+
+def test_empty_sheet_is_rejected() -> None:
+    workbook = openpyxl.Workbook()
+    credit = workbook.active
+    credit.title = "Credit_Position"
+    credit.append(["scenario_id", "revenue"])
+    buffer = BytesIO()
+    workbook.save(buffer)
+
+    with pytest.raises(ExcelScenarioError, match="is empty"):
+        load_excel_scenarios(buffer.getvalue())
+
+
+def test_unsupported_column_is_rejected() -> None:
+    workbook = openpyxl.Workbook()
+    credit = workbook.active
+    credit.title = "Credit_Position"
+    credit.append(["scenario_id", "unsupported"])
+    credit.append(["TEST-001", 1])
+    buffer = BytesIO()
+    workbook.save(buffer)
+
+    with pytest.raises(ExcelScenarioError, match="unsupported column"):
+        load_excel_scenarios(buffer.getvalue())
+
+
+def test_duplicate_credit_scenario_id_is_rejected() -> None:
+    workbook = openpyxl.Workbook()
+    credit = workbook.active
+    credit.title = "Credit_Position"
+    credit.append(["scenario_id", "revenue"])
+    credit.append(["TEST-001", 100])
+    credit.append(["TEST-001", 200])
+    buffer = BytesIO()
+    workbook.save(buffer)
+
+    with pytest.raises(ExcelScenarioError, match="duplicate scenario_id"):
+        load_excel_scenarios(buffer.getvalue())
+
+
+def test_unknown_scenario_id_in_optional_sheet_is_rejected() -> None:
+    workbook = openpyxl.Workbook()
+    credit = workbook.active
+    credit.title = "Credit_Position"
+    credit.append(["scenario_id", "revenue"])
+    credit.append(["TEST-001", 100])
+    behavioural = workbook.create_sheet("Behavioural")
+    behavioural.append(["scenario_id", "average_utilization"])
+    behavioural.append(["TEST-999", 0.75])
+    buffer = BytesIO()
+    workbook.save(buffer)
+
+    with pytest.raises(ExcelScenarioError, match="unknown scenario_id"):
+        load_excel_scenarios(buffer.getvalue())
+
+
+def test_multiple_rows_for_same_scenario_in_optional_sheet_are_rejected() -> None:
+    workbook = openpyxl.Workbook()
+    credit = workbook.active
+    credit.title = "Credit_Position"
+    credit.append(["scenario_id", "revenue"])
+    credit.append(["TEST-001", 100])
+    behavioural = workbook.create_sheet("Behavioural")
+    behavioural.append(["scenario_id", "average_utilization"])
+    behavioural.append(["TEST-001", 0.75])
+    behavioural.append(["TEST-001", 0.80])
+    buffer = BytesIO()
+    workbook.save(buffer)
+
+    with pytest.raises(ExcelScenarioError, match="multiple rows"):
+        load_excel_scenarios(buffer.getvalue())
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("generational_transition", "maybe", "Invalid boolean"),
+        ("relationship_years", "2.5", "Invalid integer"),
+        ("revenue", "abc", "Invalid numeric"),
+        ("ews_score_class", "PURPLE", "Invalid ews_score_class"),
+    ],
+)
+def test_invalid_typed_values_are_rejected(
+    field: str, value: str, message: str
+) -> None:
+    workbook = openpyxl.Workbook()
+    credit = workbook.active
+    credit.title = "Credit_Position"
+    credit.append(["scenario_id", field])
+    credit.append(["TEST-001", value])
+
+    if field in {"generational_transition", "relationship_years"}:
+        sheet = workbook.create_sheet("Customer_Profile")
+        sheet.append(["scenario_id", field])
+        sheet.append(["TEST-001", value])
+
+    buffer = BytesIO()
+    workbook.save(buffer)
+
+    with pytest.raises(ExcelScenarioError, match=message):
+        load_excel_scenarios(buffer.getvalue())
+
+
+def test_blank_scenario_id_is_rejected() -> None:
+    workbook = openpyxl.Workbook()
+    credit = workbook.active
+    credit.title = "Credit_Position"
+    credit.append(["scenario_id", "revenue"])
+    credit.append([None, 100])
+    buffer = BytesIO()
+    workbook.save(buffer)
+
+    with pytest.raises(ExcelScenarioError, match="blank scenario_id"):
+        load_excel_scenarios(buffer.getvalue())
+
+
+def test_blank_risk_grade_change_is_normalized_to_none() -> None:
+    workbook = openpyxl.Workbook()
+    credit = workbook.active
+    credit.title = "Credit_Position"
+    credit.append(["scenario_id", "revenue"])
+    credit.append(["TEST-001", 100])
+    profile = workbook.create_sheet("Customer_Profile")
+    profile.append(["scenario_id", "risk_grade_change"])
+    profile.append(["TEST-001", "   "])
+    buffer = BytesIO()
+    workbook.save(buffer)
+
+    scenarios = load_excel_scenarios(buffer.getvalue())
+
+    assert scenarios["TEST-001"][1] is not None
+    assert scenarios["TEST-001"][1].risk_grade_change is None
