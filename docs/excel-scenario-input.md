@@ -53,11 +53,42 @@ The EWS class accepts:
 
 ### Behavioural
 
-The sheet contains the fields of `BehaviouralData`.
+The sheet contains the fields of `BehaviouralData`:
+
+| Field | Meaning |
+|---|---|
+| `average_utilization` | Average utilisation of available credit facilities |
+| `overdraft_days` | Number of days with overdraft usage |
+| `payment_delay_days` | Payment-delay indicator expressed in days |
+| `exposure_growth` | Exposure growth rate |
+
+The reference workbook keeps these inputs deliberately neutral across the three demonstration scenarios:
+
+| scenario_id | average_utilization | overdraft_days | payment_delay_days | exposure_growth |
+|---|---:|---:|---:|---:|
+| DEMO-NORMAL | 0.50 | 2 | 5 | 0.05 |
+| DEMO-ATTENTION | 0.50 | 2 | 5 | 0.05 |
+| DEMO-CRITICAL | 0.50 | 2 | 5 | 0.05 |
+
+This is intentional: the scenarios isolate differences in the financial assessment rather than introduce additional behavioural triggers.
 
 ### Debt_Sustainability
 
 The sheet contains the fields of `DebtSustainabilityData`.
+
+## Reference demo scenarios
+
+The workbook `examples/excel/demo_scenarios.xlsx` contains three end-to-end synthetic cases:
+
+| Scenario | Intended behaviour |
+|---|---|
+| `DEMO-NORMAL` | baseline case without significant financial deterioration |
+| `DEMO-ATTENTION` | isolated MEDIUM financial deterioration |
+| `DEMO-CRITICAL` | multiple HIGH financial deterioration indicators |
+
+The workbook also contains a `README` sheet documenting the workbook contract and scenario purpose. Its formatting (tables, filters, frozen headers, widths and number formats) is presentation-only and does not affect ingestion.
+
+Customer Profile and Behavioural inputs are intentionally stable across the scenarios. Financial inputs are varied to make the deterministic assessment outcomes easy to inspect.
 
 ## Validation
 
@@ -69,6 +100,7 @@ The loader validates:
 - scenario identifiers that do not exist in `Credit_Position`;
 - unsupported columns;
 - numeric and integer values;
+- conversion of Excel numeric cells to the numeric Python types expected by the domain models;
 - boolean values;
 - EWS score classes;
 - regulatory risk-grade categories.
