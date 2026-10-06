@@ -36,7 +36,6 @@ The [glossary](glossary.md) is useful whenever a technical or credit-risk term i
 | [`reporting.md`](reporting.md) | How deterministic assessment evidence becomes a human-readable report |
 | [`customer-profile.md`](customer-profile.md) | Customer Profile fields, rule/context separation and executive materiality |
 | [`application-workflow.md`](application-workflow.md) | Current Streamlit input, reporting modes, execution and results presentation |
-| [`customer-profile.md`](customer-profile.md) | Current Customer Profile input fields, deterministic rules and executive materiality selection |
 | [`validation.md`](validation.md) | What the system validates and how correctness is tested |
 | [`security-data-handling.md`](security-data-handling.md) | How input integrity, credentials, data minimisation and AI boundaries are handled |
 | [`architecture-decisions.md`](architecture-decisions.md) | Important architectural decisions and the reasons behind them |
@@ -169,6 +168,36 @@ For example, the active rule catalogue is defined by the valid configuration cat
 
 This is why the documentation intentionally avoids duplicating volatile details such as the complete current rule inventory, exact rule counts, individual thresholds, provider choices or coverage percentages.
 
+## Customer Profile documentation boundary
+
+Customer Profile is documented separately because it contains both **deterministic rule evidence** and broader **contextual information**.
+
+The current implementation exposes the full structured profile through `CustomerProfileAnalysis`, while `CustomerProfileMaterialityPolicy` selects a smaller contextual subset for Executive Narrative reporting. Fields already represented by deterministic Customer Profile rules are excluded from that contextual subset.
+
+This means the documentation distinguishes:
+
+- rule-backed facts, which remain `RuleResult` evidence;
+- contextual fields, which provide analyst information without automatically becoming rules;
+- material contextual fields, selected deterministically before reporting;
+- narrative, which can only verbalise the supplied evidence and context.
+
+The current Customer Profile implementation and field-level materiality contract are documented in [`customer-profile.md`](customer-profile.md).
+
+## Current application boundary
+
+The Streamlit application under `app/` is a presentation and orchestration layer. The current input screen exposes the complete synthetic demonstration case, while workflow construction is handled under `app/workflow/`.
+
+The Results UI consumes the structured workflow result and presents:
+
+- executive assessment and summary information;
+- reporting provenance;
+- final and macro-area statuses;
+- filterable deterministic rule evidence;
+- individual rule details;
+- Executive Narrative.
+
+The UI does not recalculate rule thresholds, severity, section status or final assessment. See [`application-workflow.md`](application-workflow.md) for the current user-visible workflow.
+
 ## Extending the system
 
 Adding a new rule is an end-to-end change, not simply a new line in a YAML file:
@@ -237,5 +266,7 @@ Before changing documentation, verify that:
 - obsolete components are not described as current architecture;
 - deterministic assessment remains clearly separated from AI reporting;
 - `NOT_EVALUABLE` is not described as equivalent to a normal result;
+- Customer Profile rule evidence is not confused with contextual profile information;
+- Executive Summary materiality is described as deterministic pre-selection, not an LLM decision;
 - links point to maintained documents;
 - volatile inventories and configuration values are not unnecessarily copied into Markdown.
