@@ -3,6 +3,10 @@ from dataclasses import dataclass, field
 from src.models.ews_score import EwsScoreClass
 
 
+# Regulatory risk-grade vocabulary used by the Customer Profile context.
+REGULATORY_RISK_GRADES = ("Bonis", "Past Due", "Unlikely to Pay", "Bad Loan")
+
+
 @dataclass(frozen=True)
 class CustomerProfileData:
     """Descriptive, risk-context and relevant-event inputs for customer presentation."""
@@ -29,11 +33,11 @@ class CustomerProfileData:
 
     # Statistical predictiveness
     ews_score_class: EwsScoreClass | None = None
-    ews_score_notching: int | None = None
+    ews_score_notching: str | None = None
     ews_score_variation: float | None = None
     active_ewis: list[str] = field(default_factory=list)
     rating: str | None = None
-    rating_increments: list[str] = field(default_factory=list)
+    rating_notching: str | None = None
     rating_influential_factors: list[str] = field(default_factory=list)
     rating_elementary_modules: list[str] = field(default_factory=list)
     pd: float | None = None
