@@ -8,3 +8,4 @@ pandas
 PyYAML==6.0.2
 types-PyYAML==6.0.12.20250915
 ollama==0.6.2
+openpyxl>=3.1,<4
