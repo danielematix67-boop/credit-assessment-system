@@ -205,7 +205,7 @@ class TestReportPromptBuilder:
         assert "The supplied Analysis findings are the sole factual source." in prompt
         assert "Do not calculate, infer, round, convert or derive new indicators." in prompt
         assert "Return ONLY the final executive narrative" in prompt
-        assert "Return exactly four paragraphs" in prompt
+        assert "Return exactly four labeled sections" in prompt
         assert "No deterministic anomalies are present for this area." in prompt
 
     def test_build_returns_none_when_no_findings(self) -> None:
