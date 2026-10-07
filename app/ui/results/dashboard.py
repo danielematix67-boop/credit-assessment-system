@@ -19,7 +19,7 @@ from app.ui.results.rule_detail import render_rule_indicator_detail
 
 
 def _section_indicators(section: Any) -> list[str]:
-    """Return display-only key indicators from deterministic section evidence."""
+    """Return all triggered key indicators from deterministic section evidence."""
     evidence = list(getattr(section, "evidence", []) or [])
     triggered = [
         rule_indicator(rule_result)
@@ -27,13 +27,13 @@ def _section_indicators(section: Any) -> list[str]:
         if rule_status(rule_result) == "TRIGGERED"
     ]
     if triggered:
-        return triggered[:4]
+        return triggered
     ranked = sorted(
         evidence,
         key=lambda rule_result: severity_rank(rule_severity(rule_result)),
         reverse=True,
     )
-    return [rule_indicator(rule_result) for rule_result in ranked[:4]]
+    return [rule_indicator(rule_result) for rule_result in ranked]
 
 
 def _render_area_cards(result: Any) -> None:
