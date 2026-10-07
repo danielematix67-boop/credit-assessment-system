@@ -78,7 +78,7 @@ The sheet contains the fields of `DebtSustainabilityData`.
 
 ## Reference demo scenarios
 
-The workbook `examples/excel/demo_scenarios.xlsx` contains three end-to-end synthetic cases:
+The reference workbook `examples/excel/demo_scenarios.xlsx` contains the end-to-end synthetic demonstration case(s) used by the application:
 
 | Scenario | Intended behaviour |
 |---|---|
@@ -111,9 +111,9 @@ Validation errors are shown in the Streamlit interface before the assessment can
 
 ## Streamlit workflow
 
-Select **Excel Upload** as the data source, upload an `.xlsx` workbook, select one of the loaded scenarios, review the mapped inputs, and run the assessment.
+Upload an `.xlsx` workbook, select one of the loaded scenarios, review the mapped inputs, and run the assessment. Excel Upload is the only application data source.
 
-The uploaded scenario follows the same assessment workflow as the native demo scenario. The Excel layer does not evaluate rules or alter thresholds/statuses.
+The selected workbook scenario follows the assessment workflow directly. The Excel layer does not evaluate rules or alter thresholds/statuses.
 
 ## Design boundary
 
