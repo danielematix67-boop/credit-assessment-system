@@ -155,11 +155,11 @@ The narrative must:
 - distinguish risk from unavailable evidence;
 - avoid unsupported factual claims;
 - never generate or overwrite the structured assessment status;
-- preserve the four-area structure in both deterministic and LLM-generated reports.
+- preserve the four-area structure in both deterministic and LLM-generated reports.\n- contain exactly one prose paragraph for each area.\n- keep the authoritative assessment-area order: Customer Profile, Financial Analysis, Behavioural Analysis, Debt Sustainability.
 
 If the set of assessment domains changes, the narrative orchestration must derive its input from the workflow/domain contract rather than introducing rule-specific prompt branches.
 
-## Grounding
+## LLM provider normalization\n\nLLM output is treated as untrusted text before it becomes part of the Executive Narrative. The reporting generator normalizes common provider-specific formatting before structural validation. In particular, Ollama/Qwen responses may contain internal `<think>...</think>` blocks or Markdown/numbered section headings; reasoning blocks are removed and supported heading variants are normalized to the canonical four-area structure. The prompt also requests explicit parser-friendly section markers. A response that still fails the structural contract is rejected and the deterministic reporting fallback is used.\n\nThis normalization changes presentation only. It does not allow the model to alter deterministic status, severity, findings or materiality.\n\n## Grounding
 
 Generated narrative is treated as untrusted output. Grounding validation protects deterministic facts, particularly material indicator values and findings.
 
