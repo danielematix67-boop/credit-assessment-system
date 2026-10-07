@@ -101,7 +101,7 @@ def test_deterministic_report_generator_preserves_analysis_data(generator):
 
 
 @pytest.mark.parametrize("status", list(AssessmentStatus))
-def test_deterministic_report_generator_generates_summary_for_each_status(
+def test_deterministic_report_generator_generates_all_sections_for_each_status(
     generator,
     status,
 ):
@@ -111,7 +111,12 @@ def test_deterministic_report_generator_generates_summary_for_each_status(
     assert report.assessment_status == status
     assert report.findings_by_category == []
     assert report.limitations == []
-    assert report.executive_summary == f"Assessment Status: {status.value.capitalize()}"
+
+    for area in generator._ASSESSMENT_AREA_ORDER:
+        assert f"### {area}" in report.executive_summary
+        assert generator._NO_ANOMALY_TEXT in report.executive_summary
+
+    assert report.executive_summary.count("### ") == 4
 
 
 def test_deterministic_report_generator_status_is_authoritative_and_separate(generator):
@@ -122,7 +127,14 @@ def test_deterministic_report_generator_status_is_authoritative_and_separate(gen
     report = generator.generate(analysis)
     assert report.executive_summary == (
         "Assessment Status: Critical\n\n"
-        "EBITDA is negative at €-120,000."
+        "### Customer Profile\n\n"
+        "No anomalies were identified by the configured deterministic assessment rules in this area.\n\n"
+        "### Financial Analysis\n\n"
+        "No anomalies were identified by the configured deterministic assessment rules in this area.\n\n"
+        "### Behavioural Analysis\n\n"
+        "No anomalies were identified by the configured deterministic assessment rules in this area.\n\n"
+        "### Debt Sustainability\n\n"
+        "No anomalies were identified by the configured deterministic assessment rules in this area."
     )
     assert report.executive_summary.count("Assessment Status:") == 1
 
@@ -273,12 +285,10 @@ def test_deterministic_fallback_keeps_all_findings_in_category_paragraphs(genera
         key_findings=findings,
     )
     report = generator.generate(analysis)
-    assert report.executive_summary == (
-        "Assessment Status: Critical\n\n"
-        "Revenue growth declined to -20.0%.\n\n"
-        "EBITDA is negative at €-120,000. Interest coverage ratio is -0.2x.\n\n"
-        "NFP to EBITDA stands at 7.0x."
-    )
+    assert "Revenue growth declined to -20.0%." in report.executive_summary
+    assert "EBITDA is negative at €-120,000. Interest coverage ratio is -0.2x." in report.executive_summary
+    assert "NFP to EBITDA stands at 7.0x." in report.executive_summary
+    assert report.executive_summary.count("### ") == 4
 
 
 def test_deterministic_fallback_fixed_assessment_area_headings_follow_canonical_order(
