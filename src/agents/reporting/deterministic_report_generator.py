@@ -72,15 +72,17 @@ class DeterministicReportGenerator(ReportGenerator):
                 if cls._is_triggered(finding)
             ]
 
-            sentences = [
-                finding.text.rstrip(".") + "."
-                for finding in triggered
-            ]
-
             if area.casefold() == "customer profile" and profile_text:
-                sentences.append(profile_text)
-
-            paragraph = " ".join(sentences).strip()
+                # Customer-profile context is already consolidated into a
+                # risk-oriented narrative; avoid repeating the same fields
+                # through individual Customer Profile rule findings.
+                paragraph = profile_text
+            else:
+                sentences = [
+                    finding.text.rstrip(".") + "."
+                    for finding in triggered
+                ]
+                paragraph = " ".join(sentences).strip()
             if not paragraph:
                 paragraph = cls._NO_ANOMALY_TEXT
 
