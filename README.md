@@ -156,10 +156,7 @@ Missing evidence is therefore not silently interpreted as a normal result.
 
 ## 📥 Input sources
 
-The Streamlit application supports two input sources:
-
-- **Demo Scenario** — the built-in synthetic demonstration case.
-- **Excel Upload** — an `.xlsx` workbook containing one or more structured assessment scenarios.
+The Streamlit application uses **Excel Upload as its sole data source**. The `.xlsx` workbook contains one or more structured assessment scenarios and is the single source of synthetic demonstration data.
 
 For Excel input, `Credit_Position` is mandatory. `Customer_Profile`, `Behavioural` and `Debt_Sustainability` are optional domain sheets. Each domain sheet uses a shared `scenario_id` to identify the same case across domains.
 
