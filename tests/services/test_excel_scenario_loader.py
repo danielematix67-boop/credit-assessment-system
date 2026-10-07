@@ -159,7 +159,7 @@ def test_unknown_scenario_id_in_optional_sheet_is_rejected() -> None:
     credit.title = "Financial Analysis"
     credit.append(["scenario_id", "revenue"])
     credit.append(["TEST-001", 100])
-    behavioural = workbook.create_sheet("Behavioural")
+    behavioural = workbook.create_sheet("Behavioural Analysis")
     behavioural.append(["scenario_id", "average_utilization"])
     behavioural.append(["TEST-999", 0.75])
     buffer = BytesIO()
