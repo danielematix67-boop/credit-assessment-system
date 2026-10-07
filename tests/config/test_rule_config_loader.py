@@ -52,6 +52,7 @@ def test_financial_configuration_contains_input_fields(loader):
         "R005": ("interest_expense", "ebitda"),
         "R006": ("change_in_finished_goods_inventory", "ebitda"),
         "R007": ("ebitda", "interest_expense"),
+        "R008": ("contribution_margin", "net_operating_margin"),
     }
 
 
