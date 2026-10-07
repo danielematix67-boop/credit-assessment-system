@@ -77,7 +77,7 @@ streamlit run app/streamlit_app.py
 
 The browser interface is the presentation layer. It should display results produced by the assessment workflow rather than implement credit logic itself.
 
-The current interface uses **Excel Upload as the sole input source**. Upload an `.xlsx` workbook containing a mandatory `Credit_Position` sheet and, optionally, `Customer_Profile`, `Behavioural` and `Debt_Sustainability`. When multiple scenarios are present, select the required `scenario_id`, review the mapped domain inputs, choose a reporting mode in the sidebar and run the assessment. The application does not expose a built-in demo-scenario selector in the input screen. See [`excel-scenario-input.md`](excel-scenario-input.md) and [`application-workflow.md`](application-workflow.md) for the workbook contract and current UI flow.
+The current interface uses **Excel Upload as the sole input source**. Upload an `.xlsx` workbook containing a mandatory `Financial Analysis` sheet and, optionally, `Customer Profile`, `Behavioural` and `Debt Sustainability`. When multiple scenarios are present, select the required `scenario_id`, review the mapped domain inputs, choose a reporting mode in the sidebar and run the assessment. The application does not expose a built-in demo-scenario selector in the input screen. See [`excel-scenario-input.md`](excel-scenario-input.md) and [`application-workflow.md`](application-workflow.md) for the workbook contract and current UI flow.
 
 A hosted demonstration may also be available at:
 
