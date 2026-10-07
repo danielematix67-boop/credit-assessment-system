@@ -83,37 +83,23 @@ class LLMReportGenerator(ReportGenerator):
         analysis: AssessmentAnalysis,
         narrative: str,
     ) -> str:
-        findings = analysis.rule_evidence or analysis.key_findings
-        categories = cls._ordered_assessment_areas(findings)
-        if not categories:
-            return narrative
         paragraphs = [
             part.strip() for part in narrative.split("\n\n") if part.strip()
         ]
-        if len(paragraphs) != len(categories):
+        if len(paragraphs) != len(cls._ASSESSMENT_AREA_ORDER):
             raise ValueError(
-                "LLM narrative must contain exactly one paragraph per represented "
+                "LLM narrative must contain exactly one paragraph for each "
                 "assessment area."
             )
+
         return "\n\n".join(
             f"**{category}**\n\n{paragraph}"
-            for category, paragraph in zip(categories, paragraphs, strict=True)
+            for category, paragraph in zip(
+                cls._ASSESSMENT_AREA_ORDER,
+                paragraphs,
+                strict=True,
+            )
         )
-
-    @classmethod
-    def _ordered_assessment_areas(
-        cls,
-        findings: list[AnalysisFinding],
-    ) -> list[str]:
-        represented = {
-            (finding.assessment_area or finding.category).casefold()
-            for finding in findings
-        }
-        return [
-            area
-            for area in cls._ASSESSMENT_AREA_ORDER
-            if area.casefold() in represented
-        ]
 
     @classmethod
     def _extract_indicator_values(
