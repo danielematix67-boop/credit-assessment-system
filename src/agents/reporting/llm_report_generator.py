@@ -35,10 +35,10 @@ class LLMReportGenerator(ReportGenerator):
         "Debt Sustainability",
     )
     _ASSESSMENT_AREA_HEADING_PATTERN = re.compile(
-        r"^\s*(?:#{1,6}\s*)?(?:\d+[.)]\s*)?"
+        r"^\\s*(?:#{1,6}\\s*)?(?:\\*\\*)?(?:\\d+[.)]\\s*)?"
         r"(Customer Profile|Financial Analysis|Behavioural Analysis|Debt Sustainability)"
-        r"\s*:?[\s-]*(.*)$",
-        re.IGNORECASE | re.MULTILINE,
+        r"(?:\\*\\*)?\\s*:?[ \\t]*(?:[-–—][ \\t]*)?(.*)\\s*$",
+        re.IGNORECASE,
     )
 
     def __init__(
@@ -81,7 +81,7 @@ class LLMReportGenerator(ReportGenerator):
             str(analysis.assessment_status),
         )
         sections = cls._format_assessment_area_sections(analysis, narrative)
-        return f"Assessment Status: {str(status_value).capitalize()}\n\n{sections}"
+        return f"Assessment Status: {str(status_value).capitalize()}\\n\\n{sections}"
 
     @classmethod
     def _format_assessment_area_sections(
@@ -96,8 +96,8 @@ class LLMReportGenerator(ReportGenerator):
                 "assessment area."
             )
 
-        return "\n\n".join(
-            f"**{category}**\n\n{paragraph}"
+        return "\\n\\n".join(
+            f"**{category}**\\n\\n{paragraph}"
             for category, paragraph in zip(
                 cls._ASSESSMENT_AREA_ORDER,
                 paragraphs,
@@ -110,36 +110,56 @@ class LLMReportGenerator(ReportGenerator):
         cls,
         narrative: str,
     ) -> list[str] | None:
-        """Normalize Ollama/LLM section formatting into four paragraphs."""
-        matches = list(cls._ASSESSMENT_AREA_HEADING_PATTERN.finditer(narrative))
-        if matches:
-            if len(matches) != len(cls._ASSESSMENT_AREA_ORDER):
+        """Normalize common LLM section formats into four paragraphs."""
+        expected = [area.casefold() for area in cls._ASSESSMENT_AREA_ORDER]
+        lines = narrative.splitlines()
+
+        heading_matches: list[tuple[int, str, str]] = []
+        for index, line in enumerate(lines):
+            match = cls._ASSESSMENT_AREA_HEADING_PATTERN.fullmatch(line)
+            if match:
+                heading_matches.append(
+                    (index, match.group(1).casefold(), match.group(2).strip())
+                )
+
+        if heading_matches:
+            if len(heading_matches) != len(expected):
                 return None
 
-            expected = [area.casefold() for area in cls._ASSESSMENT_AREA_ORDER]
-            found = [match.group(1).casefold() for match in matches]
+            found = [area for _, area, _ in heading_matches]
             if found != expected or len(set(found)) != len(found):
                 return None
 
             paragraphs: list[str] = []
-            for index, match in enumerate(matches):
-                inline_content = match.group(2).strip()
-                start = match.end()
-                end = matches[index + 1].start() if index + 1 < len(matches) else len(narrative)
-                body = narrative[start:end].strip()
+            for position, (line_index, _, inline_content) in enumerate(
+                heading_matches
+            ):
+                end_line = (
+                    heading_matches[position + 1][0]
+                    if position + 1 < len(heading_matches)
+                    else len(lines)
+                )
+                body_parts = [
+                    line.strip()
+                    for line in lines[line_index + 1 : end_line]
+                    if line.strip()
+                ]
                 paragraph = " ".join(
-                    part for part in (inline_content, body) if part
+                    part for part in [inline_content, *body_parts] if part
                 ).strip()
-                paragraph = re.sub(r"\n+", " ", paragraph).strip()
+                paragraph = re.sub(r"\\s+", " ", paragraph)
                 if not paragraph:
                     return None
                 paragraphs.append(paragraph)
+
             return paragraphs
 
         paragraphs = [
-            part.strip() for part in narrative.split("\n\n") if part.strip()
+            re.sub(r"\\s+", " ", part.strip())
+            for part in narrative.split("\\n\\n")
+            if part.strip()
         ]
-        if len(paragraphs) == len(cls._ASSESSMENT_AREA_ORDER):
+        if len(paragraphs) == len(expected):
             return paragraphs
         return None
 
