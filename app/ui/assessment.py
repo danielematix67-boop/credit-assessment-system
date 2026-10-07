@@ -1,6 +1,5 @@
 import streamlit as st
 
-from app.demo_scenarios import build_demo_case_data
 from app.workflow.assessment_workflow_factory import create_workflow
 from app.workflow.runner import run_assessment
 from src.models.position import CreditPosition
@@ -58,36 +57,25 @@ def execute_assessment(
 
     with st.spinner(spinner_message):
         try:
-            if scenario_name:
-                (
-                    customer_profile_data,
-                    behavioural_data,
-                    debt_sustainability_data,
-                ) = build_demo_case_data(scenario_name)
-                result = run_assessment(
-                    workflow,
-                    position,
-                    behavioural_data=behavioural_data,
-                    debt_sustainability_data=debt_sustainability_data,
-                    customer_profile_data=customer_profile_data,
-                )
-            else:
-                result = run_assessment(
-                    workflow,
-                    position,
-                    behavioural_data=st.session_state.get("assessment_behavioural_data"),
-                    debt_sustainability_data=st.session_state.get(
-                        "assessment_debt_sustainability_data"
-                    ),
-                    customer_profile_data=st.session_state.get(
-                        "assessment_customer_profile_data"
-                    ),
-                )
+            result = run_assessment(
+                workflow,
+                position,
+                behavioural_data=st.session_state.get(
+                    "assessment_behavioural_data"
+                ),
+                debt_sustainability_data=st.session_state.get(
+                    "assessment_debt_sustainability_data"
+                ),
+                customer_profile_data=st.session_state.get(
+                    "assessment_customer_profile_data"
+                ),
+            )
 
         except Exception as error:
             st.error("Assessment execution failed.")
             st.exception(error)
             st.stop()
+
 
     return result
 
