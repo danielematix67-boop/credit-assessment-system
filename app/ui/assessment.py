@@ -94,5 +94,4 @@ def store_assessment_result(
     st.session_state["assessment_input_mode"] = input_mode
     st.session_state["assessment_reporting_mode"] = reporting_mode
 
-    if input_mode == "Demo Scenario":
-        st.session_state["assessment_scenario"] = scenario_name
+    st.session_state["assessment_scenario"] = scenario_name
