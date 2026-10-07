@@ -72,7 +72,7 @@ def _render_excel_upload() -> tuple[
         type=["xlsx"],
         help=(
             "The workbook must contain a Financial Analysis sheet. Customer Profile, "
-            "Behavioural and Debt Sustainability are optional."
+            "Behavioural Analysis and Debt Sustainability are optional."
         ),
     )
     if uploaded_file is None:
