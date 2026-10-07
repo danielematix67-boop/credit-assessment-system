@@ -13,7 +13,7 @@ from src.models.position import CreditPosition
 SHEET_MODELS = {
     "Financial Analysis": CreditPosition,
     "Customer Profile": CustomerProfileData,
-    "Behavioural": BehaviouralData,
+    "Behavioural Analysis": BehaviouralData,
     "Debt Sustainability": DebtSustainabilityData,
 }
 
@@ -124,8 +124,8 @@ def load_excel_scenarios(file: BinaryIO | bytes) -> dict[str, tuple[
             else None
         )
         behavioural = (
-            _build_model(BehaviouralData, frames["Behavioural"], scenario_id)
-            if "Behavioural" in frames
+            _build_model(BehaviouralData, frames["Behavioural Analysis"], scenario_id)
+            if "Behavioural Analysis" in frames
             else None
         )
         debt_sustainability = (
