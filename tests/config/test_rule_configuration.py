@@ -16,6 +16,7 @@ EXPECTED_RULE_IDS = {
     "R005",
     "R006",
     "R007",
+    "R008",
     "B001",
     "B002",
     "B003",
@@ -38,6 +39,7 @@ def test_default_rule_configuration_uses_core_rule_engine_catalog() -> None:
         "R005",
         "R006",
         "R007",
+        "R008",
     }
 
 
