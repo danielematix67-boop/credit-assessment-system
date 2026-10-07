@@ -34,6 +34,12 @@ class LLMReportGenerator(ReportGenerator):
         "Behavioural Analysis",
         "Debt Sustainability",
     )
+    _ASSESSMENT_AREA_HEADING_PATTERN = re.compile(
+        r"^\s*(?:#{1,6}\s*)?(?:\d+[.)]\s*)?"
+        r"(Customer Profile|Financial Analysis|Behavioural Analysis|Debt Sustainability)"
+        r"\s*:?[\s-]*(.*)$",
+        re.IGNORECASE | re.MULTILINE,
+    )
 
     def __init__(
         self,
@@ -83,10 +89,8 @@ class LLMReportGenerator(ReportGenerator):
         analysis: AssessmentAnalysis,
         narrative: str,
     ) -> str:
-        paragraphs = [
-            part.strip() for part in narrative.split("\n\n") if part.strip()
-        ]
-        if len(paragraphs) != len(cls._ASSESSMENT_AREA_ORDER):
+        paragraphs = cls._extract_assessment_area_paragraphs(narrative)
+        if paragraphs is None:
             raise ValueError(
                 "LLM narrative must contain exactly one paragraph for each "
                 "assessment area."
@@ -100,6 +104,44 @@ class LLMReportGenerator(ReportGenerator):
                 strict=True,
             )
         )
+
+    @classmethod
+    def _extract_assessment_area_paragraphs(
+        cls,
+        narrative: str,
+    ) -> list[str] | None:
+        """Normalize Ollama/LLM section formatting into four paragraphs."""
+        matches = list(cls._ASSESSMENT_AREA_HEADING_PATTERN.finditer(narrative))
+        if matches:
+            if len(matches) != len(cls._ASSESSMENT_AREA_ORDER):
+                return None
+
+            expected = [area.casefold() for area in cls._ASSESSMENT_AREA_ORDER]
+            found = [match.group(1).casefold() for match in matches]
+            if found != expected or len(set(found)) != len(found):
+                return None
+
+            paragraphs: list[str] = []
+            for index, match in enumerate(matches):
+                inline_content = match.group(2).strip()
+                start = match.end()
+                end = matches[index + 1].start() if index + 1 < len(matches) else len(narrative)
+                body = narrative[start:end].strip()
+                paragraph = " ".join(
+                    part for part in (inline_content, body) if part
+                ).strip()
+                paragraph = re.sub(r"\n+", " ", paragraph).strip()
+                if not paragraph:
+                    return None
+                paragraphs.append(paragraph)
+            return paragraphs
+
+        paragraphs = [
+            part.strip() for part in narrative.split("\n\n") if part.strip()
+        ]
+        if len(paragraphs) == len(cls._ASSESSMENT_AREA_ORDER):
+            return paragraphs
+        return None
 
     @classmethod
     def _extract_indicator_values(
