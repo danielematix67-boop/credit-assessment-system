@@ -13,6 +13,11 @@ class DeterministicReportGenerator(ReportGenerator):
         "Debt Sustainability",
     )
 
+    _NO_ANOMALY_TEXT = (
+        "No anomalies were identified by the configured deterministic "
+        "assessment rules in this area."
+    )
+
     def generate(
         self,
         analysis: AssessmentAnalysis,
@@ -34,19 +39,14 @@ class DeterministicReportGenerator(ReportGenerator):
         cls,
         analysis: AssessmentAnalysis,
     ) -> str:
-        """Build the fallback narrative using the authoritative assessment areas."""
+        """Build the fallback narrative using all authoritative assessment areas."""
         status = f"Assessment Status: {analysis.assessment_status.value.capitalize()}"
-        findings = analysis.key_findings
-        if not findings and analysis.material_customer_profile is None:
-            return status
 
+        evidence = analysis.rule_evidence or analysis.key_findings
         grouped: dict[str, list[AnalysisFinding]] = {}
-        for finding in findings:
-            area = finding.assessment_area
-            if area is None:
-                grouped.setdefault(finding.category, []).append(finding)
-            else:
-                grouped.setdefault(area, []).append(finding)
+        for finding in evidence:
+            area = finding.assessment_area or finding.category
+            grouped.setdefault(area, []).append(finding)
 
         profile_text = ""
         if analysis.material_customer_profile is not None:
@@ -57,46 +57,62 @@ class DeterministicReportGenerator(ReportGenerator):
             )
 
         paragraphs: list[tuple[str, str]] = []
-        ordered_categories = cls._ordered_categories(grouped)
-        for category in ordered_categories:
-            category_findings = grouped[category]
+        canonical = {area.casefold() for area in cls._ASSESSMENT_AREA_ORDER}
+
+        for area in cls._ASSESSMENT_AREA_ORDER:
+            area_findings = [
+                finding
+                for category, items in grouped.items()
+                if category.casefold() == area.casefold()
+                for finding in items
+            ]
             triggered = [
                 finding
-                for finding in category_findings
+                for finding in area_findings
                 if cls._is_triggered(finding)
             ]
-            sentences: list[str] = [
-                finding.text.rstrip(".") + "." for finding in triggered
+
+            sentences = [
+                finding.text.rstrip(".") + "."
+                for finding in triggered
             ]
 
-            if category.casefold() == "customer profile" and profile_text:
+            if area.casefold() == "customer profile" and profile_text:
                 sentences.append(profile_text)
 
-            if sentences:
-                paragraphs.append((category, " ".join(sentences)))
+            paragraph = " ".join(sentences).strip()
+            if not paragraph:
+                paragraph = cls._NO_ANOMALY_TEXT
 
-        if profile_text and "Customer Profile".casefold() not in {
-            category.casefold() for category in ordered_categories
-        }:
-            paragraphs.append(("Customer Profile", profile_text))
+            paragraphs.append((area, paragraph))
+
+        for category, findings in grouped.items():
+            if category.casefold() in canonical:
+                continue
+            triggered = [
+                finding
+                for finding in findings
+                if cls._is_triggered(finding)
+            ]
+            if triggered:
+                paragraphs.append(
+                    (
+                        category,
+                        " ".join(
+                            finding.text.rstrip(".") + "."
+                            for finding in triggered
+                        ),
+                    )
+                )
 
         narrative_parts: list[str] = []
-        canonical = {area.casefold() for area in cls._ASSESSMENT_AREA_ORDER}
-        paragraphs.sort(
-            key=lambda item: (
-                cls._ASSESSMENT_AREA_ORDER.index(item[0])
-                if item[0] in cls._ASSESSMENT_AREA_ORDER
-                else len(cls._ASSESSMENT_AREA_ORDER)
-            )
-        )
         for category, paragraph in paragraphs:
             if category.casefold() in canonical:
                 narrative_parts.append(f"### {category}\n\n{paragraph}")
             else:
                 narrative_parts.append(paragraph)
 
-        narrative = "\n\n".join(narrative_parts)
-        return f"{status}\n\n{narrative}"
+        return f"{status}\n\n{'\n\n'.join(narrative_parts)}"
 
     @classmethod
     def _ordered_categories(
