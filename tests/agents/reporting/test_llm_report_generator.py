@@ -287,8 +287,10 @@ def test_indicator_grounding_accepts_all_present_values() -> None:
         make_finding("NFP to EBITDA stands at 7.0x.", category="Leverage"),
     ]
     response = (
-        "Customer profile is unremarkable.\n\nRevenue growth declined to 20.0% and 
-        "NFP to EBITDA stands at 7.0x."
+        "Customer profile is unremarkable.\n\n"
+        "Revenue growth declined to 20.0% and NFP to EBITDA stands at 7.0x.\n\n"
+        "No behavioural anomalies were identified.\n\n"
+        "No debt sustainability anomalies were identified."
     )
     generator, _ = make_generator(
         response=response,
