@@ -71,8 +71,8 @@ def _render_excel_upload() -> tuple[
         "Upload Excel scenario workbook",
         type=["xlsx"],
         help=(
-            "The workbook must contain a Credit_Position sheet. Customer_Profile, "
-            "Behavioural and Debt_Sustainability are optional."
+            "The workbook must contain a Financial Analysis sheet. Customer Profile, "
+            "Behavioural and Debt Sustainability are optional."
         ),
     )
     if uploaded_file is None:
