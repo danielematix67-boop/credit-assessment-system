@@ -160,7 +160,7 @@ The Streamlit application uses **Excel Upload as its sole data source**. The `.x
 
 For Excel input, `Credit_Position` is mandatory. `Customer_Profile`, `Behavioural` and `Debt_Sustainability` are optional domain sheets. Each domain sheet uses a shared `scenario_id` to identify the same case across domains.
 
-The repository includes the reference workbook `examples/excel/demo_scenarios.xlsx`. It contains a documentation-only `README` sheet plus the four loader-compatible domain sheets. The three synthetic scenarios are:
+The repository documentation describes the Excel contract and the application is designed around a workbook containing a documentation-only `README` sheet plus the four loader-compatible domain sheets. The workbook is the sole application input source; scenario content can evolve without changing the assessment architecture.
 
 | Scenario | Purpose |
 |---|---|
@@ -434,7 +434,7 @@ ADRs
 - [x] Deterministic reporting fallback
 - [x] Execution provenance
 - [x] Automated quality checks
-- [x] Excel scenario input
+- [x] Excel scenario input\n- [x] Four-area executive narrative contract\n- [x] Ollama-compatible structured narrative parsing
 - [ ] Persistent assessment history
 - [ ] Rule-set versioning and auditability
 - [ ] Expanded monitoring/evaluation metrics
