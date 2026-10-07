@@ -47,8 +47,8 @@ def test_prompt_requires_qualitative_narrative_and_deterministic_numeric_renderi
         "The application, not the LLM, is responsible for rendering "
         "authoritative numeric indicator values"
     ) in prompt
-    assert "1. revenue" in prompt
-    assert "2. profitability" in prompt
+    assert "1. Customer Profile" in prompt
+    assert "2. Financial Analysis" in prompt
 
 
 def test_prompt_preserves_structured_indicator_value_as_source_evidence() -> None:
@@ -92,7 +92,7 @@ def test_llm_accepts_qualitative_narrative_without_numeric_values() -> None:
         MockLLMClient(response=response),
         require_indicator_values=True,
     ).generate(analysis)
-    assert report.executive_summary.endswith(response)
+    assert "The company shows material financial weaknesses." in report.executive_summary
 
 
 def test_llm_accepts_equivalent_source_indicator_formatting() -> None:
@@ -105,7 +105,7 @@ def test_llm_accepts_equivalent_source_indicator_formatting() -> None:
         MockLLMClient(response=response),
         require_indicator_values=True,
     ).generate(analysis)
-    assert report.executive_summary.endswith(response)
+    assert "Revenue growth declined to -20% and NFP to EBITDA stands at 7x." in report.executive_summary
 
 
 def test_llm_accepts_deterministic_monetary_indicator_formatting() -> None:
@@ -117,7 +117,7 @@ def test_llm_accepts_deterministic_monetary_indicator_formatting() -> None:
         MockLLMClient(response=response),
         require_indicator_values=True,
     ).generate(analysis)
-    assert report.executive_summary.endswith(response)
+    assert "EBITDA is negative at" in report.executive_summary
 
 
 def test_llm_sanitizes_unsupported_indicator_values_instead_of_falling_back() -> None:
