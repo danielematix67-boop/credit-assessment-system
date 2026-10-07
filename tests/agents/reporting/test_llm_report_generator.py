@@ -314,7 +314,12 @@ def test_indicator_grounding_accepts_all_present_values() -> None:
 
     report = generator.generate(make_analysis(key_findings=findings))
 
-    assert (\n        "Revenue growth declined to 20.0% and NFP to EBITDA stands at 7.0x."\n        in report.executive_summary\n    )
+    assert (
+        "Revenue growth declined to 20.0% and NFP to EBITDA stands at 7.0x."
+        in report.executive_summary
+    )
+
+
 
 def test_standard_llm_does_not_force_indicator_grounding() -> None:
     analysis = make_analysis(
