@@ -116,6 +116,43 @@ def test_llm_status_cannot_override_deterministic_status() -> None:
     assert report.executive_summary.count("Assessment Status:") == 1
 
 
+def test_llm_accepts_section_headings_from_ollama() -> None:
+    response = (
+        "## Customer Profile\n"
+        "The customer profile is stable.\n\n"
+        "## Financial Analysis\n"
+        "Revenue remains under pressure.\n\n"
+        "## Behavioural Analysis\n"
+        "No behavioural anomalies were identified.\n\n"
+        "## Debt Sustainability\n"
+        "Debt sustainability remains adequate."
+    )
+    generator, _ = make_generator(response=response)
+
+    report = generator.generate(make_analysis())
+
+    assert report.executive_summary == (
+        "Assessment Status: Attention\n\n"
+        "**Customer Profile**\n\nThe customer profile is stable.\n\n"
+        "**Financial Analysis**\n\nRevenue remains under pressure.\n\n"
+        "**Behavioural Analysis**\n\nNo behavioural anomalies were identified.\n\n"
+        "**Debt Sustainability**\n\nDebt sustainability remains adequate."
+    )
+
+
+def test_llm_rejects_incomplete_or_misordered_section_headings() -> None:
+    response = (
+        "Customer Profile: Profile.\n\n"
+        "Financial Analysis: Financial.\n\n"
+        "Debt Sustainability: Debt.\n\n"
+        "Behavioural Analysis: Behavioural."
+    )
+    generator, _ = make_generator(response=response)
+
+    with pytest.raises(ValueError, match="exactly one paragraph for each"):
+        generator.generate(make_analysis())
+
+
 def test_fixed_assessment_area_labels_follow_deterministic_order() -> None:
     findings = [
         make_finding("Customer context.", category="Customer Profile"),
