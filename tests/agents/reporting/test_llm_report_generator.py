@@ -237,7 +237,12 @@ def test_indicator_grounding_accepts_equivalent_numeric_formatting() -> None:
         make_finding("Revenue growth declined to -20.0%.", category="Revenue"),
         make_finding("NFP to EBITDA stands at 7.0x.", category="Leverage"),
     ]
-    response = (\n        "Customer profile is unremarkable.\n\n"\n        "Revenue growth declined to -20% and NFP to EBITDA stands at 7x.\n\n"\n        "No behavioural anomalies were identified.\n\n"\n        "No debt sustainability anomalies were identified."\n    )
+    response = (
+        "Customer profile is unremarkable.\n\n"
+        "Revenue growth declined to -20% and NFP to EBITDA stands at 7x.\n\n"
+        "No behavioural anomalies were identified.\n\n"
+        "No debt sustainability anomalies were identified."
+    )
     generator, _ = make_generator(
         response=response,
         require_indicator_values=True,
@@ -245,14 +250,22 @@ def test_indicator_grounding_accepts_equivalent_numeric_formatting() -> None:
 
     report = generator.generate(make_analysis(key_findings=findings))
 
-    assert (\n        "Revenue growth declined to -20% and NFP to EBITDA stands at 7x."\n        in report.executive_summary\n    )
+    assert (
+        "Revenue growth declined to -20% and NFP to EBITDA stands at 7x."
+        in report.executive_summary
+    )
 
 
 def test_indicator_grounding_accepts_decimal_comma_formatting() -> None:
     findings = [
         make_finding("Revenue growth declined to -20.0%.", category="Revenue"),
     ]
-    response = (\n        "Customer profile is unremarkable.\n\n"\n        "Revenue growth declined to -20,0%.\n\n"\n        "No behavioural anomalies were identified.\n\n"\n        "No debt sustainability anomalies were identified."\n    )
+    response = (
+        "Customer profile is unremarkable.\n\n"
+        "Revenue growth declined to -20,0%.\n\n"
+        "No behavioural anomalies were identified.\n\n"
+        "No debt sustainability anomalies were identified."
+    )
     generator, _ = make_generator(
         response=response,
         require_indicator_values=True,
@@ -262,15 +275,17 @@ def test_indicator_grounding_accepts_decimal_comma_formatting() -> None:
 
     assert "Revenue growth declined to -20,0%." in report.executive_summary
 
-
 def test_indicator_grounding_sanitizes_unsupported_numeric_values() -> None:
     findings = [
         make_finding("Revenue growth declined to -20.0%.", category="Revenue"),
     ]
     generator, _ = make_generator(
         response=(
-            "Customer profile is unremarkable.\n\nRevenue growth declined to -35%. "
-            "The overall financial profile remains under pressure.\n\nNo behavioural anomalies were identified.\n\nNo debt sustainability anomalies were identified."
+            "Customer profile is unremarkable.\n\n"
+            "Revenue growth declined to -35%. "
+            "The overall financial profile remains under pressure.\n\n"
+            "No behavioural anomalies were identified.\n\n"
+            "No debt sustainability anomalies were identified."
         ),
         require_indicator_values=True,
     )
@@ -300,7 +315,6 @@ def test_indicator_grounding_accepts_all_present_values() -> None:
     report = generator.generate(make_analysis(key_findings=findings))
 
     assert (\n        "Revenue growth declined to 20.0% and NFP to EBITDA stands at 7.0x."\n        in report.executive_summary\n    )
-
 
 def test_standard_llm_does_not_force_indicator_grounding() -> None:
     analysis = make_analysis(
