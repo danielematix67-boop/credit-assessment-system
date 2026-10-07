@@ -137,13 +137,25 @@ Provider configuration belongs to the application environment. Documentation sho
 
 The application controls the structure and ordering of the Executive Narrative. The model supplies prose only.
 
+Every Executive Narrative contains the same four assessment areas, in the following fixed order:
+
+1. Customer Profile
+2. Financial Analysis
+3. Behavioural Analysis
+4. Debt Sustainability
+
+A section is never omitted because no rule is triggered. When an area contains no triggered deterministic evidence, the report explicitly states that no anomalies were identified by the configured assessment rules in that area. This makes a NORMAL assessment readable as a complete review rather than as a report containing only the areas with exceptions.
+
+Customer Profile is special because material contextual information may be present even when no Customer Profile rule is triggered. In that case, the section contains the deterministic contextual profile followed by any triggered findings; if neither is available, it uses the standard no-anomaly statement.
+
 The narrative must:
 
 - use the supplied deterministic evidence;
 - preserve material numerical information;
 - distinguish risk from unavailable evidence;
 - avoid unsupported factual claims;
-- never generate or overwrite the structured assessment status.
+- never generate or overwrite the structured assessment status;
+- preserve the four-area structure in both deterministic and LLM-generated reports.
 
 If the set of assessment domains changes, the narrative orchestration must derive its input from the workflow/domain contract rather than introducing rule-specific prompt branches.
 
@@ -194,6 +206,7 @@ Reporting tests should verify:
 3. high-severity triggered evidence is correctly represented as a risk factor;
 4. prompts receive the complete evidence set required by the contract, including the selected material customer-profile context;
 5. generated prose cannot alter deterministic status or customer-profile materiality selection;
+6. every report contains all four required assessment areas, including for NORMAL scenarios with no triggered rules;
 6. unsupported or altered material evidence is rejected by grounding;
 7. provider and grounding failures activate deterministic fallback;
 8. fallback failure is surfaced rather than silently hidden.
