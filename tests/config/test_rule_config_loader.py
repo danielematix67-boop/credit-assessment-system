@@ -37,6 +37,7 @@ def test_financial_configuration_contains_all_rules(loader):
         "R005",
         "R006",
         "R007",
+        "R008",
     ]
 
 
@@ -65,6 +66,7 @@ def test_financial_configuration_contains_single_input_fields(loader):
         "R005": "",
         "R006": "",
         "R007": "",
+        "R008": "",
     }
 
 
