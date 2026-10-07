@@ -25,7 +25,7 @@ The Excel path is scenario-driven. The loader reads a workbook containing a mand
 
 Each domain sheet uses `scenario_id` to identify the case. The UI loads all valid scenarios, presents a scenario selector, previews the mapped domain inputs and then executes only the selected scenario.
 
-The repository includes `examples/excel/demo_scenarios.xlsx` as a reference workbook with three synthetic scenarios:
+The repository documentation and reference Excel artifact define the scenario-driven input contract. Scenario content may evolve independently from the application code:
 
 - `DEMO-NORMAL`
 - `DEMO-ATTENTION`
@@ -41,7 +41,7 @@ The sidebar exposes the reporting mode used to construct the workflow:
 
 - **Deterministic** — uses `DeterministicReportGenerator` without an LLM.
 - **Gemini + Fallback** — uses the Gemini-backed `LLMReportGenerator` and the deterministic generator as fallback. A Gemini API key is required.
-- **Ollama + Fallback** — uses the Ollama-backed `LLMReportGenerator` and deterministic fallback. Host and model configuration are required.
+- **Ollama + Fallback** — uses the Ollama-backed `LLMReportGenerator` and deterministic fallback. Host and model configuration are required. The LLM output is normalized and validated against the four-area narrative contract; common Ollama formatting such as `<think>` blocks, Markdown headings and numbered headings is handled before structural validation.
 
 These modes affect report generation only. All modes execute the deterministic assessment first. Provider configuration is read through `app/config.py` and may be supplied through deployment/environment settings.
 
@@ -60,7 +60,7 @@ The workflow in `src/agents/workflow/assessment_workflow.py` performs these step
 
 The reporting stage is downstream of assessment and analysis. A provider or report-generation issue does not recalculate the deterministic case result.
 
-## Results presentation
+## Executive Narrative contract\n\nThe application always renders four assessment areas in this order: Customer Profile, Financial Analysis, Behavioural Analysis and Debt Sustainability. LLM-backed reporting is required to return one prose paragraph for each area. The Ollama prompt uses explicit section markers (`Customer Profile:`, `Financial Analysis:`, `Behavioural Analysis:`, `Debt Sustainability:`) to make the contract robust for local models. If the provider output remains structurally invalid or otherwise fails reporting validation, the deterministic fallback is used without changing the underlying assessment.\n\n## Results presentation
 
 The results package under `app/ui/results/` renders the stored workflow result. The current experience includes:
 
