@@ -140,6 +140,45 @@ def test_llm_accepts_section_headings_from_ollama() -> None:
     )
 
 
+def test_llm_strips_ollama_think_block() -> None:
+    response = (
+        "<think>We need to structure the response in four areas.</think>\n"
+        "Customer Profile\n"
+        "The customer profile is stable.\n\n"
+        "Financial Analysis\n"
+        "Revenue remains under pressure.\n\n"
+        "Behavioural Analysis\n"
+        "No behavioural anomalies were identified.\n\n"
+        "Debt Sustainability\n"
+        "Debt sustainability remains adequate."
+    )
+    generator, _ = make_generator(response=response)
+
+    report = generator.generate(make_analysis())
+
+    assert "<think>" not in report.executive_summary
+    assert "The customer profile is stable." in report.executive_summary
+
+
+def test_llm_accepts_numbered_markdown_section_headings() -> None:
+    response = (
+        "### 1. Customer Profile\n"
+        "The customer profile is stable.\n\n"
+        "### 2. Financial Analysis\n"
+        "Revenue remains under pressure.\n\n"
+        "### 3. Behavioural Analysis\n"
+        "No behavioural anomalies were identified.\n\n"
+        "### 4. Debt Sustainability\n"
+        "Debt sustainability remains adequate."
+    )
+    generator, _ = make_generator(response=response)
+
+    report = generator.generate(make_analysis())
+
+    assert "**Customer Profile**" in report.executive_summary
+    assert "**Debt Sustainability**" in report.executive_summary
+
+
 def test_llm_rejects_incomplete_or_misordered_section_headings() -> None:
     response = (
         "Customer Profile: Profile.\n\n"
