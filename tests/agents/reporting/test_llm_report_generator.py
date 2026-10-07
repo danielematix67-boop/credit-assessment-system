@@ -213,7 +213,9 @@ def test_indicator_grounding_allows_omitted_source_indicators() -> None:
             category="Profitability",
         ),
         make_finding(
-            "NFP to EBITDA stands at 7.0x.\n\nNo behavioural anomalies were identified.\n\nNo debt sustainability anomalies were identified.",
+            "NFP to EBITDA stands at 7.0x.\n\n"
+            "No behavioural anomalies were identified.\n\n"
+            "No debt sustainability anomalies were identified.",
             category="Leverage",
         ),
     ]
@@ -221,7 +223,12 @@ def test_indicator_grounding_allows_omitted_source_indicators() -> None:
         status=AssessmentStatus.CRITICAL,
         key_findings=findings,
     )
-    response = "Customer profile is unremarkable.\n\nEBITDA is negative and leverage remains elevated.\n\nNo behavioural anomalies were identified.\n\nNo debt sustainability anomalies were identified."
+    response = (
+        "Customer profile is unremarkable.\n\n"
+        "EBITDA is negative and leverage remains elevated.\n\n"
+        "No behavioural anomalies were identified.\n\n"
+        "No debt sustainability anomalies were identified."
+    )
     generator, _ = make_generator(
         response=response,
         require_indicator_values=True,
