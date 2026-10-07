@@ -229,7 +229,12 @@ def test_reporting_fallback_reuses_exact_same_analysis_without_reassessment() ->
 def test_llm_primary_and_deterministic_fallback_preserve_decision_content() -> None:
     class SuccessfulLLMClient:
         def generate(self, prompt: str) -> str:
-            return "The financial position requires management attention."
+            return (
+                "Customer profile information is stable.\n\n"
+                "The financial position requires management attention.\n\n"
+                "No behavioural anomalies were identified.\n\n"
+                "No debt sustainability anomalies were identified."
+            )
 
     class FailingLLMClient:
         def generate(self, prompt: str) -> str:
