@@ -120,7 +120,7 @@ class LLMReportGenerator(ReportGenerator):
             match = cls._ASSESSMENT_AREA_HEADING_PATTERN.fullmatch(line)
             if match:
                 heading_matches.append(
-                    (index, match.group(1).casefold(), match.group(2).strip())
+                    (index, match.group(1).casefold(), (match.group(2) or "").strip())
                 )
 
         if heading_matches:
@@ -278,14 +278,24 @@ class LLMReportGenerator(ReportGenerator):
 
     @classmethod
     def _remove_category_prefixes(cls, narrative: str) -> str:
-        paragraphs = [
-            part.strip() for part in narrative.split("\n\n") if part.strip()
-        ]
-        return "\n\n".join(
-            cls._ASSESSMENT_AREA_PREFIX_PATTERN.sub(
+        lines = narrative.splitlines()
+        normalized_lines: list[str] = []
+
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                normalized_lines.append("")
+                continue
+
+            if cls._ASSESSMENT_AREA_HEADING_PATTERN.fullmatch(stripped):
+                normalized_lines.append(stripped)
+                continue
+
+            cleaned = cls._ASSESSMENT_AREA_PREFIX_PATTERN.sub(
                 "",
-                cls._CATEGORY_PREFIX_PATTERN.sub("", paragraph, count=1).strip(),
+                cls._CATEGORY_PREFIX_PATTERN.sub("", stripped, count=1),
                 count=1,
             ).strip()
-            for paragraph in paragraphs
-        )
+            normalized_lines.append(cleaned)
+
+        return "\n".join(normalized_lines).strip()
