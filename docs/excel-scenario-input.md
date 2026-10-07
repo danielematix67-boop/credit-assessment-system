@@ -15,11 +15,11 @@ A workbook must contain:
 - `Behavioural` — optional
 - `Debt_Sustainability` — optional
 
-Each sheet contains one row per scenario and a mandatory `scenario_id` column. The same `scenario_id` identifies the case across sheets.
+Each sheet contains one row per scenario and a mandatory `scenario_id` column. The same `scenario_id` identifies the case across sheets. A scenario may omit an optional domain sheet; in that case the corresponding domain object is unavailable and the assessment records the domain as `NOT_EVALUABLE` rather than treating missing data as a normal observation.
 
 ### Credit_Position
 
-The `Credit_Position` sheet contains the fields of `CreditPosition`, except `position_id`. The loader derives `position_id` from `scenario_id`.
+The `Credit_Position` sheet contains the fields of `CreditPosition`, except `position_id`. The loader derives `position_id` directly from `scenario_id`, so the workbook does not need a separate position identifier.
 
 Examples:
 
