@@ -207,9 +207,9 @@ Reporting tests should verify:
 4. prompts receive the complete evidence set required by the contract, including the selected material customer-profile context;
 5. generated prose cannot alter deterministic status or customer-profile materiality selection;
 6. every report contains all four required assessment areas, including for NORMAL scenarios with no triggered rules;
-6. unsupported or altered material evidence is rejected by grounding;
-7. provider and grounding failures activate deterministic fallback;
-8. fallback failure is surfaced rather than silently hidden.
+7. unsupported or altered material evidence is rejected by grounding;
+8. provider and grounding failures activate deterministic fallback;
+9. fallback failure is surfaced rather than silently hidden.
 
 ## Maintenance principles
 
