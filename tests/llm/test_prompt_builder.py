@@ -212,4 +212,4 @@ class TestReportPromptBuilder:
         prompt = ReportPromptBuilder().build(make_analysis())
 
         assert "ANALYSIS FINDINGS:" in prompt
-        assert "None." in prompt
+        assert "No deterministic anomalies are present for this area." in prompt
