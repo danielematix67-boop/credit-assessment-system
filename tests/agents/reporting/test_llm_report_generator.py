@@ -68,31 +68,46 @@ def test_implements_report_generator_contract() -> None:
     assert isinstance(generator, ReportGenerator)
 
 
-def test_generates_llm_narrative_with_deterministic_status() -> None:
+def test_generates_fixed_four_section_llm_narrative_with_deterministic_status() -> None:
     analysis = make_analysis(status=AssessmentStatus.CRITICAL)
-    narrative = "The company presents material financial weaknesses."
+    narrative = (
+        "No customer anomalies were identified.\n\n"
+        "The company presents material financial weaknesses.\n\n"
+        "No behavioural anomalies were identified.\n\n"
+        "No debt sustainability anomalies were identified."
+    )
     generator, _ = make_generator(response=narrative)
 
     report = generator.generate(analysis)
 
     assert report.assessment_status == AssessmentStatus.CRITICAL
     assert report.executive_summary == (
-        "Assessment Status: Critical\n\n" + narrative
+        "Assessment Status: Critical\n\n"
+        "**Customer Profile**\n\nNo customer anomalies were identified.\n\n"
+        "**Financial Analysis**\n\nThe company presents material financial weaknesses.\n\n"
+        "**Behavioural Analysis**\n\nNo behavioural anomalies were identified.\n\n"
+        "**Debt Sustainability**\n\nNo debt sustainability anomalies were identified."
     )
 
 
 def test_llm_status_cannot_override_deterministic_status() -> None:
     analysis = make_analysis(status=AssessmentStatus.CRITICAL)
-    response = "Assessment status: NORMAL.\nThe company presents material weaknesses."
+    response = (
+        "Assessment status: NORMAL.\n"
+        "The company presents material weaknesses.\n\n"
+        "No behavioural anomalies were identified.\n\n"
+        "No debt sustainability anomalies were identified.\n\n"
+        "No customer anomalies were identified."
+    )
     generator, _ = make_generator(response=response)
 
     report = generator.generate(analysis)
 
     assert report.assessment_status == AssessmentStatus.CRITICAL
-    assert report.executive_summary == (
-        "Assessment Status: Critical\n\n"
-        "The company presents material weaknesses."
-    )
+    assert "**Customer Profile**" in report.executive_summary
+    assert "**Financial Analysis**" in report.executive_summary
+    assert "**Behavioural Analysis**" in report.executive_summary
+    assert "**Debt Sustainability**" in report.executive_summary
     assert report.executive_summary.count("Assessment Status:") == 1
 
 
@@ -150,9 +165,11 @@ def test_fixed_assessment_area_labels_reject_wrong_paragraph_count() -> None:
         make_finding("Customer context.", category="Customer Profile"),
         make_finding("Revenue declined.", category="Financial Analysis"),
     ]
-    generator, _ = make_generator(response="Only one paragraph.")
+    generator, _ = make_generator(
+        response="Paragraph one.\n\nParagraph two.\n\nParagraph three."
+    )
 
-    with pytest.raises(ValueError, match="exactly one paragraph per represented"):
+    with pytest.raises(ValueError, match="exactly one paragraph for each"):
         generator.generate(make_analysis(key_findings=findings))
 
 
