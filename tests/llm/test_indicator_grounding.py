@@ -164,7 +164,10 @@ def test_llm_status_is_deterministic_and_on_one_line() -> None:
     client = MockLLMClient(
         response=(
             "Assessment status: CRITICAL.\n"
-            "Revenue growth declined to -20.0%."
+            "Customer profile is unremarkable.\n\n"
+            "Revenue growth declined to -20.0%.\n\n"
+            "No behavioural anomalies were identified.\n\n"
+            "No debt sustainability anomalies were identified."
         ),
     )
     report = LLMReportGenerator(client).generate(analysis)
