@@ -24,6 +24,13 @@ class ReportPromptBuilder:
         "debt sustainability": 3,
     }
 
+    _CATEGORY_PRIORITY_ORDER = (
+        "Customer Profile",
+        "Financial Analysis",
+        "Behavioural Analysis",
+        "Debt Sustainability",
+    )
+
     def __init__(
         self,
         template: ReportPromptTemplate | None = None,
@@ -44,14 +51,12 @@ class ReportPromptBuilder:
         findings = analysis.rule_evidence or analysis.key_findings
         grouped_findings = self._group_findings(findings)
 
-        if analysis.material_customer_profile is not None and not any(
-            category.casefold() == "customer profile"
-            for category in grouped_findings
-        ):
-            grouped_findings = {
-                "Customer Profile": [],
-                **grouped_findings,
-            }
+        # Always expose the complete assessment structure to the LLM so that
+        # every executive report contains the same four macro-areas.
+        grouped_findings = {
+            area: grouped_findings.get(area, [])
+            for area in self._CATEGORY_PRIORITY_ORDER
+        }
         category_order = list(grouped_findings.keys())
 
         return self.template.render(
@@ -152,6 +157,15 @@ class ReportPromptBuilder:
                     if section_text:
                         lines.append(f"  {section_name}:")
                         lines.append(f"    {section_text}")
+
+            if not findings and not (
+                category.casefold() == "customer profile"
+                and customer_profile is not None
+                and any(text for _, text in customer_profile.sections())
+            ):
+                lines.append(
+                    "  No deterministic anomalies are present for this area."
+                )
 
             for finding in findings:
                 lines.append(cls._format_finding(finding))
