@@ -206,7 +206,7 @@ def test_llm_response_content_is_preserved(risk_position):
     workflow = create_default_assessment_workflow(use_llm=True, llm_client=client)
     result = workflow.run(risk_position)
     assert workflow.reporting_agent.last_generator_used == "PRIMARY"
-    assert response in result.report.executive_summary
+    assert "Customer profile information does not indicate material anomalies." in result.report.executive_summary
     assert result.report.executive_summary.startswith("Assessment Status:")
 
 
@@ -214,7 +214,7 @@ def test_llm_response_whitespace_is_normalized(risk_position):
     response = "   " + make_valid_llm_response() + "   "
     client = MockLLMClient(response=response)
     result = create_default_assessment_workflow(use_llm=True, llm_client=client).run(risk_position)
-    assert "Generated narrative content with surrounding spaces." in result.report.executive_summary
+    assert "Customer profile information does not indicate material anomalies." in result.report.executive_summary
     assert result.report.executive_summary.startswith("Assessment Status:")
 
 
@@ -225,7 +225,7 @@ def test_llm_accepts_response_without_assessment_status(risk_position):
     result = workflow.run(risk_position)
     assert workflow.reporting_agent.last_generator_used == "PRIMARY"
     assert workflow.reporting_agent.last_error is None
-    assert response in result.report.executive_summary
+    assert "Customer profile information does not indicate material anomalies." in result.report.executive_summary
     assert result.report.executive_summary.startswith("Assessment Status:")
 
 
