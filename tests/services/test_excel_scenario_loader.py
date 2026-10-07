@@ -11,8 +11,7 @@ from src.services.excel_scenario_loader import (
 
 
 def _workbook_bytes(
-    *,
-    include_customer_profile: bool = True,
+    *, include_customer_profile: bool = True,
     minimum_regulatory_risk_grade: str = "Past Due",
 ) -> bytes:
     workbook = openpyxl.Workbook()
@@ -175,7 +174,7 @@ def test_multiple_rows_for_same_scenario_in_optional_sheet_are_rejected() -> Non
     credit.title = "Financial Analysis"
     credit.append(["scenario_id", "revenue"])
     credit.append(["TEST-001", 100])
-    behavioural = workbook.create_sheet("Behavioural")
+    behavioural = workbook.create_sheet("Behavioural Analysis")
     behavioural.append(["scenario_id", "average_utilization"])
     behavioural.append(["TEST-001", 0.75])
     behavioural.append(["TEST-001", 0.80])
