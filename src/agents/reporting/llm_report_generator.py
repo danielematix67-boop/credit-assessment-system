@@ -35,9 +35,10 @@ class LLMReportGenerator(ReportGenerator):
         "Debt Sustainability",
     )
     _ASSESSMENT_AREA_HEADING_PATTERN = re.compile(
-        r"^\s*(?:#{1,6}\s*)?(?:\*\*)?(?:\d+[.)]\s*)?"
+        r"^\s*(?:(?:#{1,6}\s*)|(?:\d+[.)]\s+)|(?:\*\*))?"
         r"(Customer Profile|Financial Analysis|Behavioural Analysis|Debt Sustainability)"
-        r"(?:\*\*)?\s*:?[ \t]*(?:[-–—][ \t]*)?(.*)\s*$",
+        r"(?:\*\*)?"
+        r"(?:\s*:\s*(?:[-–—][ \t]*)?(.*)|[ \t]*)$",
         re.IGNORECASE,
     )
 
