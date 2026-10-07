@@ -10,16 +10,16 @@ This keeps the deterministic assessment engine independent from the data-ingesti
 
 A workbook must contain:
 
-- `Credit_Position` — required
-- `Customer_Profile` — optional
+- `Financial Analysis` — required
+- `Customer Profile` — optional
 - `Behavioural` — optional
-- `Debt_Sustainability` — optional
+- `Debt Sustainability` — optional
 
 Each sheet contains one row per scenario and a mandatory `scenario_id` column. The same `scenario_id` identifies the case across sheets. A scenario may omit an optional domain sheet; in that case the corresponding domain object is unavailable and the assessment records the domain as `NOT_EVALUABLE` rather than treating missing data as a normal observation.
 
-### Credit_Position
+### Financial Analysis
 
-The `Credit_Position` sheet contains the fields of `CreditPosition`, except `position_id`. The loader derives `position_id` directly from `scenario_id`, so the workbook does not need a separate position identifier.
+The `Financial Analysis` sheet contains the fields of `CreditPosition`, except `position_id`. The loader derives `position_id` directly from `scenario_id`, so the workbook does not need a separate position identifier.
 
 Examples:
 
@@ -29,7 +29,7 @@ Examples:
 
 Numeric values use the same representation as the Python domain model. For example, a 5% growth rate is entered as `0.05`.
 
-### Customer_Profile
+### Customer Profile
 
 The sheet contains the fields of `CustomerProfileData`.
 
@@ -72,7 +72,7 @@ The reference workbook keeps these inputs deliberately neutral across the three 
 
 This is intentional: the scenarios isolate differences in the financial assessment rather than introduce additional behavioural triggers.
 
-### Debt_Sustainability
+### Debt Sustainability
 
 The sheet contains the fields of `DebtSustainabilityData`.
 
@@ -97,7 +97,7 @@ The loader validates:
 - required workbook sheets;
 - presence of `scenario_id`;
 - duplicate scenario identifiers;
-- scenario identifiers that do not exist in `Credit_Position`;
+- scenario identifiers that do not exist in `Financial Analysis`;
 - unsupported columns;
 - numeric and integer values;
 - conversion of Excel numeric cells to the numeric Python types expected by the domain models;
