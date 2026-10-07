@@ -27,6 +27,7 @@ _BASE_VALUES: dict[str, Any] = {
     "operating_value_added": 3_500_000.0,
     "gross_operating_margin": 1_500_000.0,
     "net_operating_margin": 1_200_000.0,
+    "contribution_margin": 4_800_000.0,
     "ebitda": -200_000.0,
     "profit_loss": -350_000.0,
     "ebitda_margin": -0.10,
