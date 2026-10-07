@@ -35,9 +35,9 @@ class LLMReportGenerator(ReportGenerator):
         "Debt Sustainability",
     )
     _ASSESSMENT_AREA_HEADING_PATTERN = re.compile(
-        r"^\\s*(?:#{1,6}\\s*)?(?:\\*\\*)?(?:\\d+[.)]\\s*)?"
+        r"^\s*(?:#{1,6}\s*)?(?:\*\*)?(?:\d+[.)]\s*)?"
         r"(Customer Profile|Financial Analysis|Behavioural Analysis|Debt Sustainability)"
-        r"(?:\\*\\*)?\\s*:?[ \\t]*(?:[-–—][ \\t]*)?(.*)\\s*$",
+        r"(?:\*\*)?\s*:?[ \t]*(?:[-–—][ \t]*)?(.*)\s*$",
         re.IGNORECASE,
     )
 
@@ -81,7 +81,7 @@ class LLMReportGenerator(ReportGenerator):
             str(analysis.assessment_status),
         )
         sections = cls._format_assessment_area_sections(analysis, narrative)
-        return f"Assessment Status: {str(status_value).capitalize()}\\n\\n{sections}"
+        return f"Assessment Status: {str(status_value).capitalize()}\n\n{sections}"
 
     @classmethod
     def _format_assessment_area_sections(
@@ -96,8 +96,8 @@ class LLMReportGenerator(ReportGenerator):
                 "assessment area."
             )
 
-        return "\\n\\n".join(
-            f"**{category}**\\n\\n{paragraph}"
+        return "\n\n".join(
+            f"**{category}**\n\n{paragraph}"
             for category, paragraph in zip(
                 cls._ASSESSMENT_AREA_ORDER,
                 paragraphs,
@@ -147,7 +147,7 @@ class LLMReportGenerator(ReportGenerator):
                 paragraph = " ".join(
                     part for part in [inline_content, *body_parts] if part
                 ).strip()
-                paragraph = re.sub(r"\\s+", " ", paragraph)
+                paragraph = re.sub(r"\s+", " ", paragraph)
                 if not paragraph:
                     return None
                 paragraphs.append(paragraph)
@@ -155,8 +155,8 @@ class LLMReportGenerator(ReportGenerator):
             return paragraphs
 
         paragraphs = [
-            re.sub(r"\\s+", " ", part.strip())
-            for part in narrative.split("\\n\\n")
+            re.sub(r"\s+", " ", part.strip())
+            for part in narrative.split("\n\n")
             if part.strip()
         ]
         if len(paragraphs) == len(expected):
