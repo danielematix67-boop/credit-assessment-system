@@ -10,21 +10,14 @@ The application is a presentation and orchestration layer. It delegates assessme
 
 ## Current input experience
 
-The current Streamlit input source supports two modes:
+The Streamlit application uses **Excel Upload as the sole input source**. There is no built-in demo scenario in the Streamlit input interface.
 
-- **Demo Scenario** — a built-in synthetic complete case.
-- **Excel Upload** — a user-provided `.xlsx` workbook containing one or more structured scenarios.
-
-Both paths ultimately provide the same domain input objects:
+The uploaded `.xlsx` workbook provides the domain input objects:
 
 - Customer Profile
 - Financial Analysis
 - Behavioural Analysis
 - Debt Sustainability
-
-### Demo Scenario
-
-The built-in demo supplies one complete synthetic case. It is useful for quickly inspecting the end-to-end workflow without preparing an external file.
 
 ### Excel Upload
 
@@ -99,6 +92,6 @@ When changing the application experience:
 - keep Streamlit controls and rendering in `app/ui/`;
 - keep application workflow construction in `app/workflow/`;
 - pass structured domain inputs into the workflow rather than duplicating assessment calculations in the UI;
-- update synthetic demo data when the input contract changes;
+- update the reference Excel workbook when the input contract or demonstration data changes;
 - test both workflow behaviour and display behaviour where the change crosses those boundaries;
 - update this document when the user-visible input, reporting modes, execution sequence or results layout changes.
