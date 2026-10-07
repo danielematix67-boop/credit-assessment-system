@@ -42,7 +42,7 @@ def _workbook_bytes(
             ]
         )
 
-    behavioural = workbook.create_sheet("Behavioural")
+    behavioural = workbook.create_sheet("Behavioural Analysis")
     behavioural.append(["scenario_id", "average_utilization"])
     behavioural.append(["TEST-001", 0.75])
 
