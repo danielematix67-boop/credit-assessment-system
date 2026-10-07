@@ -3,12 +3,9 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from app.demo_scenarios import DEMO_SCENARIOS, build_demo_case_data, build_demo_position
 from app.ui.input import display_position_table
 from src.models.position import CreditPosition
 from src.services.excel_scenario_loader import ExcelScenarioError, load_excel_scenarios
-
-_DEMO_SCENARIO = "01 · Complete Credit Assessment"
 
 
 def render_credit_data_source() -> tuple[
@@ -17,91 +14,8 @@ def render_credit_data_source() -> tuple[
     str,
     str | None,
 ]:
-    """Render the selected credit-data source used by the application."""
-    source = st.radio(
-        "Data Source",
-        ["Demo Scenario", "Excel Upload"],
-        horizontal=True,
-        key="credit_data_source",
-    )
-
-    if source == "Excel Upload":
-        return _render_excel_upload()
-
-    return _render_demo_scenario()
-
-
-def _render_demo_scenario() -> tuple[
-    CreditPosition | None,
-    dict[str, Any] | None,
-    str,
-    str | None,
-]:
-    """Render the single complete synthetic case with a user-friendly data preview."""
-    for key in (
-        "manual_customer_profile_data",
-        "manual_behavioural_data",
-        "manual_debt_sustainability_data",
-    ):
-        st.session_state.pop(key, None)
-
-    scenario_name = _DEMO_SCENARIO
-    scenario = DEMO_SCENARIOS[scenario_name]
-
-    st.subheader("Credit Position")
-    st.markdown("**Complete Credit Assessment**")
-    st.caption(scenario["description"])
-    st.info(
-        "This single demo case contains data for all four assessment domains. "
-        "Review the synthetic inputs below before running the assessment."
-    )
-
-    try:
-        position = build_demo_position(scenario_name)
-        customer_profile, behavioural, debt_sustainability = build_demo_case_data(
-            scenario_name
-        )
-    except Exception as error:
-        st.error("Unable to construct the demo scenario.")
-        st.exception(error)
-        st.stop()
-
-    domain_columns = st.columns(4)
-    domain_labels = (
-        "Customer Profile",
-        "Financial Analysis",
-        "Behavioural Analysis",
-        "Debt Sustainability",
-    )
-    for column, label in zip(domain_columns, domain_labels):
-        with column:
-            st.metric(label, "Available")
-
-    with st.expander("Review complete input data", expanded=False):
-        tab_profile, tab_financial, tab_behavioural, tab_debt = st.tabs(
-            [
-                "Customer Profile",
-                "Financial Analysis",
-                "Behavioural Analysis",
-                "Debt Sustainability",
-            ]
-        )
-
-        with tab_profile:
-            _render_object_table(customer_profile)
-        with tab_financial:
-            display_position_table(position)
-        with tab_behavioural:
-            _render_object_table(behavioural)
-        with tab_debt:
-            _render_object_table(debt_sustainability)
-
-    st.caption(
-        "The values above are synthetic demonstration data. The deterministic Rule Engine "
-        "evaluates the complete case; the LLM layer does not alter rule outcomes."
-    )
-
-    return position, None, "Demo Scenario", scenario_name
+    """Render the Excel workbook as the sole application data source."""
+    return _render_excel_upload()
 
 
 def _render_object_table(data: Any) -> None:
@@ -139,13 +53,19 @@ def _render_excel_upload() -> tuple[
     str,
     str | None,
 ]:
-    """Render and validate scenarios loaded from an uploaded Excel workbook."""
+    """Render and validate scenarios loaded from the uploaded Excel workbook."""
     for key in (
         "assessment_customer_profile_data",
         "assessment_behavioural_data",
         "assessment_debt_sustainability_data",
     ):
         st.session_state.pop(key, None)
+
+    st.subheader("Credit Data Input")
+    st.caption(
+        "The Excel workbook is the single source of synthetic demonstration data. "
+        "No built-in demo scenario is maintained in the application."
+    )
 
     uploaded_file = st.file_uploader(
         "Upload Excel scenario workbook",
