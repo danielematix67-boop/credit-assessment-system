@@ -1,6 +1,9 @@
 from types import SimpleNamespace
 
-from app.ui.results.financial_analysis import build_indicator_analysis_frame
+from app.ui.results.financial_analysis import (
+    build_indicator_analysis_frame,
+    build_operating_leverage_frame,
+)
 
 
 def _rule(
@@ -9,6 +12,7 @@ def _rule(
     threshold: float | None,
     status: str,
     indicator: str,
+    severity: str = "MEDIUM",
 ) -> SimpleNamespace:
     return SimpleNamespace(
         rule_id=rule_id,
@@ -16,6 +20,7 @@ def _rule(
         threshold=threshold,
         status=status,
         indicator=indicator,
+        severity=severity,
     )
 
 
@@ -36,3 +41,32 @@ def test_indicator_analysis_frame_exposes_deterministic_evidence() -> None:
     assert frame.loc[0, "Value"] == -0.20
     assert frame.loc[0, "Threshold"] == -0.10
     assert frame.loc[0, "Status"] == "TRIGGERED"
+
+
+def test_operating_leverage_frame_exposes_r008_ratio() -> None:
+    section = SimpleNamespace(
+        evidence=[
+            _rule(
+                "R008",
+                4.0,
+                3.0,
+                "TRIGGERED",
+                "Contribution margin / EBIT",
+                "MEDIUM",
+            )
+        ]
+    )
+
+    frame = build_operating_leverage_frame(section)
+
+    assert list(frame.columns) == [
+        "Indicator",
+        "Ratio",
+        "Trigger threshold",
+        "Status",
+        "Severity",
+    ]
+    assert frame.loc[0, "Ratio"] == 4.0
+    assert frame.loc[0, "Trigger threshold"] == 3.0
+    assert frame.loc[0, "Status"] == "TRIGGERED"
+    assert frame.loc[0, "Severity"] == "MEDIUM"
