@@ -237,7 +237,7 @@ def test_deterministic_report_renders_structured_customer_profile(generator):
     assert "A previous restructuring is reported." in report.executive_summary
 
 
-def test_deterministic_fallback_merges_customer_profile_context_and_findings(
+def test_deterministic_fallback_prioritizes_customer_profile_context_over_duplicate_findings(
     generator,
 ):
     profile = CustomerProfileAnalysis(
@@ -262,7 +262,7 @@ def test_deterministic_fallback_merges_customer_profile_context_and_findings(
     report = generator.generate(analysis)
 
     assert report.executive_summary.count("### Customer Profile") == 1
-    assert "EWS Score class is LIGHT_RED." in report.executive_summary
+    assert "The EWS Score is LIGHT_RED." in report.executive_summary
     assert "The company operates in manufacturing." in report.executive_summary
 
 
