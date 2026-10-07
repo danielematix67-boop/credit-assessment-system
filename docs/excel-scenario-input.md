@@ -12,7 +12,7 @@ A workbook must contain:
 
 - `Financial Analysis` — required
 - `Customer Profile` — optional
-- `Behavioural` — optional
+- `Behavioural Analysis` — optional
 - `Debt Sustainability` — optional
 
 Each sheet contains one row per scenario and a mandatory `scenario_id` column. The same `scenario_id` identifies the case across sheets. A scenario may omit an optional domain sheet; in that case the corresponding domain object is unavailable and the assessment records the domain as `NOT_EVALUABLE` rather than treating missing data as a normal observation.
