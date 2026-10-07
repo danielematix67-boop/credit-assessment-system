@@ -35,6 +35,7 @@ class CreditPosition:
     operating_value_added: float | None = None
     gross_operating_margin: float | None = None
     net_operating_margin: float | None = None
+    contribution_margin: float | None = None
 
     # =========================
     # Profitability
