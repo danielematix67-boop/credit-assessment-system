@@ -224,7 +224,7 @@ The UI does not recalculate thresholds, severity, section status or final status
 
 ## UI and workflow boundaries
 
-The `app/` layer is separated into interface and orchestration responsibilities. `app/ui/` contains Streamlit presentation, input-source rendering, result views and components, while `app/workflow/` constructs and invokes the assessment workflow. The current input-source screen presents one complete synthetic demo case; helper functions for manual input remain in the code, but a full manual-entry experience is not currently exposed by that screen.
+The `app/` layer is separated into interface and orchestration responsibilities. `app/ui/` contains Streamlit presentation, input-source rendering, result views and components, while `app/workflow/` constructs and invokes the assessment workflow. The current input-source screen exposes **Excel Upload as the sole data source**: users upload a workbook, select one of its validated `scenario_id` values and review the mapped domain objects before execution. The repository's built-in `app/demo_scenarios.py` catalog is not used by the Streamlit input flow.
 
 The Results UI renders the latest workflow result stored in Streamlit session state. It includes an executive assessment header, reporting provenance, final and macro-area statuses, a filterable rule-evidence dashboard, individual rule details and the Executive Narrative. These are presentation views over structured workflow output; they do not recalculate business rules or final status.
 
