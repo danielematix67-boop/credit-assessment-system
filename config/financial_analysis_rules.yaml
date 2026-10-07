@@ -129,3 +129,25 @@ rules:
     comment_template: >-
       The interest coverage ratio is {value:.1f}x, indicating that EBITDA
       provides limited coverage of interest expense.
+
+  - rule_id: R008
+    rule_name: Operating leverage
+    indicator: Contribution margin / EBIT
+    category: operating_leverage
+    input_fields:
+      - contribution_margin
+      - net_operating_margin
+    calculation: ratio
+    trigger_operator: GT
+    threshold: 3.0
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 3.0
+        severity: MEDIUM
+      - threshold: 5.0
+        severity: HIGH
+    comment_template: >-
+      The operating leverage ratio stands at {value:.1f}x, indicating high
+      operating leverage and a relatively high fixed operating cost base.
+      This means that changes in revenue may have a magnified impact on EBIT.
