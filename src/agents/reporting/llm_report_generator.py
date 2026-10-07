@@ -34,8 +34,14 @@ class LLMReportGenerator(ReportGenerator):
         "Behavioural Analysis",
         "Debt Sustainability",
     )
+    _THINK_BLOCK_PATTERN = re.compile(
+        r"<think>.*?</think>",
+        re.IGNORECASE | re.DOTALL,
+    )
     _ASSESSMENT_AREA_HEADING_PATTERN = re.compile(
-        r"^\s*(?:(?:#{1,6}\s*)|(?:\d+[.)]\s+)|(?:\*\*))?"
+        r"^\s*(?:#{1,6}\s*)?"
+        r"(?:\*\*)?"
+        r"(?:\d+[.)]\s*)?"
         r"(Customer Profile|Financial Analysis|Behavioural Analysis|Debt Sustainability)"
         r"(?:\*\*)?"
         r"(?:\s*:\s*(?:[-–—][ \t]*)?(.*)|[ \t]*)$",
@@ -269,6 +275,10 @@ class LLMReportGenerator(ReportGenerator):
         if not response or not response.strip():
             raise ValueError("LLM returned an empty response")
         narrative = response.strip()
+        # Qwen/Ollama models may emit an internal reasoning block even when
+        # explicitly instructed not to. It is not part of the executive
+        # narrative and must never reach the structural parser.
+        narrative = cls._THINK_BLOCK_PATTERN.sub("", narrative).strip()
         narrative = cls._STATUS_PREFIX_PATTERN.sub("", narrative, count=1).strip()
         narrative = cls._NUMERIC_SPACING_PATTERN.sub(".", narrative)
         narrative = cls._remove_category_prefixes(narrative)
