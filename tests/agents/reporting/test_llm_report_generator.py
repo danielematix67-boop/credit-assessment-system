@@ -245,7 +245,7 @@ def test_indicator_grounding_accepts_equivalent_numeric_formatting() -> None:
 
     report = generator.generate(make_analysis(key_findings=findings))
 
-    assert response in report.executive_summary
+    assert "Revenue growth declined to -20% and NFP to EBITDA stands at 7x." in report.executive_summary
 
 
 def test_indicator_grounding_accepts_decimal_comma_formatting() -> None:
@@ -260,7 +260,7 @@ def test_indicator_grounding_accepts_decimal_comma_formatting() -> None:
 
     report = generator.generate(make_analysis(key_findings=findings))
 
-    assert response in report.executive_summary
+    assert "Revenue growth declined to -20,0%." in report.executive_summary
 
 
 def test_indicator_grounding_sanitizes_unsupported_numeric_values() -> None:
@@ -299,7 +299,7 @@ def test_indicator_grounding_accepts_all_present_values() -> None:
 
     report = generator.generate(make_analysis(key_findings=findings))
 
-    assert response in report.executive_summary
+    assert "Revenue growth declined to 20.0% and NFP to EBITDA stands at 7.0x." in report.executive_summary
 
 
 def test_standard_llm_does_not_force_indicator_grounding() -> None:
