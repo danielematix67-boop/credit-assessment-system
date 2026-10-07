@@ -11,10 +11,10 @@ from src.models.ews_score import EwsScoreClass
 from src.models.position import CreditPosition
 
 SHEET_MODELS = {
-    "Credit_Position": CreditPosition,
-    "Customer_Profile": CustomerProfileData,
+    "Financial Analysis": CreditPosition,
+    "Customer Profile": CustomerProfileData,
     "Behavioural": BehaviouralData,
-    "Debt_Sustainability": DebtSustainabilityData,
+    "Debt Sustainability": DebtSustainabilityData,
 }
 
 LIST_FIELDS = {
@@ -81,7 +81,7 @@ def load_excel_scenarios(file: BinaryIO | bytes) -> dict[str, tuple[
             "Unable to read the Excel workbook. Please upload a valid .xlsx file."
         ) from error
 
-    missing = {"Credit_Position"} - set(workbook.sheet_names)
+    missing = {"Financial Analysis"} - set(workbook.sheet_names)
     if missing:
         raise ExcelScenarioError(
             "Missing required sheet(s): " + ", ".join(sorted(missing)) + "."
@@ -94,10 +94,10 @@ def load_excel_scenarios(file: BinaryIO | bytes) -> dict[str, tuple[
         frame = pd.read_excel(workbook, sheet_name=sheet_name)
         frames[sheet_name] = _validate_frame(sheet_name, frame, model)
 
-    scenario_ids = frames["Credit_Position"]["scenario_id"].tolist()
+    scenario_ids = frames["Financial Analysis"]["scenario_id"].tolist()
     if len(set(scenario_ids)) != len(scenario_ids):
         raise ExcelScenarioError(
-            "Sheet 'Credit_Position' contains duplicate scenario_id values."
+            "Sheet 'Financial Analysis' contains duplicate scenario_id values."
         )
 
     for sheet_name, frame in frames.items():
@@ -114,13 +114,13 @@ def load_excel_scenarios(file: BinaryIO | bytes) -> dict[str, tuple[
     for scenario_id in scenario_ids:
         position = _build_model(
             CreditPosition,
-            frames["Credit_Position"],
+            frames["Financial Analysis"],
             scenario_id,
             inject_position_id=True,
         )
         customer_profile = (
-            _build_model(CustomerProfileData, frames["Customer_Profile"], scenario_id)
-            if "Customer_Profile" in frames
+            _build_model(CustomerProfileData, frames["Customer Profile"], scenario_id)
+            if "Customer Profile" in frames
             else None
         )
         behavioural = (
@@ -131,10 +131,10 @@ def load_excel_scenarios(file: BinaryIO | bytes) -> dict[str, tuple[
         debt_sustainability = (
             _build_model(
                 DebtSustainabilityData,
-                frames["Debt_Sustainability"],
+                frames["Debt Sustainability"],
                 scenario_id,
             )
-            if "Debt_Sustainability" in frames
+            if "Debt Sustainability" in frames
             else None
         )
         result[scenario_id] = (
@@ -163,7 +163,7 @@ def _validate_frame(
     allowed = {"scenario_id"} | {
         field.name
         for field in fields(model)
-        if not (sheet_name == "Credit_Position" and field.name == "position_id")
+        if not (sheet_name == "Financial Analysis" and field.name == "position_id")
     }
     unknown = set(frame.columns) - allowed
     if unknown:
