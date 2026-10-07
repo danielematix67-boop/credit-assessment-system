@@ -73,7 +73,9 @@ def test_llm_cannot_override_deterministic_final_status(assessment_service):
     client = MockLLMClient(
         response=(
             "Assessment status: CRITICAL.\n"
-            "The model claims a critical assessment despite the supplied evidence."
+            "The model claims a critical assessment despite the supplied evidence.\n\n"
+            "No behavioural anomalies were identified.\n\n"
+            "No debt sustainability anomalies were identified."
         )
     )
     workflow = build_workflow(
