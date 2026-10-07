@@ -17,12 +17,12 @@ def _workbook_bytes(
 ) -> bytes:
     workbook = openpyxl.Workbook()
     credit = workbook.active
-    credit.title = "Credit_Position"
+    credit.title = "Financial Analysis"
     credit.append(["scenario_id", "revenue", "ebitda", "revenue_growth"])
     credit.append(["TEST-001", 1000000, 100000, 0.05])
 
     if include_customer_profile:
-        profile = workbook.create_sheet("Customer_Profile")
+        profile = workbook.create_sheet("Customer Profile")
         profile.append(
             [
                 "scenario_id",
@@ -46,7 +46,7 @@ def _workbook_bytes(
     behavioural.append(["scenario_id", "average_utilization"])
     behavioural.append(["TEST-001", 0.75])
 
-    debt = workbook.create_sheet("Debt_Sustainability")
+    debt = workbook.create_sheet("Debt Sustainability")
     debt.append(["scenario_id", "debt_service", "cash_flow_available_for_debt_service"])
     debt.append(["TEST-001", 200000, 300000])
 
@@ -88,11 +88,11 @@ def test_invalid_regulatory_risk_grade_is_rejected() -> None:
 
 def test_required_credit_position_sheet_is_rejected_when_missing() -> None:
     workbook = openpyxl.Workbook()
-    workbook.active.title = "Customer_Profile"
+    workbook.active.title = "Customer Profile"
     buffer = BytesIO()
     workbook.save(buffer)
 
-    with pytest.raises(ExcelScenarioError, match="Credit_Position"):
+    with pytest.raises(ExcelScenarioError, match="Financial Analysis"):
         load_excel_scenarios(buffer.getvalue())
 
 
@@ -104,7 +104,7 @@ def test_invalid_workbook_is_rejected() -> None:
 def test_sheet_without_scenario_id_is_rejected() -> None:
     workbook = openpyxl.Workbook()
     credit = workbook.active
-    credit.title = "Credit_Position"
+    credit.title = "Financial Analysis"
     credit.append(["revenue"])
     credit.append([100])
     buffer = BytesIO()
@@ -117,7 +117,7 @@ def test_sheet_without_scenario_id_is_rejected() -> None:
 def test_empty_sheet_is_rejected() -> None:
     workbook = openpyxl.Workbook()
     credit = workbook.active
-    credit.title = "Credit_Position"
+    credit.title = "Financial Analysis"
     credit.append(["scenario_id", "revenue"])
     buffer = BytesIO()
     workbook.save(buffer)
@@ -129,7 +129,7 @@ def test_empty_sheet_is_rejected() -> None:
 def test_unsupported_column_is_rejected() -> None:
     workbook = openpyxl.Workbook()
     credit = workbook.active
-    credit.title = "Credit_Position"
+    credit.title = "Financial Analysis"
     credit.append(["scenario_id", "unsupported"])
     credit.append(["TEST-001", 1])
     buffer = BytesIO()
@@ -142,7 +142,7 @@ def test_unsupported_column_is_rejected() -> None:
 def test_duplicate_credit_scenario_id_is_rejected() -> None:
     workbook = openpyxl.Workbook()
     credit = workbook.active
-    credit.title = "Credit_Position"
+    credit.title = "Financial Analysis"
     credit.append(["scenario_id", "revenue"])
     credit.append(["TEST-001", 100])
     credit.append(["TEST-001", 200])
@@ -156,7 +156,7 @@ def test_duplicate_credit_scenario_id_is_rejected() -> None:
 def test_unknown_scenario_id_in_optional_sheet_is_rejected() -> None:
     workbook = openpyxl.Workbook()
     credit = workbook.active
-    credit.title = "Credit_Position"
+    credit.title = "Financial Analysis"
     credit.append(["scenario_id", "revenue"])
     credit.append(["TEST-001", 100])
     behavioural = workbook.create_sheet("Behavioural")
@@ -172,7 +172,7 @@ def test_unknown_scenario_id_in_optional_sheet_is_rejected() -> None:
 def test_multiple_rows_for_same_scenario_in_optional_sheet_are_rejected() -> None:
     workbook = openpyxl.Workbook()
     credit = workbook.active
-    credit.title = "Credit_Position"
+    credit.title = "Financial Analysis"
     credit.append(["scenario_id", "revenue"])
     credit.append(["TEST-001", 100])
     behavioural = workbook.create_sheet("Behavioural")
@@ -205,7 +205,7 @@ def test_invalid_typed_values_are_rejected(
 def test_blank_scenario_id_is_rejected() -> None:
     workbook = openpyxl.Workbook()
     credit = workbook.active
-    credit.title = "Credit_Position"
+    credit.title = "Financial Analysis"
     credit.append(["scenario_id", "revenue"])
     credit.append([None, 100])
     buffer = BytesIO()
@@ -218,10 +218,10 @@ def test_blank_scenario_id_is_rejected() -> None:
 def test_blank_risk_grade_change_is_normalized_to_none() -> None:
     workbook = openpyxl.Workbook()
     credit = workbook.active
-    credit.title = "Credit_Position"
+    credit.title = "Financial Analysis"
     credit.append(["scenario_id", "revenue"])
     credit.append(["TEST-001", 100])
-    profile = workbook.create_sheet("Customer_Profile")
+    profile = workbook.create_sheet("Customer Profile")
     profile.append(["scenario_id", "risk_grade_change"])
     profile.append(["TEST-001", "   "])
     buffer = BytesIO()
