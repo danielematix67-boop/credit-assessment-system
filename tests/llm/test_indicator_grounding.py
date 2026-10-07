@@ -67,6 +67,15 @@ def test_prompt_preserves_structured_indicator_value_as_source_evidence() -> Non
     assert "rule_id" not in prompt
 
 
+def four_section_response(financial_text: str) -> str:
+    return (
+        "Customer profile is unremarkable.\n\n"
+        f"{financial_text}\n\n"
+        "No behavioural anomalies were identified.\n\n"
+        "No debt sustainability anomalies were identified."
+    )
+
+
 def test_llm_accepts_qualitative_narrative_without_numeric_values() -> None:
     analysis = make_analysis(
         make_finding("Revenue growth declined to -20.0%.", category="revenue"),
@@ -75,7 +84,7 @@ def test_llm_accepts_qualitative_narrative_without_numeric_values() -> None:
             category="profitability",
         ),
     )
-    response = (
+    response = four_section_response(
         "The company shows material financial weaknesses. "
         "EBITDA remains negative and profitability is under pressure."
     )
@@ -91,7 +100,7 @@ def test_llm_accepts_equivalent_source_indicator_formatting() -> None:
         make_finding("Revenue growth declined to -20.0%.", category="revenue"),
         make_finding("NFP to EBITDA stands at 7.0x.", category="leverage"),
     )
-    response = "Revenue growth declined to -20% and NFP to EBITDA stands at 7x."
+    response = four_section_response("Revenue growth declined to -20% and NFP to EBITDA stands at 7x.")
     report = LLMReportGenerator(
         MockLLMClient(response=response),
         require_indicator_values=True,
@@ -103,7 +112,7 @@ def test_llm_accepts_deterministic_monetary_indicator_formatting() -> None:
     analysis = make_analysis(
         make_finding("EBITDA is negative at €-120,000.00.", category="profitability"),
     )
-    response = "EBITDA is negative at €-120000.00."
+    response = four_section_response("EBITDA is negative at €-120000.00.")
     report = LLMReportGenerator(
         MockLLMClient(response=response),
         require_indicator_values=True,
@@ -119,7 +128,7 @@ def test_llm_sanitizes_unsupported_indicator_values_instead_of_falling_back() ->
             indicator="Revenue growth",
         ),
     )
-    response = (
+    response = four_section_response(
         "Revenue growth declined to 35.0%. "
         "The overall financial profile remains under pressure."
     )
@@ -141,7 +150,7 @@ def test_llm_does_not_duplicate_present_indicator_values() -> None:
         make_finding("Revenue growth declined to 20.0%.", category="revenue"),
         make_finding("NFP to EBITDA stands at 7.0x.", category="leverage"),
     )
-    response = "Revenue growth declined to 20.0% and NFP to EBITDA stands at 7.0x."
+    response = four_section_response("Revenue growth declined to 20.0% and NFP to EBITDA stands at 7.0x.")
     report = LLMReportGenerator(
         MockLLMClient(response=response),
         require_indicator_values=True,
@@ -162,7 +171,7 @@ def test_llm_status_is_deterministic_and_on_one_line() -> None:
     lines = report.executive_summary.splitlines()
     assert lines[0] == "Assessment Status: Critical"
     assert lines[1] == ""
-    assert lines[2] == "Revenue growth declined to -20.0%."
+    assert lines[2] == "**Customer Profile**"
     assert report.executive_summary.count("Assessment Status:") == 1
 
 
