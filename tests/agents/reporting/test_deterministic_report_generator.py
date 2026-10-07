@@ -122,7 +122,12 @@ def test_deterministic_report_generator_generates_all_sections_for_each_status(
 def test_deterministic_report_generator_status_is_authoritative_and_separate(generator):
     analysis = make_analysis(
         status=AssessmentStatus.CRITICAL,
-        key_findings=[make_analysis_finding(text="EBITDA is negative at €-120,000.")],
+        key_findings=[
+            make_analysis_finding(
+                category="Financial Analysis",
+                text="EBITDA is negative at €-120,000.",
+            )
+        ],
     )
     report = generator.generate(analysis)
     assert report.executive_summary == (
@@ -130,7 +135,7 @@ def test_deterministic_report_generator_status_is_authoritative_and_separate(gen
         "### Customer Profile\n\n"
         "No anomalies were identified by the configured deterministic assessment rules in this area.\n\n"
         "### Financial Analysis\n\n"
-        "No anomalies were identified by the configured deterministic assessment rules in this area.\n\n"
+        "EBITDA is negative at €-120,000.\n\n"
         "### Behavioural Analysis\n\n"
         "No anomalies were identified by the configured deterministic assessment rules in this area.\n\n"
         "### Debt Sustainability\n\n"
@@ -189,7 +194,7 @@ def test_deterministic_fallback_classification_is_invariant_to_finding_wording(g
 
     assert original_report.findings_by_category[0].findings[0].status == RuleStatus.TRIGGERED
     assert rewritten_report.findings_by_category[0].findings[0].status == RuleStatus.TRIGGERED
-    assert rewritten_report.executive_summary.endswith(rewritten.text)
+    assert rewritten.text in rewritten_report.executive_summary
 
 
 def test_deterministic_report_rejects_rule_evidence_without_status(generator):
