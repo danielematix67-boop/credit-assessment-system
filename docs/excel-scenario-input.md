@@ -78,7 +78,7 @@ The sheet contains the fields of `DebtSustainabilityData`.
 
 ## Reference demo scenarios
 
-The reference workbook `examples/excel/demo_scenarios.xlsx` contains the end-to-end synthetic demonstration case(s) used by the application:
+The reference Excel artifact is the application-facing demonstration input. Scenario rows can be extended or replaced without changing the deterministic assessment architecture, provided the workbook contract is preserved.
 
 | Scenario | Intended behaviour |
 |---|---|
@@ -88,7 +88,7 @@ The reference workbook `examples/excel/demo_scenarios.xlsx` contains the end-to-
 
 The workbook also contains a `README` sheet documenting the workbook contract and scenario purpose. Its formatting (tables, filters, frozen headers, widths and number formats) is presentation-only and does not affect ingestion.
 
-Customer Profile and Behavioural inputs are intentionally stable across the scenarios. Financial inputs are varied to make the deterministic assessment outcomes easy to inspect.
+Scenario data are demonstration-only and may include integrated Customer Profile, Behavioural and Debt Sustainability context. Their values are illustrative and do not constitute production banking data.
 
 ## Validation
 
