@@ -29,6 +29,34 @@ def build_indicator_analysis_frame(section: Any) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def build_operating_leverage_frame(section: Any) -> pd.DataFrame:
+    """Build the dedicated R008 operating-leverage presentation from rule evidence."""
+    rows = []
+    for rule in getattr(section, "evidence", []) or []:
+        if getattr(rule, "rule_id", "") != "R008":
+            continue
+
+        value = getattr(rule, "value", None)
+        threshold = getattr(rule, "threshold", None)
+        if value is None:
+            continue
+
+        rows.append(
+            {
+                "Indicator": rule_indicator(rule),
+                "Ratio": float(value),
+                "Trigger threshold": (
+                    float(threshold) if threshold is not None else None
+                ),
+                "Status": rule_status(rule),
+                "Severity": getattr(
+                    getattr(rule, "severity", None), "value", getattr(rule, "severity", "—")
+                ),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def _indicator_frame(section: Any) -> pd.DataFrame:
     """Build the compact indicator evidence table."""
     frame = build_indicator_analysis_frame(section)
@@ -60,6 +88,35 @@ def _render_area_summary(section: Any, area_label: str) -> None:
             f"{not_evaluable} of {len(evidence)} {area_label.lower()} indicators are not evaluable "
             "with the available data."
         )
+
+
+def _render_operating_leverage(section: Any) -> None:
+    """Render R008 as a dedicated operating-leverage KPI without changing the decision."""
+    frame = build_operating_leverage_frame(section)
+    if frame.empty:
+        return
+
+    row = frame.iloc[0]
+    st.markdown("**Operating Leverage**")
+    st.caption(
+        "Contribution margin / EBIT. The displayed ratio is the deterministic R008 "
+        "result; this presentation layer does not recalculate or modify the rule."
+    )
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Operating leverage", f"{row['Ratio']:.1f}x")
+    with col2:
+        threshold = row["Trigger threshold"]
+        st.metric(
+            "Trigger threshold",
+            f"{threshold:.1f}x" if pd.notna(threshold) else "—",
+        )
+    with col3:
+        severity = str(row["Severity"])
+        st.metric("R008 status", f"{row['Status']} · {severity}")
+
+    st.dataframe(frame, use_container_width=True, hide_index=True)
 
 
 def _render_financial_dimensions(section: Any) -> None:
@@ -148,6 +205,7 @@ def _render_financial_dimensions(section: Any) -> None:
 def render_financial_analysis(section: Any) -> None:
     """Render financial indicators and their deterministic rule evidence."""
     _render_area_summary(section, "Financial")
+    _render_operating_leverage(section)
     _render_financial_dimensions(section)
 
     frame = build_indicator_analysis_frame(section)
