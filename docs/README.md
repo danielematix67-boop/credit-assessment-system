@@ -185,7 +185,7 @@ The current Customer Profile implementation and field-level materiality contract
 
 ## Current application boundary
 
-The Streamlit application under `app/` is a presentation and orchestration layer. The current input screen exposes the complete synthetic demonstration case, while workflow construction is handled under `app/workflow/`.
+The Streamlit application under `app/` is a presentation and orchestration layer. The current input screen exposes **Excel Upload as the sole data source**. Users upload a workbook, select a validated `scenario_id` and review the mapped domain inputs; workflow construction is handled under `app/workflow/`.
 
 The Results UI consumes the structured workflow result and presents:
 
