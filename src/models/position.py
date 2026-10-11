@@ -59,3 +59,10 @@ class CreditPosition:
     # =========================
 
     revenue_growth: float | None = None
+
+    # Bank debt levels for current year and four prior annual observations.
+    bank_debt_current: float | None = None
+    bank_debt_1y_ago: float | None = None
+    bank_debt_2y_ago: float | None = None
+    bank_debt_3y_ago: float | None = None
+    bank_debt_4y_ago: float | None = None
