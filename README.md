@@ -158,17 +158,13 @@ Missing evidence is therefore not silently interpreted as a normal result.
 
 The Streamlit application uses **Excel Upload as its sole data source**. The `.xlsx` workbook contains one or more structured assessment scenarios and is the single source of synthetic demonstration data.
 
-For Excel input, `Credit_Position` is mandatory. `Customer_Profile`, `Behavioural` and `Debt_Sustainability` are optional domain sheets. Each domain sheet uses a shared `scenario_id` to identify the same case across domains.
+For Excel input, `Financial Analysis` is mandatory. `Customer Profile`, `Behavioural Analysis` and `Debt Sustainability` are optional domain sheets. Each domain sheet uses a shared `scenario_id` to identify the same case across domains. The accepted field names are derived from the domain models; the active rule catalogues and thresholds are maintained in configuration, not duplicated in this README.
 
 The repository documentation describes the Excel contract and the application is designed around a workbook containing a documentation-only `README` sheet plus the four loader-compatible domain sheets. The workbook is the sole application input source; scenario content can evolve without changing the assessment architecture.
 
 | Scenario | Purpose |
 |---|---|
-| `DEMO-NORMAL` | baseline case with no significant financial triggers |
-| `DEMO-ATTENTION` | isolated MEDIUM financial deterioration |
-| `DEMO-CRITICAL` | multiple HIGH financial deterioration indicators |
-
-Customer Profile and Behavioural inputs are deliberately kept stable across the three scenarios so that the main differences are attributable to the financial inputs. The workbook is formatted as a user-facing demonstration artifact while preserving the loader contract.
+The workbook may contain multiple scenarios, identified by its `scenario_id` values. Those IDs and their intended outcomes are workbook data, not application constants. The workbook is formatted as a user-facing demonstration artifact while preserving the loader contract. Scenario coverage should remain representative of the configured catalogue rather than requiring a separate scenario for every rule.
 
 See [`docs/excel-scenario-input.md`](docs/excel-scenario-input.md) for the complete workbook contract and validation behaviour.
 
@@ -283,7 +279,7 @@ See [`docs/rules.md`](docs/rules.md) for the complete development checklist, inc
 
 The active rule inventory is defined by the valid YAML catalogues under `config/` together with registered implementations discovered under `src/rules/`.
 
-The README deliberately does **not** maintain a duplicated list of rule IDs, rule counts or thresholds. Those are catalogue data and can evolve independently of the architecture.
+The documentation deliberately does **not** maintain a duplicated list of rule IDs, rule counts, domain-by-domain inventories or thresholds. Those are catalogue data and can evolve independently of the architecture.
 
 The rule contract is:
 
