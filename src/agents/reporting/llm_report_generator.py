@@ -212,8 +212,16 @@ class LLMReportGenerator(ReportGenerator):
                 continue
             area_name = finding.assessment_area or finding.category
             paragraph = paragraph_by_area.get(area_name.casefold())
+
+            # Coverage can only be enforced when the finding has an authoritative
+            # macro-area. Legacy/lightweight analyses may use categories such as
+            # "Financial Risk", "Revenue" or "Profitability"; these are not
+            # equivalent to one of the four report sections.
+            if paragraph is None:
+                continue
+
             indicator = normalize(finding.indicator)
-            if not paragraph or not indicator or indicator not in normalize(paragraph):
+            if not indicator or indicator not in normalize(paragraph):
                 missing.append(f"{area_name}: {finding.indicator}")
 
         if missing:
