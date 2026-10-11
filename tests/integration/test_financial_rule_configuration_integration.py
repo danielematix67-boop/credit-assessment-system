@@ -16,6 +16,7 @@ EXPECTED_RULE_IDS = [
     "R006",
     "R007",
     "R008",
+    "R009",
 ]
 
 
@@ -42,6 +43,8 @@ def test_financial_configuration_rules_are_instantiable_and_evaluable():
         change_in_finished_goods_inventory=20.0,
         contribution_margin=400.0,
         net_operating_margin=100.0,
+        operating_grants=150.0,
+        production_value=1000.0,
     )
 
     results = []
@@ -67,3 +70,4 @@ def test_financial_configuration_preserves_configured_calculation_semantics():
     assert config_by_id["R006"].calculation == "ratio"
     assert config_by_id["R007"].calculation == "ratio"
     assert config_by_id["R008"].calculation == "ratio"
+    assert config_by_id["R009"].calculation == "ratio"
