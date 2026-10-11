@@ -17,8 +17,12 @@ def _workbook_bytes(
     workbook = openpyxl.Workbook()
     credit = workbook.active
     credit.title = "Financial Analysis"
-    credit.append(["scenario_id", "revenue", "ebitda", "revenue_growth"])
-    credit.append(["TEST-001", 1000000, 100000, 0.05])
+    credit.append([
+        "scenario_id", "revenue", "ebitda", "revenue_growth",
+        "bank_debt_current", "bank_debt_1y_ago", "bank_debt_2y_ago",
+        "bank_debt_3y_ago", "bank_debt_4y_ago",
+    ])
+    credit.append(["TEST-001", 1000000, 100000, 0.05, 120, 100, 90, 80, 70])
 
     if include_customer_profile:
         profile = workbook.create_sheet("Customer Profile")
@@ -61,6 +65,8 @@ def test_load_excel_scenario_maps_to_domain_models() -> None:
 
     assert position.position_id == "TEST-001"
     assert position.revenue == 1000000.0
+    assert position.bank_debt_current == 120.0
+    assert position.bank_debt_4y_ago == 70.0
     assert profile is not None
     assert profile.minimum_regulatory_risk_grade == "Past Due"
     assert profile.active_ewis == ["Revenue deterioration", "Payment delay"]
