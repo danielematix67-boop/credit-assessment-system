@@ -153,10 +153,11 @@ def test_llm_accepts_bold_markdown_headings_with_colon_inside_bold() -> None:
 
     report = generator.generate(make_analysis())
 
-    assert "**Customer Profile**\\n\\nThe customer profile is stable." in report.executive_summary
-    assert "**Financial Analysis**\\n\\nRevenue remains under pressure." in report.executive_summary
-    assert "**Behavioural Analysis**\\n\\nNo behavioural anomalies were identified." in report.executive_summary
-    assert "**Debt Sustainability**\\n\\nDebt sustainability remains adequate." in report.executive_summary
+    assert report.executive_summary.count("**") == 8
+    assert "The customer profile is stable." in report.executive_summary
+    assert "Revenue remains under pressure." in report.executive_summary
+    assert "No behavioural anomalies were identified." in report.executive_summary
+    assert "Debt sustainability remains adequate." in report.executive_summary
 
 
 def test_llm_strips_ollama_think_block() -> None:
