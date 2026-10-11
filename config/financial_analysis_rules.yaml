@@ -253,3 +253,22 @@ rules:
       Tax debt represents {value:.1%} of total liabilities, exceeding the
       configured threshold and potentially indicating material accumulated
       tax obligations.
+
+  - rule_id: R014
+    rule_name: Increase in average collection days vs historical average
+    indicator: Current average collection days minus four-year historical average level
+    category: working_capital
+    input_field: avg_collection_days_current
+    trigger_operator: GT
+    threshold: 10.0
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 10.0
+        severity: MEDIUM
+      - threshold: 20.0
+        severity: HIGH
+    comment_template: >-
+      Average collection days exceed the four-year historical average by
+      {value:.1f} days, potentially indicating slower customer payments,
+      weaker cash conversion and increased working-capital pressure.
