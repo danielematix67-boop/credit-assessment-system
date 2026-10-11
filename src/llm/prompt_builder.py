@@ -4,6 +4,7 @@ from src.llm.prompt_template import ReportPromptTemplate
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.customer_profile_analysis import CustomerProfileAnalysis
+from src.rules.base.status import RuleStatus
 
 
 class ReportPromptBuilder:
@@ -48,7 +49,17 @@ class ReportPromptBuilder:
         lightweight analyses without rule_evidence retain compatibility by
         falling back to key_findings.
         """
-        findings = analysis.rule_evidence or analysis.key_findings
+        if analysis.rule_evidence:
+            # NOT_TRIGGERED rules are useful for audit/evidence views, but are
+            # not adverse findings and overwhelm a compact executive narrative.
+            findings = [
+                finding
+                for finding in analysis.rule_evidence
+                if finding.status != RuleStatus.NOT_TRIGGERED
+            ]
+        else:
+            findings = analysis.key_findings
+
         grouped_findings = self._group_findings(findings)
 
         # Always expose the complete assessment structure to the LLM so that
@@ -118,10 +129,14 @@ class ReportPromptBuilder:
     @classmethod
     def _format_finding(cls, finding: AnalysisFinding) -> str:
         """Format one finding while preserving deterministic structured evidence."""
-        lines = [f"- [{finding.severity.value.upper()}] {finding.text}"]
+        if finding.status == RuleStatus.NOT_EVALUABLE:
+            prefix = "NOT EVALUABLE"
+        else:
+            prefix = finding.severity.value.upper()
+        lines = [f"- [{prefix}] {finding.text}"]
 
         if finding.indicator:
-            lines.append(f"  Deterministic indicator: {finding.indicator}")
+            lines.append(f"  Deterministic indicator (preserve this label): {finding.indicator}")
 
         if finding.value is not None:
             lines.append(
