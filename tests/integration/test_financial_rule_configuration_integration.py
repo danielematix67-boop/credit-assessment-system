@@ -29,6 +29,8 @@ def test_financial_configuration_rules_are_instantiable_and_evaluable():
         ebitda=100.0,
         ebitda_margin=0.10,
         nfp_to_ebitda=4.0,
+        tax_debt=50.0,
+        total_liabilities=1000.0,
         interest_expense=50.0,
         change_in_finished_goods_inventory=20.0,
         contribution_margin=400.0,
