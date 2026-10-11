@@ -9,7 +9,7 @@ from src.rules.result import RuleResult
 
 @Rule.register("R012")
 class AveragePaymentDaysIncreaseRule(Rule):
-    """Detect acceleration in average payment days versus historical changes."""
+    """Detect payment days materially above the historical average level."""
 
     _PAYMENT_DAY_FIELDS = (
         "avg_payment_days_current",
@@ -49,40 +49,26 @@ class AveragePaymentDaysIncreaseRule(Rule):
                 )
             payment_day_levels.append(float(raw_value))
 
-        # Absolute changes are used because the input is measured in days.
-        # The baseline averages the three annual changes before the latest year.
-        historical_changes = [
-            newer - older
-            for newer, older in zip(
-                payment_day_levels[1:4],
-                payment_day_levels[2:5],
-            )
-        ]
-        current_change = payment_day_levels[0] - payment_day_levels[1]
-        historical_average_change = sum(historical_changes) / len(
-            historical_changes
-        )
-        deviation = current_change - historical_average_change
-        triggered = current_change > 0 and self._is_triggered(deviation)
+        current_days = payment_day_levels[0]
+        historical_levels = payment_day_levels[1:]
+        historical_average = sum(historical_levels) / len(historical_levels)
+        deviation = current_days - historical_average
+        triggered = self._is_triggered(deviation)
 
-        if current_change <= 0:
+        if not triggered:
             reason = (
-                "Average payment days have not increased in the latest year "
-                f"(current change: {current_change:.1f} days); no trigger."
-            )
-        elif not triggered:
-            reason = (
-                f"Average payment days increased by {current_change:.1f} days "
-                f"in the latest year, compared with a historical average annual "
-                f"change of {historical_average_change:.1f} days; the additional "
-                f"increase is {deviation:.1f} days, below the configured trigger."
+                f"Current average payment days are {current_days:.1f}, versus "
+                f"a four-year historical average of {historical_average:.1f}; "
+                f"the difference is {deviation:.1f} days, not above the "
+                "configured trigger."
             )
         else:
             reason = (
-                f"Average payment days increased by {current_change:.1f} days "
-                f"in the latest year, compared with a historical average annual "
-                f"change of {historical_average_change:.1f} days; the additional "
-                f"increase of {deviation:.1f} days exceeds the configured trigger."
+                f"Current average payment days are {current_days:.1f}, versus "
+                f"a four-year historical average of {historical_average:.1f}; "
+                f"the difference of {deviation:.1f} days exceeds the "
+                "configured trigger, potentially indicating liquidity pressure "
+                "or greater reliance on supplier credit."
             )
 
         return self._result(
