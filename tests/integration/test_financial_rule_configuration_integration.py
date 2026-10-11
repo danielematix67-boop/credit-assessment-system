@@ -17,6 +17,7 @@ EXPECTED_RULE_IDS = [
     "R007",
     "R008",
     "R009",
+    "R010",
 ]
 
 
@@ -45,6 +46,11 @@ def test_financial_configuration_rules_are_instantiable_and_evaluable():
         net_operating_margin=100.0,
         operating_grants=150.0,
         production_value=1000.0,
+        bank_debt_current=120.0,
+        bank_debt_1y_ago=100.0,
+        bank_debt_2y_ago=90.0,
+        bank_debt_3y_ago=80.0,
+        bank_debt_4y_ago=70.0,
     )
 
     results = []
@@ -71,3 +77,4 @@ def test_financial_configuration_preserves_configured_calculation_semantics():
     assert config_by_id["R007"].calculation == "ratio"
     assert config_by_id["R008"].calculation == "ratio"
     assert config_by_id["R009"].calculation == "ratio"
+    assert config_by_id["R010"].calculation == "direct"
