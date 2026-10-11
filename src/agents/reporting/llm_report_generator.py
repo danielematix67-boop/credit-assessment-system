@@ -48,6 +48,12 @@ class LLMReportGenerator(ReportGenerator):
         r"(?:\s*:\s*(?:[-–—][ \t]*)?(.*)|[ \t]*)$",
         re.IGNORECASE,
     )
+    _INLINE_ASSESSMENT_AREA_PATTERN = re.compile(
+        r"(?<![A-Za-z])(?:#{1,6}\\s*)?(?:\\*\\*)?"
+        r"(Customer Profile|Financial Analysis|Behavioural Analysis|Debt Sustainability)"
+        r"(?:\\*\\*)?\\s*:\\s*",
+        re.IGNORECASE,
+    )
 
     def __init__(
         self,
@@ -128,9 +134,8 @@ class LLMReportGenerator(ReportGenerator):
 
         heading_matches: list[tuple[int, str, str]] = []
         for index, line in enumerate(lines):
-            # Ollama models commonly wrap section labels in Markdown bold,
-            # including forms such as "**Customer Profile:**". Normalize that
-            # decoration before applying the structural heading parser.
+            # Ollama may wrap labels in Markdown bold, including
+            # "**Customer Profile:**". Normalize decoration before parsing.
             candidate = line.replace("**", "").strip()
             match = cls._ASSESSMENT_AREA_HEADING_PATTERN.fullmatch(candidate)
             if match:
@@ -139,46 +144,61 @@ class LLMReportGenerator(ReportGenerator):
                 )
 
         if heading_matches:
-            if len(heading_matches) != len(expected):
-                return None
-
             found = [area for _, area, _ in heading_matches]
-            if found != expected or len(set(found)) != len(found):
-                return None
+            if len(found) == len(expected) and found == expected:
+                paragraphs: list[str] = []
+                for position, (line_index, _, inline_content) in enumerate(
+                    heading_matches
+                ):
+                    end_line = (
+                        heading_matches[position + 1][0]
+                        if position + 1 < len(heading_matches)
+                        else len(lines)
+                    )
+                    body_parts = [
+                        line.strip()
+                        for line in lines[line_index + 1 : end_line]
+                        if line.strip()
+                    ]
+                    paragraph = " ".join(
+                        part for part in [inline_content, *body_parts] if part
+                    ).strip()
+                    paragraph = re.sub(r"\\s+", " ", paragraph)
+                    if not paragraph:
+                        break
+                    paragraphs.append(paragraph)
+                else:
+                    return paragraphs
 
-            paragraphs: list[str] = []
-            for position, (line_index, _, inline_content) in enumerate(
-                heading_matches
-            ):
-                end_line = (
-                    heading_matches[position + 1][0]
-                    if position + 1 < len(heading_matches)
-                    else len(lines)
+        # Some local models return all four labeled sections on one physical
+        # line, or mix headings and prose without blank lines. Parse the labels
+        # across the full response as a second, tolerant format.
+        inline_matches = list(cls._INLINE_ASSESSMENT_AREA_PATTERN.finditer(narrative))
+        found = [match.group(1).casefold() for match in inline_matches]
+        if len(found) == len(expected) and found == expected:
+            paragraphs = []
+            for position, match in enumerate(inline_matches):
+                end = (
+                    inline_matches[position + 1].start()
+                    if position + 1 < len(inline_matches)
+                    else len(narrative)
                 )
-                body_parts = [
-                    line.strip()
-                    for line in lines[line_index + 1 : end_line]
-                    if line.strip()
-                ]
-                paragraph = " ".join(
-                    part for part in [inline_content, *body_parts] if part
-                ).strip()
-                paragraph = re.sub(r"\s+", " ", paragraph)
+                paragraph = narrative[match.end() : end].strip()
+                paragraph = re.sub(r"^[-–—*#\\s]+|[-–—*#\\s]+$", "", paragraph)
+                paragraph = re.sub(r"\\s+", " ", paragraph).strip()
                 if not paragraph:
                     return None
                 paragraphs.append(paragraph)
-
             return paragraphs
 
         paragraphs = [
-            re.sub(r"\s+", " ", part.strip())
-            for part in narrative.split("\n\n")
+            re.sub(r"\\s+", " ", part.strip())
+            for part in narrative.split("\\n\\n")
             if part.strip()
         ]
         if len(paragraphs) == len(expected):
             return paragraphs
         return None
-
 
     @classmethod
     def _validate_triggered_evidence_coverage(
