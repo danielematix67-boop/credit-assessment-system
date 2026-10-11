@@ -128,7 +128,11 @@ class LLMReportGenerator(ReportGenerator):
 
         heading_matches: list[tuple[int, str, str]] = []
         for index, line in enumerate(lines):
-            match = cls._ASSESSMENT_AREA_HEADING_PATTERN.fullmatch(line)
+            # Ollama models commonly wrap section labels in Markdown bold,
+            # including forms such as "**Customer Profile:**". Normalize that
+            # decoration before applying the structural heading parser.
+            candidate = line.replace("**", "").strip()
+            match = cls._ASSESSMENT_AREA_HEADING_PATTERN.fullmatch(candidate)
             if match:
                 heading_matches.append(
                     (index, match.group(1).casefold(), (match.group(2) or "").strip())
