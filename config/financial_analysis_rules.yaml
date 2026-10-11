@@ -192,3 +192,22 @@ rules:
     comment_template: >-
       Current bank-debt growth exceeds its historical average by {value:.1%},
       indicating a material acceleration in bank borrowing.
+
+  - rule_id: R011
+    rule_name: Increase in trade payables vs historical average
+    indicator: Current trade-payables growth minus historical average growth
+    category: working_capital
+    input_field: trade_payables_current
+    trigger_operator: GT
+    threshold: 0.10
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.10
+        severity: MEDIUM
+      - threshold: 0.20
+        severity: HIGH
+    comment_template: >-
+      Current trade-payables growth exceeds its historical average by {value:.1%},
+      indicating a material acceleration in supplier financing and potentially
+      increased pressure on working-capital management.
