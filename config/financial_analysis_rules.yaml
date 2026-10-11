@@ -211,3 +211,23 @@ rules:
       Current trade-payables growth exceeds its historical average by {value:.1%},
       indicating a material acceleration in supplier financing and potentially
       increased pressure on working-capital management.
+
+  
+  - rule_id: R012
+    rule_name: Increase in average payment days vs historical average
+    indicator: Current increase in average payment days minus historical average increase
+    category: working_capital
+    input_field: avg_payment_days_current
+    trigger_operator: GT
+    threshold: 10.0
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 10.0
+        severity: MEDIUM
+      - threshold: 20.0
+        severity: HIGH
+    comment_template: >-
+      Average payment days have increased by {value:.1f} days more than the
+      historical average increase, indicating potential pressure on liquidity
+      and greater reliance on supplier credit.
