@@ -19,6 +19,7 @@ class CreditPosition:
     revenue: float | None = None
     change_in_finished_goods_inventory: float | None = None
     operating_grants: float | None = None
+    production_value: float | None = None
     net_purchases: float | None = None
     change_in_raw_materials_inventory: float | None = None
     costs_for_services_and_third_party_assets: float | None = None
