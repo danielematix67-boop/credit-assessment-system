@@ -215,7 +215,7 @@ rules:
   
   - rule_id: R012
     rule_name: Increase in average payment days vs historical average
-    indicator: Current increase in average payment days minus historical average increase
+    indicator: Current average payment days minus four-year historical average level
     category: working_capital
     input_field: avg_payment_days_current
     trigger_operator: GT
@@ -228,6 +228,6 @@ rules:
       - threshold: 20.0
         severity: HIGH
     comment_template: >-
-      Average payment days have increased by {value:.1f} days more than the
-      historical average increase, indicating potential pressure on liquidity
-      and greater reliance on supplier credit.
+      Average payment days exceed the four-year historical average by
+      {value:.1f} days, potentially indicating pressure on liquidity and
+      greater reliance on supplier credit.
