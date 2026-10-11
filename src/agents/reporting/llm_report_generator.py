@@ -109,9 +109,18 @@ class LLMReportGenerator(ReportGenerator):
     ) -> str:
         paragraphs = cls._extract_assessment_area_paragraphs(narrative)
         if paragraphs is None:
+            detected_headings = [
+                match.group(1)
+                for match in cls._INLINE_ASSESSMENT_AREA_PATTERN.finditer(narrative)
+            ]
+            paragraph_count = sum(
+                bool(part.strip()) for part in narrative.split("\\n\\n")
+            )
             raise ValueError(
                 "LLM narrative must contain exactly one paragraph for each "
-                "assessment area."
+                "assessment area. "
+                f"Detected headings: {detected_headings or 'none'}; "
+                f"blank-line paragraphs: {paragraph_count}."
             )
 
         return "\n\n".join(
