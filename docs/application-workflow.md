@@ -25,13 +25,7 @@ The Excel path is scenario-driven. The loader reads a workbook containing a mand
 
 Each domain sheet uses `scenario_id` to identify the case. The UI loads all valid scenarios, presents a scenario selector, previews the mapped domain inputs and then executes only the selected scenario.
 
-The repository documentation and reference Excel artifact define the scenario-driven input contract. Scenario content may evolve independently from the application code:
-
-- `DEMO-NORMAL`
-- `DEMO-ATTENTION`
-- `DEMO-CRITICAL`
-
-The workbook also contains a documentation-only `README` sheet. Customer Profile and Behavioural inputs are deliberately stable across scenarios so that the main differences are attributable to financial inputs.
+The workbook defines its own `scenario_id` values and intended outcomes. These are data-level examples, not identifiers hard-coded into the application workflow. The workbook may also contain a documentation-only `README` sheet, which is ignored by the domain loader. Scenario content can evolve independently from the application code as long as the workbook contract is preserved.
 
 See [`excel-scenario-input.md`](excel-scenario-input.md) for the workbook contract, supported fields and validation rules.
 
