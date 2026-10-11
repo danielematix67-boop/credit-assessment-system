@@ -14,6 +14,9 @@ from src.models.position import CreditPosition
 _BASE_VALUES: dict[str, Any] = {
     "position_id": "DEMO-INTEGRATED-001",
     "revenue": 10_000_000.0,
+    "revenue_1y_ago": 9_500_000.0,
+    "trade_receivables_current": 1_000_000.0,
+    "trade_receivables_1y_ago": 900_000.0,
     "change_in_finished_goods_inventory": 100_000.0,
     "operating_grants": 50_000.0,
     "production_value": 10_150_000.0,
