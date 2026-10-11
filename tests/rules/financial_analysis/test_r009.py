@@ -6,7 +6,6 @@ from src.rules.base.severity_threshold import SeverityThreshold
 from src.rules.base.status import RuleStatus
 from src.rules.financial_analysis.r009 import OperatingGrantsIncidenceRule
 
-
 CONFIG = RuleConfig(
     rule_id="R009",
     rule_name="Operating grants incidence on production value",
