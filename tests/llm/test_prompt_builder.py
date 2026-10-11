@@ -4,6 +4,7 @@ from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
 from src.models.customer_profile_analysis import CustomerProfileAnalysis
 from src.rules.base.severity import RuleSeverity
+from src.rules.base.status import RuleStatus
 
 
 def make_finding(
@@ -213,3 +214,42 @@ class TestReportPromptBuilder:
 
         assert "ANALYSIS FINDINGS:" in prompt
         assert "No deterministic anomalies are present for this area." in prompt
+
+
+def test_build_excludes_non_triggered_rules_but_keeps_not_evaluable_evidence() -> None:
+    not_triggered = AnalysisFinding(
+        rule_id="R001",
+        category="Financial Analysis",
+        severity=RuleSeverity.LOW,
+        text="Revenue growth is stable.",
+        status=RuleStatus.NOT_TRIGGERED,
+        assessment_area="Financial Analysis",
+        indicator="Revenue growth",
+    )
+    not_evaluable = AnalysisFinding(
+        rule_id="R002",
+        category="Financial Analysis",
+        severity=RuleSeverity.MEDIUM,
+        text="Interest coverage: no sufficiently reliable value is available.",
+        status=RuleStatus.NOT_EVALUABLE,
+        assessment_area="Financial Analysis",
+        indicator="Interest coverage",
+    )
+    triggered = AnalysisFinding(
+        rule_id="R003",
+        category="Financial Analysis",
+        severity=RuleSeverity.HIGH,
+        text="EBITDA is negative.",
+        status=RuleStatus.TRIGGERED,
+        assessment_area="Financial Analysis",
+        indicator="EBITDA",
+    )
+
+    prompt = ReportPromptBuilder().build(
+        make_analysis(rule_evidence=[not_triggered, not_evaluable, triggered])
+    )
+
+    assert "Revenue growth is stable." not in prompt
+    assert "Interest coverage: no sufficiently reliable value is available." in prompt
+    assert "EBITDA is negative." in prompt
+    assert "[NOT EVALUABLE]" in prompt
