@@ -208,6 +208,9 @@ class TestReportPromptBuilder:
         assert "Return ONLY the final executive narrative" in prompt
         assert "Return exactly four labeled sections" in prompt
         assert "No deterministic anomalies are present for this area." in prompt
+        assert "CUSTOMER PROFILE IS A MANDATORY EXCEPTION TO BREVITY" in prompt
+        assert "every non-empty subsection" in prompt
+        assert "Do not replace detailed context with a generic risk-profile summary." in prompt
 
     def test_build_returns_none_when_no_findings(self) -> None:
         prompt = ReportPromptBuilder().build(make_analysis())
