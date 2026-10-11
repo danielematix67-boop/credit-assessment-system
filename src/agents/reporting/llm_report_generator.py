@@ -6,6 +6,7 @@ from src.llm.prompt_builder import ReportPromptBuilder
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.report import Report, ReportFindingGroup
+from src.rules.base.status import RuleStatus
 
 
 class LLMReportGenerator(ReportGenerator):
@@ -63,6 +64,10 @@ class LLMReportGenerator(ReportGenerator):
     def generate(self, analysis: AssessmentAnalysis) -> Report:
         response = self.llm_client.generate(self.prompt_builder.build(analysis))
         narrative = self._validate_response(response)
+        self._validate_triggered_evidence_coverage(
+            narrative,
+            analysis.rule_evidence or analysis.key_findings,
+        )
         if self.require_indicator_values:
             narrative = self._sanitize_indicator_grounding(
                 narrative,
@@ -169,6 +174,53 @@ class LLMReportGenerator(ReportGenerator):
         if len(paragraphs) == len(expected):
             return paragraphs
         return None
+
+
+    @classmethod
+    def _validate_triggered_evidence_coverage(
+        cls,
+        narrative: str,
+        findings: list[AnalysisFinding],
+    ) -> None:
+        """
+        Reject narratives that omit triggered indicators or place them in another area.
+
+        This check is based on deterministic indicator labels, not on model-
+        generated values or a second credit-risk assessment. The ReportingAgent
+        uses the deterministic report if this contract fails.
+        """
+        paragraphs = cls._extract_assessment_area_paragraphs(narrative)
+        if paragraphs is None:
+            # Structural validation reports the canonical error later.
+            return
+
+        paragraph_by_area = {
+            area.casefold(): paragraph
+            for area, paragraph in zip(
+                cls._ASSESSMENT_AREA_ORDER,
+                paragraphs,
+                strict=True,
+            )
+        }
+
+        def normalize(value: str) -> str:
+            return re.sub(r"[^a-z0-9]+", " ", value.casefold()).strip()
+
+        missing: list[str] = []
+        for finding in findings:
+            if finding.status != RuleStatus.TRIGGERED or not finding.indicator:
+                continue
+            area_name = finding.assessment_area or finding.category
+            paragraph = paragraph_by_area.get(area_name.casefold())
+            indicator = normalize(finding.indicator)
+            if not paragraph or not indicator or indicator not in normalize(paragraph):
+                missing.append(f"{area_name}: {finding.indicator}")
+
+        if missing:
+            raise ValueError(
+                "LLM narrative omitted or misplaced triggered deterministic evidence: "
+                + "; ".join(missing)
+            )
 
     @classmethod
     def _extract_indicator_values(
