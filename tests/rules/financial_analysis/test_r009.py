@@ -11,7 +11,7 @@ CONFIG = RuleConfig(
     rule_name="Operating grants incidence on production value",
     category="profitability_quality",
     threshold=0.10,
-    severity=RuleSeverity.LOW,
+    severity=RuleSeverity.MEDIUM,
     severity_direction=SeverityDirection.HIGHER_IS_WORSE,
     severity_thresholds=(
         SeverityThreshold(threshold=0.10, severity=RuleSeverity.MEDIUM),
