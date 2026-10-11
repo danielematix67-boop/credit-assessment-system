@@ -45,6 +45,11 @@ def test_financial_configuration_rules_are_instantiable_and_evaluable():
         trade_payables_2y_ago=90.0,
         trade_payables_3y_ago=80.0,
         trade_payables_4y_ago=70.0,
+        avg_payment_days_current=45.0,
+        avg_payment_days_1y_ago=40.0,
+        avg_payment_days_2y_ago=35.0,
+        avg_payment_days_3y_ago=30.0,
+        avg_payment_days_4y_ago=25.0,
     )
 
     results = []
