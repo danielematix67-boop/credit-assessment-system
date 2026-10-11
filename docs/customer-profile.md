@@ -49,32 +49,17 @@ The model is intentionally descriptive. Presence in the input model does not imp
 
 ## Deterministic Customer Profile rules
 
-The active Customer Profile catalogue currently contains CP001–CP005. These identifiers are loaded from `config/customer_profile_rules.yaml` and resolved through the normal rule discovery/registry mechanism.
+The active Customer Profile catalogue is defined by `config/customer_profile_rules.yaml` and the deterministic implementations discovered under `src/rules/`. This document intentionally does not enumerate current rule IDs, implementation class names or thresholds: those change as the catalogue evolves and are available in the configuration and source code.
 
-| Rule | Current implementation | Input | Deterministic meaning |
-|---|---|---|---|
-| CP001 | `EwsScoreClassRule` | `ews_score_class` | Triggers for a non-GREEN EWS class; YELLOW/ORANGE are MEDIUM and LIGHT_RED is HIGH |
-| CP002 | `PreviousRestructuringRule` | `previous_restructuring` | Triggers when a previous restructuring is present |
-| CP003 | `BusinessHistoryRule` | `business_history_years` | Triggers when business history is at or below the configured threshold; severity is configuration-driven |
-| CP004 | `ForborneExposureRule` | `forborne` | Triggers when the forborne flag is `True`; MEDIUM severity when triggered |
-| CP005 | `ShortBankingRelationshipRule` | `relationship_years` | Triggers when the banking relationship is at or below the configured threshold |
+Each configured rule follows the shared rule contract:
 
-The rule implementations preserve the standard three-way outcome:
+- it declares the required input field(s), trigger condition and severity policy;
+- its implementation evaluates the condition deterministically;
+- it returns `TRIGGERED`, `NOT_TRIGGERED` or `NOT_EVALUABLE`;
+- its result is included in the Customer Profile section evidence;
+- missing or invalid required evidence is not treated as a normal result.
 
-```text
-TRIGGERED
-NOT_TRIGGERED
-NOT_EVALUABLE
-```
-
-In particular:
-
-- CP001 explicitly validates the EWS enum/value;
-- CP004 explicitly validates that the forborne input is boolean;
-- the other current CP rules use the shared configured-value comparison path;
-- missing or invalid required evidence produces `NOT_EVALUABLE` rather than an assumed normal result.
-
-The exact thresholds and declarative parameters remain in `config/customer_profile_rules.yaml`, rather than being duplicated in this document.
+Use the configuration as the source of truth for declarative thresholds and severity bands. Use the corresponding rule implementation and tests for specialised validation or calculations. When changing the catalogue, verify that each configured identifier resolves to exactly one discovered implementation and that the materiality policy remains aligned with any profile fields represented by rule evidence.
 
 ## Customer Profile section behaviour
 
