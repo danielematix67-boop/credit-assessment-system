@@ -54,6 +54,10 @@ class CreditPosition:
     nfp_to_ebitda: float | None = None
     interest_expense: float | None = None
 
+    # Tax liabilities and total liabilities for tax-debt concentration analysis.
+    tax_debt: float | None = None
+    total_liabilities: float | None = None
+
     # =========================
     # Historical / variation data
     # =========================
