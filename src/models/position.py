@@ -84,3 +84,10 @@ class CreditPosition:
     avg_payment_days_2y_ago: float | None = None
     avg_payment_days_3y_ago: float | None = None
     avg_payment_days_4y_ago: float | None = None
+
+    # Average collection days for the current year and four prior annual observations.
+    avg_collection_days_current: float | None = None
+    avg_collection_days_1y_ago: float | None = None
+    avg_collection_days_2y_ago: float | None = None
+    avg_collection_days_3y_ago: float | None = None
+    avg_collection_days_4y_ago: float | None = None
