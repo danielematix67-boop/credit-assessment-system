@@ -272,3 +272,26 @@ rules:
       Average collection days exceed the four-year historical average by
       {value:.1f} days, potentially indicating slower customer payments,
       weaker cash conversion and increased working-capital pressure.
+
+  - rule_id: R015
+    rule_name: Trade receivables growth exceeds revenue growth
+    indicator: Trade receivables growth minus revenue growth
+    category: working_capital
+    input_fields:
+      - trade_receivables_current
+      - trade_receivables_1y_ago
+      - revenue
+      - revenue_1y_ago
+    calculation: direct
+    trigger_operator: GT
+    threshold: 0.10
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.10
+        severity: MEDIUM
+      - threshold: 0.20
+        severity: HIGH
+    comment_template: >-
+      Trade receivables growth exceeds revenue growth by {value:.1%},
+      potentially indicating slower collections and weaker cash conversion.
