@@ -191,6 +191,11 @@ class LLMReportGenerator(ReportGenerator):
                 paragraphs.append(paragraph)
             return paragraphs
 
+        # The unlabeled fallback must not hide invalid labeled sections.
+        # Reject incomplete, duplicated, or misordered headings explicitly.
+        if heading_matches or inline_matches:
+            return None
+
         paragraphs = [
             re.sub(r"\s+", " ", part.strip())
             for part in narrative.split("\n\n")
