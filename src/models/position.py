@@ -63,6 +63,11 @@ class CreditPosition:
     # =========================
 
     revenue_growth: float | None = None
+    revenue_1y_ago: float | None = None
+
+    # Trade receivables for the current year and prior-year comparison.
+    trade_receivables_current: float | None = None
+    trade_receivables_1y_ago: float | None = None
 
     # Bank debt levels for current year and four prior annual observations.
     bank_debt_current: float | None = None
