@@ -160,6 +160,23 @@ def test_llm_accepts_bold_markdown_headings_with_colon_inside_bold() -> None:
     assert "Debt sustainability remains adequate." in report.executive_summary
 
 
+def test_llm_accepts_all_four_sections_on_one_line() -> None:
+    response = (
+        "**Customer Profile:** The customer profile is stable. "
+        "**Financial Analysis:** Revenue remains under pressure. "
+        "**Behavioural Analysis:** No behavioural anomalies were identified. "
+        "**Debt Sustainability:** Debt sustainability remains adequate."
+    )
+    generator, _ = make_generator(response=response)
+
+    report = generator.generate(make_analysis())
+
+    assert "The customer profile is stable." in report.executive_summary
+    assert "Revenue remains under pressure." in report.executive_summary
+    assert "No behavioural anomalies were identified." in report.executive_summary
+    assert "Debt sustainability remains adequate." in report.executive_summary
+
+
 def test_llm_strips_ollama_think_block() -> None:
     response = (
         "<think>We need to structure the response in four areas.</think>\n"
