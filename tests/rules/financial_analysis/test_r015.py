@@ -1,3 +1,5 @@
+import pytest
+
 from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig
 from src.rules.base.severity import RuleSeverity
@@ -37,7 +39,7 @@ def test_r015_triggers_medium_when_receivables_growth_outpaces_revenue():
     result = TradeReceivablesGrowthGapRule(CONFIG).evaluate(
         position(130, 100, 110, 100)
     )
-    assert result.value == 0.20
+    assert result.value == pytest.approx(0.20)
     assert result.status == RuleStatus.TRIGGERED
     assert result.severity == RuleSeverity.MEDIUM
 
@@ -47,7 +49,7 @@ def test_r015_triggers_high_for_large_growth_gap():
     result = TradeReceivablesGrowthGapRule(CONFIG).evaluate(
         position(150, 100, 110, 100)
     )
-    assert result.value == 0.40
+    assert result.value == pytest.approx(0.40)
     assert result.status == RuleStatus.TRIGGERED
     assert result.severity == RuleSeverity.HIGH
 
@@ -57,7 +59,7 @@ def test_r015_does_not_trigger_when_growth_gap_is_below_threshold():
     result = TradeReceivablesGrowthGapRule(CONFIG).evaluate(
         position(115, 100, 110, 100)
     )
-    assert result.value == 0.05
+    assert result.value == pytest.approx(0.05)
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.severity == RuleSeverity.LOW
 
@@ -66,7 +68,7 @@ def test_r015_ten_percentage_point_boundary_is_exclusive():
     result = TradeReceivablesGrowthGapRule(CONFIG).evaluate(
         position(120, 100, 110, 100)
     )
-    assert result.value == 0.10
+    assert result.value == pytest.approx(0.10)
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.severity == RuleSeverity.LOW
 
