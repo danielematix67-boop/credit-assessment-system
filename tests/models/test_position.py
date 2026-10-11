@@ -76,6 +76,11 @@ def test_credit_position_optional_fields_default_to_none():
         "ebitda_margin",
         "nfp_to_ebitda",
         "interest_expense",
+        "bank_debt_current",
+        "bank_debt_1y_ago",
+        "bank_debt_2y_ago",
+        "bank_debt_3y_ago",
+        "bank_debt_4y_ago",
     )
 
     for field_name in optional_fields:
