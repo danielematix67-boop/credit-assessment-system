@@ -49,9 +49,9 @@ class LLMReportGenerator(ReportGenerator):
         re.IGNORECASE,
     )
     _INLINE_ASSESSMENT_AREA_PATTERN = re.compile(
-        r"(?<![A-Za-z])(?:#{1,6}\\s*)?(?:\\*\\*)?"
+        r"(?<![A-Za-z])(?:#{1,6}\s*)?(?:\*\*)?"
         r"(Customer Profile|Financial Analysis|Behavioural Analysis|Debt Sustainability)"
-        r"(?:\\*\\*)?\\s*:\\s*",
+        r"(?:\*\*)?\s*:\s*",
         re.IGNORECASE,
     )
 
@@ -163,7 +163,7 @@ class LLMReportGenerator(ReportGenerator):
                     paragraph = " ".join(
                         part for part in [inline_content, *body_parts] if part
                     ).strip()
-                    paragraph = re.sub(r"\\s+", " ", paragraph)
+                    paragraph = re.sub(r"\s+", " ", paragraph)
                     if not paragraph:
                         break
                     paragraphs.append(paragraph)
@@ -184,16 +184,16 @@ class LLMReportGenerator(ReportGenerator):
                     else len(narrative)
                 )
                 paragraph = narrative[match.end() : end].strip()
-                paragraph = re.sub(r"^[-–—*#\\s]+|[-–—*#\\s]+$", "", paragraph)
-                paragraph = re.sub(r"\\s+", " ", paragraph).strip()
+                paragraph = re.sub(r"^[-–—*#\s]+|[-–—*#\s]+$", "", paragraph)
+                paragraph = re.sub(r"\s+", " ", paragraph).strip()
                 if not paragraph:
                     return None
                 paragraphs.append(paragraph)
             return paragraphs
 
         paragraphs = [
-            re.sub(r"\\s+", " ", part.strip())
-            for part in narrative.split("\\n\\n")
+            re.sub(r"\s+", " ", part.strip())
+            for part in narrative.split("\n\n")
             if part.strip()
         ]
         if len(paragraphs) == len(expected):
