@@ -149,7 +149,7 @@ class ExampleRule(Rule):
         value, error = self._configured_value(position)
         if error is not None or value is None:
             return self._not_evaluable(
-                error or "Required evidence is unavailable."
+                reason=error or "Required evidence is unavailable."
             )
 
         status = (
