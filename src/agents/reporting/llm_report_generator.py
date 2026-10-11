@@ -386,15 +386,18 @@ class LLMReportGenerator(ReportGenerator):
                 normalized_lines.append("")
                 continue
 
+            # Preserve assessment-area labels, including labels followed by
+            # prose on the same line. Removing these prefixes here prevents
+            # the structural parser from detecting missing or misordered areas.
+            if cls._ASSESSMENT_AREA_PREFIX_PATTERN.match(stripped):
+                normalized_lines.append(stripped)
+                continue
+
             if cls._ASSESSMENT_AREA_HEADING_PATTERN.fullmatch(stripped):
                 normalized_lines.append(stripped)
                 continue
 
-            cleaned = cls._ASSESSMENT_AREA_PREFIX_PATTERN.sub(
-                "",
-                cls._CATEGORY_PREFIX_PATTERN.sub("", stripped, count=1),
-                count=1,
-            ).strip()
+            cleaned = cls._CATEGORY_PREFIX_PATTERN.sub("", stripped, count=1).strip()
             normalized_lines.append(cleaned)
 
         return "\n".join(normalized_lines).strip()
