@@ -35,6 +35,7 @@ The [glossary](glossary.md) is useful whenever a technical or credit-risk term i
 | [`rules.md`](rules.md) | How a credit-risk rule is defined, implemented, tested and extended |
 | [`reporting.md`](reporting.md) | How deterministic assessment evidence becomes a human-readable report |
 | [`customer-profile.md`](customer-profile.md) | Customer Profile fields, rule/context separation and executive materiality |
+| [`excel-scenario-input.md`](excel-scenario-input.md) | Excel input contract, model-driven fields and scenario validation |
 | [`application-workflow.md`](application-workflow.md) | Current Streamlit input, reporting modes, execution and results presentation |
 | [`validation.md`](validation.md) | What the system validates and how correctness is tested |
 | [`security-data-handling.md`](security-data-handling.md) | How input integrity, credentials, data minimisation and AI boundaries are handled |
