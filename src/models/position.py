@@ -73,3 +73,10 @@ class CreditPosition:
     trade_payables_2y_ago: float | None = None
     trade_payables_3y_ago: float | None = None
     trade_payables_4y_ago: float | None = None
+
+    # Average payment days for the current year and four prior annual observations.
+    avg_payment_days_current: float | None = None
+    avg_payment_days_1y_ago: float | None = None
+    avg_payment_days_2y_ago: float | None = None
+    avg_payment_days_3y_ago: float | None = None
+    avg_payment_days_4y_ago: float | None = None
