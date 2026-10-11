@@ -12,6 +12,7 @@ EXPECTED_FINAL_STATUS = "CRITICAL"
 # individual trigger logic; this integration test should tolerate new rules.
 CORE_TRIGGERED_RULES = {"CP001", "R002", "B001", "DS001"}
 
+
 def _build_demo_case(assessment_service):
     case_service = CreditAssessmentCaseService(
         financial_assessment_service=assessment_service
@@ -72,7 +73,10 @@ def test_demo_scenario_contains_core_triggers_and_covers_all_areas(
         case.behavioural_analysis,
         case.debt_sustainability,
     )
-    assert all(any(result.is_triggered for result in section.evidence) for section in sections)
+    assert all(
+        any(result.is_triggered for result in section.evidence)
+        for section in sections
+    )
 
 
 def test_demo_scenario_has_expected_final_status(assessment_service) -> None:
