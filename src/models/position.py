@@ -66,3 +66,10 @@ class CreditPosition:
     bank_debt_2y_ago: float | None = None
     bank_debt_3y_ago: float | None = None
     bank_debt_4y_ago: float | None = None
+
+    # Trade-payables levels for current year and four prior annual observations.
+    trade_payables_current: float | None = None
+    trade_payables_1y_ago: float | None = None
+    trade_payables_2y_ago: float | None = None
+    trade_payables_3y_ago: float | None = None
+    trade_payables_4y_ago: float | None = None
