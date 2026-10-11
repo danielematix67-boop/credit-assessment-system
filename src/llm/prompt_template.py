@@ -33,7 +33,11 @@ class ReportPromptTemplate:
         "contain a valid evaluated value for that same indicator.\n"
         "- Never combine values from different indicators to create a new metric or conclusion.\n"
         "- Do not infer causality, trends or financial drivers unless explicitly stated in the findings.\n"
-        "- Do not mention internal rule IDs, thresholds or implementation details."
+        "- Do not mention internal rule IDs, thresholds or implementation details.\n"
+        "- Every supplied TRIGGERED finding is mandatory: do not omit, merge away or replace it with a generic summary.\n"
+        "- Preserve each supplied deterministic indicator label verbatim in its assigned assessment area.\n"
+        "- Keep each finding in the assessment area supplied by the application; never move an indicator between areas.\n"
+        "- NOT EVALUABLE evidence must be described as unavailable/not assessable, and must not be presented as a triggered risk.\n"
     )
 
     NARRATIVE_GUIDANCE = (
@@ -47,7 +51,8 @@ class ReportPromptTemplate:
         "findings.\n"
         "- For an area with no triggered findings, explicitly state that no anomalies "
         "were identified by the configured assessment rules.\n"
-        "- Within each category, discuss the supplied findings in their supplied order.\n"
+        "- Within each category, discuss every supplied finding in its supplied order; completeness takes priority over brevity.\n"
+        "- Do not discuss NOT_TRIGGERED rules as adverse findings; they are excluded from the executive-narrative input.\n"
         "- Produce exactly one prose paragraph for each of the four required "
         "categories, in the supplied category order.\n"
         "- Do not merge two categories into one paragraph and do not split one "
