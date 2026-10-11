@@ -42,7 +42,7 @@ When adding or changing financial indicators:
 - update the configuration, implementation and focused tests together;
 - update the reference workbook's Financial Analysis headers and representative scenario values when the input contract changes.
 
-For ratios, provide a valid denominator and test zero/negative denominator handling. Historical comparisons require observations to use a consistent annual basis. Thresholds are policy parameters and should be calibrated to the business context; a triggered indicator is a warning signal, not by itself a complete credit judgement.
+For ratios, provide a valid denominator and test zero/negative denominator handling. Historical comparisons require observations to use a consistent annual basis and comparable accounting definitions. Growth-gap indicators compare percentage changes over the same period; they should not be interpreted as proof of collection distress without considering seasonality, business mix and payment terms. Thresholds are policy parameters and should be calibrated to the business context; a triggered indicator is a warning signal, not by itself a complete credit judgement.
 
 ### Customer Profile
 
