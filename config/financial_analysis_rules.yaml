@@ -291,3 +291,25 @@ rules:
     comment_template: >-
       Trade receivables growth exceeds revenue growth by {value:.1%},
       potentially indicating slower collections and weaker cash conversion.
+
+  - rule_id: R016
+    rule_name: Intangible assets concentration in total assets
+    indicator: Intangible assets / total assets
+    category: asset_quality
+    input_fields:
+      - intangible_assets
+      - total_assets
+    calculation: ratio
+    trigger_operator: GT
+    threshold: 0.15
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.15
+        severity: MEDIUM
+      - threshold: 0.25
+        severity: HIGH
+    comment_template: >-
+      Intangible assets represent {value:.1%} of total assets, exceeding the
+      configured threshold and warranting review of capitalization policies,
+      asset recognition and recoverability.
