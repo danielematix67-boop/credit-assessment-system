@@ -34,6 +34,8 @@ _BASE_VALUES: dict[str, Any] = {
     "ebitda_margin": -0.10,
     "ebitda_inventory_contribution": 0.01,
     "nfp_to_ebitda": None,
+    "tax_debt": 100_000.0,
+    "total_liabilities": 2_000_000.0,
     "interest_expense": 700_000.0,
     "revenue_growth": -0.35,
     "bank_debt_current": 1_000_000.0,
