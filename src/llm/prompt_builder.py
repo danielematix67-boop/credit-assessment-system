@@ -136,7 +136,8 @@ class ReportPromptBuilder:
         lines = [f"- [{prefix}] {finding.text}"]
 
         if finding.indicator:
-            lines.append(f"  Deterministic indicator (preserve this label): {finding.indicator}")
+            lines.append(f"  Deterministic indicator: {finding.indicator}")
+            lines.append("  Preserve this indicator label verbatim in the narrative.")
 
         if finding.value is not None:
             lines.append(
