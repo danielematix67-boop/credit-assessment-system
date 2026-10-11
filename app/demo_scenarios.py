@@ -46,6 +46,11 @@ _BASE_VALUES: dict[str, Any] = {
     "trade_payables_2y_ago": 900_000.0,
     "trade_payables_3y_ago": 850_000.0,
     "trade_payables_4y_ago": 800_000.0,
+    "avg_payment_days_current": 45.0,
+    "avg_payment_days_1y_ago": 40.0,
+    "avg_payment_days_2y_ago": 35.0,
+    "avg_payment_days_3y_ago": 30.0,
+    "avg_payment_days_4y_ago": 25.0,
 }
 
 _BASE_CASE_DATA: dict[str, dict[str, Any]] = {
