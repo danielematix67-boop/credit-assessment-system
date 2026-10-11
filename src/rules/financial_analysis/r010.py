@@ -25,15 +25,21 @@ class SustainedBankDebtIncreaseRule(Rule):
             raw_value = getattr(position, field_name)
             if raw_value is None:
                 return self._not_evaluable(
-                    reason=f"Required historical bank-debt input is missing: {field_name}.",
+                    reason=(
+                        f"Required historical bank-debt input is missing: {field_name}."
+                    ),
                 )
             if not isinstance(raw_value, (int, float)) or not isfinite(raw_value):
                 return self._not_evaluable(
-                    reason=f"Historical bank-debt input {field_name} must be finite and numeric.",
+                    reason=(
+                        f"Historical bank-debt input {field_name} must be finite and numeric."
+                    ),
                 )
             if raw_value < 0:
                 return self._not_evaluable(
-                    reason=f"Historical bank-debt input {field_name} cannot be negative.",
+                    reason=(
+                        f"Historical bank-debt input {field_name} cannot be negative."
+                    ),
                 )
             debt_levels.append(float(raw_value))
 
@@ -41,14 +47,18 @@ class SustainedBankDebtIncreaseRule(Rule):
         # baseline averages the three growth rates from t-1 through t-4.
         if debt_levels[1] <= 0:
             return self._not_evaluable(
-                reason="Bank debt one year ago must be positive to calculate current growth.",
+                reason=(
+                    "Bank debt one year ago must be positive to calculate current growth."
+                ),
             )
 
         historical_growth: list[float] = []
         for newer, older in zip(debt_levels[1:4], debt_levels[2:5]):
             if older <= 0:
                 return self._not_evaluable(
-                    reason="Historical bank-debt bases must be positive to calculate growth.",
+                    reason=(
+                        "Historical bank-debt bases must be positive to calculate growth."
+                    ),
                 )
             historical_growth.append((newer - older) / older)
 
