@@ -174,3 +174,21 @@ rules:
       indicating a material reliance on operating contributions to support
       reported production value and potentially reducing the resilience of
       operating performance if such contributions decline.
+
+  - rule_id: R010
+    rule_name: Sustained increase in bank debt vs historical average
+    indicator: Current bank-debt growth minus historical average growth
+    category: leverage
+    input_field: bank_debt_current
+    trigger_operator: GT
+    threshold: 0.10
+    severity: MEDIUM
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.10
+        severity: MEDIUM
+      - threshold: 0.20
+        severity: HIGH
+    comment_template: >-
+      Current bank-debt growth exceeds its historical average by {value:.1%},
+      indicating a material acceleration in bank borrowing.
