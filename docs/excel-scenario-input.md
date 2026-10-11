@@ -29,6 +29,8 @@ Examples:
 
 Numeric values use the same representation as the Python domain model. For example, a 5% growth rate is entered as `0.05`.
 
+For rule `R009` (operating grants incidence), provide `operating_grants` and `production_value` in the same currency and accounting period. `production_value` means the total value of production from the source financial statements; it is not interchangeable with sales revenue. The rule evaluates `operating_grants / production_value` and is `NOT_EVALUABLE` if either input is missing, production value is non-positive, or grants are negative. A ratio above 10% triggers MEDIUM severity and above 20% triggers HIGH severity. These are configurable illustrative thresholds and should be calibrated for the sector and the bank's credit policy. Because operating grants may be recurring, the indicator flags reliance on them rather than automatically treating them as non-recurring income.
+
 ### Customer Profile
 
 The sheet contains the fields of `CustomerProfileData`.

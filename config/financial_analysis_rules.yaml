@@ -151,3 +151,26 @@ rules:
       The operating leverage ratio stands at {value:.1f}x, indicating high
       operating leverage and a relatively high fixed operating cost base.
       This means that changes in revenue may have a magnified impact on EBIT.
+
+  - rule_id: R009
+    rule_name: Operating grants incidence on production value
+    indicator: Operating grants / production value
+    category: profitability_quality
+    input_fields:
+      - operating_grants
+      - production_value
+    calculation: ratio
+    trigger_operator: GT
+    threshold: 0.10
+    severity: LOW
+    severity_direction: HIGHER_IS_WORSE
+    severity_thresholds:
+      - threshold: 0.10
+        severity: MEDIUM
+      - threshold: 0.20
+        severity: HIGH
+    comment_template: >-
+      Operating grants represent {value:.1%} of total production value,
+      indicating a material reliance on operating contributions to support
+      reported production value and potentially reducing the resilience of
+      operating performance if such contributions decline.

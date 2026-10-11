@@ -16,6 +16,7 @@ _BASE_VALUES: dict[str, Any] = {
     "revenue": 10_000_000.0,
     "change_in_finished_goods_inventory": 100_000.0,
     "operating_grants": 50_000.0,
+    "production_value": 10_150_000.0,
     "net_purchases": 5_000_000.0,
     "change_in_raw_materials_inventory": -50_000.0,
     "costs_for_services_and_third_party_assets": 1_500_000.0,
