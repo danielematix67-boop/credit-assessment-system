@@ -39,6 +39,8 @@ _BASE_VALUES: dict[str, Any] = {
     "nfp_to_ebitda": None,
     "tax_debt": 100_000.0,
     "total_liabilities": 2_000_000.0,
+    "intangible_assets": 100_000.0,
+    "total_assets": 5_000_000.0,
     "interest_expense": 700_000.0,
     "revenue_growth": -0.35,
     "bank_debt_current": 1_000_000.0,
