@@ -26,6 +26,10 @@ def test_financial_configuration_rules_are_instantiable_and_evaluable():
     position = CreditPosition(
         position_id="integration-test",
         revenue_growth=0.05,
+        revenue=1100.0,
+        revenue_1y_ago=1000.0,
+        trade_receivables_current=550.0,
+        trade_receivables_1y_ago=500.0,
         ebitda=100.0,
         ebitda_margin=0.10,
         nfp_to_ebitda=4.0,
