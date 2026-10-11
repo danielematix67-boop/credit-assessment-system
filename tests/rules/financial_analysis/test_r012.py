@@ -33,37 +33,36 @@ def position(current, one_year, two_years, three_years, four_years):
     )
 
 
-def test_r012_triggers_medium_for_material_acceleration_in_payment_days():
+def test_r012_triggers_medium_when_current_days_exceed_historical_average():
     result = AveragePaymentDaysIncreaseRule(CONFIG).evaluate(
-        position(130, 105, 100, 90, 80)
+        position(115, 100, 100, 100, 100)
     )
-    assert result.value is not None
-    assert 10.0 < result.value < 20.0
+    assert result.value == 15.0
     assert result.status == RuleStatus.TRIGGERED
     assert result.severity == RuleSeverity.MEDIUM
 
 
-def test_r012_triggers_high_for_large_acceleration_in_payment_days():
+def test_r012_triggers_high_when_current_days_materially_exceed_historical_average():
     result = AveragePaymentDaysIncreaseRule(CONFIG).evaluate(
-        position(140, 105, 100, 90, 80)
+        position(125, 100, 100, 100, 100)
     )
-    assert result.value is not None
-    assert result.value > 20.0
+    assert result.value == 25.0
     assert result.status == RuleStatus.TRIGGERED
     assert result.severity == RuleSeverity.HIGH
 
 
-def test_r012_does_not_trigger_when_payment_days_do_not_increase():
+def test_r012_does_not_trigger_when_current_days_are_close_to_history():
     result = AveragePaymentDaysIncreaseRule(CONFIG).evaluate(
-        position(100, 105, 100, 90, 80)
+        position(105, 100, 100, 100, 100)
     )
+    assert result.value == 5.0
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.severity == RuleSeverity.LOW
 
 
-def test_r012_does_not_trigger_when_change_is_in_line_with_history():
+def test_r012_does_not_trigger_when_current_days_are_below_historical_average():
     result = AveragePaymentDaysIncreaseRule(CONFIG).evaluate(
-        position(115, 105, 100, 90, 80)
+        position(80, 100, 90, 80, 70)
     )
     assert result.status == RuleStatus.NOT_TRIGGERED
     assert result.severity == RuleSeverity.LOW
