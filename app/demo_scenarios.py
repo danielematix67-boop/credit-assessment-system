@@ -53,6 +53,11 @@ _BASE_VALUES: dict[str, Any] = {
     "avg_payment_days_2y_ago": 35.0,
     "avg_payment_days_3y_ago": 30.0,
     "avg_payment_days_4y_ago": 25.0,
+    "avg_collection_days_current": 60.0,
+    "avg_collection_days_1y_ago": 60.0,
+    "avg_collection_days_2y_ago": 60.0,
+    "avg_collection_days_3y_ago": 60.0,
+    "avg_collection_days_4y_ago": 60.0,
 }
 
 _BASE_CASE_DATA: dict[str, dict[str, Any]] = {
