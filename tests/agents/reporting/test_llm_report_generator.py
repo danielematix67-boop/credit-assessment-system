@@ -40,6 +40,7 @@ def make_analysis(
     key_findings: list[AnalysisFinding] | None = None,
     risk_factors: list[AnalysisFinding] | None = None,
     limitations: list[AnalysisFinding] | None = None,
+    rule_evidence: list[AnalysisFinding] | None = None,
 ) -> AssessmentAnalysis:
     findings = key_findings if key_findings is not None else []
     return AssessmentAnalysis(
@@ -48,6 +49,7 @@ def make_analysis(
         key_findings=findings,
         risk_factors=risk_factors if risk_factors is not None else findings,
         limitations=limitations if limitations is not None else [],
+        rule_evidence=rule_evidence if rule_evidence is not None else [],
     )
 
 
@@ -450,3 +452,94 @@ def test_propagates_client_errors() -> None:
 
     prompt_builder.build.assert_called_once()
     client.generate.assert_called_once_with("Test prompt")
+
+
+def test_rejects_narrative_that_omits_a_triggered_indicator() -> None:
+    evidence = [
+        AnalysisFinding(
+            rule_id="R001",
+            category="Financial Analysis",
+            assessment_area="Financial Analysis",
+            severity=RuleSeverity.HIGH,
+            text="Revenue growth deteriorated.",
+            status=RuleStatus.TRIGGERED,
+            indicator="Revenue growth deterioration",
+        ),
+        AnalysisFinding(
+            rule_id="R002",
+            category="Financial Analysis",
+            assessment_area="Financial Analysis",
+            severity=RuleSeverity.HIGH,
+            text="Intangible assets concentration is elevated.",
+            status=RuleStatus.TRIGGERED,
+            indicator="Intangible assets concentration",
+        ),
+    ]
+    response = (
+        "Customer Profile: Customer context is available.\n\n"
+        "Financial Analysis: Revenue growth deterioration remains a concern.\n\n"
+        "Behavioural Analysis: No behavioural anomalies were identified.\n\n"
+        "Debt Sustainability: Debt service capacity remains weak."
+    )
+    generator, _ = make_generator(response=response)
+
+    with pytest.raises(ValueError, match="Intangible assets concentration"):
+        generator.generate(make_analysis(rule_evidence=evidence))
+
+
+def test_rejects_triggered_indicator_in_wrong_assessment_area() -> None:
+    evidence = [
+        AnalysisFinding(
+            rule_id="DS001",
+            category="Debt Sustainability",
+            assessment_area="Debt Sustainability",
+            severity=RuleSeverity.HIGH,
+            text="Cash flow debt-service buffer is negative.",
+            status=RuleStatus.TRIGGERED,
+            indicator="Cash Flow Debt-Service Buffer",
+        ),
+    ]
+    response = (
+        "Customer Profile: Customer context is available.\n\n"
+        "Financial Analysis: Cash flow debt-service buffer is negative.\n\n"
+        "Behavioural Analysis: No behavioural anomalies were identified.\n\n"
+        "Debt Sustainability: Debt sustainability remains weak."
+    )
+    generator, _ = make_generator(response=response)
+
+    with pytest.raises(ValueError, match="Cash Flow Debt-Service Buffer"):
+        generator.generate(make_analysis(rule_evidence=evidence))
+
+
+def test_accepts_all_triggered_indicators_in_their_assessment_areas() -> None:
+    evidence = [
+        AnalysisFinding(
+            rule_id="R001",
+            category="Financial Analysis",
+            assessment_area="Financial Analysis",
+            severity=RuleSeverity.HIGH,
+            text="Revenue growth deteriorated.",
+            status=RuleStatus.TRIGGERED,
+            indicator="Revenue growth deterioration",
+        ),
+        AnalysisFinding(
+            rule_id="DS001",
+            category="Debt Sustainability",
+            assessment_area="Debt Sustainability",
+            severity=RuleSeverity.HIGH,
+            text="Cash flow debt-service buffer is negative.",
+            status=RuleStatus.TRIGGERED,
+            indicator="Cash Flow Debt-Service Buffer",
+        ),
+    ]
+    response = (
+        "Customer Profile: Customer context is available.\n\n"
+        "Financial Analysis: Revenue growth deterioration remains a concern.\n\n"
+        "Behavioural Analysis: No behavioural anomalies were identified.\n\n"
+        "Debt Sustainability: Cash-flow debt-service buffer remains negative."
+    )
+    generator, _ = make_generator(response=response)
+
+    report = generator.generate(make_analysis(rule_evidence=evidence))
+
+    assert "Cash-flow debt-service buffer" in report.executive_summary
