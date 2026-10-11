@@ -183,18 +183,33 @@ class LLMReportGenerator(ReportGenerator):
         # line, or mix headings and prose without blank lines. Parse the labels
         # across the full response as a second, tolerant format.
         inline_matches = list(cls._INLINE_ASSESSMENT_AREA_PATTERN.finditer(narrative))
-        found = [match.group(1).casefold() for match in inline_matches]
-        if len(found) == len(expected) and found == expected:
+
+        # Small local models sometimes repeat each section label, e.g.
+        # "Customer Profile: Customer Profile: ...". Collapse only consecutive
+        # duplicate labels, preserving the required order of the four areas.
+        heading_groups: list[tuple[str, re.Match[str], re.Match[str]]] = []
+        for match in inline_matches:
+            area = match.group(1).casefold()
+            if heading_groups and heading_groups[-1][0] == area:
+                previous_area, first_match, _ = heading_groups[-1]
+                heading_groups[-1] = (previous_area, first_match, match)
+            else:
+                heading_groups.append((area, match, match))
+
+        grouped_areas = [area for area, _, _ in heading_groups]
+        if grouped_areas == expected:
             paragraphs = []
-            for position, match in enumerate(inline_matches):
+            for position, (_, _, last_match) in enumerate(heading_groups):
+                # Stop at the FIRST label of the next section so its duplicate
+                # label cannot leak into the current paragraph.
                 end = (
-                    inline_matches[position + 1].start()
-                    if position + 1 < len(inline_matches)
+                    heading_groups[position + 1][1].start()
+                    if position + 1 < len(heading_groups)
                     else len(narrative)
                 )
-                paragraph = narrative[match.end() : end].strip()
-                paragraph = re.sub(r"^[-–—*#\s]+|[-–—*#\s]+$", "", paragraph)
-                paragraph = re.sub(r"\s+", " ", paragraph).strip()
+                paragraph = narrative[last_match.end() : end].strip()
+                paragraph = re.sub(r"^[-–—*#\\s]+|[-–—*#\\s]+$", "", paragraph)
+                paragraph = re.sub(r"\\s+", " ", paragraph).strip()
                 if not paragraph:
                     return None
                 paragraphs.append(paragraph)
