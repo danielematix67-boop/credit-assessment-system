@@ -277,11 +277,7 @@ rules:
     rule_name: Trade receivables growth exceeds revenue growth
     indicator: Trade receivables growth minus revenue growth
     category: working_capital
-    input_fields:
-      - trade_receivables_current
-      - trade_receivables_1y_ago
-      - revenue
-      - revenue_1y_ago
+    input_field: trade_receivables_current
     calculation: direct
     trigger_operator: GT
     threshold: 0.10
