@@ -37,6 +37,8 @@ For rule `R011` (increase in trade payables), provide `trade_payables_current`, 
 
 For rule `R012` (average payment days vs historical average), provide `avg_payment_days_current`, `avg_payment_days_1y_ago`, `avg_payment_days_2y_ago`, `avg_payment_days_3y_ago`, and `avg_payment_days_4y_ago`. Enter the average number of days on a consistent basis for each annual observation. The engine compares the current value with the arithmetic mean of the four prior annual values. The indicator is the difference in days, not percentages. A difference above 10 days triggers MEDIUM severity; a difference above 20 days triggers HIGH severity. The rule is `NOT_EVALUABLE` if an input is missing, non-numeric, non-finite, or negative. These thresholds are illustrative and should be calibrated to the company's sector, contractual payment terms and purchasing dynamics; an elevated payment-days level is a warning indicator, not by itself proof of financial distress.
 
+For rule `R013` (tax debt concentration), provide `tax_debt` and `total_liabilities` in the same currency and for the same reporting date. The indicator is `tax_debt / total_liabilities`. A share above 15% triggers MEDIUM severity; a share above 25% triggers HIGH severity. The rule is `NOT_EVALUABLE` if either input is missing, non-numeric or non-finite, tax debt is negative, or total liabilities are zero or negative. These are illustrative thresholds: tax-debt concentration can indicate accumulated tax obligations, but should be assessed alongside the age and nature of the liabilities, payment arrangements, and the company's sector and balance-sheet structure.
+
 ### Customer Profile
 
 The sheet contains the fields of `CustomerProfileData`.
