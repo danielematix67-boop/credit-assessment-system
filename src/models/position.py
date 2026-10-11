@@ -58,6 +58,10 @@ class CreditPosition:
     tax_debt: float | None = None
     total_liabilities: float | None = None
 
+    # Intangible assets concentration in total assets.
+    intangible_assets: float | None = None
+    total_assets: float | None = None
+
     # =========================
     # Historical / variation data
     # =========================
