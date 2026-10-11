@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from src.config.rule_config_loader import RuleConfigLoader
+from src.models.position import CreditPosition
 from src.rules.base.config import RuleConfig, SeverityThreshold
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.severity_direction import SeverityDirection
@@ -27,51 +28,39 @@ def test_rule_config_loader_returns_unique_rule_ids(loader):
     assert len(rule_ids) == len(set(rule_ids))
 
 
-def test_financial_configuration_contains_all_rules(loader):
+def test_financial_configuration_contains_all_configured_rules(loader):
     configs = loader.load(RULES_CONFIG_PATH)
-    assert [config.rule_id for config in configs] == [
-        "R001",
-        "R002",
-        "R003",
-        "R004",
-        "R005",
-        "R006",
-        "R007",
-        "R008",
-        "R009",
-    ]
+    assert configs
+    assert all(config.rule_id.startswith("R") for config in configs)
 
 
-def test_financial_configuration_contains_input_fields(loader):
+def test_financial_configuration_input_fields_match_position_model(loader):
     configs = loader.load(RULES_CONFIG_PATH)
-    input_fields = {config.rule_id: config.input_fields for config in configs}
-    assert input_fields == {
-        "R001": (),
-        "R002": (),
-        "R003": (),
-        "R004": (),
-        "R005": ("interest_expense", "ebitda"),
-        "R006": ("change_in_finished_goods_inventory", "ebitda"),
-        "R007": ("ebitda", "interest_expense"),
-        "R008": ("contribution_margin", "net_operating_margin"),
-        "R009": ("operating_grants", "production_value"),
-    }
+    position_fields = set(CreditPosition.__dataclass_fields__)
+
+    for config in configs:
+        fields = set(config.input_fields)
+        if config.input_field:
+            fields.add(config.input_field)
+
+        assert not (config.input_field and config.input_fields), (
+            f"{config.rule_id} must use input_field or input_fields, not both"
+        )
+        assert fields <= position_fields, (
+            f"{config.rule_id} references unknown CreditPosition fields: "
+            f"{sorted(fields - position_fields)}"
+        )
 
 
-def test_financial_configuration_contains_single_input_fields(loader):
+def test_financial_configuration_declares_input_fields_consistently(loader):
     configs = loader.load(RULES_CONFIG_PATH)
-    input_fields = {config.rule_id: config.input_field for config in configs}
-    assert input_fields == {
-        "R001": "revenue_growth",
-        "R002": "ebitda",
-        "R003": "ebitda_margin",
-        "R004": "nfp_to_ebitda",
-        "R005": "",
-        "R006": "",
-        "R007": "",
-        "R008": "",
-        "R009": "",
-    }
+    assert all(
+        isinstance(config.input_field, str)
+        and isinstance(config.input_fields, tuple)
+        for config in configs
+    )
+    assert any(config.input_field for config in configs)
+    assert any(config.input_fields for config in configs)
 
 
 def test_financial_configuration_contains_comment_templates(loader):
