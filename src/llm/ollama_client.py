@@ -15,8 +15,8 @@ class OllamaClient(LLMClient):
         self,
         model: str,
         host: str = "http://localhost:11434",
-        temperature: float = 0.2,
-        num_predict: int = 512,
+        temperature: float = 0.1,
+        num_predict: int = 1024,
     ) -> None:
         self.model = model
         self.host = host
