@@ -38,6 +38,7 @@ def test_financial_configuration_contains_all_rules(loader):
         "R006",
         "R007",
         "R008",
+        "R009",
     ]
 
 
@@ -53,6 +54,7 @@ def test_financial_configuration_contains_input_fields(loader):
         "R006": ("change_in_finished_goods_inventory", "ebitda"),
         "R007": ("ebitda", "interest_expense"),
         "R008": ("contribution_margin", "net_operating_margin"),
+        "R009": ("operating_grants", "production_value"),
     }
 
 
@@ -68,6 +70,7 @@ def test_financial_configuration_contains_single_input_fields(loader):
         "R006": "",
         "R007": "",
         "R008": "",
+        "R009": "",
     }
 
 
