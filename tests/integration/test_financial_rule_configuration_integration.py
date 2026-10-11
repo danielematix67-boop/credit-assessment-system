@@ -52,6 +52,11 @@ def test_financial_configuration_rules_are_instantiable_and_evaluable():
         avg_payment_days_2y_ago=35.0,
         avg_payment_days_3y_ago=30.0,
         avg_payment_days_4y_ago=25.0,
+        avg_collection_days_current=50.0,
+        avg_collection_days_1y_ago=45.0,
+        avg_collection_days_2y_ago=40.0,
+        avg_collection_days_3y_ago=35.0,
+        avg_collection_days_4y_ago=30.0,
     )
 
     results = []
