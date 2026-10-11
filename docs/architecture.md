@@ -43,7 +43,7 @@ The assessment is organised into macro-areas. Each domain owns its inputs, rule 
 
 This is intentional: adding or removing a rule should not require rewriting the architecture document.
 
-The architecture is catalogue-independent: the number of domains, rule identifiers and rule counts may evolve without changing the architectural model described here.
+The architecture is catalogue-independent: rule identifiers, rule counts and domain-specific rule families may evolve without changing the architectural model described here. User-facing contracts that intentionally require a fixed set of reporting areas are documented separately in the reporting guide.
 
 ## Rule architecture
 
