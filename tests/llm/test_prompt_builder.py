@@ -213,7 +213,7 @@ class TestReportPromptBuilder:
         assert "Do not replace detailed context with a generic risk-profile summary." in prompt
         assert "REWRITE, DO NOT TRANSCRIBE" in prompt
         assert "Re-express their meaning in natural, fluent and varied professional prose." in prompt
-        assert "The explanatory wording around that label may be paraphrased." in prompt
+        assert "the explanatory wording around that label may be paraphrased." in prompt
         assert "Do not merge distinct signals" in prompt
 
     def test_build_returns_none_when_no_findings(self) -> None:
