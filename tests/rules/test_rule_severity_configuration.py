@@ -67,6 +67,13 @@ def rule_configs():
             "HIGHER_IS_WORSE",
             ((0.10, RuleSeverity.MEDIUM), (0.20, RuleSeverity.HIGH)),
         ),
+        (
+            "R010",
+            0.10,
+            RuleSeverity.MEDIUM,
+            "HIGHER_IS_WORSE",
+            ((0.10, RuleSeverity.MEDIUM), (0.20, RuleSeverity.HIGH)),
+        ),
     ],
 )
 def test_rule_configuration_matches_expected_values(
