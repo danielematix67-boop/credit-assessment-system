@@ -36,6 +36,11 @@ _BASE_VALUES: dict[str, Any] = {
     "nfp_to_ebitda": None,
     "interest_expense": 700_000.0,
     "revenue_growth": -0.35,
+    "bank_debt_current": 1_000_000.0,
+    "bank_debt_1y_ago": 950_000.0,
+    "bank_debt_2y_ago": 900_000.0,
+    "bank_debt_3y_ago": 850_000.0,
+    "bank_debt_4y_ago": 800_000.0,
 }
 
 _BASE_CASE_DATA: dict[str, dict[str, Any]] = {
