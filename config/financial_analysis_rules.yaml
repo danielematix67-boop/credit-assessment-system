@@ -162,7 +162,7 @@ rules:
     calculation: ratio
     trigger_operator: GT
     threshold: 0.10
-    severity: LOW
+    severity: MEDIUM
     severity_direction: HIGHER_IS_WORSE
     severity_thresholds:
       - threshold: 0.10
