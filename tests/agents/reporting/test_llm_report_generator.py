@@ -177,6 +177,25 @@ def test_llm_accepts_all_four_sections_on_one_line() -> None:
     assert "Debt sustainability remains adequate." in report.executive_summary
 
 
+
+def test_llm_accepts_repeated_section_labels_from_small_local_models() -> None:
+    response = (
+        "Customer Profile: Customer Profile: The customer profile is stable. "
+        "Financial Analysis: Financial Analysis: Revenue remains under pressure. "
+        "Behavioural Analysis: Behavioural Analysis: No behavioural anomalies were identified. "
+        "Debt Sustainability: Debt Sustainability: Debt sustainability remains adequate."
+    )
+    generator, _ = make_generator(response=response)
+
+    report = generator.generate(make_analysis())
+
+    assert "The customer profile is stable." in report.executive_summary
+    assert "Revenue remains under pressure." in report.executive_summary
+    assert "No behavioural anomalies were identified." in report.executive_summary
+    assert "Debt sustainability remains adequate." in report.executive_summary
+    assert "Customer Profile: Customer Profile:" not in report.executive_summary
+
+
 def test_llm_strips_ollama_think_block() -> None:
     response = (
         "<think>We need to structure the response in four areas.</think>\n"
