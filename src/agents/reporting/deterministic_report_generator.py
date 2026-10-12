@@ -68,10 +68,8 @@ class DeterministicReportGenerator(ReportGenerator):
 
         profile_text = ""
         if analysis.material_customer_profile is not None:
-            profile_text = "\n\n".join(
-                text
-                for _, text in analysis.material_customer_profile.sections()
-                if text
+            profile_text = cls._render_customer_profile_context(
+                analysis.material_customer_profile.sections()
             )
 
         paragraphs: list[tuple[str, str]] = []
@@ -144,6 +142,25 @@ class DeterministicReportGenerator(ReportGenerator):
                 narrative_parts.append(paragraph)
 
         return f"{status}\n\n{'\n\n'.join(narrative_parts)}"
+
+    @staticmethod
+    def _render_customer_profile_context(
+        sections: list[tuple[str, str]],
+    ) -> str:
+        """Render profile context as compact prose without nested subsection headings."""
+        import re
+
+        paragraphs: list[str] = []
+        for _, content in sections:
+            if not content:
+                continue
+            # Keep structured sections internally, but omit their headings from
+            # the deterministic executive narrative to avoid excessive nesting.
+            cleaned = re.sub(r"(?m)^\*\*[^\n]+\*\*\s*", "", content).strip()
+            cleaned = re.sub(r"\s+", " ", cleaned)
+            if cleaned and cleaned != "No additional information available.":
+                paragraphs.append(cleaned)
+        return " ".join(paragraphs)
 
     @classmethod
     def _ordered_categories(
