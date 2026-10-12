@@ -203,126 +203,141 @@ class CaseAnalysisAgent:
         profile: dict[str, object],
         fields: set[str] | None = None,
     ) -> str:
-        """Build a compact Customer Profile narrative without space-consuming bullet lists."""
+        """Build a readable prose narrative from customer-profile context."""
         def included(key: str) -> bool:
             item = profile.get(key)
             return item not in (None, "", [], {}) and (fields is None or key in fields)
 
-        def text(item: object) -> str:
+        def value(key: str) -> str:
+            item = profile[key]
             if isinstance(item, bool):
-                return "Yes" if item else "No"
+                return "yes" if item else "no"
             if isinstance(item, list):
                 return ", ".join(str(entry) for entry in item)
             return str(item)
 
-        def bullet(
-            label: str,
-            key: str,
-            transform: Callable[[object], str] | None = None,
-        ) -> str | None:
-            if not included(key):
-                return None
-            item = profile[key]
-            rendered = transform(item) if transform else text(item)
-            return f"{label} is {rendered}"
+        def add(parts: list[str], key: str, phrase: str) -> None:
+            if included(key):
+                parts.append(phrase.format(value=value(key)))
 
-        def section(
-            title: str,
-            lines: list[str | None],
-            introduction: str | None = None,
-        ) -> str:
-            populated = [line for line in lines if line]
-            body = [f"**{title}**"]
-            if introduction:
-                body.extend(("", introduction))
-            if populated:
-                body.extend(("", ". ".join(line.rstrip(".") for line in populated) + "."))
-            elif not introduction:
-                body.extend(("", "No additional information available."))
-            return "\n".join(body)
-
-        def records(key: str) -> list[object]:
-            item = profile.get(key)
-            return item if isinstance(item, list) else []
-
-        company_name = profile.get("company_name")
-        introduction_parts: list[str] = []
-        if isinstance(company_name, str) and company_name.strip():
-            introduction_parts.append(f"{company_name.strip()} is the customer under assessment.")
-        sector = profile.get("sector")
-        if isinstance(sector, str) and sector.strip():
-            introduction_parts.append(f"The company operates in the {sector.strip()} sector.")
-        founding_year = profile.get("founding_year")
-        if founding_year not in (None, ""):
-            introduction_parts.append(f"It was established in {founding_year}.")
-        general = section("General Information", [
-            bullet("Customer", "company_name"),
-            bullet("Sector", "sector"),
-            bullet("Company size", "size_class"),
-            bullet("Geography", "geography"),
-            bullet("Business activities", "operations"),
-            bullet("Established", "founding_year"),
-            bullet("Operating history", "business_history_years",
-                   lambda v: f"{v} year" if v == 1 else f"{v} years"),
-        ], " ".join(introduction_parts) or "General customer information is available as summarised below.")
-        risk = section("Risk Profile & Predictiveness", [
-            bullet("Minimum regulatory risk grade", "minimum_regulatory_risk_grade"),
-            bullet("Previous risk grade", "previous_risk_grade"),
-            bullet("Risk-grade change", "risk_grade_change"),
-            bullet("Past-due positions", "past_due_count"),
-            bullet("EWS Score class", "ews_score_class"),
-            bullet("EWS notching", "ews_score_notching"),
-            bullet("EWS variation", "ews_score_variation"),
-            bullet("Active early-warning indicators", "active_ewis"),
-            bullet("Rating", "rating"),
-            bullet("Rating notching", "rating_notching"),
-            bullet("Rating factors", "rating_influential_factors"),
-            bullet("Rating modules", "rating_elementary_modules"),
-            bullet("Probability of default (PD)", "pd"),
-        ])
-
-        relationship_lines = [
-            bullet("Banking relationship", "relationship_years",
-                   lambda v: f"{v} year" if v == 1 else f"{v} years"),
-            bullet("Risk-group interdependence", "risk_group_interdependence"),
-            bullet("Risk-group independence", "risk_group_independence"),
-            bullet("Shareholders", "shareholders"),
-            bullet("Shareholder roles", "shareholder_roles"),
-            bullet("Management", "management_members"),
-            bullet("Generational transition", "generational_transition"),
-            bullet("Historical facilities", "historical_facilities"),
-            bullet("Employment contract", "employment_contract_type"),
-            bullet("Economic-family context", "economic_family_context"),
-        ]
-        shareholders = records("shareholder_details") if included("shareholder_details") else []
-        if shareholders:
-            relationship_lines.append(
-                "Shareholding structure: " + "; ".join(str(entry) for entry in shareholders)
+        def section(title: str, prose: str) -> str:
+            return f"**{title}**\n\n{prose.strip()}" if prose.strip() else (
+                f"**{title}**\n\nNo additional information available."
             )
-        facilities = records("credit_facility_details") if included("credit_facility_details") else []
-        if facilities:
-            relationship_lines.append(
-                "Credit facilities: " + "; ".join(str(entry) for entry in facilities)
-            )
-        relationship = section("Relationship & Counterparty Context", relationship_lines)
 
-        event_lines = [
-            bullet("Previous restructuring", "previous_restructuring"),
-            bullet("Forborne exposure", "forborne"),
-            bullet("Exit from forborne non-performing status", "forborne_non_performing_exit"),
-            bullet("Cure period", "cure_period_days", lambda v: f"{v} days"),
-            bullet("Monitoring period", "monitoring_period_days", lambda v: f"{v} days"),
-            bullet("Probation period", "probation_period_days", lambda v: f"{v} days"),
-            bullet("Protests", "protests"),
-            bullet("Bankruptcies", "bankruptcies"),
-            bullet("Litigation", "litigation"),
-            bullet("Significant historical events", "significant_historical_events"),
-        ]
-        event_records = records("relevant_event_details") if included("relevant_event_details") else []
-        if event_records:
-            event_lines.append(
-                "Recorded events: " + "; ".join(str(entry) for entry in event_records)
+        # General information: introduce the company once and avoid repeating
+        # the same company, sector and establishment year as labelled fields.
+        general_parts: list[str] = []
+        company = value("company_name") if included("company_name") else "The customer"
+        opening = [company]
+        if included("sector"):
+            opening.append(f"operates in the {value('sector')} sector")
+        if included("operations"):
+            opening.append(f"with activities focused on {value('operations')}")
+        general_sentence = " ".join(opening) + "."
+        general_details: list[str] = []
+        add(general_details, "size_class", "It is classified as a {value}.")
+        add(general_details, "geography", "Its main geographical base is {value}.")
+        add(general_details, "founding_year", "The company was established in {value}.")
+        add(
+            general_details,
+            "business_history_years",
+            "Its operating history spans {value} years.",
+        )
+        general_parts.append(general_sentence)
+        general_parts.extend(general_details)
+        general = section("General Information", " ".join(general_parts))
+
+        # Risk profile: group related grades, EWS signals and rating information
+        # into connected sentences instead of repeating "X is Y" field labels.
+        risk_parts: list[str] = []
+        if included("minimum_regulatory_risk_grade"):
+            minimum_grade = value("minimum_regulatory_risk_grade")
+            if included("previous_risk_grade"):
+                previous_grade = value("previous_risk_grade")
+                change = (
+                    f", with a {value('risk_grade_change').lower()} trend"
+                    if included("risk_grade_change")
+                    else ""
+                )
+                risk_parts.append(
+                    f"The minimum regulatory risk grade is {minimum_grade}, "
+                    f"compared with {previous_grade} previously{change}."
+                )
+            else:
+                risk_parts.append(f"The minimum regulatory risk grade is {minimum_grade}.")
+        elif included("previous_risk_grade"):
+            risk_parts.append(f"The previous risk grade was {value('previous_risk_grade')}.")
+
+        if included("past_due_count"):
+            risk_parts.append(f"The recorded number of past-due positions is {value('past_due_count')}.")
+        ews_parts: list[str] = []
+        add(ews_parts, "ews_score_class", "an EWS score class of {value}")
+        add(ews_parts, "ews_score_notching", "EWS notching of {value}")
+        add(ews_parts, "ews_score_variation", "an EWS variation of {value}")
+        add(ews_parts, "active_ewis", "active early-warning indicators comprising {value}")
+        if ews_parts:
+            risk_parts.append("Early-warning information includes " + ", ".join(ews_parts) + ".")
+        rating_parts: list[str] = []
+        add(rating_parts, "rating", "a rating of {value}")
+        add(rating_parts, "rating_notching", "rating notching of {value}")
+        add(rating_parts, "pd", "a probability of default (PD) of {value}")
+        add(rating_parts, "rating_influential_factors", "the following rating factors: {value}")
+        add(rating_parts, "rating_elementary_modules", "rating modules covering {value}")
+        if rating_parts:
+            risk_parts.append("The rating assessment records " + ", ".join(rating_parts) + ".")
+        risk = section("Risk Profile & Predictiveness", " ".join(risk_parts))
+
+        # Relationship context: describe group links and ownership, then retain
+        # all facility details without turning each attribute into a bullet.
+        relationship_parts: list[str] = []
+        group_parts: list[str] = []
+        add(group_parts, "risk_group_interdependence", "interdependence of {value}")
+        add(group_parts, "risk_group_independence", "independence of {value}")
+        if group_parts:
+            relationship_parts.append(
+                "At group level, the counterparty has " + " and ".join(group_parts) + "."
             )
-        events = section("Relevant Events", event_lines)
+        add(relationship_parts, "relationship_years", "The banking relationship has lasted {value} years.")
+        add(relationship_parts, "shareholders", "The shareholders are {value}.")
+        add(relationship_parts, "shareholder_roles", "Shareholders' roles include {value}.")
+        add(relationship_parts, "management_members", "The management team includes {value}.")
+        add(relationship_parts, "generational_transition", "The generational-transition context is {value}.")
+        add(relationship_parts, "historical_facilities", "Historical facilities include {value}.")
+        add(relationship_parts, "employment_contract_type", "The employment-contract context is {value}.")
+        add(relationship_parts, "economic_family_context", "The economic-family context is {value}.")
+
+        if included("shareholder_details"):
+            shareholders = profile["shareholder_details"]
+            if isinstance(shareholders, list):
+                relationship_parts.append(
+                    "The shareholding structure is " + "; ".join(str(item) for item in shareholders) + "."
+                )
+        if included("credit_facility_details"):
+            facilities = profile["credit_facility_details"]
+            if isinstance(facilities, list):
+                relationship_parts.append(
+                    "Available credit facilities comprise " + "; ".join(str(item) for item in facilities) + "."
+                )
+        relationship = section("Relationship & Counterparty Context", " ".join(relationship_parts))
+
+        event_parts: list[str] = []
+        add(event_parts, "previous_restructuring", "The previous-restructuring status is {value}.")
+        add(event_parts, "forborne", "Forborne exposure is reported: {value}.")
+        add(event_parts, "forborne_non_performing_exit", "The exit from forborne non-performing status is {value}.")
+        add(event_parts, "cure_period_days", "The cure period is {value} days.")
+        add(event_parts, "monitoring_period_days", "The monitoring period is {value} days.")
+        add(event_parts, "probation_period_days", "The probation period is {value} days.")
+        add(event_parts, "protests", "Protests are recorded: {value}.")
+        add(event_parts, "bankruptcies", "Bankruptcies are recorded: {value}.")
+        add(event_parts, "litigation", "Litigation is reported: {value}.")
+        add(event_parts, "significant_historical_events", "Significant historical events include {value}.")
+        if included("relevant_event_details"):
+            events = profile["relevant_event_details"]
+            if isinstance(events, list):
+                event_parts.append(
+                    "Recorded events include " + "; ".join(str(item) for item in events) + "."
+                )
+        events = section("Relevant Events", " ".join(event_parts))
 
         return "\n\n".join((general, risk, relationship, events))
