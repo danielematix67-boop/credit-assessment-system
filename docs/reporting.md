@@ -148,6 +148,21 @@ A section is never omitted because no rule is triggered. When an area contains n
 
 Customer Profile is special because material contextual information may be present even when no Customer Profile rule is triggered. In that case, the section contains the deterministic contextual profile followed by any triggered findings; if neither is available, it uses the standard no-anomaly statement.
 
+### Finding ordering and thematic synthesis
+
+Before the prompt is sent to the LLM, `ReportPromptBuilder` groups findings by their authoritative assessment area and applies a stable, domain-specific topic order. The current narrative order is:
+
+| Assessment area | Topic sequence |
+|---|---|
+| Customer Profile | Customer Profile context and risk signals |
+| Financial Analysis | Revenue and operating profitability → earnings quality and operating structure → working capital and cash conversion → leverage and funding structure → asset quality |
+| Behavioural Analysis | Credit utilization and liquidity behaviour → payment behaviour → exposure evolution |
+| Debt Sustainability | Debt-service capacity |
+
+The ordering uses the configured rule-category metadata where available, not rule IDs. Unknown categories are retained after the recognized themes and preserve their relative source order. This is a presentation contract only: it does not reorder rule execution, change severity or affect assessment aggregation.
+
+The prompt labels each theme so the LLM can synthesize related concepts rather than restating every rule comment independently. For example, several working-capital findings may be expressed in connected prose about cash conversion and liquidity pressure, provided the individual indicators remain identifiable and no unsupported causal link is introduced. The model must preserve each deterministic indicator label verbatim and must not omit a triggered finding. Structural and evidence-coverage validation remain authoritative; a failed report follows the configured deterministic fallback path.
+
 The narrative must:
 
 - use only supplied deterministic evidence and selected Customer Profile context;
