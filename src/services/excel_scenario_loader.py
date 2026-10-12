@@ -17,6 +17,17 @@ SHEET_MODELS = {
     "Debt Sustainability": DebtSustainabilityData,
 }
 
+AUXILIARY_SHEETS = {
+    "Shareholders": {"shareholder_name", "age", "role", "ownership_percentage"},
+    "Relevant Events": {"event_type", "event_date", "description", "status"},
+    "Credit Facilities": {
+        "facility_id", "facility_type", "description", "approved_amount",
+        "used_amount", "cash_approved_amount", "cash_used_amount",
+        "residual_debt", "maturity_date", "review_date", "unpaid_installments",
+        "forborne",
+    },
+}
+
 LIST_FIELDS = {
     "operations",
     "active_ewis",
@@ -92,11 +103,20 @@ def load_excel_scenarios(file: BinaryIO | bytes) -> dict[str, tuple[
         )
 
     frames: dict[str, pd.DataFrame] = {}
+    auxiliary_frames: dict[str, pd.DataFrame] = {}
     for sheet_name, model in SHEET_MODELS.items():
         if sheet_name not in workbook.sheet_names:
             continue
         frame = pd.read_excel(workbook, sheet_name=sheet_name)
         frames[sheet_name] = _validate_frame(sheet_name, frame, model)
+
+    for sheet_name, allowed_fields in AUXILIARY_SHEETS.items():
+        if sheet_name not in workbook.sheet_names:
+            continue
+        frame = pd.read_excel(workbook, sheet_name=sheet_name)
+        auxiliary_frames[sheet_name] = _validate_auxiliary_frame(
+            sheet_name, frame, allowed_fields
+        )
 
     scenario_ids = frames["Financial Analysis"]["scenario_id"].tolist()
     if len(set(scenario_ids)) != len(scenario_ids):
@@ -104,7 +124,7 @@ def load_excel_scenarios(file: BinaryIO | bytes) -> dict[str, tuple[
             "Sheet 'Financial Analysis' contains duplicate scenario_id values."
         )
 
-    for sheet_name, frame in frames.items():
+    for sheet_name, frame in {**frames, **auxiliary_frames}.items():
         ids = set(frame["scenario_id"])
         unknown = ids - set(scenario_ids)
         if unknown:
@@ -127,6 +147,10 @@ def load_excel_scenarios(file: BinaryIO | bytes) -> dict[str, tuple[
             if "Customer Profile" in frames
             else None
         )
+        if customer_profile is not None:
+            customer_profile = _attach_auxiliary_details(
+                customer_profile, auxiliary_frames, scenario_id
+            )
         behavioural = (
             _build_model(BehaviouralData, frames["Behavioural Analysis"], scenario_id)
             if "Behavioural Analysis" in frames
@@ -149,6 +173,71 @@ def load_excel_scenarios(file: BinaryIO | bytes) -> dict[str, tuple[
         )
 
     return result
+
+
+
+def _validate_auxiliary_frame(
+    sheet_name: str,
+    frame: pd.DataFrame,
+    allowed_fields: set[str],
+) -> pd.DataFrame:
+    """Validate a one-to-many detail sheet; multiple rows per scenario are expected."""
+    if "scenario_id" not in frame.columns:
+        raise ExcelScenarioError(
+            f"Sheet '{sheet_name}' must contain a 'scenario_id' column."
+        )
+    if frame.empty:
+        raise ExcelScenarioError(f"Sheet '{sheet_name}' is empty.")
+    unknown = set(frame.columns) - ({"scenario_id"} | allowed_fields)
+    if unknown:
+        raise ExcelScenarioError(
+            f"Sheet '{sheet_name}' contains unsupported column(s): "
+            + ", ".join(sorted(map(str, unknown)))
+            + "."
+        )
+    normalized = frame.copy()
+    normalized["scenario_id"] = normalized["scenario_id"].map(_scenario_id)
+    if normalized["scenario_id"].eq("").any():
+        raise ExcelScenarioError(
+            f"Sheet '{sheet_name}' contains a blank scenario_id."
+        )
+    return normalized
+
+
+def _attach_auxiliary_details(
+    profile: CustomerProfileData,
+    frames: dict[str, pd.DataFrame],
+    scenario_id: str,
+) -> CustomerProfileData:
+    """Map each auxiliary row into a readable record for profile reporting."""
+    from dataclasses import replace
+
+    updates: dict[str, list[str]] = {}
+    mappings = {
+        "Shareholders": ("shareholder_details", ("shareholder_name", "age", "role", "ownership_percentage")),
+        "Relevant Events": ("relevant_event_details", ("event_type", "event_date", "description", "status")),
+        "Credit Facilities": ("credit_facility_details", (
+            "facility_id", "facility_type", "description", "approved_amount",
+            "used_amount", "cash_approved_amount", "cash_used_amount",
+            "residual_debt", "maturity_date", "review_date", "unpaid_installments",
+            "forborne",
+        )),
+    }
+    for sheet_name, (target_field, columns) in mappings.items():
+        frame = frames.get(sheet_name)
+        if frame is None:
+            continue
+        records: list[str] = []
+        for _, row in frame.loc[frame["scenario_id"] == scenario_id].iterrows():
+            parts = [
+                f"{column}={str(row[column]).strip()}"
+                for column in columns
+                if column in row and not pd.isna(row[column]) and str(row[column]).strip()
+            ]
+            if parts:
+                records.append("; ".join(parts))
+        updates[target_field] = records
+    return replace(profile, **updates)
 
 
 def _validate_frame(
