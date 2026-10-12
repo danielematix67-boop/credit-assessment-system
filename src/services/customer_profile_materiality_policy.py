@@ -12,12 +12,14 @@ class CustomerProfileMaterialityPolicy:
             "ews_score_notching", "ews_score_variation", "active_ewis", "rating", "rating_notching",
             "rating_influential_factors", "rating_elementary_modules", "pd", "minimum_regulatory_risk_grade",
             "previous_risk_grade", "risk_grade_change", "risk_group_interdependence", "risk_group_independence",
+            "shareholder_details", "credit_facility_details", "relevant_event_details",
             "forborne_non_performing_exit", "protests", "bankruptcies", "litigation", "significant_historical_events",
         }
     )
     _POSITIVE_MATERIAL: ClassVar[frozenset[str]] = frozenset(
         {
             "past_due_count",
+            "founding_year",
             "cure_period_days",
             "monitoring_period_days",
             "probation_period_days",
