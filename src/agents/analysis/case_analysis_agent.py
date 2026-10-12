@@ -180,7 +180,11 @@ class CaseAnalysisAgent:
 
         headings = ("General Information", "Risk Profile & Predictiveness", "Relationship & Counterparty Context", "Relevant Events")
         pattern = r"(?=^\*\*(?:" + "|".join(re.escape(h) for h in headings) + r")\*\*\s*$)"
-        sections = [part.strip() for part in re.split(pattern, summary, flags=re.MULTILINE) if part.strip()]
+        matches = list(re.finditer(pattern, summary, flags=re.MULTILINE))
+        sections: list[str] = []
+        for index, match in enumerate(matches):
+            end = matches[index + 1].start() if index + 1 < len(matches) else len(summary)
+            sections.append(summary[match.start():end].strip())
         padded = (sections + [""] * 4)[:4]
         return CustomerProfileAnalysis(
             general_information=padded[0],
@@ -217,15 +221,19 @@ class CaseAnalysisAgent:
             rendered = transform(item) if transform else text(item)
             return f"- **{label}:** {rendered}"
 
-        def section(title: str, lines: list[str | None], introduction: str | None = None) -> str:
+        def section(
+            title: str,
+            lines: list[str | None],
+            introduction: str | None = None,
+        ) -> str:
             populated = [line for line in lines if line]
-            if not populated and not introduction:
-                return ""
             body = [f"**{title}**"]
             if introduction:
                 body.extend(("", introduction))
             if populated:
-                body.extend(("", "\n".join(populated)))
+                body.extend(("", "\n\n".join(populated)))
+            elif not introduction:
+                body.extend(("", "No additional information available."))
             return "\n".join(body)
 
         def records(key: str) -> list[object]:
@@ -243,6 +251,7 @@ class CaseAnalysisAgent:
         if founding_year not in (None, ""):
             introduction_parts.append(f"It was established in {founding_year}.")
         general = section("General Information", [
+            bullet("Customer", "company_name"),
             bullet("Sector", "sector"),
             bullet("Company size", "size_class"),
             bullet("Geography", "geography"),
@@ -282,11 +291,11 @@ class CaseAnalysisAgent:
         ]
         shareholders = records("shareholder_details") if included("shareholder_details") else []
         if shareholders:
-            relationship_lines.extend(("", "**Shareholding structure**"))
+            relationship_lines.extend(("", "**Shareholding structure**", ""))
             relationship_lines.extend(f"- {entry}" for entry in shareholders)
         facilities = records("credit_facility_details") if included("credit_facility_details") else []
         if facilities:
-            relationship_lines.extend(("", "**Credit facilities**"))
+            relationship_lines.extend(("", "**Credit facilities**", ""))
             relationship_lines.extend(f"- {entry}" for entry in facilities)
         relationship = section("Relationship & Counterparty Context", relationship_lines)
 
@@ -304,7 +313,7 @@ class CaseAnalysisAgent:
         ]
         event_records = records("relevant_event_details") if included("relevant_event_details") else []
         if event_records:
-            event_lines.extend(("", "**Recorded events**"))
+            event_lines.extend(("", "**Recorded events**", ""))
             event_lines.extend(f"- {entry}" for entry in event_records)
         events = section("Relevant Events", event_lines)
 
