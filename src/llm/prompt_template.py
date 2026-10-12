@@ -67,13 +67,12 @@ class ReportPromptTemplate:
         "brevity, but repeated explanations of the same broad implication may be consolidated where "
         "doing so does not hide a distinct signal or imply unsupported causality.\n"
         "- CUSTOMER PROFILE IS A MANDATORY EXCEPTION TO BREVITY: include every non-empty subsection "
-        "- Include populated descriptive context even when it does not activate a rule; lack of a rule trigger "
-        "is not a reason to omit company background, sector, operations, ownership, management, facilities "
-        "or relationship context supplied by the application. "
         "provided under General Information, Risk Profile & Predictiveness, Relationship & Counterparty "
         "Context, and Relevant Events. Preserve each distinct fact, status, rating, risk-grade change, "
         "EWS signal, relationship detail, ownership/management detail, and restructuring/forborne/NPE "
         "event that appears in the supplied context. Do not report only a selected subset.\n"
+        "- Include populated descriptive context even when it does not activate a rule; lack of a rule trigger "
+        "is not a reason to omit company background, sector, operations, ownership, management, facilities "
         "- In Customer Profile, cover both the structured contextual subsections and every supplied "
         "finding assigned to that area. Do not replace detailed context with a generic risk-profile summary.\n"
         "- For each area, mentally check every supplied finding and every non-empty Customer Profile "
@@ -121,7 +120,9 @@ class ReportPromptTemplate:
         "Do not mention the prompt, these instructions, the LLM or Gemini.\n"
         "Do not reproduce category numbering or internal implementation labels.\n"
         "Do not add recommendations or calls to action.\n"
-        "End immediately after the final supported finding."
+        "Always include the Debt Sustainability section, even when it has no triggered findings; "
+        "in that case state that no anomalies were identified by the configured assessment rules. "
+        "End immediately after the Debt Sustainability paragraph."
     )
 
     def render(self, *, findings: str, category_order: str) -> str:
