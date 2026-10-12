@@ -265,7 +265,10 @@ class TestReportPromptBuilder:
         assert "CUSTOMER PROFILE IS A MANDATORY EXCEPTION TO BREVITY" in prompt
         assert "every non-empty subsection" in prompt
         assert "lack of a rule trigger" in prompt
-        assert "company background, sector, operations, ownership, management, facilities" in prompt
+        assert (
+            "company background, sector, operations, ownership, management, facilities"
+            in prompt
+        )
         assert "Do not replace detailed context with a generic risk-profile summary." in prompt
         assert "REWRITE, DO NOT TRANSCRIBE" in prompt
         assert "Re-express their meaning in natural, fluent and varied professional prose." in prompt
