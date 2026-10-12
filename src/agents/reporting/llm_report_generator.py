@@ -215,6 +215,37 @@ class LLMReportGenerator(ReportGenerator):
                 paragraphs.append(paragraph)
             return paragraphs
 
+        # Small local models occasionally omit the final section label while
+        # still returning four blank-line-separated paragraphs. Recover only the
+        # narrowly defined case where the first three labels are present in the
+        # canonical order and the fourth paragraph is unlabeled. The application
+        # still assigns the final paragraph to Debt Sustainability and validates
+        # all triggered evidence against that area before accepting the report.
+        if heading_matches:
+            found = [area for _, area, _ in heading_matches]
+            blocks = [
+                re.sub(r"\\s+", " ", part.strip())
+                for part in narrative.split("\\n\\n")
+                if part.strip()
+            ]
+            if found == expected[:3] and len(blocks) == 4:
+                recovered = []
+                for index, area in enumerate(cls._ASSESSMENT_AREA_ORDER[:3]):
+                    block = blocks[index]
+                    label = re.compile(
+                        r"^\\s*(?:#{1,6}\\s*)?(?:\\*\\*)?"
+                        + re.escape(area)
+                        + r"(?:\\*\\*)?\\s*:?\\s*",
+                        re.IGNORECASE,
+                    )
+                    block = label.sub("", block, count=1).strip()
+                    if not block:
+                        return None
+                    recovered.append(block)
+                if blocks[3]:
+                    recovered.append(blocks[3])
+                    return recovered
+
         # The unlabeled fallback must not hide invalid labeled sections.
         # Reject incomplete, duplicated, or misordered headings explicitly.
         if heading_matches or inline_matches:
