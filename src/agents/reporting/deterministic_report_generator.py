@@ -90,10 +90,23 @@ class DeterministicReportGenerator(ReportGenerator):
             )
 
             if area.casefold() == "customer profile" and profile_text:
-                # Customer-profile context is already consolidated into a
-                # risk-oriented narrative; avoid repeating the same fields
-                # through individual Customer Profile rule findings.
+                # Keep the complete contextual profile and append triggered
+                # deterministic evidence, because rule-backed fields are
+                # intentionally excluded from the material context subset.
                 paragraph = profile_text
+                if triggered:
+                    context_key = cls._normalize_text(profile_text)
+                    distinct_rule_sentences = [
+                        finding.text.rstrip(".") + "."
+                        for finding in triggered
+                        if finding.indicator
+                        and cls._normalize_text(finding.indicator) not in context_key
+                    ]
+                    if distinct_rule_sentences:
+                        paragraph += (
+                            "\n\n**Deterministic rule findings**\n\n"
+                            + " ".join(distinct_rule_sentences)
+                        )
             else:
                 sentences = [
                     finding.text.rstrip(".") + "."
@@ -166,6 +179,13 @@ class DeterministicReportGenerator(ReportGenerator):
                 "Rule evidence requires a structured RuleStatus; "
                 f"missing status for: {rule_ids}"
             )
+
+    @staticmethod
+    def _normalize_text(value: str) -> str:
+        """Normalize text for conservative duplicate checks in the fallback."""
+        import re
+
+        return re.sub(r"[^a-z0-9]+", " ", value.casefold()).strip()
 
     @classmethod
     def _topic_order(cls, category: str) -> int:
