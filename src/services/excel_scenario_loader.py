@@ -346,7 +346,7 @@ def _format_auxiliary_record(sheet_name: str, row: pd.Series) -> str:
             if isinstance(forborne, str):
                 forborne = forborne.strip().lower() in {"true", "yes", "y", "1"}
             parts.append("forborne exposure" if bool(forborne) else "not reported as forborne")
-        return "; ".join(parts)
+        return ", ".join(parts)
 
     return ""
 
