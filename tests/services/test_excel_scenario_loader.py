@@ -236,3 +236,50 @@ def test_blank_risk_grade_change_is_normalized_to_none() -> None:
 
     assert scenarios["TEST-001"][1] is not None
     assert scenarios["TEST-001"][1].risk_grade_change is None
+
+
+
+def test_one_to_many_sheets_preserve_each_shareholder_event_and_facility() -> None:
+    workbook = openpyxl.Workbook()
+    credit = workbook.active
+    credit.title = "Financial Analysis"
+    credit.append(["scenario_id", "revenue"])
+    credit.append(["TEST-001", 100])
+
+    profile = workbook.create_sheet("Customer Profile")
+    profile.append(["scenario_id", "company_name", "founding_year"])
+    profile.append(["TEST-001", "Test Company", 1998])
+
+    shareholders = workbook.create_sheet("Shareholders")
+    shareholders.append(["scenario_id", "shareholder_name", "age", "role", "ownership_percentage"])
+    shareholders.append(["TEST-001", "Alice Example", 52, "Chair", 60])
+    shareholders.append(["TEST-001", "Bob Example", 48, "Director", 40])
+
+    events = workbook.create_sheet("Relevant Events")
+    events.append(["scenario_id", "event_type", "event_date", "description", "status"])
+    events.append(["TEST-001", "Protest", "2026-01-15", "Supplier protest", "Open"])
+    events.append(["TEST-001", "Restructuring", "2024-06-30", "Debt rescheduled", "Closed"])
+
+    facilities = workbook.create_sheet("Credit Facilities")
+    facilities.append([
+        "scenario_id", "facility_id", "facility_type", "approved_amount",
+        "used_amount", "residual_debt", "maturity_date", "review_date",
+        "unpaid_installments", "forborne",
+    ])
+    facilities.append(["TEST-001", "F-001", "Term loan", 500000, 300000, 280000, "2028-12-31", None, 1, True])
+    facilities.append(["TEST-001", "F-002", "Revolving", 200000, 150000, None, None, "2027-03-31", 0, False])
+
+    buffer = BytesIO()
+    workbook.save(buffer)
+
+    scenarios = load_excel_scenarios(buffer.getvalue())
+    _, customer_profile, _, _ = scenarios["TEST-001"]
+
+    assert customer_profile is not None
+    assert customer_profile.founding_year == 1998
+    assert len(customer_profile.shareholder_details) == 2
+    assert len(customer_profile.relevant_event_details) == 2
+    assert len(customer_profile.credit_facility_details) == 2
+    assert "Alice Example" in customer_profile.shareholder_details[0]
+    assert "F-001" in customer_profile.credit_facility_details[0]
+    assert "F-002" in customer_profile.credit_facility_details[1]
