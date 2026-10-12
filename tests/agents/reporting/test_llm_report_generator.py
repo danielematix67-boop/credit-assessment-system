@@ -142,6 +142,21 @@ def test_llm_accepts_section_headings_from_ollama() -> None:
     )
 
 
+def test_llm_recovers_missing_final_label_when_fourth_paragraph_is_present() -> None:
+    response = (
+        "Customer Profile: The customer profile is stable.\\n\\n"
+        "Financial Analysis: Revenue remains under pressure.\\n\\n"
+        "Behavioural Analysis: No behavioural anomalies were identified.\\n\\n"
+        "Debt sustainability remains adequate."
+    )
+    generator, _ = make_generator(response=response)
+
+    report = generator.generate(make_analysis())
+
+    assert "**Debt Sustainability**" in report.executive_summary
+    assert "Debt sustainability remains adequate." in report.executive_summary
+
+
 def test_llm_accepts_bold_markdown_headings_with_colon_inside_bold() -> None:
     response = (
         "**Customer Profile:** The customer profile is stable.\n\n"
