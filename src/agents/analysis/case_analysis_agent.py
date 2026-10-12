@@ -224,7 +224,7 @@ class CaseAnalysisAgent:
                 return None
             item = profile[key]
             rendered = transform(item) if transform else text(item)
-            return f"{label}: {rendered}"
+            return f"{label} is {rendered}"
 
         def section(
             title: str,
@@ -236,7 +236,7 @@ class CaseAnalysisAgent:
             if introduction:
                 body.extend(("", introduction))
             if populated:
-                body.extend(("", "; ".join(populated)))
+                body.extend(("", ". ".join(line.rstrip(".") for line in populated) + "."))
             elif not introduction:
                 body.extend(("", "No additional information available."))
             return "\n".join(body)
