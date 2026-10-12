@@ -178,7 +178,12 @@ class CaseAnalysisAgent:
         """Map the structured profile narrative into four reporting sections."""
         import re
 
-        headings = ("General Information", "Risk Profile & Predictiveness", "Relationship & Counterparty Context", "Relevant Events")
+        headings = (
+            "General Information",
+            "Risk Profile & Predictiveness",
+            "Relationship & Counterparty Context",
+            "Relevant Events",
+        )
         pattern = r"(?=^\*\*(?:" + "|".join(re.escape(h) for h in headings) + r")\*\*\s*$)"
         matches = list(re.finditer(pattern, summary, flags=re.MULTILINE))
         sections: list[str] = []
