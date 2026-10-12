@@ -266,7 +266,7 @@ def _format_auxiliary_record(sheet_name: str, row: pd.Series) -> str:
             parsed = pd.to_datetime(item, errors="raise")
         except (TypeError, ValueError, OverflowError):
             return str(item)
-        return parsed.strftime("%-d %B %Y")
+        return parsed.strftime("%d %B %Y").lstrip("0")
 
     def amount_text(key: str, label: str) -> str | None:
         item = value(key)
@@ -296,7 +296,7 @@ def _format_auxiliary_record(sheet_name: str, row: pd.Series) -> str:
                 parts.append(f"holding {percentage:g}% of the shares")
             except (TypeError, ValueError):
                 parts.append(f"reported ownership {ownership}")
-        return " (" + ", ".join(parts[1:]) + ")" .join(parts[:1]) if parts else ""
+        return f"{parts[0]} ({\", \".join(parts[1:])})" if len(parts) > 1 else (parts[0] if parts else "")
 
     if sheet_name == "Relevant Events":
         event_type = value("event_type")
