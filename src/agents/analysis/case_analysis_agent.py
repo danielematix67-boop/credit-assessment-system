@@ -226,6 +226,8 @@ class CaseAnalysisAgent:
 
         if present(get("operations"), "operations"):
             identity += f" Its activities include {as_text(get('operations'))}."
+        if present(get("founding_year"), "founding_year"):
+            identity += f" The company was established in {get('founding_year')}."
         if present(get("business_history_years"), "business_history_years"):
             years = get("business_history_years")
             unit = "year" if years == 1 else "years"
@@ -301,6 +303,10 @@ class CaseAnalysisAgent:
             relationship_parts.append(
                 f"{as_text(get('risk_group_independence')).lower()} independence within the risk group"
             )
+        if present(get("shareholder_details"), "shareholder_details"):
+            relationship_parts.append(f"shareholder details: {as_text(get('shareholder_details'))}")
+        if present(get("credit_facility_details"), "credit_facility_details"):
+            relationship_parts.append(f"credit facilities: {as_text(get('credit_facility_details'))}")
         if present(get("shareholders"), "shareholders"):
             relationship_parts.append(
                 f"shareholders including {as_text(get('shareholders'))}"
@@ -363,6 +369,9 @@ class CaseAnalysisAgent:
         ):
             if present(get(key), key):
                 event_parts.append(f"{label}: {as_text(get(key))}")
+
+        if present(get("relevant_event_details"), "relevant_event_details"):
+            event_parts.append(f"event register: {as_text(get('relevant_event_details'))}")
 
         events = ""
         if event_parts:
