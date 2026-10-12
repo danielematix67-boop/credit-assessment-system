@@ -78,6 +78,7 @@ class CustomerProfileAssessmentService:
                 "counterparty_type": data.counterparty_type,
                 "legal_form": data.legal_form,
                 "sector": data.sector,
+                "founding_year": data.founding_year,
                 "size_class": data.size_class,
                 "geography": data.geography,
                 "business_history_years": data.business_history_years,
@@ -104,6 +105,8 @@ class CustomerProfileAssessmentService:
                 "risk_group_interdependence": data.risk_group_interdependence,
                 "risk_group_independence": data.risk_group_independence,
                 "shareholders": list(data.shareholders),
+                "shareholder_details": list(data.shareholder_details),
+                "credit_facility_details": list(data.credit_facility_details),
                 "shareholder_roles": list(data.shareholder_roles),
                 "management_members": list(data.management_members),
                 "generational_transition": data.generational_transition,
@@ -117,6 +120,7 @@ class CustomerProfileAssessmentService:
                 "bankruptcies": list(data.bankruptcies),
                 "litigation": list(data.litigation),
                 "significant_historical_events": list(data.significant_historical_events),
+                "relevant_event_details": list(data.relevant_event_details),
             },
         )
 
@@ -129,6 +133,7 @@ class CustomerProfileAssessmentService:
                 data.counterparty_type,
                 data.legal_form,
                 data.sector,
+                data.founding_year,
                 data.size_class,
                 data.geography,
                 data.business_history_years,
@@ -153,6 +158,8 @@ class CustomerProfileAssessmentService:
                 data.risk_group_interdependence,
                 data.risk_group_independence,
                 data.shareholders,
+                data.shareholder_details,
+                data.credit_facility_details,
                 data.shareholder_roles,
                 data.management_members,
                 data.generational_transition,
@@ -166,5 +173,6 @@ class CustomerProfileAssessmentService:
                 data.bankruptcies,
                 data.litigation,
                 data.significant_historical_events,
+                data.relevant_event_details,
             )
         )
