@@ -126,6 +126,10 @@ Reporting tests verify that:
 - `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` remain distinguishable;
 - high-severity triggered evidence is represented correctly;
 - the prompt receives the evidence required by its structured contract;
+- the LLM is instructed to synthesize findings into natural, varied professional prose rather than transcribe or concatenate source sentences;
+- paraphrasing preserves each mandatory finding's meaning and verbatim indicator label, without merging distinct signals into generic summaries;
+- every non-empty Customer Profile context subsection is represented without losing distinct material facts, statuses, ratings, EWS signals, relationship details or relevant events;
+- structural compliance and evidence completeness are checked independently of stylistic quality;
 - material indicators remain grounded in authoritative evidence;
 - Customer Profile materiality excludes facts already represented by deterministic Customer Profile rules, preventing duplicate narrative evidence;
 - unsupported or altered evidence is rejected where grounding applies;
