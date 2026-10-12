@@ -140,6 +140,21 @@ Other descriptive fields remain available in the full profile but are not automa
 
 The analysis layer therefore performs the materiality decision before the reporting layer is invoked.
 
+### Detailed narrative formatting contract
+
+The deterministic detailed profile uses these four headings in this canonical order:
+
+1. **General Information**
+2. **Risk Profile & Predictiveness**
+3. **Relationship & Counterparty Context**
+4. **Relevant Events**
+
+Each heading is a distinct block and must remain present even when its data are sparse. The analysis parser maps blocks by their explicit heading, not by assuming that every block contains populated fields. Empty blocks use `No additional information available.` rather than disappearing and shifting the meaning of subsequent sections.
+
+When company identity/context is available, **General Information** begins with a short discursive introduction describing the customer and relevant high-level business details. It also retains an explicit `Customer` bullet for the company name, followed by other populated fields. This combination provides a readable introduction without removing the structured identifier expected by downstream consumers and regression tests.
+
+Within each block, Markdown blank lines separate the heading, introductory prose and bullet content. Related records are kept under their intended thematic section: shareholders, ownership and credit facilities belong to **Relationship & Counterparty Context**; protests, bankruptcies, litigation and significant historical events belong to **Relevant Events**. Missing scalar fields are omitted instead of being printed as empty values or raw `field=value` pairs. This is a presentation contract only: it does not alter materiality, rule evidence or assessment status.
+
 The reporting boundary is:
 
 ```text
