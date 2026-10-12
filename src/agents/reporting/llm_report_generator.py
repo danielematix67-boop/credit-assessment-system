@@ -224,8 +224,8 @@ class LLMReportGenerator(ReportGenerator):
         if heading_matches:
             found = [area for _, area, _ in heading_matches]
             blocks = [
-                re.sub(r"\\s+", " ", part.strip())
-                for part in narrative.split("\\n\\n")
+                re.sub(r"\s+", " ", part.strip())
+                for part in narrative.split("\n\n")
                 if part.strip()
             ]
             if found == expected[:3] and len(blocks) == 4:
@@ -233,9 +233,9 @@ class LLMReportGenerator(ReportGenerator):
                 for index, area in enumerate(cls._ASSESSMENT_AREA_ORDER[:3]):
                     block = blocks[index]
                     label = re.compile(
-                        r"^\\s*(?:#{1,6}\\s*)?(?:\\*\\*)?"
+                        r"^\s*(?:#{1,6}\s*)?(?:\*\*)?"
                         + re.escape(area)
-                        + r"(?:\\*\\*)?\\s*:?\\s*",
+                        + r"(?:\*\*)?\s*:?\s*",
                         re.IGNORECASE,
                     )
                     block = label.sub("", block, count=1).strip()
