@@ -266,7 +266,7 @@ def _format_auxiliary_record(sheet_name: str, row: pd.Series) -> str:
             parsed = pd.to_datetime(item, errors="raise")
         except (TypeError, ValueError, OverflowError):
             return str(item)
-        return parsed.strftime("%d %B %Y").lstrip("0")
+        return str(parsed.strftime("%d %B %Y").lstrip("0"))
 
     def amount_text(key: str, label: str) -> str | None:
         item = value(key)
@@ -317,13 +317,13 @@ def _format_auxiliary_record(sheet_name: str, row: pd.Series) -> str:
         facility_type = value("facility_type")
         facility_id = value("facility_id")
         description = value("description")
-        parts: list[str] = []
+        facility_parts: list[str] = []
         title = str(facility_type) if facility_type is not None else "Credit facility"
         if facility_id:
             title += f" {facility_id}"
         if description:
             title += f" — {description}"
-        parts.append(title)
+        facility_parts.append(title)
         for key, label in (
             ("approved_amount", "approved limit"),
             ("used_amount", "utilised amount"),
@@ -333,20 +333,20 @@ def _format_auxiliary_record(sheet_name: str, row: pd.Series) -> str:
         ):
             formatted = amount_text(key, label)
             if formatted:
-                parts.append(formatted)
+                facility_parts.append(formatted)
         for key, label in (("maturity_date", "maturity"), ("review_date", "review date")):
             formatted_date = date_text(key)
             if formatted_date:
-                parts.append(f"{label} {formatted_date}")
+                facility_parts.append(f"{label} {formatted_date}")
         unpaid = value("unpaid_installments")
         if unpaid is not None:
-            parts.append(f"{unpaid} unpaid instalment(s)")
+            facility_parts.append(f"{unpaid} unpaid instalment(s)")
         forborne = value("forborne")
         if forborne is not None:
             if isinstance(forborne, str):
                 forborne = forborne.strip().lower() in {"true", "yes", "y", "1"}
-            parts.append("forborne exposure" if bool(forborne) else "not reported as forborne")
-        return ", ".join(parts)
+            facility_parts.append("forborne exposure" if bool(forborne) else "not reported as forborne")
+        return ", ".join(facility_parts)
 
     return ""
 
