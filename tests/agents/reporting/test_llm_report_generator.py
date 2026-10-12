@@ -144,9 +144,9 @@ def test_llm_accepts_section_headings_from_ollama() -> None:
 
 def test_llm_recovers_missing_final_label_when_fourth_paragraph_is_present() -> None:
     response = (
-        "Customer Profile: The customer profile is stable.\\n\\n"
-        "Financial Analysis: Revenue remains under pressure.\\n\\n"
-        "Behavioural Analysis: No behavioural anomalies were identified.\\n\\n"
+        "Customer Profile: The customer profile is stable.\n\n"
+        "Financial Analysis: Revenue remains under pressure.\n\n"
+        "Behavioural Analysis: No behavioural anomalies were identified.\n\n"
         "Debt sustainability remains adequate."
     )
     generator, _ = make_generator(response=response)
