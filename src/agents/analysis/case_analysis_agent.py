@@ -176,7 +176,11 @@ class CaseAnalysisAgent:
     @staticmethod
     def _customer_profile_analysis(summary: str) -> CustomerProfileAnalysis:
         """Map the structured profile narrative into four reporting sections."""
-        sections = [part.strip() for part in summary.split("\n\n")]
+        import re
+
+        headings = ("General Information", "Risk Profile & Predictiveness", "Relationship & Counterparty Context", "Relevant Events")
+        pattern = r"(?=^\*\*(?:" + "|".join(re.escape(h) for h in headings) + r")\*\*\s*$)"
+        sections = [part.strip() for part in re.split(pattern, summary, flags=re.MULTILINE) if part.strip()]
         padded = (sections + [""] * 4)[:4]
         return CustomerProfileAnalysis(
             general_information=padded[0],
@@ -213,16 +217,32 @@ class CaseAnalysisAgent:
             rendered = transform(item) if transform else text(item)
             return f"- **{label}:** {rendered}"
 
-        def section(title: str, lines: list[str | None]) -> str:
+        def section(title: str, lines: list[str | None], introduction: str | None = None) -> str:
             populated = [line for line in lines if line]
-            return "\n".join([f"**{title}**", *populated]) if populated else ""
+            if not populated and not introduction:
+                return ""
+            body = [f"**{title}**"]
+            if introduction:
+                body.extend(("", introduction))
+            if populated:
+                body.extend(("", "\n".join(populated)))
+            return "\n".join(body)
 
         def records(key: str) -> list[object]:
             item = profile.get(key)
             return item if isinstance(item, list) else []
 
+        company_name = profile.get("company_name")
+        introduction_parts: list[str] = []
+        if isinstance(company_name, str) and company_name.strip():
+            introduction_parts.append(f"{company_name.strip()} is the customer under assessment.")
+        sector = profile.get("sector")
+        if isinstance(sector, str) and sector.strip():
+            introduction_parts.append(f"The company operates in the {sector.strip()} sector.")
+        founding_year = profile.get("founding_year")
+        if founding_year not in (None, ""):
+            introduction_parts.append(f"It was established in {founding_year}.")
         general = section("General Information", [
-            bullet("Customer", "company_name"),
             bullet("Sector", "sector"),
             bullet("Company size", "size_class"),
             bullet("Geography", "geography"),
@@ -230,7 +250,7 @@ class CaseAnalysisAgent:
             bullet("Established", "founding_year"),
             bullet("Operating history", "business_history_years",
                    lambda v: f"{v} year" if v == 1 else f"{v} years"),
-        ])
+        ], " ".join(introduction_parts) or "General customer information is available as summarised below.")
         risk = section("Risk Profile & Predictiveness", [
             bullet("Minimum regulatory risk grade", "minimum_regulatory_risk_grade"),
             bullet("Previous risk grade", "previous_risk_grade"),
@@ -262,12 +282,12 @@ class CaseAnalysisAgent:
         ]
         shareholders = records("shareholder_details") if included("shareholder_details") else []
         if shareholders:
-            relationship_lines.append("**Shareholding structure**")
-            relationship_lines.extend(f"  - {entry}" for entry in shareholders)
+            relationship_lines.extend(("", "**Shareholding structure**"))
+            relationship_lines.extend(f"- {entry}" for entry in shareholders)
         facilities = records("credit_facility_details") if included("credit_facility_details") else []
         if facilities:
-            relationship_lines.append("**Credit facilities**")
-            relationship_lines.extend(f"  - {entry}" for entry in facilities)
+            relationship_lines.extend(("", "**Credit facilities**"))
+            relationship_lines.extend(f"- {entry}" for entry in facilities)
         relationship = section("Relationship & Counterparty Context", relationship_lines)
 
         event_lines = [
@@ -284,8 +304,8 @@ class CaseAnalysisAgent:
         ]
         event_records = records("relevant_event_details") if included("relevant_event_details") else []
         if event_records:
-            event_lines.append("**Recorded events**")
-            event_lines.extend(f"  - {entry}" for entry in event_records)
+            event_lines.extend(("", "**Recorded events**"))
+            event_lines.extend(f"- {entry}" for entry in event_records)
         events = section("Relevant Events", event_lines)
 
         return "\n\n".join((general, risk, relationship, events))
