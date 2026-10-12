@@ -84,6 +84,8 @@ Materiality is therefore **not an LLM decision**. The reporting layer receives a
 
 Deterministic customer-profile rules remain in `rule_evidence` and retain their normal `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` semantics. Contextual fields such as active EWIs, business information, rating context or historical events are not converted into pseudo-rule findings merely because they are relevant to the Executive Summary.
 
+Auxiliary one-to-many inputs from the `Shareholders`, `Credit Facilities` and `Relevant Events` sheets are converted into concise, human-readable records before they reach the narrative layer. The deterministic Customer Profile uses four labelled subsections and Markdown bullet lists. Ownership records and facilities are nested under Relationship & Counterparty Context, while event records are listed under Relevant Events. The deterministic generator preserves these line breaks rather than flattening the profile into one long sentence. Names, roles, ownership percentages, facility limits/utilisation, relevant dates, unpaid instalments, forborne status and event descriptions are verbalised using their domain meaning rather than raw `field=value` pairs. Missing fields are omitted; small numeric values in date columns are not rendered as dates, preventing misplaced counts from becoming misleading dates near 1900. These records remain contextual information and do not create rule findings or change assessment status.
+
 The detailed profile and the Executive Summary intentionally have different scopes:
 
 | Output | Customer-profile scope |

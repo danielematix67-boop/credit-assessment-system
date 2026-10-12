@@ -209,34 +209,26 @@ def _attach_auxiliary_details(
     frames: dict[str, pd.DataFrame],
     scenario_id: str,
 ) -> CustomerProfileData:
-    """Map each auxiliary row into a readable record for profile reporting."""
+    """Convert one-to-many Excel rows into concise, human-readable context."""
     from dataclasses import replace
 
     updates: dict[str, list[str]] = {}
-    mappings = {
-        "Shareholders": ("shareholder_details", ("shareholder_name", "age", "role", "ownership_percentage")),
-        "Relevant Events": ("relevant_event_details", ("event_type", "event_date", "description", "status")),
-        "Credit Facilities": ("credit_facility_details", (
-            "facility_id", "facility_type", "description", "approved_amount",
-            "used_amount", "cash_approved_amount", "cash_used_amount",
-            "residual_debt", "maturity_date", "review_date", "unpaid_installments",
-            "forborne",
-        )),
-    }
-    for sheet_name, (target_field, columns) in mappings.items():
+    for sheet_name, target_field in (
+        ("Shareholders", "shareholder_details"),
+        ("Relevant Events", "relevant_event_details"),
+        ("Credit Facilities", "credit_facility_details"),
+    ):
         frame = frames.get(sheet_name)
         if frame is None:
             continue
         records: list[str] = []
-        for _, row in frame.loc[frame["scenario_id"] == scenario_id].iterrows():
-            parts = [
-                f"{column}={str(row[column]).strip()}"
-                for column in columns
-                if column in row and not pd.isna(row[column]) and str(row[column]).strip()
-            ]
-            if parts:
-                records.append("; ".join(parts))
+        selected = frame.loc[frame["scenario_id"] == scenario_id]
+        for _, row in selected.iterrows():
+            record = _format_auxiliary_record(sheet_name, row)
+            if record:
+                records.append(record)
         updates[target_field] = records
+
     return replace(
         profile,
         shareholder_details=updates.get(
@@ -249,6 +241,114 @@ def _attach_auxiliary_details(
             "credit_facility_details", profile.credit_facility_details
         ),
     )
+
+
+def _format_auxiliary_record(sheet_name: str, row: pd.Series) -> str:
+    """Render an auxiliary row without exposing internal column names."""
+    def value(key: str) -> Any:
+        if key not in row or pd.isna(row[key]):
+            return None
+        item = row[key]
+        if isinstance(item, str):
+            item = item.strip()
+            return item or None
+        return item
+
+    def date_text(key: str) -> str | None:
+        item = value(key)
+        if item is None:
+            return None
+        # Small numeric values are more likely misplaced counts than valid dates.
+        if isinstance(item, (int, float)) and not isinstance(item, bool):
+            if item < 10000:
+                return None
+        try:
+            parsed = pd.to_datetime(item, errors="raise")
+        except (TypeError, ValueError, OverflowError):
+            return str(item)
+        return parsed.strftime("%d %B %Y").lstrip("0")
+
+    def amount_text(key: str, label: str) -> str | None:
+        item = value(key)
+        if item is None:
+            return None
+        try:
+            amount = float(item)
+        except (TypeError, ValueError):
+            return f"{label} {item}"
+        return f"{label} €{amount:,.0f}"
+
+    if sheet_name == "Shareholders":
+        name = value("shareholder_name")
+        parts = [str(name)] if name is not None else []
+        age = value("age")
+        role = value("role")
+        ownership = value("ownership_percentage")
+        if age is not None:
+            parts.append(f"aged {age}")
+        if role is not None:
+            parts.append(str(role))
+        if ownership is not None:
+            try:
+                percentage = float(ownership)
+                if 0 <= percentage <= 1:
+                    percentage *= 100
+                parts.append(f"holding {percentage:g}% of the shares")
+            except (TypeError, ValueError):
+                parts.append(f"reported ownership {ownership}")
+        details = ", ".join(parts[1:])
+        return f"{parts[0]} ({details})" if len(parts) > 1 else (parts[0] if parts else "")
+
+    if sheet_name == "Relevant Events":
+        event_type = value("event_type")
+        event_date = date_text("event_date")
+        description = value("description")
+        status = value("status")
+        headline = str(event_type) if event_type is not None else "Recorded event"
+        if event_date:
+            headline += f" dated {event_date}"
+        if description:
+            headline += f": {description}"
+        if status:
+            headline += f" (status: {status})"
+        return headline
+
+    if sheet_name == "Credit Facilities":
+        facility_type = value("facility_type")
+        facility_id = value("facility_id")
+        description = value("description")
+        parts: list[str] = []
+        title = str(facility_type) if facility_type is not None else "Credit facility"
+        if facility_id:
+            title += f" {facility_id}"
+        if description:
+            title += f" — {description}"
+        parts.append(title)
+        for key, label in (
+            ("approved_amount", "approved limit"),
+            ("used_amount", "utilised amount"),
+            ("cash_approved_amount", "approved cash limit"),
+            ("cash_used_amount", "utilised cash amount"),
+            ("residual_debt", "residual debt"),
+        ):
+            formatted = amount_text(key, label)
+            if formatted:
+                parts.append(formatted)
+        for key, label in (("maturity_date", "maturity"), ("review_date", "review date")):
+            formatted_date = date_text(key)
+            if formatted_date:
+                parts.append(f"{label} {formatted_date}")
+        unpaid = value("unpaid_installments")
+        if unpaid is not None:
+            parts.append(f"{unpaid} unpaid instalment(s)")
+        forborne = value("forborne")
+        if forborne is not None:
+            if isinstance(forborne, str):
+                forborne = forborne.strip().lower() in {"true", "yes", "y", "1"}
+            parts.append("forborne exposure" if bool(forborne) else "not reported as forborne")
+        return ", ".join(parts)
+
+    return ""
 
 
 def _validate_frame(

@@ -173,7 +173,7 @@ class CaseAnalysisAgent:
 
     @staticmethod
     def _customer_profile_analysis(summary: str) -> CustomerProfileAnalysis:
-        """Map the deterministic profile narrative into stable reporting sections."""
+        """Map the structured profile narrative into four reporting sections."""
         sections = [part.strip() for part in summary.split("\n\n")]
         padded = (sections + [""] * 4)[:4]
         return CustomerProfileAnalysis(
@@ -188,193 +188,94 @@ class CaseAnalysisAgent:
         profile: dict[str, object],
         fields: set[str] | None = None,
     ) -> str:
-        """Build a discursive contextual customer-profile narrative for reporting."""
-        def present(value: object, key: str | None = None) -> bool:
-            return (
-                value not in (None, "", [], {})
-                and (fields is None or key is None or key in fields)
-            )
+        """Build a readable, structured Customer Profile with human-readable bullets."""
+        def included(key: str) -> bool:
+            item = profile.get(key)
+            return item not in (None, "", [], {}) and (fields is None or key in fields)
 
-        def as_text(value: object) -> str:
-            if isinstance(value, list):
-                return ", ".join(str(item) for item in value)
-            if isinstance(value, bool):
-                return "Yes" if value else "No"
-            return str(value)
+        def text(item: object) -> str:
+            if isinstance(item, bool):
+                return "Yes" if item else "No"
+            if isinstance(item, list):
+                return ", ".join(str(entry) for entry in item)
+            return str(item)
 
-        def get(key: str) -> object:
-            return profile.get(key)
+        def bullet(label: str, key: str, transform=None) -> str | None:
+            if not included(key):
+                return None
+            item = profile[key]
+            rendered = transform(item) if transform else text(item)
+            return f"- **{label}:** {rendered}"
 
-        company = get("company_name")
-        identity_parts: list[str] = []
-        if present(get("size_class"), "size_class"):
-            identity_parts.append(f"a {as_text(get('size_class')).lower()} company")
-        if present(get("sector"), "sector"):
-            identity_parts.append(
-                f"operating in the {as_text(get('sector')).lower()} sector"
-            )
-        if present(get("geography"), "geography"):
-            identity_parts.append(f"based in {as_text(get('geography'))}")
+        def section(title: str, lines: list[str | None]) -> str:
+            populated = [line for line in lines if line]
+            return "\n".join([f"**{title}**", *populated]) if populated else ""
 
-        if identity_parts:
-            subject = as_text(company) if present(company) else "The customer"
-            identity = f"{subject} is {', '.join(identity_parts)}."
-        elif present(company):
-            identity = f"{as_text(company)} is the customer under assessment."
-        else:
-            identity = ""
+        general = section("General Information", [
+            bullet("Customer", "company_name"),
+            bullet("Sector", "sector"),
+            bullet("Company size", "size_class"),
+            bullet("Geography", "geography"),
+            bullet("Business activities", "operations"),
+            bullet("Established", "founding_year"),
+            bullet("Operating history", "business_history_years",
+                   lambda v: f"{v} year" if v == 1 else f"{v} years"),
+        ])
+        risk = section("Risk Profile & Predictiveness", [
+            bullet("Minimum regulatory risk grade", "minimum_regulatory_risk_grade"),
+            bullet("Previous risk grade", "previous_risk_grade"),
+            bullet("Risk-grade change", "risk_grade_change"),
+            bullet("Past-due positions", "past_due_count"),
+            bullet("EWS Score class", "ews_score_class"),
+            bullet("EWS notching", "ews_score_notching"),
+            bullet("EWS variation", "ews_score_variation"),
+            bullet("Active early-warning indicators", "active_ewis"),
+            bullet("Rating", "rating"),
+            bullet("Rating notching", "rating_notching"),
+            bullet("Rating factors", "rating_influential_factors"),
+            bullet("Rating modules", "rating_elementary_modules"),
+            bullet("Probability of default (PD)", "pd"),
+        ])
 
-        if present(get("operations"), "operations"):
-            identity += f" Its activities include {as_text(get('operations'))}."
-        if present(get("founding_year"), "founding_year"):
-            identity += f" The company was established in {get('founding_year')}."
-        if present(get("business_history_years"), "business_history_years"):
-            years = get("business_history_years")
-            unit = "year" if years == 1 else "years"
-            identity += f" The business has an operating history of {years} {unit}."
+        relationship_lines = [
+            bullet("Banking relationship", "relationship_years",
+                   lambda v: f"{v} year" if v == 1 else f"{v} years"),
+            bullet("Risk-group interdependence", "risk_group_interdependence"),
+            bullet("Risk-group independence", "risk_group_independence"),
+            bullet("Shareholders", "shareholders"),
+            bullet("Shareholder roles", "shareholder_roles"),
+            bullet("Management", "management_members"),
+            bullet("Generational transition", "generational_transition"),
+            bullet("Historical facilities", "historical_facilities"),
+            bullet("Employment contract", "employment_contract_type"),
+            bullet("Economic-family context", "economic_family_context"),
+        ]
+        shareholders = profile.get("shareholder_details", []) if included("shareholder_details") else []
+        if shareholders:
+            relationship_lines.append("**Shareholding structure**")
+            relationship_lines.extend(f"  - {entry}" for entry in shareholders)
+        facilities = profile.get("credit_facility_details", []) if included("credit_facility_details") else []
+        if facilities:
+            relationship_lines.append("**Credit facilities**")
+            relationship_lines.extend(f"  - {entry}" for entry in facilities)
+        relationship = section("Relationship & Counterparty Context", relationship_lines)
 
-        risk_parts: list[str] = []
-        if present(get("minimum_regulatory_risk_grade"), "minimum_regulatory_risk_grade"):
-            risk_parts.append(
-                f"the minimum regulatory risk grade is {as_text(get('minimum_regulatory_risk_grade'))}"
-            )
-        if present(get("previous_risk_grade"), "previous_risk_grade"):
-            risk_parts.append(
-                f"the previous risk grade was {as_text(get('previous_risk_grade'))}"
-            )
-        if present(get("risk_grade_change"), "risk_grade_change"):
-            risk_parts.append(
-                f"the risk-grade change is {as_text(get('risk_grade_change'))}"
-            )
-        if present(get("past_due_count"), "past_due_count"):
-            count = get("past_due_count")
-            risk_parts.append(f"{count} past-due positions are reported")
-        if present(get("ews_score_class"), "ews_score_class"):
-            risk_parts.append(
-                f"the EWS Score class is {as_text(get('ews_score_class'))}"
-            )
-        if present(get("ews_score_notching"), "ews_score_notching"):
-            risk_parts.append(
-                f"EWS notching is {as_text(get('ews_score_notching'))}"
-            )
-        if present(get("ews_score_variation"), "ews_score_variation"):
-            risk_parts.append(
-                f"EWS variation is {as_text(get('ews_score_variation'))}"
-            )
-        if present(get("active_ewis"), "active_ewis"):
-            risk_parts.append(
-                f"active EWIs include {as_text(get('active_ewis'))}"
-            )
-        if present(get("rating"), "rating"):
-            risk_parts.append(f"the rating is {as_text(get('rating'))}")
-        if present(get("rating_notching"), "rating_notching"):
-            risk_parts.append(
-                f"rating notching is {as_text(get('rating_notching'))}"
-            )
-        if present(get("rating_influential_factors"), "rating_influential_factors"):
-            risk_parts.append(
-                f"the main influential rating factors include {as_text(get('rating_influential_factors'))}"
-            )
-        if present(get("rating_elementary_modules"), "rating_elementary_modules"):
-            risk_parts.append(
-                f"the elementary rating modules include {as_text(get('rating_elementary_modules'))}"
-            )
-        if present(get("pd"), "pd"):
-            risk_parts.append(f"the reported PD is {as_text(get('pd'))}")
+        event_lines = [
+            bullet("Previous restructuring", "previous_restructuring"),
+            bullet("Forborne exposure", "forborne"),
+            bullet("Exit from forborne non-performing status", "forborne_non_performing_exit"),
+            bullet("Cure period", "cure_period_days", lambda v: f"{v} days"),
+            bullet("Monitoring period", "monitoring_period_days", lambda v: f"{v} days"),
+            bullet("Probation period", "probation_period_days", lambda v: f"{v} days"),
+            bullet("Protests", "protests"),
+            bullet("Bankruptcies", "bankruptcies"),
+            bullet("Litigation", "litigation"),
+            bullet("Significant historical events", "significant_historical_events"),
+        ]
+        event_records = profile.get("relevant_event_details", []) if included("relevant_event_details") else []
+        if event_records:
+            event_lines.append("**Recorded events**")
+            event_lines.extend(f"  - {entry}" for entry in event_records)
+        events = section("Relevant Events", event_lines)
 
-        risk = ""
-        if risk_parts:
-            risk = "The available risk-profile information indicates that " + ", ".join(risk_parts) + "."
-
-        relationship_parts: list[str] = []
-        if present(get("relationship_years"), "relationship_years"):
-            years = get("relationship_years")
-            unit = "year" if years == 1 else "years"
-            relationship_parts.append(f"a banking relationship of {years} {unit}")
-        if present(get("historical_facilities"), "historical_facilities"):
-            relationship_parts.append(
-                f"historical facilities including {as_text(get('historical_facilities'))}"
-            )
-        if present(get("risk_group_interdependence"), "risk_group_interdependence"):
-            relationship_parts.append(
-                f"{as_text(get('risk_group_interdependence'))} interdependence with the risk group"
-            )
-        if present(get("risk_group_independence"), "risk_group_independence"):
-            relationship_parts.append(
-                f"{as_text(get('risk_group_independence')).lower()} independence within the risk group"
-            )
-        if present(get("shareholder_details"), "shareholder_details"):
-            relationship_parts.append(f"shareholder details: {as_text(get('shareholder_details'))}")
-        if present(get("credit_facility_details"), "credit_facility_details"):
-            relationship_parts.append(f"credit facilities: {as_text(get('credit_facility_details'))}")
-        if present(get("shareholders"), "shareholders"):
-            relationship_parts.append(
-                f"shareholders including {as_text(get('shareholders'))}"
-            )
-        if present(get("shareholder_roles"), "shareholder_roles"):
-            relationship_parts.append(
-                f"shareholder roles including {as_text(get('shareholder_roles'))}"
-            )
-        if present(get("management_members"), "management_members"):
-            relationship_parts.append(
-                f"management comprising {as_text(get('management_members'))}"
-            )
-        generational_transition = get("generational_transition")
-        if present(generational_transition, "generational_transition"):
-            if generational_transition is True:
-                relationship_parts.append("a generational transition")
-            elif generational_transition is False:
-                relationship_parts.append("no reported generational transition")
-        if present(get("employment_contract_type"), "employment_contract_type"):
-            relationship_parts.append(
-                f"an employment contract described as {as_text(get('employment_contract_type'))}"
-            )
-        if present(get("economic_family_context"), "economic_family_context"):
-            relationship_parts.append(
-                f"an economic-family context described as {as_text(get('economic_family_context'))}"
-            )
-
-        relationship = ""
-        if relationship_parts:
-            relationship = (
-                "The broader relationship and counterparty context includes "
-                + ", ".join(relationship_parts)
-                + "."
-            )
-
-        event_parts: list[str] = []
-        if present(get("previous_restructuring"), "previous_restructuring") and get("previous_restructuring") is True:
-            event_parts.append("a previous restructuring")
-        if present(get("forborne"), "forborne") and get("forborne") is True:
-            event_parts.append("a forborne exposure")
-        forborne_exit = get("forborne_non_performing_exit")
-        if present(forborne_exit, "forborne_non_performing_exit"):
-            if forborne_exit is True:
-                event_parts.append("an exit from a forborne non-performing exposure")
-            elif forborne_exit is False:
-                event_parts.append(
-                    "no reported exit from a forborne non-performing exposure"
-                )
-        if present(get("cure_period_days"), "cure_period_days"):
-            event_parts.append(f"a cure period of {as_text(get('cure_period_days'))} days")
-        if present(get("monitoring_period_days"), "monitoring_period_days"):
-            event_parts.append(f"a monitoring period of {as_text(get('monitoring_period_days'))} days")
-        if present(get("probation_period_days"), "probation_period_days"):
-            event_parts.append(f"a probation period of {as_text(get('probation_period_days'))} days")
-        for label, key in (
-            ("protests", "protests"),
-            ("bankruptcies", "bankruptcies"),
-            ("litigation", "litigation"),
-            ("significant historical events", "significant_historical_events"),
-        ):
-            if present(get(key), key):
-                event_parts.append(f"{label}: {as_text(get(key))}")
-
-        if present(get("relevant_event_details"), "relevant_event_details"):
-            event_parts.append(f"event register: {as_text(get('relevant_event_details'))}")
-
-        events = ""
-        if event_parts:
-            events = "Relevant events and credit-history information include " + ", ".join(event_parts) + "."
-
-        return "\n\n".join((identity, risk, relationship, events))
+        return "\n\n".join((general, risk, relationship, events))

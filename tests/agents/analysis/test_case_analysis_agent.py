@@ -106,4 +106,7 @@ def test_case_analysis_agent_includes_customer_profile_context() -> None:
                 assert str(value).casefold() in normalized_text
 
     assert ";" not in profile_text
+    assert "**General Information**" in profile_text
+    assert "- **Customer:** Synthetic Co." in profile_text
+    assert "**Relationship & Counterparty Context**" in profile_text
     assert len(analysis.customer_profile.sections()) == 4
