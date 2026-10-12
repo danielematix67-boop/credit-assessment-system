@@ -2,24 +2,20 @@ from typing import ClassVar
 
 
 class CustomerProfileMaterialityPolicy:
-    """Deterministically select non-rule customer-profile context for executive reporting."""
+    """Select populated customer-profile context not already covered by rules."""
 
     _RULE_BACKED_FIELDS: ClassVar[frozenset[str]] = frozenset(
-        {"ews_score_class", "previous_restructuring", "forborne", "business_history_years", "relationship_years"}
-    )
-    _ALWAYS_MATERIAL: ClassVar[frozenset[str]] = frozenset(
         {
-            "ews_score_notching", "ews_score_variation", "active_ewis", "rating", "rating_notching",
-            "rating_influential_factors", "rating_elementary_modules", "pd", "minimum_regulatory_risk_grade",
-            "previous_risk_grade", "risk_grade_change", "risk_group_interdependence", "risk_group_independence",
-            "shareholder_details", "credit_facility_details", "relevant_event_details",
-            "forborne_non_performing_exit", "protests", "bankruptcies", "litigation", "significant_historical_events",
+            "ews_score_class",
+            "previous_restructuring",
+            "forborne",
+            "business_history_years",
+            "relationship_years",
         }
     )
     _POSITIVE_MATERIAL: ClassVar[frozenset[str]] = frozenset(
         {
             "past_due_count",
-            "founding_year",
             "cure_period_days",
             "monitoring_period_days",
             "probation_period_days",
@@ -29,22 +25,29 @@ class CustomerProfileMaterialityPolicy:
 
     @classmethod
     def material_fields(cls, profile: dict[str, object]) -> set[str]:
-        """Return material contextual fields not already covered by deterministic rules."""
+        """Keep all populated context except rule-backed fields and non-material zeros.
+
+        Descriptive information such as sector, company size, operations, ownership,
+        management and banking facilities remains reportable even when it does not
+        trigger a deterministic rule. Rule-backed fields are omitted here to avoid
+        duplicating the corresponding deterministic rule evidence in the narrative.
+        """
         fields: set[str] = set()
         for key, value in profile.items():
             if key in cls._RULE_BACKED_FIELDS or value in (None, "", [], {}):
                 continue
-            if key in cls._ALWAYS_MATERIAL:
-                if isinstance(value, bool) and not value:
-                    continue
-                fields.add(key)
-                continue
+
             if key in cls._POSITIVE_MATERIAL:
                 if isinstance(value, bool):
                     if value:
                         fields.add(key)
-                elif isinstance(value, (int, float)) and value > 0:
-                    fields.add(key)
+                elif isinstance(value, (int, float)):
+                    if value > 0:
+                        fields.add(key)
                 elif value:
                     fields.add(key)
+                continue
+
+            fields.add(key)
+
         return fields
