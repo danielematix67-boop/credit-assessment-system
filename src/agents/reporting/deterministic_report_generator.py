@@ -68,7 +68,7 @@ class DeterministicReportGenerator(ReportGenerator):
 
         profile_text = ""
         if analysis.material_customer_profile is not None:
-            profile_text = " ".join(
+            profile_text = "\n\n".join(
                 text
                 for _, text in analysis.material_customer_profile.sections()
                 if text
