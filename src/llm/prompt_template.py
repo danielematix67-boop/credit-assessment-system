@@ -73,6 +73,7 @@ class ReportPromptTemplate:
         "event that appears in the supplied context. Do not report only a selected subset.\n"
         "- Include populated descriptive context even when it does not activate a rule; lack of a rule trigger "
         "is not a reason to omit company background, sector, operations, ownership, management, facilities "
+        "or relationship context supplied by the application.\n"
         "- In Customer Profile, cover both the structured contextual subsections and every supplied "
         "finding assigned to that area. Do not replace detailed context with a generic risk-profile summary.\n"
         "- For each area, mentally check every supplied finding and every non-empty Customer Profile "
