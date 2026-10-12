@@ -235,6 +235,10 @@ def test_deterministic_report_renders_structured_customer_profile(generator):
     assert "The company operates in manufacturing." in report.executive_summary
     assert "The EWS Score is LIGHT_RED." in report.executive_summary
     assert "A previous restructuring is reported." in report.executive_summary
+    assert "**General Information**" not in report.executive_summary
+    assert "**Risk Profile & Predictiveness**" not in report.executive_summary
+    assert "**Relationship & Counterparty Context**" not in report.executive_summary
+    assert "**Relevant Events**" not in report.executive_summary
 
 
 def test_deterministic_fallback_prioritizes_customer_profile_context_over_duplicate_findings(
