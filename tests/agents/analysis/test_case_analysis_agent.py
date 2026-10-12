@@ -107,6 +107,6 @@ def test_case_analysis_agent_includes_customer_profile_context() -> None:
 
     assert "- " not in profile_text
     assert "**General Information**" in profile_text
-    assert "Customer is Synthetic Co." in profile_text
+    assert "Synthetic Co. operates in the Manufacturing sector." in profile_text
     assert "**Relationship & Counterparty Context**" in profile_text
     assert len(analysis.customer_profile.sections()) == 4
