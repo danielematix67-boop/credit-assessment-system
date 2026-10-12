@@ -15,6 +15,7 @@ class CustomerProfileData:
     counterparty_type: str | None = None
     legal_form: str | None = None
     sector: str | None = None
+    founding_year: int | None = None
     size_class: str | None = None
     geography: str | None = None
     business_history_years: int | None = None
@@ -47,6 +48,8 @@ class CustomerProfileData:
 
     # Ownership / management / counterparty-specific information
     shareholders: list[str] = field(default_factory=list)
+    shareholder_details: list[str] = field(default_factory=list)
+    credit_facility_details: list[str] = field(default_factory=list)
     shareholder_roles: list[str] = field(default_factory=list)
     management_members: list[str] = field(default_factory=list)
     generational_transition: bool | None = None
@@ -64,3 +67,4 @@ class CustomerProfileData:
     bankruptcies: list[str] = field(default_factory=list)
     litigation: list[str] = field(default_factory=list)
     significant_historical_events: list[str] = field(default_factory=list)
+    relevant_event_details: list[str] = field(default_factory=list)
