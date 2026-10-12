@@ -266,6 +266,40 @@ def test_deterministic_fallback_prioritizes_customer_profile_context_over_duplic
     assert "The company operates in manufacturing." in report.executive_summary
 
 
+def test_deterministic_fallback_keeps_profile_context_and_distinct_rule_evidence(
+    generator,
+):
+    profile = CustomerProfileAnalysis(
+        general_information="The company operates in manufacturing.",
+        risk_profile="The rating is BB-.",
+    )
+    finding = AnalysisFinding(
+        rule_id="CP001",
+        category="Customer Profile",
+        severity=RuleSeverity.HIGH,
+        text="EWS Score Class is LIGHT_RED and indicates heightened monitoring.",
+        status=RuleStatus.TRIGGERED,
+        assessment_area="Customer Profile",
+        indicator="EWS Score Class",
+    )
+    analysis = AssessmentAnalysis(
+        position_id="TEST_POSITION",
+        assessment_status=AssessmentStatus.ATTENTION,
+        key_findings=[finding],
+        risk_factors=[],
+        limitations=[],
+        material_customer_profile=profile,
+    )
+
+    report = generator.generate(analysis)
+
+    assert "The company operates in manufacturing." in report.executive_summary
+    assert "The rating is BB-." in report.executive_summary
+    assert "EWS Score Class is LIGHT_RED and indicates heightened monitoring." in (
+        report.executive_summary
+    )
+
+
 def test_deterministic_fallback_keeps_all_findings_in_category_paragraphs(generator):
     findings = [
         make_analysis_finding(
