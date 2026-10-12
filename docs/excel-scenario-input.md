@@ -10,12 +10,25 @@ This keeps the deterministic assessment engine independent from the data-ingesti
 
 A workbook must contain:
 
-- `Financial Analysis` — required
-- `Customer Profile` — optional
-- `Behavioural Analysis` — optional
-- `Debt Sustainability` — optional
+- `Financial Analysis` — required, one row per scenario
+- `Customer Profile` — optional, one row per scenario
+- `Behavioural Analysis` — optional, one row per scenario
+- `Debt Sustainability` — optional, one row per scenario
+- `Shareholders` — optional, multiple rows per scenario are allowed
+- `Relevant Events` — optional, multiple rows per scenario are allowed
+- `Credit Facilities` — optional, one row per individual credit line
 
-Each sheet contains one row per scenario and a mandatory `scenario_id` column. The same `scenario_id` identifies the case across sheets. A scenario may omit an optional domain sheet; in that case the corresponding domain object is unavailable and the assessment records the domain as `NOT_EVALUABLE` rather than treating missing data as a normal observation.
+Every sheet requires a `scenario_id` column. The same identifier connects records to the scenario in `Financial Analysis`. The four assessment-domain sheets remain one-row-per-scenario; the three detail sheets are one-to-many and intentionally support repeated `scenario_id` values. A scenario may omit an optional domain sheet; in that case the corresponding domain object is unavailable and the assessment records the domain as `NOT_EVALUABLE` rather than treating missing data as a normal observation.
+
+### Shareholders, Relevant Events and Credit Facilities
+
+These are detail sheets, not assessment domains. Their records are attached to the matching `Customer Profile` context for reporting. Multiple records for the same scenario are preserved individually and rendered as separate detail entries.
+
+`Shareholders` accepts `shareholder_name`, `age`, `role` and `ownership_percentage`, in addition to `scenario_id`.
+
+`Relevant Events` accepts `event_type`, `event_date`, `description` and `status`, in addition to `scenario_id`. Use one row per event, for example a protest, adverse legal event or restructuring. Distinguish a confirmed absence of events from an unprovided or incomplete event register.
+
+`Credit Facilities` accepts `facility_id`, `facility_type`, `description`, `approved_amount`, `used_amount`, `cash_approved_amount`, `cash_used_amount`, `residual_debt`, `maturity_date`, `review_date`, `unpaid_installments` and `forborne`, in addition to `scenario_id`. Enter one row per credit line. Use the fields applicable to the facility type; leave non-applicable fields blank rather than entering zero. For self-liquidating facilities, use the cash-specific approved and used fields when reporting cash limits and utilisation.
 
 ### Financial Analysis
 
