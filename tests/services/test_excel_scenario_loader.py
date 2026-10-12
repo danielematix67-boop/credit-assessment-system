@@ -266,7 +266,7 @@ def test_one_to_many_sheets_preserve_each_shareholder_event_and_facility() -> No
         "used_amount", "residual_debt", "maturity_date", "review_date",
         "unpaid_installments", "forborne",
     ])
-    facilities.append(["TEST-001", "F-001", "Term loan", 500000, 300000, 280000, "2028-12-31", None, 1, True])
+    facilities.append(["TEST-001", "F-001", "Term loan", 500000, 300000, 280000, "2028-12-31", 2, 3, True])
     facilities.append(["TEST-001", "F-002", "Revolving", 200000, 150000, None, None, "2027-03-31", 0, False])
 
     buffer = BytesIO()
@@ -286,6 +286,7 @@ def test_one_to_many_sheets_preserve_each_shareholder_event_and_facility() -> No
     assert "approved limit €500,000" in customer_profile.credit_facility_details[0]
     assert "maturity 31 December 2028" in customer_profile.credit_facility_details[0]
     assert "review date" not in customer_profile.credit_facility_details[0]
+    assert "3 unpaid instalment(s)" in customer_profile.credit_facility_details[0]
     assert "F-002" in customer_profile.credit_facility_details[1]
     assert "review date 31 March 2027" in customer_profile.credit_facility_details[1]
     assert "event_date=" not in customer_profile.relevant_event_details[0]
