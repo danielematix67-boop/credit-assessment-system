@@ -30,6 +30,9 @@ LIST_FIELDS = {
     "bankruptcies",
     "litigation",
     "significant_historical_events",
+    "shareholder_details",
+    "credit_facility_details",
+    "relevant_event_details",
 }
 
 BOOL_FIELDS = {
@@ -41,6 +44,7 @@ BOOL_FIELDS = {
 
 INT_FIELDS = {
     "business_history_years",
+    "founding_year",
     "past_due_count",
     "cure_period_days",
     "monitoring_period_days",
