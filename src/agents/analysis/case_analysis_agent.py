@@ -304,9 +304,9 @@ class CaseAnalysisAgent:
                 f"{as_text(get('risk_group_independence')).lower()} independence within the risk group"
             )
         if present(get("shareholder_details"), "shareholder_details"):
-            relationship_parts.append(f"shareholder details: {as_text(get('shareholder_details'))}")
+            relationship_parts.append(f"ownership details include {as_text(get('shareholder_details'))}")
         if present(get("credit_facility_details"), "credit_facility_details"):
-            relationship_parts.append(f"credit facilities: {as_text(get('credit_facility_details'))}")
+            relationship_parts.append(f"recorded credit facilities include {as_text(get('credit_facility_details'))}")
         if present(get("shareholders"), "shareholders"):
             relationship_parts.append(
                 f"shareholders including {as_text(get('shareholders'))}"
@@ -371,7 +371,7 @@ class CaseAnalysisAgent:
                 event_parts.append(f"{label}: {as_text(get(key))}")
 
         if present(get("relevant_event_details"), "relevant_event_details"):
-            event_parts.append(f"event register: {as_text(get('relevant_event_details'))}")
+            event_parts.append(f"recorded events include {as_text(get('relevant_event_details'))}")
 
         events = ""
         if event_parts:
