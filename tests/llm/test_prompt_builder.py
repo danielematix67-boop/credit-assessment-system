@@ -261,6 +261,8 @@ class TestReportPromptBuilder:
         assert "Do not calculate, infer, round, convert or derive new indicators." in prompt
         assert "Return ONLY the final executive narrative" in prompt
         assert "Return exactly four labeled sections" in prompt
+        assert "Always include the Debt Sustainability section" in prompt
+        assert "End immediately after the Debt Sustainability paragraph" in prompt
         assert "No deterministic anomalies are present for this area." in prompt
         assert "CUSTOMER PROFILE IS A MANDATORY EXCEPTION TO BREVITY" in prompt
         assert "every non-empty subsection" in prompt
