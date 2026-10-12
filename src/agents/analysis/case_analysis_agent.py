@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.assessment_status import AssessmentStatus
@@ -200,7 +202,11 @@ class CaseAnalysisAgent:
                 return ", ".join(str(entry) for entry in item)
             return str(item)
 
-        def bullet(label: str, key: str, transform=None) -> str | None:
+        def bullet(
+            label: str,
+            key: str,
+            transform: Callable[[object], str] | None = None,
+        ) -> str | None:
             if not included(key):
                 return None
             item = profile[key]
@@ -210,6 +216,10 @@ class CaseAnalysisAgent:
         def section(title: str, lines: list[str | None]) -> str:
             populated = [line for line in lines if line]
             return "\n".join([f"**{title}**", *populated]) if populated else ""
+
+        def records(key: str) -> list[object]:
+            item = profile.get(key)
+            return item if isinstance(item, list) else []
 
         general = section("General Information", [
             bullet("Customer", "company_name"),
@@ -250,11 +260,11 @@ class CaseAnalysisAgent:
             bullet("Employment contract", "employment_contract_type"),
             bullet("Economic-family context", "economic_family_context"),
         ]
-        shareholders = profile.get("shareholder_details", []) if included("shareholder_details") else []
+        shareholders = records("shareholder_details") if included("shareholder_details") else []
         if shareholders:
             relationship_lines.append("**Shareholding structure**")
             relationship_lines.extend(f"  - {entry}" for entry in shareholders)
-        facilities = profile.get("credit_facility_details", []) if included("credit_facility_details") else []
+        facilities = records("credit_facility_details") if included("credit_facility_details") else []
         if facilities:
             relationship_lines.append("**Credit facilities**")
             relationship_lines.extend(f"  - {entry}" for entry in facilities)
@@ -272,7 +282,7 @@ class CaseAnalysisAgent:
             bullet("Litigation", "litigation"),
             bullet("Significant historical events", "significant_historical_events"),
         ]
-        event_records = profile.get("relevant_event_details", []) if included("relevant_event_details") else []
+        event_records = records("relevant_event_details") if included("relevant_event_details") else []
         if event_records:
             event_lines.append("**Recorded events**")
             event_lines.extend(f"  - {entry}" for entry in event_records)
