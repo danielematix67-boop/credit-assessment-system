@@ -203,7 +203,7 @@ class CaseAnalysisAgent:
         profile: dict[str, object],
         fields: set[str] | None = None,
     ) -> str:
-        """Build a readable, structured Customer Profile with human-readable bullets."""
+        """Build a compact Customer Profile narrative without space-consuming bullet lists."""
         def included(key: str) -> bool:
             item = profile.get(key)
             return item not in (None, "", [], {}) and (fields is None or key in fields)
@@ -224,7 +224,7 @@ class CaseAnalysisAgent:
                 return None
             item = profile[key]
             rendered = transform(item) if transform else text(item)
-            return f"- **{label}:** {rendered}"
+            return f"{label}: {rendered}"
 
         def section(
             title: str,
@@ -236,7 +236,7 @@ class CaseAnalysisAgent:
             if introduction:
                 body.extend(("", introduction))
             if populated:
-                body.extend(("", "\n\n".join(populated)))
+                body.extend(("", "; ".join(populated)))
             elif not introduction:
                 body.extend(("", "No additional information available."))
             return "\n".join(body)
@@ -296,12 +296,14 @@ class CaseAnalysisAgent:
         ]
         shareholders = records("shareholder_details") if included("shareholder_details") else []
         if shareholders:
-            relationship_lines.extend(("", "**Shareholding structure**", ""))
-            relationship_lines.extend(f"- {entry}" for entry in shareholders)
+            relationship_lines.append(
+                "Shareholding structure: " + "; ".join(str(entry) for entry in shareholders)
+            )
         facilities = records("credit_facility_details") if included("credit_facility_details") else []
         if facilities:
-            relationship_lines.extend(("", "**Credit facilities**", ""))
-            relationship_lines.extend(f"- {entry}" for entry in facilities)
+            relationship_lines.append(
+                "Credit facilities: " + "; ".join(str(entry) for entry in facilities)
+            )
         relationship = section("Relationship & Counterparty Context", relationship_lines)
 
         event_lines = [
@@ -318,8 +320,9 @@ class CaseAnalysisAgent:
         ]
         event_records = records("relevant_event_details") if included("relevant_event_details") else []
         if event_records:
-            event_lines.extend(("", "**Recorded events**", ""))
-            event_lines.extend(f"- {entry}" for entry in event_records)
+            event_lines.append(
+                "Recorded events: " + "; ".join(str(entry) for entry in event_records)
+            )
         events = section("Relevant Events", event_lines)
 
         return "\n\n".join((general, risk, relationship, events))
