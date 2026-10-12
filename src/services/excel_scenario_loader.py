@@ -296,7 +296,8 @@ def _format_auxiliary_record(sheet_name: str, row: pd.Series) -> str:
                 parts.append(f"holding {percentage:g}% of the shares")
             except (TypeError, ValueError):
                 parts.append(f"reported ownership {ownership}")
-        return f"{parts[0]} ({\", \".join(parts[1:])})" if len(parts) > 1 else (parts[0] if parts else "")
+        details = ", ".join(parts[1:])
+        return f"{parts[0]} ({details})" if len(parts) > 1 else (parts[0] if parts else "")
 
     if sheet_name == "Relevant Events":
         event_type = value("event_type")
