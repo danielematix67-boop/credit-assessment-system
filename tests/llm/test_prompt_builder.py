@@ -132,6 +132,60 @@ class TestReportPromptBuilder:
         assert "The EWS Score is LIGHT_RED." in prompt
         assert "Customer profile rule finding." in prompt
 
+    def test_build_orders_financial_findings_by_narrative_theme(self) -> None:
+        findings = [
+            make_finding(
+                "R010",
+                "working_capital",
+                RuleSeverity.MEDIUM,
+                "Trade payables are increasing.",
+            ),
+            make_finding(
+                "R004",
+                "leverage",
+                RuleSeverity.HIGH,
+                "Leverage is elevated.",
+            ),
+            make_finding(
+                "R001",
+                "revenue",
+                RuleSeverity.HIGH,
+                "Revenue growth deteriorated.",
+            ),
+            make_finding(
+                "R006",
+                "profitability_quality",
+                RuleSeverity.MEDIUM,
+                "Earnings quality is weak.",
+            ),
+        ]
+        findings = [
+            AnalysisFinding(
+                rule_id=finding.rule_id,
+                category=finding.category,
+                assessment_area="Financial Analysis",
+                severity=finding.severity,
+                text=finding.text,
+            )
+            for finding in findings
+        ]
+
+        prompt = ReportPromptBuilder().build(make_analysis(key_findings=findings))
+
+        assert prompt.index("Revenue growth deteriorated.") < prompt.index(
+            "Earnings quality is weak."
+        )
+        assert prompt.index("Earnings quality is weak.") < prompt.index(
+            "Trade payables are increasing."
+        )
+        assert prompt.index("Trade payables are increasing.") < prompt.index(
+            "Leverage is elevated."
+        )
+        assert "Narrative theme: Revenue and operating profitability" in prompt
+        assert "Narrative theme: Earnings quality and operating structure" in prompt
+        assert "Narrative theme: Working capital and cash conversion" in prompt
+        assert "Narrative theme: Leverage and funding structure" in prompt
+
     def test_build_preserves_finding_order_within_macro_area(self) -> None:
         findings = [
             make_finding(
@@ -215,6 +269,8 @@ class TestReportPromptBuilder:
         assert "Re-express their meaning in natural, fluent and varied professional prose." in prompt
         assert "the explanatory wording around that label may be paraphrased." in prompt
         assert "Do not merge distinct signals" in prompt
+        assert "SYNTHESIZE RELATED CONCEPTS" in prompt
+        assert "Keep each indicator label verbatim" in prompt
 
     def test_build_returns_none_when_no_findings(self) -> None:
         prompt = ReportPromptBuilder().build(make_analysis())
