@@ -32,6 +32,23 @@ class ReportPromptBuilder:
         "Debt Sustainability",
     )
 
+    # Narrative-ordering hints only: these never affect deterministic decisioning.
+    _TOPIC_ORDER = {
+        "revenue": (0, "Revenue and operating profitability"),
+        "profitability": (0, "Revenue and operating profitability"),
+        "profitability_quality": (1, "Earnings quality and operating structure"),
+        "operating_leverage": (1, "Earnings quality and operating structure"),
+        "working_capital": (2, "Working capital and cash conversion"),
+        "leverage": (3, "Leverage and funding structure"),
+        "asset_quality": (4, "Asset quality"),
+        "utilization": (0, "Credit utilization and liquidity behaviour"),
+        "overdraft": (0, "Credit utilization and liquidity behaviour"),
+        "payment_behaviour": (1, "Payment behaviour"),
+        "exposure": (2, "Exposure evolution"),
+        "customer_profile": (0, "Customer profile risk signals"),
+        "debt sustainability": (0, "Debt-service capacity"),
+    }
+
     def __init__(
         self,
         template: ReportPromptTemplate | None = None,
@@ -90,6 +107,18 @@ class ReportPromptBuilder:
             area = finding.assessment_area or finding.category
             grouped[area].append(finding)
 
+        # Stable sort: findings in the same or an unknown topic keep source order.
+        for area, area_findings in grouped.items():
+            if area.casefold() in {
+                "financial analysis",
+                "behavioural analysis",
+                "customer profile",
+                "debt sustainability",
+            }:
+                area_findings.sort(
+                    key=lambda finding: cls._topic_order(finding.category)[0]
+                )
+
         ordered_categories = sorted(
             grouped,
             key=lambda category: cls._CATEGORY_PRIORITY.get(
@@ -99,6 +128,14 @@ class ReportPromptBuilder:
         )
 
         return {category: grouped[category] for category in ordered_categories}
+
+    @classmethod
+    def _topic_order(cls, category: str) -> tuple[int, str]:
+        """Return a stable narrative priority and theme for a rule category."""
+        return cls._TOPIC_ORDER.get(
+            category.strip().casefold(),
+            (99, "Other findings"),
+        )
 
     @staticmethod
     def _format_category_order(categories: list[str]) -> str:
@@ -183,7 +220,12 @@ class ReportPromptBuilder:
                     "  No deterministic anomalies are present for this area."
                 )
 
+            current_topic: str | None = None
             for finding in findings:
+                _, topic = cls._topic_order(finding.category)
+                if topic != current_topic:
+                    lines.append(f"  Narrative theme: {topic}")
+                    current_topic = topic
                 lines.append(cls._format_finding(finding))
 
             sections.append("\n".join(lines))
