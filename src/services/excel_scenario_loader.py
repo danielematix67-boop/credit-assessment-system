@@ -237,7 +237,18 @@ def _attach_auxiliary_details(
             if parts:
                 records.append("; ".join(parts))
         updates[target_field] = records
-    return replace(profile, **updates)
+    return replace(
+        profile,
+        shareholder_details=updates.get(
+            "shareholder_details", profile.shareholder_details
+        ),
+        relevant_event_details=updates.get(
+            "relevant_event_details", profile.relevant_event_details
+        ),
+        credit_facility_details=updates.get(
+            "credit_facility_details", profile.credit_facility_details
+        ),
+    )
 
 
 def _validate_frame(
