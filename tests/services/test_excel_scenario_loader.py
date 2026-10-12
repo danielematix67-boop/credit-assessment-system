@@ -281,5 +281,13 @@ def test_one_to_many_sheets_preserve_each_shareholder_event_and_facility() -> No
     assert len(customer_profile.relevant_event_details) == 2
     assert len(customer_profile.credit_facility_details) == 2
     assert "Alice Example" in customer_profile.shareholder_details[0]
+    assert "60% of the shares" in customer_profile.shareholder_details[0]
     assert "F-001" in customer_profile.credit_facility_details[0]
+    assert "approved limit €500,000" in customer_profile.credit_facility_details[0]
+    assert "maturity 31 December 2028" in customer_profile.credit_facility_details[0]
+    assert "review date" not in customer_profile.credit_facility_details[0]
     assert "F-002" in customer_profile.credit_facility_details[1]
+    assert "review date 31 March 2027" in customer_profile.credit_facility_details[1]
+    assert "event_date=" not in customer_profile.relevant_event_details[0]
+    assert "15 January 2026" in customer_profile.relevant_event_details[0]
+    assert "1900" not in " ".join(customer_profile.credit_facility_details)
