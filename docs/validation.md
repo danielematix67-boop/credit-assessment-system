@@ -128,6 +128,10 @@ Reporting tests verify that:
 - the prompt receives the evidence required by its structured contract;
 - the LLM is instructed to synthesize findings into natural, varied professional prose rather than transcribe or concatenate source sentences;
 - paraphrasing preserves each mandatory finding's meaning and verbatim indicator label, without merging distinct signals into generic summaries;
+- the detailed deterministic Customer Profile preserves the four canonical headings in order: General Information, Risk Profile & Predictiveness, Relationship & Counterparty Context, and Relevant Events;
+- the Customer Profile parser maps content by explicit section headings, including when some sections have no populated fields, so sections cannot shift position or be misclassified;
+- General Information includes a short discursive introduction when identity/context is available and retains the explicit `Customer` bullet;
+- Markdown spacing keeps headings, introductions, bullets, ownership/facility records and relevant-event records visually separated;
 - every non-empty Customer Profile context subsection is represented without losing distinct material facts, statuses, ratings, EWS signals, relationship details or relevant events;
 - structural compliance and evidence completeness are checked independently of stylistic quality;
 - material indicators remain grounded in authoritative evidence;
