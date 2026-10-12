@@ -114,7 +114,7 @@ class LLMReportGenerator(ReportGenerator):
                 for match in cls._INLINE_ASSESSMENT_AREA_PATTERN.finditer(narrative)
             ]
             paragraph_count = sum(
-                bool(part.strip()) for part in narrative.split("\\n\\n")
+                bool(part.strip()) for part in narrative.split("\n\n")
             )
             raise ValueError(
                 "LLM narrative must contain exactly one paragraph for each "
