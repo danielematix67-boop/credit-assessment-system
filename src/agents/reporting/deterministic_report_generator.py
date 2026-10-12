@@ -13,6 +13,24 @@ class DeterministicReportGenerator(ReportGenerator):
         "Debt Sustainability",
     )
 
+    # Presentation priorities aligned with the LLM prompt builder.
+    _TOPIC_ORDER = {
+        "revenue": 0,
+        "profitability": 0,
+        "profitability_quality": 1,
+        "operating_leverage": 1,
+        "working_capital": 2,
+        "leverage": 3,
+        "asset_quality": 4,
+        "utilization": 0,
+        "overdraft": 0,
+        "payment_behaviour": 1,
+        "payment_behavior": 1,
+        "exposure": 2,
+        "customer_profile": 0,
+        "debt_sustainability": 0,
+    }
+
     _NO_ANOMALY_TEXT = (
         "No anomalies were identified by the configured deterministic "
         "assessment rules in this area."
@@ -66,11 +84,10 @@ class DeterministicReportGenerator(ReportGenerator):
                 if category.casefold() == area.casefold()
                 for finding in items
             ]
-            triggered = [
-                finding
-                for finding in area_findings
-                if cls._is_triggered(finding)
-            ]
+            triggered = sorted(
+                (finding for finding in area_findings if cls._is_triggered(finding)),
+                key=lambda finding: cls._topic_order(finding.category),
+            )
 
             if area.casefold() == "customer profile" and profile_text:
                 # Customer-profile context is already consolidated into a
@@ -91,11 +108,10 @@ class DeterministicReportGenerator(ReportGenerator):
         for category, findings in grouped.items():
             if category.casefold() in canonical:
                 continue
-            triggered = [
-                finding
-                for finding in findings
-                if cls._is_triggered(finding)
-            ]
+            triggered = sorted(
+                (finding for finding in findings if cls._is_triggered(finding)),
+                key=lambda finding: cls._topic_order(finding.category),
+            )
             if triggered:
                 paragraphs.append(
                     (
@@ -150,6 +166,12 @@ class DeterministicReportGenerator(ReportGenerator):
                 "Rule evidence requires a structured RuleStatus; "
                 f"missing status for: {rule_ids}"
             )
+
+    @classmethod
+    def _topic_order(cls, category: str) -> int:
+        """Return a narrative priority for a configured rule category."""
+        normalized = category.strip().casefold().replace(" ", "_")
+        return cls._TOPIC_ORDER.get(normalized, 99)
 
     @staticmethod
     def _is_triggered(finding: AnalysisFinding) -> bool:
