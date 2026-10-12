@@ -150,16 +150,32 @@ Customer Profile is special because material contextual information may be prese
 
 The narrative must:
 
-- use the supplied deterministic evidence;
-- preserve material numerical information;
-- distinguish risk from unavailable evidence;
-- avoid unsupported factual claims;
-- never generate or overwrite the structured assessment status;
-- preserve the four-area structure in both deterministic and LLM-generated reports.\n- contain exactly one prose paragraph for each area.\n- keep the authoritative assessment-area order: Customer Profile, Financial Analysis, Behavioural Analysis, Debt Sustainability.
+- use only supplied deterministic evidence and selected Customer Profile context;
+- preserve the meaning and identity of every mandatory finding;
+- distinguish risk evidence from unavailable or non-evaluable evidence;
+- avoid unsupported facts, causes, conclusions, recommendations or calculations;
+- never generate or overwrite rule results, severity, section status or overall assessment status;
+- preserve all four areas in both deterministic and LLM-generated reports;
+- contain exactly one prose paragraph per area, with the canonical labels and fixed order;
+- include the standard no-anomaly statement when an area has no triggered findings and no material contextual information.
+
+### Narrative quality: synthesis without loss of evidence
+
+The LLM prompt explicitly asks the model to **rewrite rather than transcribe** the source findings. The intended output is fluent, professional credit-monitoring prose, not a sequence of copied rule comments joined by repeated phrases such as “indicating” or “suggesting”.
+
+The model may vary sentence openings, syntax and transitions, and may connect closely related findings in a sentence. It must retain the supplied finding order and keep every distinct signal identifiable. The explanatory wording can be paraphrased, but each deterministic indicator label must remain verbatim as an anchor. The model must not merge findings into a vague summary, introduce a causal relationship that the evidence does not state, or sacrifice coverage for brevity.
+
+Customer Profile has an additional completeness requirement. The narrative should synthesize the non-empty **General Information**, **Risk Profile & Predictiveness**, **Relationship & Counterparty Context**, and **Relevant Events** subsections into readable prose, preserving every distinct material fact, status, rating, risk-grade change, EWS signal, relationship detail, ownership/management detail and relevant event supplied to the prompt. It should not merely reproduce the subsection text as a mechanical inventory or replace it with a generic profile summary.
+
+These are prompt-level generation requirements, not a change to the decision engine. They guide wording and organization only; the supplied findings remain the sole factual source, and structural/grounding validation plus deterministic fallback remain in place. Because language-model behaviour is not fully deterministic, prompt guidance should be backed by regression tests and realistic provider tests where available.
 
 If the set of assessment domains changes, the narrative orchestration must derive its input from the workflow/domain contract rather than introducing rule-specific prompt branches.
 
-## LLM provider normalization\n\nLLM output is treated as untrusted text before it becomes part of the Executive Narrative. The reporting generator normalizes common provider-specific formatting before structural validation. In particular, Ollama/Qwen responses may contain internal `<think>...</think>` blocks or Markdown/numbered section headings; reasoning blocks are removed and supported heading variants are normalized to the canonical four-area structure. The prompt also requests explicit parser-friendly section markers. A response that still fails the structural contract is rejected and the deterministic reporting fallback is used.\n\nThis normalization changes presentation only. It does not allow the model to alter deterministic status, severity, findings or materiality.\n\n## Grounding
+## LLM provider normalization
+
+LLM output is treated as untrusted text before it becomes part of the Executive Narrative. The reporting generator normalizes common provider-specific formatting before structural validation. In particular, Ollama/Qwen responses may contain internal `<think>...</think>` blocks or Markdown/numbered section headings; reasoning blocks are removed and supported heading variants are normalized to the canonical four-area structure. The prompt also requests explicit parser-friendly section markers. A response that still fails the structural contract is rejected and the deterministic reporting fallback is used.
+
+This normalization changes presentation only. It does not allow the model to alter deterministic status, severity, findings or materiality.\n\n## Grounding
 
 Generated narrative is treated as untrusted output. Grounding validation protects deterministic facts, particularly material indicator values and findings.
 
