@@ -1,4 +1,3 @@
-from collections.abc import Callable
 
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
