@@ -128,11 +128,12 @@ Reporting tests verify that:
 - the prompt receives the evidence required by its structured contract;
 - the LLM is instructed to synthesize findings into natural, varied professional prose rather than transcribe or concatenate source sentences;
 - paraphrasing preserves each mandatory finding's meaning and verbatim indicator label, without merging distinct signals into generic summaries;
-- the detailed deterministic Customer Profile preserves the four canonical headings in order: General Information, Risk Profile & Predictiveness, Relationship & Counterparty Context, and Relevant Events;
-- the Customer Profile parser maps content by explicit section headings, including when some sections have no populated fields, so sections cannot shift position or be misclassified;
-- General Information includes a short discursive introduction when identity/context is available and retains the explicit `Customer` bullet;
-- Markdown spacing keeps headings, introductions, bullets, ownership/facility records and relevant-event records visually separated;
-- every non-empty Customer Profile context subsection is represented without losing distinct material facts, statuses, ratings, EWS signals, relationship details or relevant events;
+- the structured Customer Profile analysis preserves the four canonical section identities in order: General Information, Risk Profile & Predictiveness, Relationship & Counterparty Context, and Relevant Events, including sparse or empty sections;
+- the analysis agent renders Customer Profile fields as fluent prose, beginning with a natural company/business introduction when context is available, rather than a bullet-style field inventory;
+- the Executive Narrative keeps material Customer Profile context in one consolidated area; deterministic reporting removes nested subsection headings and flattens the selected context into compact prose;
+- every material Customer Profile fact selected for the Executive Narrative is represented without losing distinct statuses, ratings, EWS signals, relationship details or relevant events;
+- LLM reporting may recover a narrowly defined missing final heading only when the first three area headings are present in canonical order and exactly four non-empty paragraphs exist; malformed or ambiguous section structures remain rejected;
+- regression tests cover the omitted final Debt Sustainability label and the parser's newline/regular-expression handling;
 - structural compliance and evidence completeness are checked independently of stylistic quality;
 - material indicators remain grounded in authoritative evidence;
 - Customer Profile materiality excludes facts already represented by deterministic Customer Profile rules, preventing duplicate narrative evidence;
