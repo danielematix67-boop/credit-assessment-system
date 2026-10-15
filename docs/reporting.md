@@ -243,7 +243,7 @@ Reporting tests should verify:
 1. configured domain evidence is propagated;
 2. all supported rule outcomes remain distinguishable;
 3. high-severity triggered evidence is correctly represented as a risk factor;
-4. prompts receive the complete evidence set required by the contract, including the selected material customer-profile context;
+4. prompts receive the complete evidence set required by the contract, including the full deterministic customer-profile context and the selected material subset where relevant;
 5. generated prose cannot alter deterministic status or customer-profile materiality selection;
 6. every report contains all four required assessment areas, including for NORMAL scenarios with no triggered rules;
 7. unsupported or altered material evidence is rejected by grounding;
