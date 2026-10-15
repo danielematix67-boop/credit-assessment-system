@@ -15,7 +15,7 @@ class BehaviouralData:
     payment_delay_days: float | None = None
     exposure_growth: float | None = None
 
-    # Latest available Centrale dei Rischi reference month and utilized exposure.
+    # Latest available Centrale dei Rischi reference date and utilized exposure.
     cr_reference_date: str | None = None
     total_utilized_system: float | None = None
     utilized_revocable: float | None = None
