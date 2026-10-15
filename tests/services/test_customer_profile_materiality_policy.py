@@ -85,3 +85,19 @@ def test_materiality_excludes_rule_backed_fields_and_non_material_zeros() -> Non
     assert "past_due_count" not in fields
     assert "generational_transition" not in fields
     assert "monitoring_period_days" not in fields
+
+
+def test_materiality_excludes_risk_group_interdependence_fields() -> None:
+    fields = CustomerProfileMaterialityPolicy.material_fields(
+        {
+            "company_name": "Example S.p.A.",
+            "risk_group_interdependence": "Moderate",
+            "risk_group_independence": "Low",
+            "rating": "BB-",
+        }
+    )
+
+    assert "company_name" in fields
+    assert "rating" in fields
+    assert "risk_group_interdependence" not in fields
+    assert "risk_group_independence" not in fields
