@@ -16,7 +16,7 @@ class BehaviouralData:
     exposure_growth: float | None = None
 
     # Latest available Centrale dei Rischi reference month and utilized exposure.
-    cr_reference_month: str | None = None
+    cr_reference_date: str | None = None
     total_utilized_system: float | None = None
     utilized_revocable: float | None = None
     utilized_term: float | None = None
