@@ -457,6 +457,15 @@ def _convert_value(field_name: str, value: Any) -> Any:
                 f"Invalid numeric value for '{field_name}': {value!r}."
             ) from error
 
+    if field_name == "cr_reference_date":
+        try:
+            return pd.to_datetime(value, errors="raise").strftime("%Y-%m-%d")
+        except (TypeError, ValueError, OverflowError) as error:
+            raise ExcelScenarioError(
+                f"Invalid date value for '{field_name}': {value!r}. "
+                "Use YYYY-MM-DD."
+            ) from error
+
     if field_name == "ews_score_class":
         try:
             return EwsScoreClass(str(value).strip().upper())
