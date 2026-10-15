@@ -118,6 +118,12 @@ _BASE_CASE_DATA: dict[str, dict[str, Any]] = {
         "overdraft_days": 45,
         "payment_delay_days": 75,
         "exposure_growth": 0.48,
+        # Synthetic Centrale dei Rischi data for the latest available month.
+        "cr_reference_month": "2026-09",
+        "total_utilized_system": 4_800_000.0,
+        "utilized_revocable": 1_600_000.0,
+        "utilized_term": 2_400_000.0,
+        "utilized_self_liquidating": 800_000.0,
     },
     "debt_sustainability": {
         "cash_flow_available_for_debt_service": 100_000.0,
