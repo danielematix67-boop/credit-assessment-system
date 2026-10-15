@@ -90,7 +90,7 @@ class ReportPromptBuilder:
         return self.template.render(
             findings=self._format_grouped_findings(
                 grouped_findings,
-                analysis.material_customer_profile,
+                analysis.customer_profile,
             ),
             category_order=self._format_category_order(category_order),
         )
