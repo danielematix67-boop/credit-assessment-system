@@ -147,19 +147,38 @@ class DeterministicReportGenerator(ReportGenerator):
     def _render_customer_profile_context(
         sections: list[tuple[str, str]],
     ) -> str:
-        """Render profile context as compact prose without nested subsection headings."""
+        """Render the concise fixed profile, excluding risk signals and events."""
         import re
 
+        section_text = {name.casefold(): content for name, content in sections}
         paragraphs: list[str] = []
-        for _, content in sections:
-            if not content:
-                continue
-            # Keep structured sections internally, but omit their headings from
-            # the deterministic executive narrative to avoid excessive nesting.
-            cleaned = re.sub(r"(?m)^\*\*[^\n]+\*\*\s*", "", content).strip()
-            cleaned = re.sub(r"\s+", " ", cleaned)
-            if cleaned and cleaned != "No additional information available.":
-                paragraphs.append(cleaned)
+
+        def clean(content: str) -> str:
+            content = re.sub(r"(?m)^\*\*[^\n]+\*\*\s*", "", content).strip()
+            return re.sub(r"\s+", " ", content)
+
+        general = clean(section_text.get("general information", ""))
+        if general and general != "No additional information available.":
+            paragraphs.append(general)
+
+        # Keep the rating and PD, but omit regulatory-grade changes, past-due
+        # counts and EWS/EWI signals from the fixed context block.
+        risk_profile = clean(section_text.get("risk profile & predictiveness", ""))
+        rating_marker = "The rating assessment records "
+        rating_start = risk_profile.find(rating_marker)
+        if rating_start >= 0:
+            rating = risk_profile[rating_start:].strip()
+            if rating and rating != "No additional information available.":
+                paragraphs.append(rating)
+
+        relationship = clean(
+            section_text.get("relationship & counterparty context", "")
+        )
+        if relationship and relationship != "No additional information available.":
+            paragraphs.append(relationship)
+
+        # Relevant events, restructuring/forborne status and EWS/risk-grade
+        # details are intentionally left to the corresponding rule findings.
         return " ".join(paragraphs)
 
     @classmethod
