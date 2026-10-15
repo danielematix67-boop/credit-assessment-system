@@ -147,7 +147,7 @@ See [`adr-017-rule-implementation-configuration-separation.md`](adr-017-rule-imp
 
 ## ADR-018 — Structured Customer Profile and Deterministic Materiality
 
-Customer Profile is modelled as a broader contextual information layer rather than as a collection of rule findings. `CustomerProfileData` can contain descriptive information, risk-grade evolution, EWS/EWI and rating context, risk-group context, relationship information, counterparty-specific information and relevant events.
+Customer Profile is modelled as a broader contextual information layer rather than as a collection of rule findings. `CustomerProfileData` can contain descriptive information, risk-grade evolution, EWS/EWI and rating context, relationship information, counterparty-specific information and relevant events.
 
 `CustomerProfileAnalysis` organises this context into four ordered reporting sections:
 
@@ -158,21 +158,23 @@ Customer Profile is modelled as a broader contextual information layer rather th
 
 Deterministic customer-profile rules continue to produce normal `RuleResult` evidence and participate in the assessment status contract. Descriptive fields do not automatically become pseudo-rules.
 
-For Executive Summary reporting, `CustomerProfileMaterialityPolicy` deterministically selects the profile fields considered material. `AssessmentAnalysis` therefore exposes both the full `customer_profile` and the bounded `material_customer_profile` representation.
+For reporting, `AssessmentAnalysis.customer_profile` supplies the full contextual profile used by the fixed Customer Profile narrative block. `CustomerProfileMaterialityPolicy` still computes a bounded `material_customer_profile` subset for separate uses, but the final Customer Profile narrative no longer depends on that subset.
 
 ```text
 CustomerProfileData
        ↓
 CaseAnalysisAgent
-       ├── customer_profile
+       ├── customer_profile ──────────────┐
        └── CustomerProfileMaterialityPolicy
-                    ↓
-          material_customer_profile
-                    ↓
-          Reporting / Executive Narrative
+                    ↓                     │
+          material_customer_profile       │
+                                          ↓
+                               ReportingAgent post-processing
+                                          ↓
+                            Fixed Customer Profile + rule findings
 ```
 
-The LLM does not select, rank or otherwise redefine profile materiality. It receives the deterministic material context and is limited to narrative generation. The materiality policy excludes facts already covered by deterministic Customer Profile rules, preventing overlap. Both the LLM and deterministic report generator follow the same materiality boundary, and both reporting paths consolidate Customer Profile rule evidence and material contextual information into a single Customer Profile Executive Narrative section.
+The LLM does not control the final Customer Profile wording. After either the primary or fallback generator returns, `ReportingAgent` replaces the generated Customer Profile prose with the same deterministic full-profile block and appends triggered Customer Profile rule findings after it. This guarantees the same context and ordering across reporting modes. Risk-group interdependence/independence descriptions are omitted from narrative output.
 
 **Why:** keep descriptive customer context available for analyst review, prevent the Executive Summary from becoming a full data dump or duplicate the same evidence, and preserve a strict separation between deterministic credit evidence and generative narrative.
 
@@ -192,4 +194,4 @@ The LLM does not select, rank or otherwise redefine profile materiality. It rece
 12. The Results UI has one authoritative macro-area evidence surface.
 13. Every configured rule must resolve to one registered deterministic implementation.
 14. Customer Profile context is structurally separated from deterministic rule evidence.
-15. Executive Summary profile materiality is selected deterministically before reporting.
+15. The fixed Customer Profile narrative is rendered deterministically and is independent of reporting mode.
