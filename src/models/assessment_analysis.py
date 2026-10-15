@@ -17,3 +17,5 @@ class AssessmentAnalysis:
     rule_evidence: list[AnalysisFinding] = field(default_factory=list)
     customer_profile: CustomerProfileAnalysis | None = None
     material_customer_profile: CustomerProfileAnalysis | None = None
+    # Non-rule behavioural context included in every reporting mode.
+    behavioural_context: dict[str, object] = field(default_factory=dict)
