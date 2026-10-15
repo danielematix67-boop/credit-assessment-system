@@ -80,7 +80,7 @@ CustomerProfileMaterialityPolicy
             Executive Narrative
 ```
 
-Materiality is therefore **not an LLM decision**. The reporting layer receives an already-selected contextual subset and can only format, organise or verbalise it.
+The materiality subset is computed deterministically and is not an LLM decision. The final Customer Profile block is separately rendered from the full profile, while rule findings remain sourced from deterministic evidence.
 
 Deterministic customer-profile rules remain in `rule_evidence` and retain their normal `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` semantics. Contextual fields such as active EWIs, business information, rating context or historical events are not converted into pseudo-rule findings merely because they are relevant to the Executive Summary.
 
