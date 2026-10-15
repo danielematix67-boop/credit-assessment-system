@@ -161,15 +161,26 @@ class DeterministicReportGenerator(ReportGenerator):
         if general and general != "No additional information available.":
             paragraphs.append(general)
 
-        # Keep the rating and PD, but omit regulatory-grade changes, past-due
-        # counts and EWS/EWI signals from the fixed context block.
+        # Keep rating/PD sentences only. Regulatory grades, past-due counts
+        # and EWS/EWI signals belong to the corresponding rule findings.
         risk_profile = clean(section_text.get("risk profile & predictiveness", ""))
-        rating_marker = "The rating assessment records "
-        rating_start = risk_profile.find(rating_marker)
-        if rating_start >= 0:
-            rating = risk_profile[rating_start:].strip()
-            if rating and rating != "No additional information available.":
-                paragraphs.append(rating)
+        rating_sentences = [
+            sentence.strip()
+            for sentence in re.split(r"(?<=[.!?])\\s+", risk_profile)
+            if sentence.strip()
+            and (
+                "rating" in sentence.casefold()
+                or "probability of default" in sentence.casefold()
+                or re.search(r"\\bPD\\b", sentence, re.IGNORECASE)
+            )
+            and not any(
+                signal in sentence.casefold()
+                for signal in ("risk grade", "ews", "early-warning", "early warning")
+            )
+            and sentence != "No additional information available."
+        ]
+        if rating_sentences:
+            paragraphs.append(" ".join(rating_sentences))
 
         relationship = clean(
             section_text.get("relationship & counterparty context", "")
