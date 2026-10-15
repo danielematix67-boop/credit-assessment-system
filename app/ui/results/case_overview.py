@@ -126,14 +126,19 @@ def _render_behavioural_context(section: Any) -> None:
         with column:
             column.metric(label, _format_euro_amount(value))
 
-    available_components = [value for value in (revocable, term, self_liquidating) if value is not None]
+    available_components = [
+        value
+        for value in (revocable, term, self_liquidating)
+        if value is not None
+    ]
     if total is not None and len(available_components) == 3:
         component_total = sum(float(value) for value in available_components)
         difference = float(total) - component_total
         if abs(difference) > 0.01:
             st.caption(
-                "Note: the three facility categories do not reconcile to total utilized "
-                f"exposure (difference: {_format_euro_amount(difference)})."
+                "Note: the three facility categories do not reconcile to total "
+                "utilized exposure "
+                f"(difference: {_format_euro_amount(difference)})."
             )
 
     exposure_fields = (
