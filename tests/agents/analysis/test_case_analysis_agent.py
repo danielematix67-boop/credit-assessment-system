@@ -95,8 +95,11 @@ def test_case_analysis_agent_includes_customer_profile_context() -> None:
     )
     normalized_text = profile_text.casefold()
 
-    for value in profile.context.values():
-        if value not in (None, "", [], {}):
+    for key, value in profile.context.items():
+        if value not in (None, "", [], {}) and key not in {
+            "risk_group_interdependence",
+            "risk_group_independence",
+        }:
             if isinstance(value, list):
                 for item in value:
                     assert str(item).casefold() in normalized_text
@@ -108,5 +111,7 @@ def test_case_analysis_agent_includes_customer_profile_context() -> None:
     assert "- " not in profile_text
     assert "**General Information**" in profile_text
     assert "Synthetic Co. operates in the Manufacturing sector." in profile_text
+    assert "interdependence" not in normalized_text
+    assert "independence" not in normalized_text
     assert "**Relationship & Counterparty Context**" in profile_text
     assert len(analysis.customer_profile.sections()) == 4
