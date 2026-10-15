@@ -92,6 +92,57 @@ def _render_customer_evidence(section: Any) -> None:
             st.caption("Ownership and management information not available.")
 
 
+def _format_euro_amount(value: Any) -> str:
+    """Format a numeric exposure as EUR without inventing missing values."""
+    if value is None or value == "":
+        return "Not available"
+    try:
+        return f"€{float(value):,.0f}"
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def _render_behavioural_context(section: Any) -> None:
+    """Render latest Centrale dei Rischi exposure context separately from rules."""
+    context = getattr(section, "context", {}) or {}
+    st.markdown("**Centrale dei Rischi — latest available month**")
+
+    reference_month = _profile_value(context, "cr_reference_month")
+    st.caption(f"Reference month: {reference_month}")
+
+    total = context.get("total_utilized_system")
+    revocable = context.get("utilized_revocable")
+    term = context.get("utilized_term")
+    self_liquidating = context.get("utilized_self_liquidating")
+
+    metrics = [
+        ("Total utilized at system level", total),
+        ("Revocable lines", revocable),
+        ("Term facilities", term),
+        ("Self-liquidating facilities", self_liquidating),
+    ]
+    columns = st.columns(4)
+    for column, (label, value) in zip(columns, metrics):
+        with column:
+            column.metric(label, _format_euro_amount(value))
+
+    available_components = [value for value in (revocable, term, self_liquidating) if value is not None]
+    if total is not None and len(available_components) == 3:
+        component_total = sum(float(value) for value in available_components)
+        difference = float(total) - component_total
+        if abs(difference) > 0.01:
+            st.caption(
+                "Note: the three facility categories do not reconcile to total utilized "
+                f"exposure (difference: {_format_euro_amount(difference)})."
+            )
+
+    if not context:
+        st.info(
+            "Centrale dei Rischi exposure context is not available for this case. "
+            "Provide the latest reference month and utilization amounts in the input data."
+        )
+
+
 def _render_rule_evidence(section: Any) -> None:
     rows = [{
         "Indicator": rule_indicator(rule),
@@ -148,6 +199,10 @@ def _render_area(section: Any) -> None:
     st.divider()
     if section.name == "Customer Profile":
         _render_customer_evidence(section)
+    elif section.name == "Behavioural Analysis":
+        _render_behavioural_context(section)
+        st.divider()
+        _render_rule_evidence(section)
     else:
         _render_rule_evidence(section)
     st.divider()
