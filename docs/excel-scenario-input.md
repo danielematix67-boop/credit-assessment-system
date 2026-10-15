@@ -89,6 +89,11 @@ The sheet contains the fields of `BehaviouralData`:
 | `overdraft_days` | Number of days with overdraft usage |
 | `payment_delay_days` | Payment-delay indicator expressed in days |
 | `exposure_growth` | Exposure growth rate |
+| `cr_reference_date` | Date of the latest available Centrale dei Rischi data, in `YYYY-MM-DD` format (for example, `2026-09-30`) |
+| `total_utilized_system` | Total utilized exposure at system level, in euros |
+| `utilized_revocable` | Utilized amount for revocable credit lines, in euros |
+| `utilized_term` | Utilized amount for term facilities, in euros |
+| `utilized_self_liquidating` | Utilized amount for self-liquidating facilities, in euros |
 
 The reference workbook keeps these inputs deliberately neutral across the three demonstration scenarios:
 
@@ -98,7 +103,7 @@ The reference workbook keeps these inputs deliberately neutral across the three 
 | DEMO-ATTENTION | 0.50 | 2 | 5 | 0.05 |
 | DEMO-CRITICAL | 0.50 | 2 | 5 | 0.05 |
 
-This is intentional: the scenarios isolate differences in the financial assessment rather than introduce additional behavioural triggers.
+This is intentional: the scenarios isolate differences in the financial assessment rather than introduce additional behavioural triggers. The integrated demo case can also include synthetic CR context fields; these are descriptive only and do not affect rule evaluation.
 
 ### Debt Sustainability
 
