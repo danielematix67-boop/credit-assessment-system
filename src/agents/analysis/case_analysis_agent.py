@@ -291,13 +291,8 @@ class CaseAnalysisAgent:
         # Relationship context: describe group links and ownership, then retain
         # all facility details without turning each attribute into a bullet.
         relationship_parts: list[str] = []
-        group_parts: list[str] = []
-        add(group_parts, "risk_group_interdependence", "interdependence of {value}")
-        add(group_parts, "risk_group_independence", "independence of {value}")
-        if group_parts:
-            relationship_parts.append(
-                "At group level, the counterparty has " + " and ".join(group_parts) + "."
-            )
+        # Risk-group interdependence/independence are intentionally excluded
+        # from the narrative.
         add(relationship_parts, "relationship_years", "The banking relationship has lasted {value} years.")
         add(relationship_parts, "shareholders", "The shareholders are {value}.")
         add(relationship_parts, "shareholder_roles", "Shareholders' roles include {value}.")
