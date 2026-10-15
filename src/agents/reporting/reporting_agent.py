@@ -1,4 +1,7 @@
 import logging
+import re
+from dataclasses import replace
+from datetime import datetime
 
 from src.agents.base.agent import Agent
 from src.agents.reporting.report_generator import ReportGenerator
@@ -70,6 +73,66 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
         self.last_error: str | None = None
         self.last_error_category: str | None = None
 
+    @staticmethod
+    def _add_behavioural_context(
+        report: Report,
+        analysis: AssessmentAnalysis,
+    ) -> Report:
+        """Prefix the CR exposure summary independently of the selected generator."""
+        context = analysis.behavioural_context
+        required = (
+            "cr_reference_date",
+            "total_utilized_system",
+            "utilized_term",
+            "utilized_revocable",
+            "utilized_self_liquidating",
+        )
+        if any(context.get(key) in (None, "") for key in required):
+            return report
+
+        try:
+            reference_date = datetime.strptime(
+                str(context["cr_reference_date"]), "%Y-%m-%d"
+            ).strftime("%d/%m/%Y")
+            amounts = {key: float(context[key]) for key in required[1:]}
+        except (TypeError, ValueError, OverflowError):
+            logger.warning("Skipping malformed CR context in executive narrative.")
+            return report
+
+        def euro(value: float) -> str:
+            return f"€{value:,.0f}"
+
+        sentence = (
+            f"As of {reference_date}, total system-wide utilised exposure amounted "
+            f"to approximately {euro(amounts['total_utilized_system'])}, comprising "
+            f"{euro(amounts['utilized_term'])} in term facilities, "
+            f"{euro(amounts['utilized_revocable'])} in revocable facilities and "
+            f"{euro(amounts['utilized_self_liquidating'])} in self-liquidating facilities."
+        )
+        heading = re.compile(
+            r"(?m)^(?:###\s*Behavioural Analysis|\*\*Behavioural Analysis\*\*)\s*$",
+            re.IGNORECASE,
+        )
+        match = heading.search(report.executive_summary)
+        if match is None:
+            logger.warning(
+                "Could not locate Behavioural Analysis heading to insert CR context."
+            )
+            return report
+
+        insertion_point = match.end()
+        summary = report.executive_summary
+        separator_end = insertion_point
+        while separator_end < len(summary) and summary[separator_end] in "\r\n":
+            separator_end += 1
+        updated_summary = (
+            summary[:separator_end]
+            + sentence
+            + (" " if summary[separator_end:].strip() else "")
+            + summary[separator_end:].lstrip()
+        )
+        return replace(report, executive_summary=updated_summary)
+
     def run(
         self,
         analysis: AssessmentAnalysis,
@@ -92,7 +155,7 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
 
             print(f"\n  [PRIMARY] Report generated successfully ({generator_name}).")
 
-            return report
+            return self._add_behavioural_context(report, analysis)
 
         # ====================================================
         # Primary failure
@@ -135,4 +198,4 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
 
             print("  [FALLBACK] Report generated successfully.")
 
-            return report
+            return self._add_behavioural_context(report, analysis)
