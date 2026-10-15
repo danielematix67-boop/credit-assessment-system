@@ -136,9 +136,15 @@ def _render_behavioural_context(section: Any) -> None:
                 f"exposure (difference: {_format_euro_amount(difference)})."
             )
 
-    if not context:
+    exposure_fields = (
+        "total_utilized_system",
+        "utilized_revocable",
+        "utilized_term",
+        "utilized_self_liquidating",
+    )
+    if not any(context.get(field) is not None for field in exposure_fields):
         st.info(
-            "Centrale dei Rischi exposure context is not available for this case. "
+            "Centrale dei Rischi exposure amounts are not available for this case. "
             "Provide the latest reference month and utilization amounts in the input data."
         )
 
