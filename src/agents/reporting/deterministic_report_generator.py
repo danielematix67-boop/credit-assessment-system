@@ -97,8 +97,8 @@ class DeterministicReportGenerator(ReportGenerator):
                     distinct_rule_sentences = [
                         finding.text.rstrip(".") + "."
                         for finding in triggered
-                        if finding.indicator
-                        and cls._normalize_text(finding.indicator) not in context_key
+                        if not finding.indicator
+                        or cls._normalize_text(finding.indicator) not in context_key
                     ]
                     if distinct_rule_sentences:
                         paragraph += (
