@@ -7,8 +7,8 @@ from src.agents.reporting.report_generator import ReportGenerator
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
-from src.models.customer_profile_analysis import CustomerProfileAnalysis
 from src.models.assessment_status import AssessmentStatus
+from src.models.customer_profile_analysis import CustomerProfileAnalysis
 from src.models.report import Report, ReportFindingGroup
 from src.rules.base.severity import RuleSeverity
 from src.rules.base.status import RuleStatus
