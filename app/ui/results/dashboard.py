@@ -1,4 +1,4 @@
-""""Compact deterministic Rule Engine evidence dashboard."""
+"""Compact deterministic Rule Engine evidence dashboard."""
 
 from typing import Any
 
@@ -147,4 +147,3 @@ def render_risk_indicator_dashboard(result: Any) -> None:
         _render_rule_catalogue(dataframe)
     with st.expander("Individual rule detail", expanded=False):
         render_rule_indicator_detail(result)
-"
