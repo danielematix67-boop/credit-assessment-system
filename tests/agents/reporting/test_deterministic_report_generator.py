@@ -226,7 +226,7 @@ def test_deterministic_report_renders_structured_customer_profile(generator):
         key_findings=[],
         risk_factors=[],
         limitations=[],
-        material_customer_profile=profile,
+        customer_profile=profile,
     )
 
     report = generator.generate(analysis)
@@ -260,7 +260,7 @@ def test_deterministic_fallback_prioritizes_customer_profile_context_over_duplic
         key_findings=[finding],
         risk_factors=[],
         limitations=[],
-        material_customer_profile=profile,
+        customer_profile=profile,
     )
 
     report = generator.generate(analysis)
@@ -292,7 +292,7 @@ def test_deterministic_fallback_keeps_profile_context_and_distinct_rule_evidence
         key_findings=[finding],
         risk_factors=[],
         limitations=[],
-        material_customer_profile=profile,
+        customer_profile=profile,
     )
 
     report = generator.generate(analysis)
