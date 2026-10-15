@@ -173,7 +173,7 @@ The narrative must:
 - avoid unsupported facts, causes, conclusions, recommendations or calculations;
 - never generate or overwrite rule results, severity, section status or overall assessment status;
 - preserve all four areas in both deterministic and LLM-generated reports;
-- contain exactly one prose paragraph per area, with the canonical labels and fixed order;
+- retain the canonical labels and fixed area order; Customer Profile is the deliberate exception to the single-generated-paragraph format because post-processing places the fixed context block first and the deterministic rule findings after it;
 - include the standard no-anomaly statement when an area has no triggered findings and no material contextual information.
 
 ### Narrative quality: synthesis without loss of evidence
