@@ -1,4 +1,4 @@
-"""Compact deterministic Rule Engine evidence dashboard."""
+""""Compact deterministic Rule Engine evidence dashboard."""
 
 from typing import Any
 
@@ -11,7 +11,6 @@ from app.ui.results.helpers import (
     get_rule_results,
     get_rule_sections,
     rule_indicator,
-    rule_severity,
     rule_status,
     severity_rank,
 )
@@ -19,21 +18,13 @@ from app.ui.results.rule_detail import render_rule_indicator_detail
 
 
 def _section_indicators(section: Any) -> list[str]:
-    """Return all triggered key indicators from deterministic section evidence."""
+    """Return only triggered key indicators from deterministic section evidence."""
     evidence = list(getattr(section, "evidence", []) or [])
-    triggered = [
+    return [
         rule_indicator(rule_result)
         for rule_result in evidence
         if rule_status(rule_result) == "TRIGGERED"
     ]
-    if triggered:
-        return triggered
-    ranked = sorted(
-        evidence,
-        key=lambda rule_result: severity_rank(rule_severity(rule_result)),
-        reverse=True,
-    )
-    return [rule_indicator(rule_result) for rule_result in ranked]
 
 
 def _render_area_cards(result: Any) -> None:
@@ -58,9 +49,11 @@ def _render_area_cards(result: Any) -> None:
                 f"{status} · {len(evidence)} rules · {triggered} triggered · "
                 f"{not_evaluable} not evaluable"
             )
+            st.caption("Key indicators")
             if indicators:
-                st.caption("Key indicators")
                 st.write(" · ".join(indicators))
+            else:
+                st.caption("No triggered indicators.")
 
 
 def _render_rule_catalogue(dataframe: pd.DataFrame) -> None:
@@ -154,3 +147,4 @@ def render_risk_indicator_dashboard(result: Any) -> None:
         _render_rule_catalogue(dataframe)
     with st.expander("Individual rule detail", expanded=False):
         render_rule_indicator_detail(result)
+"
