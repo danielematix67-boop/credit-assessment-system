@@ -282,4 +282,6 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
 
             print("  [FALLBACK] Report generated successfully.")
 
-            return self._add_behavioural_context(report, analysis)
+            return self._add_behavioural_context(
+                self._add_customer_profile_context(report, analysis), analysis
+            )
