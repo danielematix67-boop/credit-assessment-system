@@ -264,14 +264,9 @@ class TestReportPromptBuilder:
         assert "Always include the Debt Sustainability section" in prompt
         assert "End immediately after the Debt Sustainability paragraph" in prompt
         assert "No deterministic anomalies are present for this area." in prompt
-        assert "CUSTOMER PROFILE IS A MANDATORY EXCEPTION TO BREVITY" in prompt
-        assert "every non-empty subsection" in prompt
-        assert "lack of a rule trigger" in prompt
-        assert (
-            "company background, sector, operations, ownership, management, facilities"
-            in prompt
-        )
-        assert "Do not replace detailed context with a generic risk-profile summary." in prompt
+        assert "Customer Profile input contains rule findings only." in prompt
+        assert "The application inserts its fixed Customer Profile context separately." in prompt
+        assert "Do not include the fixed customer-context block" in prompt
         assert "REWRITE, DO NOT TRANSCRIBE" in prompt
         assert "Re-express their meaning in natural, fluent and varied professional prose." in prompt
         assert "the explanatory wording around that label may be paraphrased." in prompt
