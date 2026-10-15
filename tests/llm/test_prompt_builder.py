@@ -258,17 +258,26 @@ class TestReportPromptBuilder:
 
         assert "Follow the supplied category order exactly." in prompt
         assert "The supplied Analysis findings are the sole factual source." in prompt
-        assert "Do not calculate, infer, round, convert or derive new indicators." in prompt
+        assert (
+            "Do not calculate, infer, round, convert or derive new indicators."
+            in prompt
+        )
         assert "Return ONLY the final executive narrative" in prompt
         assert "Return exactly four labeled sections" in prompt
         assert "Always include the Debt Sustainability section" in prompt
         assert "End immediately after the Debt Sustainability paragraph" in prompt
         assert "No deterministic anomalies are present for this area." in prompt
         assert "Customer Profile input contains rule findings only." in prompt
-        assert "The application inserts its fixed Customer Profile context separately." in prompt
+        assert (
+            "The application inserts its fixed Customer Profile context separately."
+            in prompt
+        )
         assert "Do not include the fixed customer-context block" in prompt
         assert "REWRITE, DO NOT TRANSCRIBE" in prompt
-        assert "Re-express their meaning in natural, fluent and varied professional prose." in prompt
+        assert (
+            "Re-express their meaning in natural, fluent and varied professional prose."
+            in prompt
+        )
         assert "the explanatory wording around that label may be paraphrased." in prompt
         assert "Do not merge distinct signals" in prompt
         assert "SYNTHESIZE RELATED CONCEPTS" in prompt
