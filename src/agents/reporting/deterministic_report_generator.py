@@ -67,9 +67,9 @@ class DeterministicReportGenerator(ReportGenerator):
             grouped.setdefault(area, []).append(finding)
 
         profile_text = ""
-        if analysis.material_customer_profile is not None:
+        if analysis.customer_profile is not None:
             profile_text = cls._render_customer_profile_context(
-                analysis.material_customer_profile.sections()
+                analysis.customer_profile.sections()
             )
 
         paragraphs: list[tuple[str, str]] = []
