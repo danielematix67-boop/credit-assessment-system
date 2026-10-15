@@ -554,3 +554,81 @@ def test_reporting_agent_depends_only_on_report_generator_contract(
 
     primary.generate.assert_called_once_with(analysis)
     fallback.generate.assert_not_called()
+
+
+def test_reporting_agent_prefixes_cr_context_for_primary_report(analysis, generator):
+    analysis = AssessmentAnalysis(
+        position_id=analysis.position_id,
+        assessment_status=analysis.assessment_status,
+        key_findings=analysis.key_findings,
+        risk_factors=analysis.risk_factors,
+        limitations=analysis.limitations,
+        behavioural_context={
+            "cr_reference_date": "2026-09-30",
+            "total_utilized_system": 1_250_000,
+            "utilized_term": 800_000,
+            "utilized_revocable": 150_000,
+            "utilized_self_liquidating": 300_000,
+        },
+    )
+    expected_report = build_report(
+        analysis,
+        executive_summary=(
+            "Assessment Status: Attention\n\n"
+            "**Customer Profile**\n\nCustomer context.\n\n"
+            "**Financial Analysis**\n\nFinancial context.\n\n"
+            "**Behavioural Analysis**\n\nBehavioural findings.\n\n"
+            "**Debt Sustainability**\n\nDebt context."
+        ),
+    )
+    generator.generate.return_value = expected_report
+
+    report = ReportingAgent(generator).run(analysis)
+
+    cr_comment = (
+        "As of 30/09/2026, total system-wide utilised exposure amounted to "
+        "approximately €1,250,000, comprising €800,000 in term facilities, "
+        "€150,000 in revocable facilities and €300,000 in self-liquidating facilities."
+    )
+    assert cr_comment in report.executive_summary
+    assert report.executive_summary.index(cr_comment) < report.executive_summary.index(
+        "Behavioural findings."
+    )
+    assert report.executive_summary.count("Behavioural Analysis") == 1
+
+
+def test_reporting_agent_adds_cr_context_to_fallback_report(analysis):
+    primary = MagicMock(spec=ReportGenerator)
+    fallback = MagicMock(spec=ReportGenerator)
+    analysis = AssessmentAnalysis(
+        position_id=analysis.position_id,
+        assessment_status=analysis.assessment_status,
+        key_findings=analysis.key_findings,
+        risk_factors=analysis.risk_factors,
+        limitations=analysis.limitations,
+        behavioural_context={
+            "cr_reference_date": "2026-09-30",
+            "total_utilized_system": 1_250_000,
+            "utilized_term": 800_000,
+            "utilized_revocable": 150_000,
+            "utilized_self_liquidating": 300_000,
+        },
+    )
+    primary.generate.side_effect = RuntimeError("provider unavailable")
+    fallback.generate.return_value = build_report(
+        analysis,
+        executive_summary=(
+            "Assessment Status: Attention\n\n"
+            "### Customer Profile\n\nCustomer context.\n\n"
+            "### Financial Analysis\n\nFinancial context.\n\n"
+            "### Behavioural Analysis\n\nBehavioural findings.\n\n"
+            "### Debt Sustainability\n\nDebt context."
+        ),
+    )
+
+    report = ReportingAgent(primary, fallback).run(analysis)
+
+    assert "As of 30/09/2026" in report.executive_summary
+    assert report.executive_summary.index("As of 30/09/2026") < report.executive_summary.index(
+        "Behavioural findings."
+    )
