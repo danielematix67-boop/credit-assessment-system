@@ -268,7 +268,9 @@ def test_deterministic_fallback_prioritizes_customer_profile_context_over_duplic
 
     assert report.executive_summary.count("### Customer Profile") == 1
     assert "The company operates in manufacturing." in report.executive_summary
-    assert "The EWS Score is LIGHT_RED." in report.executive_summary
+    # EWS is excluded from the fixed context and retained as rule evidence.
+    assert "The EWS Score is LIGHT_RED." not in report.executive_summary
+    assert "EWS Score class is LIGHT_RED." in report.executive_summary
     assert report.executive_summary.count("LIGHT_RED") == 1
     assert "**Deterministic rule findings**" in report.executive_summary
 
