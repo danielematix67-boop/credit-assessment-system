@@ -95,7 +95,7 @@ The detailed profile and the Executive Summary now use the same full factual pro
 | Rule evidence | Only deterministic rule results |
 | LLM narrative | Rewritten prose from deterministic rule findings only; fixed context is inserted by the application |
 
-This prevents descriptive customer information from contaminating the deterministic rule-evidence contract while still making material customer context available to management-level reporting. The deterministic and AI reporting paths use the same fixed Customer Profile block, sourced from `AssessmentAnalysis.customer_profile`. In `Deterministic` mode, triggered rule comments remain the preconfigured rule text. In Gemini/Ollama modes, the LLM receives only deterministic rule evidence and rewrites the Customer Profile rule findings; `ReportingAgent` then inserts the fixed context and preserves the LLM-written findings after it. The LLM cannot rewrite or replace the fixed profile block. The fixed block covers all populated profile fields supported by the model, including counterparty description, risk grades and evolution, EWS/EWIs, rating/PD, ownership/management, banking relationship, facilities and relevant events. Risk-group interdependence and independence are intentionally omitted from the narrative. Both paths must emit exactly one Customer Profile heading.
+This prevents descriptive customer information from contaminating the deterministic rule-evidence contract while still making material customer context available to management-level reporting. The deterministic and AI reporting paths use the same fixed Customer Profile block, sourced from `AssessmentAnalysis.customer_profile`. In `Deterministic` mode, triggered rule comments remain the preconfigured rule text. In Gemini/Ollama modes, the LLM receives only deterministic rule evidence and rewrites the Customer Profile rule findings; `ReportingAgent` then inserts the fixed context and preserves the LLM-written findings after it. The LLM cannot rewrite or replace the fixed profile block. The fixed block is intentionally concise: it includes general company information, rating/PD, banking relationship, shareholders and credit facilities. Regulatory risk-grade changes, EWS/EWIs, past-due counts, restructuring/forborne status and relevant events are omitted from this context paragraph and should be represented through their corresponding rule findings where applicable. Risk-group interdependence and independence are also omitted from the narrative. Both paths must emit exactly one Customer Profile heading.
 
 ## Reporting boundary
 
@@ -148,7 +148,7 @@ Every Executive Narrative contains the same four assessment areas, in the follow
 
 A section is never omitted because no rule is triggered. When an area contains no triggered deterministic evidence, the report explicitly states that no anomalies were identified by the configured assessment rules in that area. This makes a NORMAL assessment readable as a complete review rather than as a report containing only the areas with exceptions.
 
-Customer Profile is special: the complete deterministic contextual profile is placed first, independently of reporting mode, and triggered Customer Profile rule findings follow under a `Deterministic rule findings` label. The generated profile wording is not authoritative. If no profile context is available, the generator's normal Customer Profile behaviour applies.
+Customer Profile is special: the concise deterministic customer context (general information, rating/PD, relationship, ownership and facilities) is placed first, independently of reporting mode, and triggered Customer Profile rule findings follow under the mode-appropriate label. The generated profile wording is not authoritative. If no profile context is available, the generator's normal Customer Profile behaviour applies.
 
 ### Finding ordering and thematic synthesis
 
@@ -245,7 +245,7 @@ Reporting tests should verify:
 1. configured domain evidence is propagated;
 2. all supported rule outcomes remain distinguishable;
 3. high-severity triggered evidence is correctly represented as a risk factor;
-4. prompts receive the complete evidence set required by the contract, including the full deterministic customer-profile context and the selected material subset where relevant;
+4. prompts receive the complete evidence set required by the contract, while the fixed Customer Profile context includes only general information, rating/PD, relationship, ownership and facilities;
 5. generated prose cannot alter deterministic status or customer-profile materiality selection;
 6. every report contains all four required assessment areas, including for NORMAL scenarios with no triggered rules;
 7. unsupported or altered material evidence is rejected by grounding;
