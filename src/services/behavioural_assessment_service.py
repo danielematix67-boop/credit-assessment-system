@@ -14,7 +14,7 @@ from src.services.assessment_status_calculator import AssessmentStatusCalculator
 
 
 class BehaviouralAssessmentService:
-    """Build behavioural assessment using the shared Rule implementation."""
+    """Build behavioural assessment using rules plus non-rule CR context."""
 
     DEFAULT_CONFIG_PATH = Path("config/behavioural_analysis_rules.yaml")
 
@@ -52,10 +52,28 @@ class BehaviouralAssessmentService:
         if all(result.status == RuleStatus.NOT_EVALUABLE for result in results):
             limitations.append("Behavioural banking indicators are not available.")
 
+        context: dict[str, object] = {
+            key: value
+            for key, value in {
+                "cr_reference_month": data.cr_reference_month,
+                "total_utilized_system": data.total_utilized_system,
+                "utilized_revocable": data.utilized_revocable,
+                "utilized_term": data.utilized_term,
+                "utilized_self_liquidating": data.utilized_self_liquidating,
+            }.items()
+            if value is not None and value != ""
+        }
+
+        if not context:
+            limitations.append(
+                "Latest available Centrale dei Rischi exposure breakdown is not available."
+            )
+
         return AssessmentSection(
             name="Behavioural Analysis",
             status=SectionStatus(self.status_calculator.calculate(results).value),
             findings=findings,
             evidence=results,
             limitations=limitations,
+            context=context,
         )
