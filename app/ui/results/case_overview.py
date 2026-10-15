@@ -110,7 +110,9 @@ def _render_behavioural_context(section: Any) -> None:
 
     reference_date = _profile_value(context, "cr_reference_date")
     try:
-        displayed_date = datetime.strptime(reference_date, "%Y-%m-%d").strftime("%d/%m/%Y")
+        displayed_date = datetime.strptime(
+            reference_date, "%Y-%m-%d"
+        ).strftime("%d/%m/%Y")
     except ValueError:
         displayed_date = reference_date
     st.caption(f"Reference date: {displayed_date}")
