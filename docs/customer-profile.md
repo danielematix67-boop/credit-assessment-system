@@ -40,7 +40,7 @@ All scalar fields are optional unless a run supplies them. Collection fields def
 | General information | `company_name`, `counterparty_type`, `legal_form`, `sector`, `size_class`, `geography`, `business_history_years`, `operations` |
 | Risk-grade evolution | `forborne_non_performing_exit`, `past_due_count`, `cure_period_days`, `monitoring_period_days`, `probation_period_days`, `minimum_regulatory_risk_grade`, `previous_risk_grade`, `risk_grade_change` |
 | Statistical predictiveness | `ews_score_class`, `ews_score_notching`, `ews_score_variation`, `active_ewis`, `rating`, `rating_notching`, `rating_influential_factors`, `rating_elementary_modules`, `pd` |
-| Risk group | `risk_group_interdependence`, `risk_group_independence` |
+
 | Ownership, management and counterparty context | `shareholders`, `shareholder_roles`, `management_members`, `generational_transition`, `employment_contract_type`, `economic_family_context` |
 | Banking relationship and credit history | `relationship_years`, `historical_facilities`, `previous_restructuring`, `forborne` |
 | Relevant events | `protests`, `bankruptcies`, `litigation`, `significant_historical_events` |
@@ -102,7 +102,6 @@ When populated, the policy selects:
 - rating, rating increments, influential factors and elementary modules;
 - PD;
 - minimum regulatory risk grade, previous risk grade and risk-grade change;
-- risk-group interdependence and independence;
 - forborne non-performing exit;
 - protests, bankruptcies, litigation and significant historical events.
 
@@ -160,16 +159,16 @@ The reporting boundary is:
 ```text
 Full profile context
         ↓
-CustomerProfileMaterialityPolicy
+AssessmentAnalysis.customer_profile
         ↓
-material_customer_profile
+ReportingAgent post-processing
         ↓
-ReportPromptBuilder / DeterministicReportGenerator
+Fixed Customer Profile block
         ↓
-One consolidated Customer Profile section
+Triggered Customer Profile rule findings
 ```
 
-Both the LLM-backed and deterministic reporting paths receive the same bounded material contextual profile. Neither path decides independently which profile fields are material.
+The full profile block is rendered deterministically and replaces any LLM-generated Customer Profile prose after the selected generator returns. This makes the context identical in deterministic, Gemini, Ollama and fallback modes. Risk-group interdependence/independence descriptions are excluded from narrative output. `material_customer_profile` remains a separate policy-selected model field but does not define the fixed narrative block.
 
 ## Risk-grade evolution
 
