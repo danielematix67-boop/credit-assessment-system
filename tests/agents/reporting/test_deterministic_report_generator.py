@@ -233,8 +233,9 @@ def test_deterministic_report_renders_structured_customer_profile(generator):
 
     assert report.executive_summary.count("### Customer Profile") == 1
     assert "The company operates in manufacturing." in report.executive_summary
-    assert "The EWS Score is LIGHT_RED." in report.executive_summary
-    assert "A previous restructuring is reported." in report.executive_summary
+    assert "The banking relationship is two years." in report.executive_summary
+    assert "The EWS Score is LIGHT_RED." not in report.executive_summary
+    assert "A previous restructuring is reported." not in report.executive_summary
     assert "**General Information**" not in report.executive_summary
     assert "**Risk Profile & Predictiveness**" not in report.executive_summary
     assert "**Relationship & Counterparty Context**" not in report.executive_summary
@@ -266,8 +267,10 @@ def test_deterministic_fallback_prioritizes_customer_profile_context_over_duplic
     report = generator.generate(analysis)
 
     assert report.executive_summary.count("### Customer Profile") == 1
-    assert "The EWS Score is LIGHT_RED." in report.executive_summary
     assert "The company operates in manufacturing." in report.executive_summary
+    assert "The EWS Score is LIGHT_RED." in report.executive_summary
+    assert report.executive_summary.count("LIGHT_RED") == 1
+    assert "**Deterministic rule findings**" in report.executive_summary
 
 
 def test_deterministic_fallback_keeps_profile_context_and_distinct_rule_evidence(
