@@ -94,7 +94,14 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
             reference_date = datetime.strptime(
                 str(context["cr_reference_date"]), "%Y-%m-%d"
             ).strftime("%d/%m/%Y")
-            amounts = {key: float(context[key]) for key in required[1:]}
+            amounts: dict[str, float] = {}
+            for key in required[1:]:
+                value = context[key]
+                if isinstance(value, bool) or not isinstance(
+                    value, (int, float, str)
+                ):
+                    raise TypeError(f"Invalid numeric CR context value for {key}.")
+                amounts[key] = float(value)
         except (TypeError, ValueError, OverflowError):
             logger.warning("Skipping malformed CR context in executive narrative.")
             return report
