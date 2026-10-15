@@ -47,8 +47,8 @@ def _workbook_bytes(
         )
 
     behavioural = workbook.create_sheet("Behavioural Analysis")
-    behavioural.append(["scenario_id", "average_utilization"])
-    behavioural.append(["TEST-001", 0.75])
+    behavioural.append(["scenario_id", "average_utilization", "cr_reference_date"])
+    behavioural.append(["TEST-001", 0.75, date(2026, 9, 30)])
 
     debt = workbook.create_sheet("Debt Sustainability")
     debt.append(["scenario_id", "debt_service", "cash_flow_available_for_debt_service"])
@@ -73,6 +73,7 @@ def test_load_excel_scenario_maps_to_domain_models() -> None:
     assert profile.active_ewis == ["Revenue deterioration", "Payment delay"]
     assert behavioural is not None
     assert behavioural.average_utilization == 0.75
+    assert behavioural.cr_reference_date == "2026-09-30"
     assert debt is not None
     assert debt.debt_service == 200000.0
 
