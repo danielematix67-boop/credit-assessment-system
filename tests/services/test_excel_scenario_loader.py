@@ -1,3 +1,4 @@
+from datetime import date
 from io import BytesIO
 
 import openpyxl
@@ -205,6 +206,16 @@ def test_invalid_typed_values_are_rejected(
 ) -> None:
     with pytest.raises(ExcelScenarioError, match=message):
         _convert_value(field, value)
+
+
+def test_cr_reference_date_is_normalized_to_iso_date() -> None:
+    assert _convert_value("cr_reference_date", date(2026, 9, 30)) == "2026-09-30"
+    assert _convert_value("cr_reference_date", "2026-09-30") == "2026-09-30"
+
+
+def test_invalid_cr_reference_date_is_rejected() -> None:
+    with pytest.raises(ExcelScenarioError, match="Invalid date value"):
+        _convert_value("cr_reference_date", "not-a-date")
 
 
 def test_blank_scenario_id_is_rejected() -> None:
