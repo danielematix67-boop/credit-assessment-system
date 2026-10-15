@@ -105,7 +105,7 @@ class TestReportPromptBuilder:
             "4. Debt Sustainability"
         )
 
-    def test_build_formats_structured_customer_profile_context(self) -> None:
+    def test_build_excludes_fixed_customer_profile_context_but_keeps_rule_findings(self) -> None:
         profile = CustomerProfileAnalysis(
             general_information="The company operates in manufacturing.",
             risk_profile="The EWS Score is LIGHT_RED.",
@@ -125,11 +125,11 @@ class TestReportPromptBuilder:
 
         prompt = ReportPromptBuilder().build(analysis)
 
-        assert "General Information:" in prompt
-        assert "Risk Profile & Predictiveness:" in prompt
-        assert "Relationship & Counterparty Context:" in prompt
-        assert "Relevant Events:" in prompt
-        assert "The EWS Score is LIGHT_RED." in prompt
+        assert "General Information:" not in prompt
+        assert "Risk Profile & Predictiveness:" not in prompt
+        assert "Relationship & Counterparty Context:" not in prompt
+        assert "Relevant Events:" not in prompt
+        assert "The EWS Score is LIGHT_RED." not in prompt
         assert "Customer profile rule finding." in prompt
 
     def test_build_orders_financial_findings_by_narrative_theme(self) -> None:
