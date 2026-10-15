@@ -70,3 +70,29 @@ def test_behavioural_assessment_uses_high_severity_thresholds() -> None:
         if result.status == RuleStatus.TRIGGERED
     }
     assert severities == {"B002": "HIGH", "B003": "HIGH", "B004": "HIGH"}
+
+
+def test_behavioural_assessment_exposes_cr_context_without_changing_rule_evidence() -> None:
+    section = BehaviouralAssessmentService().assess(
+        BehaviouralData(
+            average_utilization=0.60,
+            overdraft_days=2,
+            payment_delay_days=5,
+            exposure_growth=0.10,
+            cr_reference_month="2026-09",
+            total_utilized_system=4_800_000.0,
+            utilized_revocable=1_600_000.0,
+            utilized_term=2_400_000.0,
+            utilized_self_liquidating=800_000.0,
+        )
+    )
+
+    assert section.context == {
+        "cr_reference_month": "2026-09",
+        "total_utilized_system": 4_800_000.0,
+        "utilized_revocable": 1_600_000.0,
+        "utilized_term": 2_400_000.0,
+        "utilized_self_liquidating": 800_000.0,
+    }
+    assert section.status == SectionStatus.NORMAL
+    assert all(result.status == RuleStatus.NOT_TRIGGERED for result in section.evidence)
