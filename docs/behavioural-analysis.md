@@ -21,7 +21,7 @@ The CR exposure figures are contextual information, not rule inputs. They do not
 | `utilized_term` | Utilized amount for term facilities, in euros |
 | `utilized_self_liquidating` | Utilized amount for self-liquidating facilities, in euros |
 
-The values are optional. When exposure amounts are missing, the UI identifies the data as unavailable instead of treating missing values as zero. The input data provider is responsible for supplying the latest available CR reference date; the application does not infer or fetch the CR reporting month automatically.
+The values are optional. When exposure amounts are missing, the UI identifies the data as unavailable instead of treating missing values as zero. The input data provider is responsible for supplying the latest available CR reference date; the application does not infer or fetch the CR reference date automatically.
 
 ## Presentation
 
