@@ -55,7 +55,7 @@ class BehaviouralAssessmentService:
         context: dict[str, object] = {
             key: value
             for key, value in {
-                "cr_reference_month": data.cr_reference_month,
+                "cr_reference_date": data.cr_reference_date,
                 "total_utilized_system": data.total_utilized_system,
                 "utilized_revocable": data.utilized_revocable,
                 "utilized_term": data.utilized_term,
