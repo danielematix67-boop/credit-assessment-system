@@ -7,6 +7,7 @@ from src.agents.base.agent import Agent
 from src.agents.reporting.deterministic_report_generator import (
     DeterministicReportGenerator,
 )
+from src.agents.reporting.llm_report_generator import LLMReportGenerator
 from src.agents.reporting.report_generator import ReportGenerator
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.report import Report
@@ -81,8 +82,10 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
     def _add_customer_profile_context(
         report: Report,
         analysis: AssessmentAnalysis,
+        *,
+        preserve_llm_findings: bool = False,
     ) -> Report:
-        """Replace generated Customer Profile prose with the fixed deterministic block."""
+        """Insert fixed profile context without discarding LLM-written rule findings."""
         profile = analysis.customer_profile
         if profile is None:
             return report
@@ -132,11 +135,19 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
             if finding.text.strip()
         ]
 
+        if preserve_llm_findings and triggered:
+            paragraphs = LLMReportGenerator._extract_assessment_area_paragraphs(
+                summary
+            )
+            findings_text = paragraphs[0] if paragraphs else ""
+        else:
+            findings_text = " ".join(rule_sentences)
+
         block = profile_text
-        if rule_sentences:
+        if findings_text.strip():
             block += (
-                "\n\n**Deterministic rule findings**\n\n"
-                + " ".join(rule_sentences)
+                "\n\n**Rule findings**\n\n"
+                + findings_text.strip()
             )
 
         updated_summary = (
@@ -238,7 +249,14 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
             print(f"\n  [PRIMARY] Report generated successfully ({generator_name}).")
 
             return self._add_behavioural_context(
-                self._add_customer_profile_context(report, analysis), analysis
+                self._add_customer_profile_context(
+                    report,
+                    analysis,
+                    preserve_llm_findings=isinstance(
+                        self.report_generator, LLMReportGenerator
+                    ),
+                ),
+                analysis,
             )
 
         # ====================================================
