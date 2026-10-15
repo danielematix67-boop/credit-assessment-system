@@ -67,6 +67,8 @@ def test_case_analysis_agent_includes_customer_profile_context() -> None:
     profile = CustomerProfileAssessmentService().assess(
         CustomerProfileData(
             company_name="Synthetic Co.",
+            counterparty_type="Corporate",
+            legal_form="S.p.A.",
             sector="Manufacturing",
             relationship_years=7,
         )
@@ -111,6 +113,8 @@ def test_case_analysis_agent_includes_customer_profile_context() -> None:
     assert "- " not in profile_text
     assert "**General Information**" in profile_text
     assert "Synthetic Co. operates in the Manufacturing sector." in profile_text
+    assert "Its counterparty type is Corporate." in profile_text
+    assert "Its legal form is S.p.A." in profile_text
     assert "interdependence" not in normalized_text
     assert "independence" not in normalized_text
     assert "**Relationship & Counterparty Context**" in profile_text
