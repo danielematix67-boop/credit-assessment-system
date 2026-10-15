@@ -34,7 +34,10 @@ class CustomerProfileMaterialityPolicy:
         """
         fields: set[str] = set()
         for key, value in profile.items():
-            if key in cls._RULE_BACKED_FIELDS or value in (None, "", [], {}):
+            if key in cls._RULE_BACKED_FIELDS or key in {
+                "risk_group_interdependence",
+                "risk_group_independence",
+            } or value in (None, "", [], {}):
                 continue
 
             if key in cls._POSITIVE_MATERIAL:
