@@ -95,7 +95,7 @@ The detailed profile and the Executive Summary now use the same full factual pro
 | Rule evidence | Only deterministic rule results |
 | LLM narrative | Prose generated from supplied evidence/context |
 
-This prevents descriptive customer information from contaminating the deterministic rule-evidence contract while still making material customer context available to management-level reporting. The deterministic and AI reporting paths use the same fixed Customer Profile block, sourced from `AssessmentAnalysis.customer_profile`, and append triggered Customer Profile rule findings after it. The LLM-generated Customer Profile prose is replaced during post-processing, so its wording cannot change the fixed context. The fixed block covers all populated profile fields supported by the model, including counterparty description, risk grades and evolution, EWS/EWIs, rating/PD, ownership/management, banking relationship, facilities and relevant events. Risk-group interdependence and independence are intentionally omitted from the narrative. Both paths must emit exactly one Customer Profile heading.
+This prevents descriptive customer information from contaminating the deterministic rule-evidence contract while still making material customer context available to management-level reporting. The deterministic and AI reporting paths use the same fixed Customer Profile block, sourced from `AssessmentAnalysis.customer_profile`. In `Deterministic` mode, triggered rule comments remain the preconfigured rule text. In Gemini/Ollama modes, the LLM receives only deterministic rule evidence and rewrites the Customer Profile rule findings; `ReportingAgent` then inserts the fixed context and preserves the LLM-written findings after it. The LLM cannot rewrite or replace the fixed profile block. The fixed block covers all populated profile fields supported by the model, including counterparty description, risk grades and evolution, EWS/EWIs, rating/PD, ownership/management, banking relationship, facilities and relevant events. Risk-group interdependence and independence are intentionally omitted from the narrative. Both paths must emit exactly one Customer Profile heading.
 
 ## Reporting boundary
 
@@ -119,7 +119,7 @@ The structured assessment remains application-controlled and independent of gene
 
 ## Generator modes
 
-The application exposes a deterministic reporting path and may expose one or more configured LLM providers depending on the execution environment.
+The application exposes a deterministic reporting path and may expose one or more configured LLM providers depending on the execution environment. `Deterministic` mode keeps the configured rule comments unchanged. Gemini and Ollama modes use the LLM to rewrite rule findings into professional narrative, while fixed Customer Profile and behavioural CR context remain application-rendered.
 
 ```text
 Deterministic evidence
