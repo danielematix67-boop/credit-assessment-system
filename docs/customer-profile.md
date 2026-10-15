@@ -137,7 +137,7 @@ Other descriptive fields remain available in the full profile but are not automa
 | `customer_profile` | Full available structured profile | Detailed Customer Profile presentation |
 | `material_customer_profile` | Policy-selected contextual subset | Separate contextual use; not the fixed narrative block |
 
-The analysis layer therefore performs the materiality decision before the reporting layer is invoked.
+The analysis layer computes the separate material subset before reporting. The final Executive Narrative's fixed Customer Profile block is sourced from the full profile instead.
 
 ### Detailed narrative formatting contract
 
