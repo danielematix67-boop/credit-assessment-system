@@ -4,9 +4,13 @@ from dataclasses import replace
 from datetime import datetime
 
 from src.agents.base.agent import Agent
+from src.agents.reporting.deterministic_report_generator import (
+    DeterministicReportGenerator,
+)
 from src.agents.reporting.report_generator import ReportGenerator
 from src.models.assessment_analysis import AssessmentAnalysis
 from src.models.report import Report
+from src.rules.base.status import RuleStatus
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +76,77 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
         self.last_generator_used: str | None = None
         self.last_error: str | None = None
         self.last_error_category: str | None = None
+
+    @staticmethod
+    def _add_customer_profile_context(
+        report: Report,
+        analysis: AssessmentAnalysis,
+    ) -> Report:
+        """Replace generated Customer Profile prose with the fixed deterministic block."""
+        profile = analysis.customer_profile
+        if profile is None:
+            return report
+
+        profile_text = DeterministicReportGenerator._render_customer_profile_context(
+            profile.sections()
+        )
+        if not profile_text:
+            return report
+
+        summary = report.executive_summary
+        customer_heading = re.compile(
+            r"(?m)^(?:###\s*|\*\*)Customer Profile(?:\*\*)?\s*$",
+            re.IGNORECASE,
+        )
+        next_heading = re.compile(
+            r"(?m)^(?:###\s*|\*\*)"
+            r"(?:Financial Analysis|Behavioural Analysis|Debt Sustainability)"
+            r"(?:\*\*)?\s*$",
+            re.IGNORECASE,
+        )
+        match = customer_heading.search(summary)
+        if match is None:
+            logger.warning(
+                "Could not locate Customer Profile heading to insert fixed context."
+            )
+            return report
+
+        following = next_heading.search(summary, match.end())
+        if following is None:
+            logger.warning(
+                "Could not locate the next assessment heading after Customer Profile."
+            )
+            return report
+
+        evidence = analysis.rule_evidence or analysis.key_findings
+        triggered = [
+            finding
+            for finding in evidence
+            if finding.status == RuleStatus.TRIGGERED
+            and (finding.assessment_area or finding.category).casefold()
+            == "customer profile"
+        ]
+        rule_sentences = [
+            finding.text.rstrip(".") + "."
+            for finding in triggered
+            if finding.text.strip()
+        ]
+
+        block = profile_text
+        if rule_sentences:
+            block += (
+                "\n\n**Deterministic rule findings**\n\n"
+                + " ".join(rule_sentences)
+            )
+
+        updated_summary = (
+            summary[: match.end()]
+            + "\n\n"
+            + block
+            + "\n\n"
+            + summary[following.start() :]
+        )
+        return replace(report, executive_summary=updated_summary)
 
     @staticmethod
     def _add_behavioural_context(
@@ -162,7 +237,9 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
 
             print(f"\n  [PRIMARY] Report generated successfully ({generator_name}).")
 
-            return self._add_behavioural_context(report, analysis)
+            return self._add_behavioural_context(
+                self._add_customer_profile_context(report, analysis), analysis
+            )
 
         # ====================================================
         # Primary failure
