@@ -145,8 +145,13 @@ class ReportingAgent(Agent[AssessmentAnalysis, Report]):
 
         block = profile_text
         if findings_text.strip():
+            findings_heading = (
+                "LLM-rewritten rule findings"
+                if preserve_llm_findings
+                else "Deterministic rule findings"
+            )
             block += (
-                "\n\n**Rule findings**\n\n"
+                f"\n\n**{findings_heading}**\n\n"
                 + findings_text.strip()
             )
 
