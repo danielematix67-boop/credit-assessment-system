@@ -166,12 +166,12 @@ class DeterministicReportGenerator(ReportGenerator):
         risk_profile = clean(section_text.get("risk profile & predictiveness", ""))
         rating_sentences = [
             sentence.strip()
-            for sentence in re.split(r"(?<=[.!?])\\s+", risk_profile)
+            for sentence in re.split(r"(?<=[.!?])\s+", risk_profile)
             if sentence.strip()
             and (
                 "rating" in sentence.casefold()
                 or "probability of default" in sentence.casefold()
-                or re.search(r"\\bPD\\b", sentence, re.IGNORECASE)
+                or re.search(r"\bPD\b", sentence, re.IGNORECASE)
             )
             and not any(
                 signal in sentence.casefold()
