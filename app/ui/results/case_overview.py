@@ -1,5 +1,6 @@
 """Detailed analyst view for the credit assessment case."""
 
+from datetime import datetime
 from typing import Any
 
 import pandas as pd
@@ -105,10 +106,14 @@ def _format_euro_amount(value: Any) -> str:
 def _render_behavioural_context(section: Any) -> None:
     """Render latest Centrale dei Rischi exposure context separately from rules."""
     context = getattr(section, "context", {}) or {}
-    st.markdown("**Centrale dei Rischi — latest available month**")
+    st.markdown("**Centrale dei Rischi — latest available reference date**")
 
-    reference_month = _profile_value(context, "cr_reference_month")
-    st.caption(f"Reference month: {reference_month}")
+    reference_date = _profile_value(context, "cr_reference_date")
+    try:
+        displayed_date = datetime.strptime(reference_date, "%Y-%m-%d").strftime("%d/%m/%Y")
+    except ValueError:
+        displayed_date = reference_date
+    st.caption(f"Reference date: {displayed_date}")
 
     total = context.get("total_utilized_system")
     revocable = context.get("utilized_revocable")
