@@ -94,10 +94,12 @@ def test_materiality_excludes_risk_group_interdependence_fields() -> None:
             "risk_group_interdependence": "Moderate",
             "risk_group_independence": "Low",
             "rating": "BB-",
+            "monitoring_period_days": "30",
         }
     )
 
     assert "company_name" in fields
     assert "rating" in fields
+    assert "monitoring_period_days" in fields
     assert "risk_group_interdependence" not in fields
     assert "risk_group_independence" not in fields
