@@ -79,7 +79,7 @@ def test_behavioural_assessment_exposes_cr_context_without_changing_rule_evidenc
             overdraft_days=2,
             payment_delay_days=5,
             exposure_growth=0.10,
-            cr_reference_month="2026-09",
+            cr_reference_date="2026-09-30",
             total_utilized_system=4_800_000.0,
             utilized_revocable=1_600_000.0,
             utilized_term=2_400_000.0,
@@ -88,7 +88,7 @@ def test_behavioural_assessment_exposes_cr_context_without_changing_rule_evidenc
     )
 
     assert section.context == {
-        "cr_reference_month": "2026-09",
+        "cr_reference_date": "2026-09-30",
         "total_utilized_system": 4_800_000.0,
         "utilized_revocable": 1_600_000.0,
         "utilized_term": 2_400_000.0,
