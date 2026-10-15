@@ -117,7 +117,7 @@ The policy selects the following only when they indicate a positive/non-zero con
 - `probation_period_days`;
 - `generational_transition`.
 
-For numeric fields, the condition is a value greater than zero. For `generational_transition`, the condition is `True`.
+For numeric fields, the condition is a value greater than zero. For `generational_transition`, the condition is `True`. The policy also accepts a non-empty string for a positive-material field, because some Excel/import paths can supply numeric-looking values as strings; an empty string remains non-material. This is a selection rule only and does not convert or validate the value for rule evaluation.
 
 Other descriptive fields remain available in the full profile but are not automatically selected for the Executive Summary by the current materiality policy.
 
@@ -168,7 +168,7 @@ Fixed Customer Profile block
 Triggered Customer Profile rule findings
 ```
 
-The full profile block is rendered deterministically and replaces any LLM-generated Customer Profile prose after the selected generator returns. This makes the context identical in deterministic, Gemini, Ollama and fallback modes. Risk-group interdependence/independence descriptions are excluded from narrative output. `material_customer_profile` remains a separate policy-selected model field but does not define the fixed narrative block.
+The full profile block is rendered deterministically and replaces any LLM-generated Customer Profile prose after the selected generator returns. This makes the context identical in deterministic, Gemini, Ollama and fallback modes. The block precedes a separate `Deterministic rule findings` subsection containing triggered Customer Profile rules. Risk-group interdependence/independence descriptions are excluded from both the fixed narrative context and the materiality subset, even if values are present in the source model or workbook. `material_customer_profile` remains a separate policy-selected model field but does not define the fixed narrative block.
 
 ## Risk-grade evolution
 
