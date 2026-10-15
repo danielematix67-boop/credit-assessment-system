@@ -116,6 +116,7 @@ class CaseAnalysisAgent:
             rule_evidence=rule_evidence,
             customer_profile=customer_profile_analysis,
             material_customer_profile=material_customer_profile_analysis,
+            behavioural_context=dict(case.behavioural_analysis.context),
         )
 
     @staticmethod
