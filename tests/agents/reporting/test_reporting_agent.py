@@ -702,7 +702,11 @@ def test_reporting_agent_uses_fixed_full_customer_profile_before_rule_findings(
     summary = report.executive_summary
 
     assert "Acme Manufacturing operates in the industrial sector." in summary
-    assert "The rating assessment records a rating of BB- and a probability of default (PD) of 0.18." in summary
+    assert (
+        "The rating assessment records a rating of BB- and a probability of default "
+        "(PD) of 0.18."
+        in summary
+    )
     assert "minimum regulatory risk grade is Past Due" not in summary
     assert "LIGHT_RED" not in summary
     assert "previous-restructuring status" not in summary
