@@ -59,7 +59,9 @@ For ratios, provide a valid denominator and test zero/negative denominator handl
 
 ### Customer Profile
 
-The sheet contains the fields of `CustomerProfileData`.
+The sheet contains the fields of `CustomerProfileData`. Use the exact model field names as Excel column headers, alongside `scenario_id`. The profile contract includes general company information (`company_name`, `counterparty_type`, `legal_form`, `sector`, `founding_year`, `size_class`, `geography`, `business_history_years`, `operations`); risk-grade evolution; EWS/rating/PD information; ownership and management; banking relationship and credit history; and relevant events. Consult `src/models/customer_profile_data.py` for the complete, current field inventory.
+
+The report always renders the available Customer Profile context as a deterministic opening block, independent of reporting mode, then appends triggered Customer Profile rule findings. `risk_group_interdependence` and `risk_group_independence` are not included in the narrative even if those columns are present in an input workbook. This is a reporting choice; it does not change rule evaluation or the assessment status.
 
 List-valued fields are entered as semicolon-separated values:
 
