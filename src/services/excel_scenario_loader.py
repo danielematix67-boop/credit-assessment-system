@@ -438,6 +438,15 @@ def _convert_value(field_name: str, value: Any) -> Any:
             "Use TRUE/FALSE or Yes/No."
         )
 
+    if field_name == "cr_reference_date":
+        try:
+            return pd.to_datetime(value, errors="raise").strftime("%Y-%m-%d")
+        except (TypeError, ValueError, OverflowError) as error:
+            raise ExcelScenarioError(
+                f"Invalid date value for '{field_name}': {value!r}. "
+                "Use YYYY-MM-DD."
+            ) from error
+
     if field_name in INT_FIELDS:
         try:
             numeric = float(value)
@@ -455,15 +464,6 @@ def _convert_value(field_name: str, value: Any) -> Any:
         except (TypeError, ValueError) as error:
             raise ExcelScenarioError(
                 f"Invalid numeric value for '{field_name}': {value!r}."
-            ) from error
-
-    if field_name == "cr_reference_date":
-        try:
-            return pd.to_datetime(value, errors="raise").strftime("%Y-%m-%d")
-        except (TypeError, ValueError, OverflowError) as error:
-            raise ExcelScenarioError(
-                f"Invalid date value for '{field_name}': {value!r}. "
-                "Use YYYY-MM-DD."
             ) from error
 
     if field_name == "ews_score_class":
