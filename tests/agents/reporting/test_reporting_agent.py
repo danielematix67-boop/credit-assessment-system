@@ -635,11 +635,11 @@ def test_reporting_agent_uses_fixed_full_customer_profile_before_rule_findings(
     generator.generate.return_value = build_report(
         analysis,
         executive_summary=(
-            "Assessment Status: Attention\\n\\n"
-            "**Customer Profile**\\n\\nLLM-generated profile that must be replaced.\\n\\n"
-            "**Financial Analysis**\\n\\nFinancial findings.\\n\\n"
-            "**Behavioural Analysis**\\n\\nBehavioural findings.\\n\\n"
-            "**Debt Sustainability**\\n\\nDebt findings."
+            "Assessment Status: Attention\n\n"
+            "**Customer Profile**\n\nLLM-generated profile that must be replaced.\n\n"
+            "**Financial Analysis**\n\nFinancial findings.\n\n"
+            "**Behavioural Analysis**\n\nBehavioural findings.\n\n"
+            "**Debt Sustainability**\n\nDebt findings."
         ),
     )
 
@@ -678,11 +678,11 @@ def test_reporting_agent_adds_fixed_customer_profile_context_on_fallback(analysi
     fallback.generate.return_value = build_report(
         analysis,
         executive_summary=(
-            "Assessment Status: Normal\\n\\n"
-            "### Customer Profile\\n\\nGenerated profile.\\n\\n"
-            "### Financial Analysis\\n\\nNo anomalies.\\n\\n"
-            "### Behavioural Analysis\\n\\nNo anomalies.\\n\\n"
-            "### Debt Sustainability\\n\\nNo anomalies."
+            "Assessment Status: Normal\n\n"
+            "### Customer Profile\n\nGenerated profile.\n\n"
+            "### Financial Analysis\n\nNo anomalies.\n\n"
+            "### Behavioural Analysis\n\nNo anomalies.\n\n"
+            "### Debt Sustainability\n\nNo anomalies."
         ),
     )
 
