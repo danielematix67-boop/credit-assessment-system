@@ -236,6 +236,8 @@ class CaseAnalysisAgent:
             opening.append(f"with activities focused on {value('operations')}")
         general_sentence = " ".join(opening) + "."
         general_details: list[str] = []
+        add(general_details, "counterparty_type", "Its counterparty type is {value}.")
+        add(general_details, "legal_form", "Its legal form is {value}.")
         add(general_details, "size_class", "It is classified as a {value}.")
         add(general_details, "geography", "Its main geographical base is {value}.")
         add(general_details, "founding_year", "The company was established in {value}.")
