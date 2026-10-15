@@ -673,13 +673,18 @@ def test_reporting_agent_uses_fixed_full_customer_profile_before_rule_findings(
             general_information="Acme Manufacturing operates in the industrial sector.",
             risk_profile=(
                 "The minimum regulatory risk grade is Past Due, compared with "
-                "Bonis previously. The rating assessment records a rating of BB-."
+                "Bonis previously. Early-warning information includes an EWS "
+                "score class of LIGHT_RED. The rating assessment records a rating "
+                "of BB- and a probability of default (PD) of 0.18."
             ),
             relationship_context=(
                 "The shareholders are Alpha (60%) and Beta (40%). Available credit "
                 "facilities comprise a term loan of €500,000."
             ),
-            relevant_events="No material events are reported.",
+            relevant_events=(
+                "The previous-restructuring status is yes. Forborne exposure is "
+                "reported: yes. Recorded events include a historical restructuring."
+            ),
         ),
     )
     generator.generate.return_value = build_report(
@@ -697,7 +702,11 @@ def test_reporting_agent_uses_fixed_full_customer_profile_before_rule_findings(
     summary = report.executive_summary
 
     assert "Acme Manufacturing operates in the industrial sector." in summary
-    assert "minimum regulatory risk grade is Past Due" in summary
+    assert "The rating assessment records a rating of BB- and a probability of default (PD) of 0.18." in summary
+    assert "minimum regulatory risk grade is Past Due" not in summary
+    assert "LIGHT_RED" not in summary
+    assert "previous-restructuring status" not in summary
+    assert "Recorded events include" not in summary
     assert "The shareholders are Alpha (60%) and Beta (40%)." in summary
     assert "term loan of €500,000" in summary
     assert "LLM-generated profile" not in summary
