@@ -3,7 +3,6 @@ from collections import defaultdict
 from src.llm.prompt_template import ReportPromptTemplate
 from src.models.analysis_finding import AnalysisFinding
 from src.models.assessment_analysis import AssessmentAnalysis
-from src.models.customer_profile_analysis import CustomerProfileAnalysis
 from src.rules.base.status import RuleStatus
 
 
@@ -88,10 +87,7 @@ class ReportPromptBuilder:
         category_order = list(grouped_findings.keys())
 
         return self.template.render(
-            findings=self._format_grouped_findings(
-                grouped_findings,
-                analysis.customer_profile,
-            ),
+            findings=self._format_grouped_findings(grouped_findings),
             category_order=self._format_category_order(category_order),
         )
 
@@ -188,14 +184,13 @@ class ReportPromptBuilder:
     def _format_grouped_findings(
         cls,
         grouped_findings: dict[str, list[AnalysisFinding]],
-        customer_profile: CustomerProfileAnalysis | None = None,
     ) -> str:
         """
-        Format grouped deterministic findings for the LLM.
+        Format deterministic rule findings for LLM narrative generation.
 
-        Rule IDs are intentionally excluded from the narrative input
-        because they are internal implementation details. Customer-profile
-        context is supplied separately from deterministic rule evidence.
+        Rule IDs and fixed contextual blocks are intentionally excluded:
+        fixed Customer Profile and behavioural context are rendered by the
+        application and added after narrative generation.
         """
         if not grouped_findings:
             return "None."
@@ -205,17 +200,7 @@ class ReportPromptBuilder:
         for category, findings in grouped_findings.items():
             lines = [f"{category}:"]
 
-            if category.casefold() == "customer profile" and customer_profile is not None:
-                for section_name, section_text in customer_profile.sections():
-                    if section_text:
-                        lines.append(f"  {section_name}:")
-                        lines.append(f"    {section_text}")
-
-            if not findings and not (
-                category.casefold() == "customer profile"
-                and customer_profile is not None
-                and any(text for _, text in customer_profile.sections())
-            ):
+            if not findings:
                 lines.append(
                     "  No deterministic anomalies are present for this area."
                 )
