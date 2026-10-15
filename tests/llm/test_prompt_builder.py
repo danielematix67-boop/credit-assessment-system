@@ -120,7 +120,7 @@ class TestReportPromptBuilder:
         )
         analysis = make_analysis(
             key_findings=[finding],
-            material_customer_profile=profile,
+            customer_profile=profile,
         )
 
         prompt = ReportPromptBuilder().build(analysis)
