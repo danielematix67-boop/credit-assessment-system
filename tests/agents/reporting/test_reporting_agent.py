@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.agents.base.agent import Agent
+from src.agents.reporting.llm_report_generator import LLMReportGenerator
 from src.agents.reporting.report_generator import ReportGenerator
 from src.agents.reporting.reporting_agent import ReportingAgent
 from src.models.analysis_finding import AnalysisFinding
@@ -156,6 +157,52 @@ def test_reporting_agent_preserves_report_content(
     assert flatten_report_findings(report) == analysis.key_findings
 
     assert report.limitations == analysis.limitations
+
+
+def test_llm_customer_profile_context_preserves_rewritten_rule_findings():
+    finding = AnalysisFinding(
+        rule_id="CP001",
+        category="customer_profile",
+        assessment_area="Customer Profile",
+        severity=RuleSeverity.HIGH,
+        text="Customer has an adverse risk signal.",
+        status=RuleStatus.TRIGGERED,
+        indicator="Adverse risk signal",
+    )
+    profile = CustomerProfileAnalysis(
+        general_information="The company operates in manufacturing.",
+        risk_profile="The current risk grade has deteriorated.",
+    )
+    analysis = AssessmentAnalysis(
+        position_id="TEST_PROFILE",
+        assessment_status=AssessmentStatus.CRITICAL,
+        key_findings=[finding],
+        risk_factors=[finding],
+        limitations=[],
+        rule_evidence=[finding],
+        customer_profile=profile,
+    )
+    llm_narrative = (
+        "Assessment Status: Critical\n\n"
+        "**Customer Profile**\n\n"
+        "The Adverse risk signal indicates a material customer-profile concern.\n\n"
+        "**Financial Analysis**\n\n"
+        "No anomalies were identified by the configured assessment rules.\n\n"
+        "**Behavioural Analysis**\n\n"
+        "No anomalies were identified by the configured assessment rules.\n\n"
+        "**Debt Sustainability**\n\n"
+        "No anomalies were identified by the configured assessment rules."
+    )
+    generator = LLMReportGenerator(llm_client=MagicMock())
+    generator.generate = MagicMock(return_value=build_report(analysis, llm_narrative))
+
+    report = ReportingAgent(generator).run(analysis)
+
+    customer_section = report.executive_summary.split("**Financial Analysis**")[0]
+    assert "The company operates in manufacturing." in customer_section
+    assert "The current risk grade has deteriorated." in customer_section
+    assert "The Adverse risk signal indicates a material customer-profile concern." in customer_section
+    assert "Customer has an adverse risk signal." not in customer_section
 
 
 # ============================================================
