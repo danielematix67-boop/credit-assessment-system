@@ -201,7 +201,10 @@ def test_llm_customer_profile_context_preserves_rewritten_rule_findings():
     customer_section = report.executive_summary.split("**Financial Analysis**")[0]
     assert "The company operates in manufacturing." in customer_section
     assert "The current risk grade has deteriorated." in customer_section
-    assert "The Adverse risk signal indicates a material customer-profile concern." in customer_section
+    assert (
+        "The Adverse risk signal indicates a material customer-profile concern."
+        in customer_section
+    )
     assert "Customer has an adverse risk signal." not in customer_section
 
 
