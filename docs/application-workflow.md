@@ -21,7 +21,7 @@ The uploaded `.xlsx` workbook provides the domain input objects:
 
 ### Excel Upload
 
-The Excel path is scenario-driven. The loader reads a workbook containing a mandatory `Financial Analysis` sheet and optional `Customer Profile`, `Behavioural` and `Debt Sustainability` sheets.
+The Excel path is scenario-driven. The loader reads a workbook containing a mandatory `Financial Analysis` sheet, optional `Customer Profile`, `Behavioural Analysis` and `Debt Sustainability` sheets, and optional detail sheets for shareholders, relevant events and credit facilities.
 
 Each domain sheet uses `scenario_id` to identify the case. The UI loads all valid scenarios, presents a scenario selector, previews the mapped domain inputs and then executes only the selected scenario.
 
