@@ -54,7 +54,7 @@ Use a Python version supported by the repository's CI workflow. The workflow con
 ## 4. Install dependencies
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 ## 5. Run the quality checks
@@ -67,7 +67,7 @@ python -m mypy src
 python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 ```
 
-The CI workflow is the authoritative source for the exact quality gates and supported runtime.
+The CI workflow is the authoritative source for the exact quality gates and supported runtime. To run the suite without coverage reporting, use `python -m pytest`. Excel-loader tests import `openpyxl`; it is declared in `requirements.txt`, so installing the project requirements should provide it. If the import is missing, activate the project virtual environment and run `python -m pip install -r requirements.txt`.
 
 ## 6. Start the application
 
@@ -77,7 +77,7 @@ streamlit run app/streamlit_app.py
 
 The browser interface is the presentation layer. It should display results produced by the assessment workflow rather than implement credit logic itself.
 
-The current interface uses **Excel Upload as the sole input source**. Upload an `.xlsx` workbook containing a mandatory `Financial Analysis` sheet and, optionally, `Customer Profile`, `Behavioural` and `Debt Sustainability`. When multiple scenarios are present, select the required `scenario_id`, review the mapped domain inputs, choose a reporting mode in the sidebar and run the assessment. The application does not expose a built-in demo-scenario selector in the input screen. See [`excel-scenario-input.md`](excel-scenario-input.md) and [`application-workflow.md`](application-workflow.md) for the workbook contract and current UI flow.
+The current interface uses **Excel Upload as the sole input source**. Upload an `.xlsx` workbook containing a mandatory `Financial Analysis` sheet and optional `Customer Profile`, `Behavioural Analysis` and `Debt Sustainability` sheets. Optional detail sheets are `Shareholders`, `Relevant Events` and `Credit Facilities`. Each sheet uses `scenario_id`; detail sheets may contain multiple rows per scenario. When multiple scenarios are present, select the required `scenario_id`, review the mapped domain inputs, choose a reporting mode in the sidebar and run the assessment. The application does not expose a built-in demo-scenario selector in the input screen. See [`excel-scenario-input.md`](excel-scenario-input.md) and [`application-workflow.md`](application-workflow.md) for the workbook contract and current UI flow.
 
 A hosted demonstration may also be available at:
 
