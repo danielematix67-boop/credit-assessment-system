@@ -156,17 +156,24 @@ Missing evidence is therefore not silently interpreted as a normal result.
 
 ## 📥 Input sources
 
-The Streamlit application uses **Excel Upload as its sole data source**. The `.xlsx` workbook contains one or more structured assessment scenarios and is the single source of synthetic demonstration data.
+The Streamlit application uses **Excel Upload as its sole input source**. Upload a workbook containing one or more scenarios; the application validates the workbook, lets the user select a `scenario_id`, previews the mapped inputs and executes the selected scenario.
 
-For Excel input, `Financial Analysis` is mandatory. `Customer Profile`, `Behavioural Analysis` and `Debt Sustainability` are optional domain sheets. Each domain sheet uses a shared `scenario_id` to identify the same case across domains. The accepted field names are derived from the domain models; the active rule catalogues and thresholds are maintained in configuration, not duplicated in this README.
+The loader recognises these assessment-domain sheets:
 
-The repository documentation describes the Excel contract and the application is designed around a workbook containing a documentation-only `README` sheet plus the four loader-compatible domain sheets. The workbook is the sole application input source; scenario content can evolve without changing the assessment architecture.
+| Sheet | Requirement | Cardinality |
+|---|---|---|
+| `Financial Analysis` | Required | One row per scenario |
+| `Customer Profile` | Optional | One row per scenario |
+| `Behavioural Analysis` | Optional | One row per scenario |
+| `Debt Sustainability` | Optional | One row per scenario |
 
-| Scenario | Purpose |
-|---|---|
-The workbook may contain multiple scenarios, identified by its `scenario_id` values. Those IDs and their intended outcomes are workbook data, not application constants. The workbook is formatted as a user-facing demonstration artifact while preserving the loader contract. Scenario coverage should remain representative of the configured catalogue rather than requiring a separate scenario for every rule.
+It also supports three optional detail sheets: `Shareholders`, `Relevant Events` and `Credit Facilities`. These can contain multiple rows per scenario and enrich the Customer Profile context. Every input sheet must include `scenario_id`; identifiers in detail sheets must match a scenario in `Financial Analysis`. The loader rejects malformed workbooks, missing required columns, duplicate scenario identifiers and references to unknown scenarios.
 
-See [`docs/excel-scenario-input.md`](docs/excel-scenario-input.md) for the complete workbook contract and validation behaviour.
+If an optional assessment-domain sheet is absent, its domain input is unavailable; it is not silently treated as normal evidence. A workbook may include a documentation-only `README` sheet, which is ignored by the domain loader.
+
+The accepted field names follow the domain models and loader contract. Rule inventories and thresholds remain defined in configuration and source code rather than duplicated here.
+
+See [`docs/excel-scenario-input.md`](docs/excel-scenario-input.md) for the workbook schema and validation behaviour.
 
 ---
 
@@ -191,25 +198,13 @@ The reporting component is therefore a **consumer of assessment evidence**, not 
 
 ## 👤 Customer Profile
 
-Customer Profile is treated as a **contextual information layer**, not merely as a list of deterministic risk rules. It combines descriptive customer information, risk-profile evolution, statistical predictiveness, relationship context and relevant historical events.
+Customer Profile combines deterministic rule evidence with descriptive counterparty context. The structured profile is organised into General Information, Risk Profile & Predictiveness, Relationship & Counterparty Context, and Relevant Events.
 
-The profile is organised into four reporting sections:
+The Executive Narrative always starts its Customer Profile section with a **fixed, deterministic context block**, independent of reporting mode. Triggered Customer Profile rule findings follow that block. In Deterministic mode, rule findings retain their configured deterministic comments; in Gemini/Ollama modes, the LLM may rewrite the rule findings but cannot rewrite the fixed context or change any assessment result.
 
-1. **General Information** — identity, counterparty type, business activity and operating context.
-2. **Risk Profile & Predictiveness** — EWS score information, active EWIs, rating/PD information and risk-grade evolution.
-3. **Relationship & Counterparty Context** — banking relationship, ownership/management and counterparty-specific context.
-4. **Relevant Events** — protests, bankruptcies, litigation and significant historical events.
+The fixed narrative context includes available company information, rating/PD, banking relationship, shareholders and credit facilities. Risk-group interdependence/independence descriptions are excluded. This keeps contextual description distinct from deterministic rule evidence and avoids duplicating profile facts in the narrative.
 
-The distinction between **contextual profile information** and **deterministic rule evidence** is intentional:
-
-- deterministic customer-profile rules produce authoritative `RuleResult` objects and can affect section status;
-- descriptive profile fields provide context and do not automatically become pseudo-rules;
-- the Executive Summary receives only the contextual information selected as material by the deterministic `CustomerProfileMaterialityPolicy`;
-- profile facts already represented by deterministic Customer Profile rules are excluded from that contextual subset;
-- the reporting paths merge rule evidence and material context into a single `Customer Profile` Executive Narrative section;
-- the LLM receives that already-selected material context and may only verbalise it.
-
-This prevents the Executive Summary from becoming either a dump of all available customer data, a duplicate of rule evidence, or a second decision engine.
+See [`docs/customer-profile.md`](docs/customer-profile.md) and [`docs/reporting.md`](docs/reporting.md) for the detailed contracts.
 
 ---
 
@@ -339,7 +334,7 @@ git clone https://github.com/danielematix67-boop/credit-assessment-system.git
 cd credit-assessment-system
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 streamlit run app/streamlit_app.py
 ```
 
