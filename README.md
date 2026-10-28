@@ -348,7 +348,7 @@ git clone https://github.com/danielematix67-boop/credit-assessment-system.git
 cd credit-assessment-system
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 streamlit run app/streamlit_app.py
 ```
 
