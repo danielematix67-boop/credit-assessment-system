@@ -173,6 +173,26 @@ It can include information such as execution identity, timestamp, reporting mode
 
 Tests should verify metadata consistency, while keeping metadata separate from decision evidence.
 
+## Tests as the executable contract
+
+Documentation describes intended behaviour; regression tests establish the behaviour the current implementation is expected to preserve. When documentation and code appear inconsistent, inspect the implementation and the focused tests, then update the documentation to match the verified contract rather than copying assumptions from an older description.
+
+Use the tests at the layer closest to the change:
+
+| Change | Evidence to review |
+|---|---|
+| Domain model or input field | Model and validation tests; Excel loader tests if the field is importable |
+| Rule logic or rule configuration | Rule tests, catalogue/discovery checks and domain-status tests |
+| Final assessment aggregation | Case-service and assessment-policy tests |
+| Analysis/reporting contract | Analysis-agent, prompt-builder, report-generator, grounding and fallback tests |
+| End-to-end orchestration | Workflow integration tests |
+| Streamlit input or results display | Application/UI tests, where available, plus workflow regression tests |
+| Reference workbook or scenario content | Excel loader tests and scenario-level workflow tests |
+
+The workbook ingestion contract is covered by `tests/services/test_excel_scenario_loader.py`; the end-to-end workflow has integration coverage under `tests/integration/`. Check the actual test tree before assuming that every UI component has a dedicated test module.
+
+For local verification, use the commands and coverage threshold configured in the repository's CI workflow. Do not report a test count or passing status in documentation unless it has been measured against the current revision.
+
 ## CI gates
 
 The CI workflow is the authoritative definition of automated repository checks. Local commands are convenience equivalents.
