@@ -156,20 +156,29 @@ Missing evidence is therefore not silently interpreted as a normal result.
 
 ## 📥 Input sources
 
-The Streamlit application uses **Excel Upload as its sole data source**. The `.xlsx` workbook contains one or more structured assessment scenarios and is the single source of synthetic demonstration data.
+The Streamlit application uses **Excel Upload as its only input source**. Upload a structured `.xlsx` workbook, choose a scenario by `scenario_id`, review the mapped inputs and run the assessment. The application does not expose a built-in demo-scenario selector.
 
-For Excel input, `Financial Analysis` is mandatory. `Customer Profile`, `Behavioural Analysis` and `Debt Sustainability` are optional domain sheets. Each domain sheet uses a shared `scenario_id` to identify the same case across domains. The accepted field names are derived from the domain models; the active rule catalogues and thresholds are maintained in configuration, not duplicated in this README.
+The loader in `src/services/excel_scenario_loader.py` maps workbook rows to the same domain models used by the deterministic workflow:
 
-The repository documentation describes the Excel contract and the application is designed around a workbook containing a documentation-only `README` sheet plus the four loader-compatible domain sheets. The workbook is the sole application input source; scenario content can evolve without changing the assessment architecture.
-
-| Scenario | Purpose |
+| Sheet | Contract |
 |---|---|
-The workbook may contain multiple scenarios, identified by its `scenario_id` values. Those IDs and their intended outcomes are workbook data, not application constants. The workbook is formatted as a user-facing demonstration artifact while preserving the loader contract. Scenario coverage should remain representative of the configured catalogue rather than requiring a separate scenario for every rule.
+| `Financial Analysis` | Required; one row per scenario. `scenario_id` is mapped to the position identifier. |
+| `Customer Profile` | Optional; one row per scenario. |
+| `Behavioural Analysis` | Optional; one row per scenario. |
+| `Debt Sustainability` | Optional; one row per scenario. |
+| `Shareholders` | Optional detail sheet; multiple rows per scenario. |
+| `Relevant Events` | Optional detail sheet; multiple rows per scenario. |
+| `Credit Facilities` | Optional detail sheet; one row per credit facility. |
+| `README` | Optional workbook documentation sheet; ignored by domain ingestion. |
 
-See [`docs/excel-scenario-input.md`](docs/excel-scenario-input.md) for the complete workbook contract and validation behaviour.
+Every domain/detail sheet uses `scenario_id` to link its rows to a scenario defined in `Financial Analysis`. The loader validates required sheets and columns, duplicate and unknown scenario identifiers, supported fields, and supported value types before building the domain models. Missing optional domain sheets remain unavailable evidence; they are not treated as a normal observation. Auxiliary sheets enrich Customer Profile context and do not create additional assessment domains.
+
+The accepted fields follow the domain models and loader contract. Rule catalogues and assessment policy are maintained separately under `config/`; this README intentionally does not duplicate individual rule IDs or thresholds.
+
+See [`docs/excel-scenario-input.md`](docs/excel-scenario-input.md) for the workbook contract, [`docs/application-workflow.md`](docs/application-workflow.md) for the current UI flow, and [`docs/validation.md`](docs/validation.md) for validation and testing principles.
 
 ---
-
+ 
 ## 🤖 Deterministic assessment vs AI reporting
 
 This separation is the central design decision of the project.
