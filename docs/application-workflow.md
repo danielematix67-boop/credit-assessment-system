@@ -21,11 +21,11 @@ The uploaded `.xlsx` workbook provides the domain input objects:
 
 ### Excel Upload
 
-The Excel path is scenario-driven. The loader reads a workbook containing a mandatory `Financial Analysis` sheet, optional `Customer Profile`, `Behavioural Analysis` and `Debt Sustainability` sheets, and optional detail sheets for shareholders, relevant events and credit facilities.
+The Excel path is scenario-driven. The loader requires `Financial Analysis`; `Customer Profile`, `Behavioural Analysis` and `Debt Sustainability` are optional domain sheets. Optional `Shareholders`, `Relevant Events` and `Credit Facilities` sheets enrich Customer Profile context. A workbook may also include a documentation-only `README` sheet, which is ignored by the domain loader.
 
 Each domain sheet uses `scenario_id` to identify the case. The UI loads all valid scenarios, presents a scenario selector, previews the mapped domain inputs and then executes only the selected scenario.
 
-The workbook defines its own `scenario_id` values and intended outcomes. These are data-level examples, not identifiers hard-coded into the application workflow. The workbook may also contain a documentation-only `README` sheet, which is ignored by the domain loader. Scenario content can evolve independently from the application code as long as the workbook contract is preserved.
+The workbook defines its own `scenario_id` values and intended outcomes. These are data-level examples, not identifiers hard-coded into the application workflow. Scenario content can evolve independently from the application code as long as the workbook contract is preserved.
 
 See [`excel-scenario-input.md`](excel-scenario-input.md) for the workbook contract, supported fields and validation rules.
 
@@ -56,9 +56,7 @@ The reporting stage is downstream of assessment and analysis. A provider or repo
 
 ## Executive Narrative contract
 
-The application renders exactly four assessment areas in this order: Customer Profile, Financial Analysis, Behavioural Analysis and Debt Sustainability. LLM-backed reporting must satisfy the four-area narrative contract. The Ollama prompt uses explicit section markers to support structural validation. If provider output is invalid or fails reporting validation, deterministic fallback is used without changing the underlying assessment.
-
-Customer Profile is post-processed by the application: a fixed context block is inserted first, followed by triggered rule findings. This block is the same across reporting modes. In Deterministic mode, rule findings use configured deterministic comments; Gemini/Ollama may rewrite findings but cannot change the fixed context or structured assessment. Risk-group interdependence/independence is excluded from the narrative.
+The application always renders four assessment areas in this order: Customer Profile, Financial Analysis, Behavioural Analysis and Debt Sustainability. LLM-backed reporting is required to return one prose paragraph for each area. The Ollama prompt uses explicit section markers (`Customer Profile:`, `Financial Analysis:`, `Behavioural Analysis:`, `Debt Sustainability:`) to make the contract robust for local models. If the provider output remains structurally invalid or otherwise fails reporting validation, the deterministic fallback is used without changing the underlying assessment.
 
 ## Results presentation
 
