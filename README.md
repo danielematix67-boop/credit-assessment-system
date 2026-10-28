@@ -156,27 +156,29 @@ Missing evidence is therefore not silently interpreted as a normal result.
 
 ## 📥 Input sources
 
-The Streamlit application uses **Excel Upload as its sole input source**. Upload a workbook containing one or more scenarios; the application validates the workbook, lets the user select a `scenario_id`, previews the mapped inputs and executes the selected scenario.
+The Streamlit application uses **Excel Upload as its only input source**. Upload a structured `.xlsx` workbook, choose a scenario by `scenario_id`, review the mapped inputs and run the assessment. The application does not expose a built-in demo-scenario selector.
 
-The loader recognises these assessment-domain sheets:
+The loader in `src/services/excel_scenario_loader.py` maps workbook rows to the same domain models used by the deterministic workflow:
 
-| Sheet | Requirement | Cardinality |
-|---|---|---|
-| `Financial Analysis` | Required | One row per scenario |
-| `Customer Profile` | Optional | One row per scenario |
-| `Behavioural Analysis` | Optional | One row per scenario |
-| `Debt Sustainability` | Optional | One row per scenario |
+| Sheet | Contract |
+|---|---|
+| `Financial Analysis` | Required; one row per scenario. `scenario_id` is mapped to the position identifier. |
+| `Customer Profile` | Optional; one row per scenario. |
+| `Behavioural Analysis` | Optional; one row per scenario. |
+| `Debt Sustainability` | Optional; one row per scenario. |
+| `Shareholders` | Optional detail sheet; multiple rows per scenario. |
+| `Relevant Events` | Optional detail sheet; multiple rows per scenario. |
+| `Credit Facilities` | Optional detail sheet; one row per credit facility. |
+| `README` | Optional workbook documentation sheet; ignored by domain ingestion. |
 
-It also supports three optional detail sheets: `Shareholders`, `Relevant Events` and `Credit Facilities`. These can contain multiple rows per scenario and enrich the Customer Profile context. Every input sheet must include `scenario_id`; identifiers in detail sheets must match a scenario in `Financial Analysis`. The loader rejects malformed workbooks, missing required columns, duplicate scenario identifiers and references to unknown scenarios.
+Every domain/detail sheet uses `scenario_id` to link its rows to a scenario defined in `Financial Analysis`. The loader validates required sheets and columns, duplicate and unknown scenario identifiers, supported fields, and supported value types before building the domain models. Missing optional domain sheets remain unavailable evidence; they are not treated as a normal observation. Auxiliary sheets enrich Customer Profile context and do not create additional assessment domains.
 
-If an optional assessment-domain sheet is absent, its domain input is unavailable; it is not silently treated as normal evidence. A workbook may include a documentation-only `README` sheet, which is ignored by the domain loader.
+The accepted fields follow the domain models and loader contract. Rule catalogues and assessment policy are maintained separately under `config/`; this README intentionally does not duplicate individual rule IDs or thresholds.
 
-The accepted field names follow the domain models and loader contract. Rule inventories and thresholds remain defined in configuration and source code rather than duplicated here.
-
-See [`docs/excel-scenario-input.md`](docs/excel-scenario-input.md) for the workbook schema and validation behaviour.
+See [`docs/excel-scenario-input.md`](docs/excel-scenario-input.md) for the workbook contract, [`docs/application-workflow.md`](docs/application-workflow.md) for the current UI flow, and [`docs/validation.md`](docs/validation.md) for validation and testing principles.
 
 ---
-
+ 
 ## 🤖 Deterministic assessment vs AI reporting
 
 This separation is the central design decision of the project.
@@ -198,13 +200,25 @@ The reporting component is therefore a **consumer of assessment evidence**, not 
 
 ## 👤 Customer Profile
 
-Customer Profile combines deterministic rule evidence with descriptive counterparty context. The structured profile is organised into General Information, Risk Profile & Predictiveness, Relationship & Counterparty Context, and Relevant Events.
+Customer Profile is treated as a **contextual information layer**, not merely as a list of deterministic risk rules. It combines descriptive customer information, risk-profile evolution, statistical predictiveness, relationship context and relevant historical events.
 
-The Executive Narrative always starts its Customer Profile section with a **fixed, deterministic context block**, independent of reporting mode. Triggered Customer Profile rule findings follow that block. In Deterministic mode, rule findings retain their configured deterministic comments; in Gemini/Ollama modes, the LLM may rewrite the rule findings but cannot rewrite the fixed context or change any assessment result.
+The profile is organised into four reporting sections:
 
-The fixed narrative context includes available company information, rating/PD, banking relationship, shareholders and credit facilities. Risk-group interdependence/independence descriptions are excluded. This keeps contextual description distinct from deterministic rule evidence and avoids duplicating profile facts in the narrative.
+1. **General Information** — identity, counterparty type, business activity and operating context.
+2. **Risk Profile & Predictiveness** — EWS score information, active EWIs, rating/PD information and risk-grade evolution.
+3. **Relationship & Counterparty Context** — banking relationship, ownership/management and counterparty-specific context.
+4. **Relevant Events** — protests, bankruptcies, litigation and significant historical events.
 
-See [`docs/customer-profile.md`](docs/customer-profile.md) and [`docs/reporting.md`](docs/reporting.md) for the detailed contracts.
+The distinction between **contextual profile information** and **deterministic rule evidence** is intentional:
+
+- deterministic customer-profile rules produce authoritative `RuleResult` objects and can affect section status;
+- descriptive profile fields provide context and do not automatically become pseudo-rules;
+- the Executive Summary receives only the contextual information selected as material by the deterministic `CustomerProfileMaterialityPolicy`;
+- profile facts already represented by deterministic Customer Profile rules are excluded from that contextual subset;
+- the reporting paths merge rule evidence and material context into a single `Customer Profile` Executive Narrative section;
+- the LLM receives that already-selected material context and may only verbalise it.
+
+This prevents the Executive Summary from becoming either a dump of all available customer data, a duplicate of rule evidence, or a second decision engine.
 
 ---
 
