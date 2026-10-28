@@ -25,7 +25,7 @@ The Excel path is scenario-driven. The loader requires `Financial Analysis`; `Cu
 
 Each domain sheet uses `scenario_id` to identify the case. The UI loads all valid scenarios, presents a scenario selector, previews the mapped domain inputs and then executes only the selected scenario.
 
-The workbook defines its own `scenario_id` values and intended outcomes. These are data-level examples, not identifiers hard-coded into the application workflow. The workbook may also contain a documentation-only `README` sheet, which is ignored by the domain loader. Scenario content can evolve independently from the application code as long as the workbook contract is preserved.
+The workbook defines its own `scenario_id` values and intended outcomes. These are data-level examples, not identifiers hard-coded into the application workflow. Scenario content can evolve independently from the application code as long as the workbook contract is preserved.
 
 See [`excel-scenario-input.md`](excel-scenario-input.md) for the workbook contract, supported fields and validation rules.
 
@@ -54,7 +54,11 @@ The workflow in `src/agents/workflow/assessment_workflow.py` performs these step
 
 The reporting stage is downstream of assessment and analysis. A provider or report-generation issue does not recalculate the deterministic case result.
 
-## Executive Narrative contract\n\nThe application always renders four assessment areas in this order: Customer Profile, Financial Analysis, Behavioural Analysis and Debt Sustainability. LLM-backed reporting is required to return one prose paragraph for each area. The Ollama prompt uses explicit section markers (`Customer Profile:`, `Financial Analysis:`, `Behavioural Analysis:`, `Debt Sustainability:`) to make the contract robust for local models. If the provider output remains structurally invalid or otherwise fails reporting validation, the deterministic fallback is used without changing the underlying assessment.\n\n## Results presentation
+## Executive Narrative contract
+
+The application always renders four assessment areas in this order: Customer Profile, Financial Analysis, Behavioural Analysis and Debt Sustainability. LLM-backed reporting is required to return one prose paragraph for each area. The Ollama prompt uses explicit section markers (`Customer Profile:`, `Financial Analysis:`, `Behavioural Analysis:`, `Debt Sustainability:`) to make the contract robust for local models. If the provider output remains structurally invalid or otherwise fails reporting validation, the deterministic fallback is used without changing the underlying assessment.
+
+## Results presentation
 
 The results package under `app/ui/results/` renders the stored workflow result. The current experience includes:
 
