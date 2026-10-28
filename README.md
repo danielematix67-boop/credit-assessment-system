@@ -439,7 +439,9 @@ ADRs
 - [x] Deterministic reporting fallback
 - [x] Execution provenance
 - [x] Automated quality checks
-- [x] Excel scenario input\n- [x] Four-area executive narrative contract\n- [x] Ollama-compatible structured narrative parsing
+- [x] Excel scenario input
+- [x] Four-area executive narrative contract
+- [x] Ollama-compatible structured narrative parsing
 - [ ] Persistent assessment history
 - [ ] Rule-set versioning and auditability
 - [ ] Expanded monitoring/evaluation metrics
