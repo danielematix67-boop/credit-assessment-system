@@ -39,15 +39,15 @@ All scalar fields are optional unless a run supplies them. Collection fields def
 
 | Group | Fields in `CustomerProfileData` |
 |---|---|
-| General information | `company_name`, `counterparty_type`, `legal_form`, `sector`, `size_class`, `geography`, `business_history_years`, `operations` |
+| General information | `company_name`, `counterparty_type`, `legal_form`, `sector`, `founding_year`, `size_class`, `geography`, `business_history_years`, `operations` |
 | Risk-grade evolution | `forborne_non_performing_exit`, `past_due_count`, `cure_period_days`, `monitoring_period_days`, `probation_period_days`, `minimum_regulatory_risk_grade`, `previous_risk_grade`, `risk_grade_change` |
 | Statistical predictiveness | `ews_score_class`, `ews_score_notching`, `ews_score_variation`, `active_ewis`, `rating`, `rating_notching`, `rating_influential_factors`, `rating_elementary_modules`, `pd` |
-
-| Ownership, management and counterparty context | `shareholders`, `shareholder_roles`, `management_members`, `generational_transition`, `employment_contract_type`, `economic_family_context` |
+| Risk-group context | `risk_group_interdependence`, `risk_group_independence` |
+| Ownership, management and counterparty context | `shareholders`, `shareholder_details`, `credit_facility_details`, `shareholder_roles`, `management_members`, `generational_transition`, `employment_contract_type`, `economic_family_context` |
 | Banking relationship and credit history | `relationship_years`, `historical_facilities`, `previous_restructuring`, `forborne` |
-| Relevant events | `protests`, `bankruptcies`, `litigation`, `significant_historical_events` |
+| Relevant events | `protests`, `bankruptcies`, `litigation`, `significant_historical_events`, `relevant_event_details` |
 
-The model is intentionally descriptive. Presence in the input model does not imply that a field is currently exposed as a dedicated UI control or used by a rule. The active application input path and synthetic demo scenario determine which values are supplied in a run.
+The model is intentionally descriptive. Presence in the input model does not imply that a field is used by a deterministic rule or included in the fixed Executive Narrative context. The active Excel workbook determines which values are supplied in a run. The model definition in `src/models/customer_profile_data.py` remains authoritative if this field summary becomes stale.
 
 ## Deterministic Customer Profile rules
 
