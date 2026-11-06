@@ -173,7 +173,7 @@ This is why the documentation intentionally avoids duplicating volatile details 
 
 Customer Profile is documented separately because it contains both **deterministic rule evidence** and broader **contextual information**.
 
-The current implementation exposes the full structured profile through `CustomerProfileAnalysis`, while `CustomerProfileMaterialityPolicy` selects a smaller contextual subset for Executive Narrative reporting. Fields already represented by deterministic Customer Profile rules are excluded from that contextual subset.
+The current implementation exposes the full structured profile through `CustomerProfileAnalysis` and also computes a separate subset through `CustomerProfileMaterialityPolicy`. The fixed Executive Narrative profile block is rendered deterministically from selected portions of the full profile (general information, rating/PD and relationship context); it does not use the materiality subset. Triggered Customer Profile rule findings follow as a separate block. Fields already represented by deterministic rules are excluded from the separate materiality subset.
 
 This means the documentation distinguishes:
 
