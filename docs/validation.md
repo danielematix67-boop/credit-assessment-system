@@ -186,10 +186,10 @@ Use the tests at the layer closest to the change:
 | Final assessment aggregation | Case-service and assessment-policy tests |
 | Analysis/reporting contract | Analysis-agent, prompt-builder, report-generator, grounding and fallback tests |
 | End-to-end orchestration | Workflow integration tests |
-| Streamlit input or results display | Application/UI tests, where available, plus workflow regression tests |
+| Streamlit input or results display | Focused tests under `tests/app/ui/` and `tests/app/demo/`, plus workflow regression tests |
 | Reference workbook or scenario content | Excel loader tests and scenario-level workflow tests |
 
-The workbook ingestion contract is covered by `tests/services/test_excel_scenario_loader.py`; the end-to-end workflow has integration coverage under `tests/integration/`. Check the actual test tree before assuming that every UI component has a dedicated test module.
+The workbook ingestion contract is covered by `tests/services/test_excel_scenario_loader.py`; the end-to-end workflow has integration coverage under `tests/integration/`. Application-level tests are grouped under `tests/app/ui/` and `tests/app/demo/`. Core test areas also include `tests/models/`, `tests/rules/`, `tests/config/`, `tests/services/`, `tests/agents/` and `tests/llm/`. Not every Streamlit view or widget necessarily has a dedicated test module.
 
 For local verification, use the commands and coverage threshold configured in the repository's CI workflow. Do not report a test count or passing status in documentation unless it has been measured against the current revision.
 
