@@ -286,4 +286,4 @@ Documentation should not hard-code coverage percentages or runtime versions unle
 11. Execution metadata is observational.
 12. The Results UI consumes workflow results rather than recalculating them.
 13. Customer Profile context is separated from deterministic rule evidence.
-14. Executive Summary customer-profile materiality is selected deterministically before reporting.
+14. Customer Profile materiality is selected deterministically as a separate analysis field; the fixed Executive Narrative context is rendered independently from selected fields in the full profile.
