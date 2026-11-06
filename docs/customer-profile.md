@@ -25,10 +25,12 @@ CustomerProfileAssessmentService
              CaseAnalysisAgent
                 ↙        ↘
        full profile    material context
-                            ↓
-              CustomerProfileMaterialityPolicy
-                            ↓
-                    Executive Narrative
+            ↓                 ↓
+ detailed profile      CustomerProfileMaterialityPolicy
+            ↓                 ↓
+                    separate analysis field
+
+Full profile → concise deterministic narrative renderer → Executive Narrative
 ```
 
 ## Input contract
@@ -134,8 +136,8 @@ Other descriptive fields remain available in the full profile but are not automa
 
 | Field | Scope | Purpose |
 |---|---|---|
-| `customer_profile` | Full available structured profile | Detailed Customer Profile presentation |
-| `material_customer_profile` | Policy-selected contextual subset | Separate contextual use; not the fixed narrative block |
+| `customer_profile` | Full available structured profile | Source for detailed profile analysis and for the fixed renderer's selected context |
+| `material_customer_profile` | Policy-selected contextual subset | Separate analysis field; not the fixed narrative block |
 
 The analysis layer computes the separate material subset before reporting. The final Executive Narrative's fixed Customer Profile block is sourced from the full profile instead.
 
