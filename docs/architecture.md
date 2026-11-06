@@ -85,12 +85,12 @@ Customer Profile Assessment
         └── contextual profile information
                     ↓
           CaseAnalysisAgent
-             ↙           ↘
-      full profile    material profile
-                          ↓
-            CustomerProfileMaterialityPolicy
-                          ↓
-                 Executive Summary
+             ↙                         ↘
+      full profile              material profile
+           ↓                          ↓
+ concise narrative renderer   CustomerProfileMaterialityPolicy
+           ↓                          ↓
+ Executive Narrative           separate analysis field
 ```
 
 The contextual profile is represented by `CustomerProfileAnalysis`, rather than by pseudo-rules. This model preserves four reporting areas:
