@@ -121,8 +121,8 @@ Each stage has a different responsibility. Reporting consumes deterministic resu
 Reporting tests verify that:
 
 - evidence from all configured domains reaches the analysis model;
-- Customer Profile rule evidence and material contextual profile information are kept as separate structured concepts;
-- Customer Profile rule findings and material contextual information are rendered as one consolidated Executive Narrative section;
+- Customer Profile rule evidence, the full structured profile and the separately computed materiality subset remain distinct analysis concepts;
+- the Executive Narrative receives a deterministic fixed profile block rendered from selected fields of the full profile, followed by triggered Customer Profile rule findings;
 - `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` remain distinguishable;
 - high-severity triggered evidence is represented correctly;
 - the prompt receives the evidence required by its structured contract;
@@ -131,12 +131,12 @@ Reporting tests verify that:
 - the structured Customer Profile analysis preserves the four canonical section identities in order: General Information, Risk Profile & Predictiveness, Relationship & Counterparty Context, and Relevant Events, including sparse or empty sections;
 - the analysis agent renders Customer Profile fields as fluent prose, beginning with a natural company/business introduction when context is available, rather than a bullet-style field inventory;
 - the Executive Narrative keeps material Customer Profile context in one consolidated area; deterministic reporting removes nested subsection headings and flattens the selected context into compact prose;
-- every material Customer Profile fact selected for the Executive Narrative is represented without losing distinct statuses, ratings, EWS signals, relationship details or relevant events;
+- the fixed Executive Narrative profile block contains the renderer's supported context (general information, rating/PD details and relationship/ownership/facility context); EWS/EWI and regulatory-grade details, past-due/restructuring/forborne information, relevant events and risk-group descriptions are intentionally excluded from that fixed block;
 - LLM reporting may recover a narrowly defined missing final heading only when the first three area headings are present in canonical order and exactly four non-empty paragraphs exist; malformed or ambiguous section structures remain rejected;
 - regression tests cover the omitted final Debt Sustainability label and the parser's newline/regular-expression handling;
 - structural compliance and evidence completeness are checked independently of stylistic quality;
 - material indicators remain grounded in authoritative evidence;
-- Customer Profile materiality excludes facts already represented by deterministic Customer Profile rules, preventing duplicate narrative evidence;
+- Customer Profile materiality excludes rule-backed fields from its separate `material_customer_profile` subset; tests must not assume that this subset is the source of the fixed Executive Narrative profile block;
 - unsupported or altered evidence is rejected where grounding applies;
 - provider or grounding failure activates the deterministic fallback where configured;
 - fallback failure is propagated rather than silently hidden.
