@@ -8,7 +8,7 @@ Customer Profile is a contextual information layer alongside deterministic rule 
 
 - `CustomerProfileData` is the input contract.
 - `CustomerProfileAssessmentService` loads `config/customer_profile_rules.yaml`, evaluates the configured CP rules and constructs the Customer Profile section and context.
-- `CustomerProfileMaterialityPolicy` deterministically computes a separate subset of contextual fields; the final Executive Narrative uses the full profile.
+- `CustomerProfileMaterialityPolicy` deterministically computes a separate subset of contextual fields; the fixed Executive Narrative block is rendered from selected portions of the full profile, not from this subset.
 - `CustomerProfileAnalysis` organises the profile into four reporting sections.
 - `AssessmentAnalysis` keeps both the full `customer_profile` and the bounded `material_customer_profile` representation.
 - Rule findings remain deterministic and retain their own statuses. Context fields do not become findings merely because they are informative.
@@ -139,7 +139,7 @@ Other descriptive fields remain available in the full profile but are not automa
 | `customer_profile` | Full available structured profile | Source for detailed profile analysis and for the fixed renderer's selected context |
 | `material_customer_profile` | Policy-selected contextual subset | Separate analysis field; not the fixed narrative block |
 
-The analysis layer computes the separate material subset before reporting. The final Executive Narrative's fixed Customer Profile block is sourced from the full profile instead.
+The analysis layer computes the separate material subset before reporting. The fixed Executive Narrative block is sourced from the full `customer_profile` representation, but the renderer deliberately selects only general information, rating/PD details and relationship/ownership/facility context.
 
 ### Detailed narrative formatting contract
 
@@ -154,7 +154,7 @@ Each heading is a distinct block and must remain present even when its data are 
 
 When company identity or business context is available, **General Information** begins with a short natural introduction describing the customer and relevant high-level business details. The analysis agent now assembles the available profile attributes into fluent prose instead of a repeated `Label is value` or bullet-style inventory. List-valued fields are rendered as readable text, and Boolean values use human-readable wording. Related records remain associated with their intended thematic section: shareholders, ownership and credit facilities belong to **Relationship & Counterparty Context**; protests, bankruptcies, litigation and significant historical events belong to **Relevant Events**. Missing scalar fields are omitted instead of being printed as empty values or raw `field=value` pairs. This is a presentation change only: it does not alter materiality, rule evidence or assessment status.
 
-The detailed analysis retains the four canonical section identities so each block can be mapped reliably even when some fields are empty. This should not be confused with Executive Narrative formatting: the reporting layer combines the full deterministic profile context into compact prose and removes nested profile headings to avoid duplicating the hierarchy inside the Customer Profile narrative area.
+The detailed analysis retains the four canonical section identities so each block can be mapped reliably even when some fields are empty. This should not be confused with Executive Narrative formatting: the reporting renderer creates a concise block from general information, rating/PD details and relationship/ownership/facility context. EWS/EWI and regulatory-grade details, past-due/restructuring/forborne information, relevant events and risk-group descriptions are intentionally excluded from this fixed block.
 
 The reporting boundary is:
 
@@ -170,7 +170,7 @@ Fixed Customer Profile block
 Triggered Customer Profile rule findings
 ```
 
-The full profile block is rendered deterministically and replaces any LLM-generated Customer Profile prose after the selected generator returns. This makes the context identical in deterministic, Gemini, Ollama and fallback modes. The block precedes a separate `Deterministic rule findings` subsection containing triggered Customer Profile rules. Risk-group interdependence/independence descriptions are excluded from both the fixed narrative context and the materiality subset, even if values are present in the source model or workbook. `material_customer_profile` remains a separate policy-selected model field but does not define the fixed narrative block.
+The concise profile block is rendered deterministically by `DeterministicReportGenerator._render_customer_profile_context()` and inserted by `ReportingAgent` after the selected generator returns. This makes the fixed context identical in deterministic, Gemini, Ollama and fallback modes. In LLM modes, the model receives rule evidence only; it does not generate or rewrite this fixed profile context. Triggered Customer Profile rule findings follow in a separate `Deterministic rule findings` or `LLM-rewritten rule findings` subsection. Risk-group interdependence/independence descriptions are excluded from both the fixed narrative context and the materiality subset, even if values are present in the source model or workbook. `material_customer_profile` remains a separate policy-selected model field but does not define the fixed narrative block.
 
 ## Risk-grade evolution
 
@@ -192,7 +192,7 @@ The reporting contract distinguishes:
 |---|---|
 | Deterministic rule evidence | Complete CP rule results, including status, severity and evidence |
 | Detailed Customer Profile | Structured profile context available for the run |
-| Executive Narrative | Full deterministic profile context followed by triggered CP rule findings in one Customer Profile section |
+| Executive Narrative | Concise deterministic context (general information, rating/PD, relationship/ownership/facilities) followed by triggered CP rule findings in one Customer Profile section |
 
 The Streamlit Results UI presents workflow output. It does not independently decide materiality or recompute CP rule outcomes.
 
