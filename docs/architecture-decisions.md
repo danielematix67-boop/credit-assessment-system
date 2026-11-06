@@ -158,23 +158,24 @@ Customer Profile is modelled as a broader contextual information layer rather th
 
 Deterministic customer-profile rules continue to produce normal `RuleResult` evidence and participate in the assessment status contract. Descriptive fields do not automatically become pseudo-rules.
 
-For reporting, `AssessmentAnalysis.customer_profile` supplies the full contextual profile used by the fixed Customer Profile narrative block. `CustomerProfileMaterialityPolicy` still computes a bounded `material_customer_profile` subset for separate uses, but the final Customer Profile narrative no longer depends on that subset.
+For reporting, `AssessmentAnalysis.customer_profile` supplies the full structured profile to a deterministic renderer. The renderer selects general information, rating/PD details and relationship/ownership/facility context for the fixed Customer Profile narrative block; it excludes EWS/EWI and regulatory-grade details, past-due/restructuring/forborne information, relevant events and risk-group descriptions. `CustomerProfileMaterialityPolicy` separately computes `material_customer_profile`, but that subset does not drive the fixed narrative block. Triggered Customer Profile rule findings are appended separately.
 
 ```text
 CustomerProfileData
        ↓
 CaseAnalysisAgent
-       ├── customer_profile ──────────────┐
+       ├── customer_profile ────────→ concise deterministic renderer
+       │                                      ↓
+       │                          Fixed Customer Profile context
+       │
        └── CustomerProfileMaterialityPolicy
-                    ↓                     │
-          material_customer_profile       │
-                                          ↓
-                               ReportingAgent post-processing
-                                          ↓
-                            Fixed Customer Profile + rule findings
+                    ↓
+          material_customer_profile (separate analysis field)
+
+Triggered rule findings → ReportingAgent post-processing → appended after fixed context
 ```
 
-The LLM does not control the final Customer Profile wording. After either the primary or fallback generator returns, `ReportingAgent` replaces the generated Customer Profile prose with the same deterministic full-profile block and appends triggered Customer Profile rule findings after it. This guarantees the same context and ordering across reporting modes. Risk-group interdependence/independence descriptions are omitted from narrative output.
+The LLM does not control the fixed Customer Profile context. After either the primary or fallback generator returns, `ReportingAgent` inserts the same concise deterministic block rendered from selected fields of the full profile (general information, rating/PD, and relationship/ownership/facility context), then appends triggered Customer Profile rule findings. In LLM modes, the model rewrites rule findings only; the fixed profile block is not part of the generated prose. This guarantees consistent context and ordering across reporting modes. EWS/EWI and regulatory-grade details, past-due/restructuring/forborne information, relevant events and risk-group interdependence/independence are excluded from the fixed block.
 
 **Why:** keep descriptive customer context available for analyst review, prevent the Executive Summary from becoming a full data dump or duplicate the same evidence, and preserve a strict separation between deterministic credit evidence and generative narrative.
 

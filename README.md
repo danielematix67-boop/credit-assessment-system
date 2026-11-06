@@ -211,12 +211,12 @@ The profile is organised into four reporting sections:
 
 The distinction between **contextual profile information** and **deterministic rule evidence** is intentional:
 
-- deterministic customer-profile rules produce authoritative `RuleResult` objects and can affect section status;
+- deterministic Customer Profile rules produce authoritative `RuleResult` objects and can affect section status;
 - descriptive profile fields provide context and do not automatically become pseudo-rules;
-- the Executive Summary receives only the contextual information selected as material by the deterministic `CustomerProfileMaterialityPolicy`;
-- profile facts already represented by deterministic Customer Profile rules are excluded from that contextual subset;
-- the reporting paths merge rule evidence and material context into a single `Customer Profile` Executive Narrative section;
-- the LLM receives that already-selected material context and may only verbalise it.
+- `CaseAnalysisAgent` builds a full structured `CustomerProfileAnalysis` and, separately, a policy-selected `material_customer_profile` subset;
+- the materiality subset excludes fields already represented by deterministic rules, but it is **not** the source of the fixed Executive Narrative profile block;
+- `ReportingAgent` inserts the same deterministic, concise profile context after primary or fallback report generation. The renderer selects general information, rating/PD details and relationship/ownership/facility context from the full profile; it excludes EWS/EWI and regulatory-grade details, past-due/restructuring/forborne information, relevant events and risk-group descriptions;
+- in LLM modes, generated prose may rewrite rule findings, while the fixed Customer Profile context and the available Centrale dei Rischi exposure summary are added by the application after generation.
 
 This prevents the Executive Summary from becoming either a dump of all available customer data, a duplicate of rule evidence, or a second decision engine.
 
@@ -378,6 +378,8 @@ python -m ruff check .
 python -m mypy src
 python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 ```
+
+The CI workflow runs these checks on Python 3.14. Tests marked `ollama` are excluded by the default pytest configuration (`-m 'not ollama'`) and require a separately available Ollama service to run.
 
 The CI workflow is the authoritative definition of supported Python versions, commands and quality requirements. README values should be updated if the workflow changes.
 

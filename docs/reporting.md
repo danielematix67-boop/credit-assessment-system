@@ -62,40 +62,43 @@ Customer Profile is a structured contextual input to reporting and is deliberate
 3. Relationship & Counterparty Context
 4. Relevant Events
 
-`AssessmentAnalysis.customer_profile` is the authoritative source for the Customer Profile block in the Executive Narrative. The block is rendered deterministically from the full profile and is inserted by `ReportingAgent` after either the primary generator or the fallback returns. `material_customer_profile` remains available as a separately selected contextual subset, but it does not control the final Customer Profile block.
+`AssessmentAnalysis.customer_profile` contains the full structured profile used to build the fixed Executive Narrative context. `ReportingAgent` inserts this context after either the primary generator or the fallback returns, but the renderer deliberately selects only general information, rating/PD details and relationship/ownership/facility context. It excludes EWS/EWI and regulatory-grade details, past-due/restructuring/forborne information, relevant events and risk-group descriptions. `material_customer_profile` is computed separately by `CustomerProfileMaterialityPolicy`; it is not the source of the fixed narrative block.
 
-The materiality boundary is:
+The analysis model preserves two separate profile representations; the fixed narrative renderer has its own explicit selection:
 
 ```text
 Full CustomerProfileData
         ↓
 CaseAnalysisAgent
-        ↓
-CustomerProfileMaterialityPolicy
-        ├── material_customer_profile (bounded context for other uses)
-        └── customer_profile (full fixed narrative block)
+        ├── customer_profile (full structured profile)
+        │          ↓
+        │  concise deterministic renderer
+        │          ↓
+        │  ReportingAgent post-processing
+        │
+        └── CustomerProfileMaterialityPolicy
                     ↓
-       ReportingAgent post-processing
-                    ↓
-            Executive Narrative
+          material_customer_profile (separate analysis field)
+
+Triggered rule evidence → generator → ReportingAgent post-processing → Executive Narrative
 ```
 
-The materiality subset is computed deterministically and is not an LLM decision. The final Customer Profile block is separately rendered from the full profile, while rule findings remain sourced from deterministic evidence.
+The materiality subset is computed deterministically and is not an LLM decision. It remains available for separate uses, but does not control the fixed Executive Narrative block. The block is rendered from selected portions of the full structured profile, while rule findings remain sourced from deterministic evidence.
 
 Deterministic customer-profile rules remain in `rule_evidence` and retain their normal `TRIGGERED`, `NOT_TRIGGERED` and `NOT_EVALUABLE` semantics. Contextual fields such as active EWIs, business information, rating context or historical events are not converted into pseudo-rule findings merely because they are relevant to the Executive Summary.
 
-Auxiliary one-to-many inputs from the `Shareholders`, `Credit Facilities` and `Relevant Events` sheets are converted into concise, human-readable records before they reach the narrative layer. The detailed Customer Profile analysis retains four canonical contextual sections in this order: **General Information**, **Risk Profile & Predictiveness**, **Relationship & Counterparty Context**, and **Relevant Events**. The analysis agent now writes these blocks as fluent prose rather than a sequence of bullet-style field labels. General Information begins with a natural introduction when company identity or business context is available; values such as ownership records, credit facilities and event details are verbalised using their domain meaning rather than raw `field=value` pairs. The detailed profile contract still preserves the four section identities for analysis and downstream mapping, including when a section has no populated values. The Executive Narrative is a separate, compact presentation: the deterministic generator flattens the selected material profile context into continuous prose and removes nested subsection headings to avoid excessive hierarchy inside the single `Customer Profile` paragraph. Missing fields are omitted; an otherwise empty detailed section states that no additional information is available. Small numeric values in date columns are not rendered as dates, preventing misplaced counts from becoming misleading dates near 1900. These records remain contextual information and do not create rule findings or change assessment status.
+Auxiliary one-to-many inputs from the `Shareholders`, `Credit Facilities` and `Relevant Events` sheets are converted into concise, human-readable records before they reach the analysis layer. The detailed Customer Profile analysis retains four canonical contextual sections in this order: **General Information**, **Risk Profile & Predictiveness**, **Relationship & Counterparty Context**, and **Relevant Events**. The analysis agent writes these blocks as fluent prose rather than a sequence of bullet-style field labels. General Information begins with a natural introduction when company identity or business context is available; ownership records, credit facilities and event details are verbalised using their domain meaning rather than raw `field=value` pairs. The detailed profile contract preserves all four section identities, including when a section has no populated values. The Executive Narrative is a separate, concise presentation: its deterministic renderer selects general information, rating/PD details and relationship/ownership/facility context from the full profile and omits EWS/EWI and regulatory-grade details, past-due/restructuring/forborne information, relevant events and risk-group descriptions. Missing fields are omitted; an otherwise empty detailed section states that no additional information is available. Small numeric values in date columns are not rendered as dates, preventing misplaced counts from becoming misleading dates near 1900. These records remain contextual information and do not create rule findings or change assessment status.
 
-The detailed profile and the Executive Summary now use the same full factual profile block, while rule findings remain a separate subsequent part of the Customer Profile section:
+The detailed profile and the Executive Summary have different presentation scopes: the detailed profile preserves the four structured sections, while the Executive Narrative uses a concise deterministic context block and then presents triggered rule findings separately:
 
 | Output | Customer-profile scope |
 |---|---|
 | Detailed Customer Profile | Full available structured context |
-| Executive Summary | Full deterministic profile context, followed by triggered rule findings |
+| Executive Summary | Concise deterministic context (general information, rating/PD, relationship/ownership/facilities), followed by triggered rule findings |
 | Rule evidence | Only deterministic rule results |
 | LLM narrative | Rewritten prose from deterministic rule findings only; fixed context is inserted by the application |
 
-This prevents descriptive customer information from contaminating the deterministic rule-evidence contract while still making material customer context available to management-level reporting. The deterministic and AI reporting paths use the same fixed Customer Profile block, sourced from `AssessmentAnalysis.customer_profile`. In `Deterministic` mode, triggered rule comments remain the preconfigured rule text. In Gemini/Ollama modes, the LLM receives only deterministic rule evidence and rewrites the Customer Profile rule findings; `ReportingAgent` then inserts the fixed context and preserves the LLM-written findings after it. The LLM cannot rewrite or replace the fixed profile block. The fixed block is intentionally concise: it includes general company information, rating/PD, banking relationship, shareholders and credit facilities. Regulatory risk-grade changes, EWS/EWIs, past-due counts, restructuring/forborne status and relevant events are omitted from this context paragraph and should be represented through their corresponding rule findings where applicable. Risk-group interdependence and independence are also omitted from the narrative. Both paths must emit exactly one Customer Profile heading.
+This prevents descriptive customer information from contaminating the deterministic rule-evidence contract. The deterministic and AI reporting paths use the same fixed Customer Profile block, sourced from `AssessmentAnalysis.customer_profile`. In `Deterministic` mode, triggered rule comments remain the preconfigured rule text. In Gemini/Ollama modes, `ReportPromptBuilder` sends deterministic rule evidence to the LLM, which rewrites the rule findings only; it does not receive the fixed profile context. `ReportingAgent` then inserts that context and preserves the LLM-written findings after it. The fixed block includes general company information, rating/PD, banking relationship, shareholders and credit facilities. Regulatory risk-grade changes, EWS/EWIs, past-due counts, restructuring/forborne status and relevant events are intentionally omitted from this block. Risk-group interdependence and independence are also omitted. Both paths must emit exactly one Customer Profile heading.
 
 ## Reporting boundary
 
@@ -104,7 +107,7 @@ The Reporting Agent may:
 - organise supplied evidence;
 - synthesise narrative;
 - preserve material indicators and findings;
-- verbalise the deterministic material customer-profile context supplied to it;
+- verbalise deterministic rule evidence supplied to it;
 - use deterministic fallback.
 
 It may not:
@@ -167,14 +170,14 @@ The prompt labels each theme so the LLM can synthesize related concepts rather t
 
 The narrative must:
 
-- use only supplied deterministic evidence and selected Customer Profile context;
+- use only the deterministic rule evidence supplied in the prompt; fixed Customer Profile and behavioural CR context are inserted by the application after generation;
 - preserve the meaning and identity of every mandatory finding;
 - distinguish risk evidence from unavailable or non-evaluable evidence;
 - avoid unsupported facts, causes, conclusions, recommendations or calculations;
 - never generate or overwrite rule results, severity, section status or overall assessment status;
 - preserve all four areas in both deterministic and LLM-generated reports;
 - retain the canonical labels and fixed area order; Customer Profile is the deliberate exception to the single-generated-paragraph format because post-processing places the fixed context block first and the deterministic rule findings after it;
-- include the standard no-anomaly statement when an area has no triggered findings and no material contextual information.
+- include the standard no-anomaly statement when an area has no triggered findings and no application-inserted contextual block.
 
 ### Narrative quality: synthesis without loss of evidence
 
@@ -182,7 +185,7 @@ The LLM prompt explicitly asks the model to **rewrite rather than transcribe** t
 
 The model may vary sentence openings, syntax and transitions, and may connect closely related findings in a sentence. It must retain the supplied finding order and keep every distinct signal identifiable. The explanatory wording can be paraphrased, but each deterministic indicator label must remain verbatim as an anchor. The model must not merge findings into a vague summary, introduce a causal relationship that the evidence does not state, or sacrifice coverage for brevity.
 
-Customer Profile has an additional completeness requirement. The analysis agent constructs readable prose from the structured profile rather than emitting a bullet-style field inventory. The fixed Executive Narrative block includes all available context from **General Information**, **Risk Profile & Predictiveness**, **Relationship & Counterparty Context**, and **Relevant Events**, preserving supplied counterparty description, regulatory risk grades and their evolution, EWS signals, rating/PD, relationship information, ownership/management, credit facilities and relevant events. Nested subsection headings are removed. Risk-group interdependence/independence descriptions are intentionally omitted. Triggered deterministic rule findings are appended after this fixed block.
+Customer Profile has an additional completeness requirement. The analysis agent constructs readable prose for the full structured profile rather than emitting a bullet-style field inventory. The fixed Executive Narrative block is narrower: it includes general company/business information, rating/PD details and relationship/ownership/facility context. It excludes regulatory risk grades and their evolution, EWS/EWI signals, past-due counts, restructuring/forborne status, relevant events and risk-group interdependence/independence. Triggered deterministic rule findings are appended after this fixed block.
 
 Materiality selection for the separate `material_customer_profile` subset is deterministic. For conditionally material fields such as past-due counts and monitoring/cure/probation periods, positive numeric values are included; non-empty string values are also treated as populated/positive by the materiality selector to accommodate string-valued inputs. This affects contextual selection only and does not coerce data for rule evaluation. Risk-group interdependence/independence fields are excluded from that subset as well as from the fixed narrative block.
 
