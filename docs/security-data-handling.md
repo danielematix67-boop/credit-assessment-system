@@ -42,7 +42,7 @@ Never expose credentials in logs, screenshots, reports, commits or error message
 
 **In simple terms:** do not send or store information merely because it is available. Send only what the next processing step actually needs.
 
-For LLM reporting, only the assessment information required to generate the narrative should cross the provider boundary. Customer Profile data follows the same minimisation rule: the Executive Narrative receives the deterministic material contextual subset, while facts already represented by Customer Profile rule evidence are not redundantly injected as contextual material.
+For LLM reporting, the provider is used to rewrite/synthesise rule findings from the structured analysis; it does not author the fixed Customer Profile context or the Centrale dei Rischi exposure summary. `ReportingAgent` inserts those application-rendered blocks after report generation. The separate `material_customer_profile` subset is computed by the analysis layer but is not the source of the fixed Executive Narrative profile block. Do not send production or confidential customer information to an external provider without the required authorisation and governance controls.
 
 Production or confidential banking data must not be sent to an external provider without explicit authorisation and the applicable organisational, legal and governance controls.
 
@@ -62,7 +62,7 @@ Narrative Report
 
 Gemini is an external provider. Ollama can run locally. Both are reporting providers only.
 
-The LLM cannot change assessment status, rule results, severity, findings, limitations or Customer Profile materiality selection. Generated text is untrusted presentation content and must not be executed as code, SQL, shell commands or configuration.
+The LLM cannot change assessment status, rule results, severity, findings, limitations or the deterministic profile/behavioural context inserted by the application. Generated text is untrusted presentation content and must not be executed as code, SQL, shell commands or configuration.
 
 ## Reporting failure does not mean assessment failure
 
@@ -119,7 +119,7 @@ Malformed Input → Rejected before assessment
 Credentials     → Outside source code and Git
 LLM Output      ≠ Assessment Decision
 External Input  ⊆ Required Reporting Data
-Profile Materiality → Deterministic selection before LLM
+Fixed Profile / CR Context → Inserted by ReportingAgent after generation
 LLM Failure     → Deterministic Assessment remains valid
 Metadata        ≠ Decision Evidence
 ```
