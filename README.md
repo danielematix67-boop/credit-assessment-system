@@ -379,6 +379,8 @@ python -m mypy src
 python -m pytest --cov=src --cov-report=term-missing --cov-fail-under=95
 ```
 
+The CI workflow runs these checks on Python 3.14. Tests marked `ollama` are excluded by the default pytest configuration (`-m 'not ollama'`) and require a separately available Ollama service to run.
+
 The CI workflow is the authoritative definition of supported Python versions, commands and quality requirements. README values should be updated if the workflow changes.
 
 ---
