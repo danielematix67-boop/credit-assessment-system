@@ -70,14 +70,17 @@ The analysis model preserves two separate profile representations; the fixed nar
 Full CustomerProfileData
         ↓
 CaseAnalysisAgent
-        ↓
-CustomerProfileMaterialityPolicy
-        ├── material_customer_profile (bounded context for other uses)
-        └── customer_profile (full fixed narrative block)
+        ├── customer_profile (full structured profile)
+        │          ↓
+        │  concise deterministic renderer
+        │          ↓
+        │  ReportingAgent post-processing
+        │
+        └── CustomerProfileMaterialityPolicy
                     ↓
-       ReportingAgent post-processing
-                    ↓
-            Executive Narrative
+          material_customer_profile (separate analysis field)
+
+Triggered rule evidence → generator → ReportingAgent post-processing → Executive Narrative
 ```
 
 The materiality subset is computed deterministically and is not an LLM decision. It remains available for separate uses, but does not control the fixed Executive Narrative block. The block is rendered from selected portions of the full structured profile, while rule findings remain sourced from deterministic evidence.
