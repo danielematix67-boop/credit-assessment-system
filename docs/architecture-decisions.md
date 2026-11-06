@@ -175,7 +175,7 @@ CaseAnalysisAgent
 Triggered rule findings → ReportingAgent post-processing → appended after fixed context
 ```
 
-The LLM does not control the final Customer Profile wording. After either the primary or fallback generator returns, `ReportingAgent` replaces the generated Customer Profile prose with the same deterministic full-profile block and appends triggered Customer Profile rule findings after it. This guarantees the same context and ordering across reporting modes. Risk-group interdependence/independence descriptions are omitted from narrative output.
+The LLM does not control the fixed Customer Profile context. After either the primary or fallback generator returns, `ReportingAgent` inserts the same concise deterministic block rendered from selected fields of the full profile (general information, rating/PD, and relationship/ownership/facility context), then appends triggered Customer Profile rule findings. In LLM modes, the model rewrites rule findings only; the fixed profile block is not part of the generated prose. This guarantees consistent context and ordering across reporting modes. EWS/EWI and regulatory-grade details, past-due/restructuring/forborne information, relevant events and risk-group interdependence/independence are excluded from the fixed block.
 
 **Why:** keep descriptive customer context available for analyst review, prevent the Executive Summary from becoming a full data dump or duplicate the same evidence, and preserve a strict separation between deterministic credit evidence and generative narrative.
 
