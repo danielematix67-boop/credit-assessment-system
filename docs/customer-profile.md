@@ -204,7 +204,7 @@ When changing Customer Profile:
 - [ ] Verify propagation through `CustomerProfileAssessmentService`.
 - [ ] If a rule changes, update the YAML catalogue and corresponding implementation/tests.
 - [ ] Decide explicitly whether a new field is rule-backed, always material, conditionally material, or full-profile-only.
-- [ ] Update `CustomerProfileMaterialityPolicy` and its tests if Executive Summary selection changes.
+- [ ] Update `CustomerProfileMaterialityPolicy` and its tests if the `material_customer_profile` subset policy changes.
 - [ ] Verify `AssessmentAnalysis.customer_profile` and `material_customer_profile` remain correctly populated.
 - [ ] Update analysis/reporting tests and grounding tests where applicable.
 - [ ] Update synthetic demo scenarios and UI input handling if the field is exposed there.
