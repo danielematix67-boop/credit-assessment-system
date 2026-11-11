@@ -228,14 +228,16 @@ The Results experience presents the workflow output through a compact hierarchy:
 ```text
 Executive assessment
         ↓
+Deterministic status rationale + contributing evidence
+        ↓
 Assessment by macro-area
         ↓
 Executive narrative
 ```
 
-The macro-area evidence surface is authoritative for the UI. Technical rule inspection is progressively disclosed from the same structured results.
+The executive header shows the final status and counts of rule results, triggered rules and non-evaluable rules. The **Why this assessment status?** section reads `FinalAssessment.status_rationale`, identifies contributing macro-areas from `risk_sections`, and displays their triggered evidence (rule ID, indicator, severity, observed value, configured threshold and reason when available). Final-assessment limitations are shown separately when evidence is incomplete.
 
-The UI does not recalculate thresholds, severity, section status or final status.
+The rationale and evidence are generated upstream by deterministic services. The Results page only renders them; it does not ask an LLM to explain the status or recalculate thresholds, severity, section status or final status.
 
 ## UI and workflow boundaries
 
