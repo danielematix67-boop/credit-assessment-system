@@ -228,7 +228,6 @@ def render_assessment_rationale(result: Any) -> None:
     if final_assessment is None:
         return
 
-    status = getattr(getattr(final_assessment, "status", None), "value", "UNKNOWN")
     rationale = getattr(final_assessment, "status_rationale", "")
     risk_sections = set(getattr(final_assessment, "risk_sections", []) or [])
     sections = get_rule_sections(result)
@@ -256,7 +255,9 @@ def render_assessment_rationale(result: Any) -> None:
             with st.container(border=True):
                 st.markdown(f"**{section.name}** · {section_status}")
                 if not triggered_rules:
-                    st.caption("No individual triggered rule evidence is available for this area.")
+                    st.caption(
+                        "No individual triggered rule evidence is available for this area."
+                    )
                 for rule in triggered_rules:
                     rule_id = getattr(rule, "rule_id", "—")
                     indicator = rule_indicator(rule)
