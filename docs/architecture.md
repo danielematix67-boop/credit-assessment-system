@@ -149,7 +149,19 @@ The policy defines, among other things:
 - the status used when evidence is insufficient;
 - limitation messages for partial evaluation.
 
-The policy distinguishes **core** sections from **contextual** sections. Core sections participate explicitly in the current escalation logic, while contextual sections provide additional assessment context without necessarily driving the final status.
+The policy distinguishes **core** sections from **contextual** sections for the multiple-ATTENTION escalation rule. The current core sections are Financial Analysis, Behavioural Analysis and Debt Sustainability; Customer Profile is contextual for that count. This distinction does not exempt Customer Profile from the unconditional CRITICAL escalation.
+
+The current decision precedence implemented by `FinalAssessmentService` is:
+
+1. If any macro-area is CRITICAL, the final status is CRITICAL.
+2. Otherwise, if the number of core macro-areas classified as ATTENTION reaches the configured threshold, the final status is CRITICAL.
+3. Otherwise, if at least one evaluable macro-area is ATTENTION, the final status is ATTENTION.
+4. Otherwise, NORMAL is assigned only when all evaluable macro-areas are NORMAL and the configured minimum number of evaluable macro-areas is met.
+5. In all other cases (including no evaluable macro-areas or insufficient evaluable evidence), the configured fallback status is used; the current configuration sets this to ATTENTION.
+
+Non-evaluable macro-areas are excluded from the evaluable count and generate limitation messages. Partial evaluation also adds a summary limitation. The policy parameters and section membership are defined in `config/final_assessment.yaml`; the ordered decision logic is implemented in `src/services/final_assessment_service.py`.
+
+The service also creates `FinalAssessment.status_rationale` in the same branch that assigns the status. The rationale explains the applicable escalation, attention, normality or insufficient-evidence condition, and is returned with the structured assessment rather than generated downstream by an LLM.
 
 ```text
 Section assessments
@@ -157,8 +169,11 @@ Section assessments
 FinalAssessmentPolicy
         ↓
 FinalAssessmentService
-        ↓
-FinalAssessment
+        ├── final status
+        ├── status rationale
+        └── limitations / risk sections
+                 ↓
+            FinalAssessment
 ```
 
 This makes aggregation policy independently reviewable and avoids embedding thresholds in the UI or reporting layer.
