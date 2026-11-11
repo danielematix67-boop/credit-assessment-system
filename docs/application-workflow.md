@@ -62,15 +62,19 @@ The application always renders four assessment areas in this order: Customer Pro
 
 The results package under `app/ui/results/` renders the stored workflow result. The current experience includes:
 
-- an executive assessment header and summary metrics;
+- an executive assessment header and summary metrics (total rule results, triggered rules and non-evaluable rules);
+- a **Why this assessment status?** section containing the deterministic rationale returned by `FinalAssessmentService`;
+- contributing risk macro-areas, with their status and triggered rule evidence (rule ID, indicator, severity, observed value, configured threshold and reason when available);
+- an expandable list of final-assessment limitations when macro-areas are non-evaluable;
 - reporting provenance, including selected mode and fallback information when available;
-- final assessment and macro-area statuses, evidence counts and limitations;
 - a deterministic Rule Engine evidence dashboard with macro-area cards;
 - filters for rule status, severity, assessment area and sort order;
 - individual rule details and indicator/evidence views;
 - the Executive Narrative.
 
-The UI derives its display from the workflow result. It may count or format evidence for presentation, but it does not recalculate thresholds, rule severity, section status or final assessment.
+The rationale is part of `FinalAssessment` (`status_rationale`) and is produced in the same decision branches that assign the final status. The Results page reads it from `result.credit_case.final_assessment`; it does not ask the reporting model to explain or infer the decision. Contributing areas are selected from `risk_sections`, and the displayed rule details are taken from each section's existing evidence.
+
+The UI may count or format evidence for presentation, but it does not recalculate thresholds, rule severity, section status or final assessment. If a rationale is absent (for example, for a legacy or incomplete result), the page displays an availability note rather than fabricating an explanation.
 
 ## Session state and reruns
 
