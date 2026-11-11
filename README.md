@@ -229,14 +229,25 @@ The Streamlit application exposes the workflow through a compact hierarchy:
 ```text
 Executive Credit Assessment
           ↓
+Why this assessment status?
+          ↓
 Assessment by Macro-Area
           ↓
 Executive Narrative
 ```
 
-The UI presents structured results but does not recalculate thresholds, severity or assessment status.
+The results view includes:
 
-For technical inspection, the same underlying rule results remain available to the workflow and reporting layers.
+- the final deterministic status and summary counts for evaluated, triggered and non-evaluable rules;
+- **Why this assessment status?**, showing the rationale produced by `FinalAssessmentService`;
+- contributing risk areas and their triggered rule evidence, including rule ID, indicator, severity, observed value, configured threshold and reason when available;
+- assessment limitations when one or more macro-areas could not be evaluated;
+- reporting provenance and fallback information;
+- the macro-area evidence dashboard and Executive Narrative.
+
+The rationale is generated alongside the final status from the same policy decision path. It is not inferred by the LLM and the UI does not reconstruct the decision. The UI presents the structured rationale and evidence without recalculating thresholds, severity, macro-area status or final assessment status.
+
+The policy currently treats Financial Analysis, Behavioural Analysis and Debt Sustainability as core macro-areas for the multiple-ATTENTION escalation rule; Customer Profile is contextual for that specific count. A CRITICAL macro-area still escalates the overall assessment regardless of whether it is core or contextual. The complete policy remains defined in `config/final_assessment.yaml` and implemented by `src/services/final_assessment_service.py`.
 
 ---
 
