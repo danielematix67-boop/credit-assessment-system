@@ -87,10 +87,12 @@ Tests should cover at least:
 - partial section evaluation;
 - supported empty result collections;
 - final aggregation involving critical, attention, normal and non-evaluable sections;
-- configured core/contextual section behaviour;
-- minimum evidence requirements for a normal final assessment.
+- configured core/contextual section behaviour, including the fact that any CRITICAL macro-area escalates while the multiple-ATTENTION threshold counts core areas only;
+- minimum evidence requirements for a normal final assessment;
+- the rationale corresponding to each final-status branch (critical section, core ATTENTION threshold, any ATTENTION, all-normal evidence, no evaluable evidence and insufficient evaluable evidence);
+- limitations for non-evaluable macro-areas and partial evaluation.
 
-Exact thresholds and section membership belong to the configuration under `config/final_assessment.yaml`; they should not be independently reproduced in the UI or reporting layer.
+Exact thresholds and section membership belong to the configuration under `config/final_assessment.yaml`; they should not be independently reproduced in the UI or reporting layer. The rationale is returned as `FinalAssessment.status_rationale` by the deterministic service and should be tested alongside the status, rather than tested as an independently generated narrative.
 
 ## End-to-end workflow invariant
 
