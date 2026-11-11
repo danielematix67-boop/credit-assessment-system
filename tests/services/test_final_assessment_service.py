@@ -23,11 +23,13 @@ def test_final_assessment_is_normal_when_all_evaluable_sections_are_normal() -> 
     result = FinalAssessmentService().assess(_case(SectionStatus.NORMAL, SectionStatus.NORMAL))
     assert result.status == SectionStatus.NORMAL
     assert result.evaluated_sections == 2
+    assert "All 2 evaluable macro-areas are NORMAL" in result.status_rationale
 
 
 def test_final_assessment_is_attention_for_one_attention_section() -> None:
     result = FinalAssessmentService().assess(_case(SectionStatus.ATTENTION, SectionStatus.NORMAL))
     assert result.status == SectionStatus.ATTENTION
+    assert "at least one evaluable macro-area is classified as attention" in result.status_rationale.lower()
 
 
 def test_final_assessment_is_critical_for_two_core_attention_sections() -> None:
@@ -35,27 +37,33 @@ def test_final_assessment_is_critical_for_two_core_attention_sections() -> None:
         _case(SectionStatus.NORMAL, SectionStatus.ATTENTION, SectionStatus.ATTENTION)
     )
     assert result.status == SectionStatus.CRITICAL
+    assert "2 core macro-areas" in result.status_rationale
+    assert "threshold is 2" in result.status_rationale
 
 
 def test_customer_profile_attention_does_not_count_as_core_double_trigger() -> None:
     result = FinalAssessmentService().assess(_case(SectionStatus.ATTENTION, SectionStatus.ATTENTION))
     assert result.status == SectionStatus.ATTENTION
+    assert "Customer Profile" in result.status_rationale
 
 
 def test_customer_profile_critical_always_escalates_final_assessment() -> None:
     result = FinalAssessmentService().assess(_case(SectionStatus.CRITICAL, SectionStatus.NORMAL))
     assert result.status == SectionStatus.CRITICAL
+    assert "Customer Profile" in result.status_rationale
 
 
 def test_final_assessment_is_critical_when_any_core_section_is_critical() -> None:
     result = FinalAssessmentService().assess(_case(SectionStatus.NORMAL, SectionStatus.CRITICAL))
     assert result.status == SectionStatus.CRITICAL
+    assert "Financial Analysis" in result.status_rationale
 
 
 def test_final_assessment_is_attention_when_no_section_is_evaluable() -> None:
     result = FinalAssessmentService().assess(_case())
     assert result.status == SectionStatus.ATTENTION
     assert result.evaluated_sections == 0
+    assert "No macro-area could be evaluated" in result.status_rationale
 
 
 def test_customer_profile_attention_plus_two_core_attention_is_critical() -> None:
@@ -63,6 +71,7 @@ def test_customer_profile_attention_plus_two_core_attention_is_critical() -> Non
         _case(SectionStatus.ATTENTION, SectionStatus.ATTENTION, SectionStatus.ATTENTION)
     )
     assert result.status == SectionStatus.CRITICAL
+    assert "2 core macro-areas" in result.status_rationale
 
 
 def test_partial_evaluation_with_all_evaluable_sections_normal_is_normal() -> None:
@@ -72,3 +81,11 @@ def test_partial_evaluation_with_all_evaluable_sections_normal_is_normal() -> No
     assert result.status == SectionStatus.NORMAL
     assert result.evaluated_sections == 2
     assert len(result.limitations) == 3
+    assert "2 evaluable macro-areas are NORMAL" in result.status_rationale
+
+
+def test_insufficient_evaluable_areas_explains_fallback_status() -> None:
+    result = FinalAssessmentService().assess(_case(SectionStatus.NORMAL))
+    assert result.status == SectionStatus.ATTENTION
+    assert "Only 1 macro-area(s) could be evaluated" in result.status_rationale
+    assert "at least 2 are required" in result.status_rationale

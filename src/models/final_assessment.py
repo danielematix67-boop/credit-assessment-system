@@ -12,3 +12,4 @@ class FinalAssessment:
     risk_sections: list[str] = field(default_factory=list)
     normal_sections: list[str] = field(default_factory=list)
     limitations: list[str] = field(default_factory=list)
+    status_rationale: str = ""

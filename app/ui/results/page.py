@@ -4,7 +4,14 @@ import streamlit as st
 
 from app.ui.results.dashboard import render_risk_indicator_dashboard
 from app.ui.results.executive_synthesis import render_executive_synthesis
-from app.ui.results.helpers import get_rule_results, rule_status
+from app.ui.results.helpers import (
+    format_indicator_value,
+    get_rule_results,
+    get_rule_sections,
+    rule_indicator,
+    rule_severity,
+    rule_status,
+)
 
 
 def _status_class(status: str) -> str:
@@ -214,6 +221,63 @@ def render_results_header(result: Any) -> None:
     )
 
 
+def render_assessment_rationale(result: Any) -> None:
+    """Explain the final status using only deterministic assessment outputs."""
+    credit_case = getattr(result, "credit_case", None)
+    final_assessment = getattr(credit_case, "final_assessment", None)
+    if final_assessment is None:
+        return
+
+    rationale = getattr(final_assessment, "status_rationale", "")
+    risk_sections = set(getattr(final_assessment, "risk_sections", []) or [])
+    sections = get_rule_sections(result)
+
+    st.markdown("### Why this assessment status?")
+    if rationale:
+        st.write(rationale)
+    else:
+        st.caption("The deterministic assessment rationale is not available for this result.")
+
+    contributing_sections = [
+        section
+        for section in sections
+        if section.name in risk_sections
+    ]
+    if contributing_sections:
+        st.markdown("**Contributing risk areas**")
+        for section in contributing_sections:
+            section_status = getattr(getattr(section, "status", None), "value", "UNKNOWN")
+            triggered_rules = [
+                rule
+                for rule in (getattr(section, "evidence", []) or [])
+                if rule_status(rule) == "TRIGGERED"
+            ]
+            with st.container(border=True):
+                st.markdown(f"**{section.name}** · {section_status}")
+                if not triggered_rules:
+                    st.caption(
+                        "No individual triggered rule evidence is available for this area."
+                    )
+                for rule in triggered_rules:
+                    rule_id = getattr(rule, "rule_id", "—")
+                    indicator = rule_indicator(rule)
+                    severity = rule_severity(rule)
+                    st.write(f"**{rule_id} — {indicator}** · {severity}")
+                    st.caption(
+                        f"Observed value: {format_indicator_value(getattr(rule, 'value', None))} "
+                        f"· Configured threshold: {format_indicator_value(getattr(rule, 'threshold', None))}"
+                    )
+                    reason = getattr(rule, "reason", None)
+                    if reason:
+                        st.write(reason)
+
+    limitations = list(getattr(final_assessment, "limitations", []) or [])
+    if limitations:
+        with st.expander(f"Assessment limitations ({len(limitations)})", expanded=False):
+            for limitation in limitations:
+                st.write(f"• {limitation}")
+
+
 def render_reporting_provenance(result: Any) -> None:
     """Expose reporting provenance only as lightweight metadata."""
     metadata = getattr(result, "execution_metadata", None)
@@ -260,6 +324,7 @@ def render_results(result: Any, assessment_position: Any, selected_reporting_mod
     _apply_results_styles()
     st.markdown('<div class="results-divider"></div>', unsafe_allow_html=True)
     render_results_header(result)
+    render_assessment_rationale(result)
     render_reporting_provenance(result)
 
     # Single, compact deterministic view: the macro-area dashboard is the detailed
