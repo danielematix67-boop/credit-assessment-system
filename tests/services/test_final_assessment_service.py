@@ -29,7 +29,7 @@ def test_final_assessment_is_normal_when_all_evaluable_sections_are_normal() -> 
 def test_final_assessment_is_attention_for_one_attention_section() -> None:
     result = FinalAssessmentService().assess(_case(SectionStatus.ATTENTION, SectionStatus.NORMAL))
     assert result.status == SectionStatus.ATTENTION
-    assert "at least one evaluable macro-area is classified as ATTENTION" in result.status_rationale.lower()
+    assert "at least one evaluable macro-area is classified as attention" in result.status_rationale.lower()
 
 
 def test_final_assessment_is_critical_for_two_core_attention_sections() -> None:
