@@ -1,6 +1,6 @@
 # Application Workflow and Streamlit Interface
 
-This document describes the current application path implemented under `app/` and the workflow orchestration under `src/agents/workflow/`.
+This document describes the user-visible application path implemented under `app/` and the workflow orchestration under `src/agents/workflow/`. For a module-by-module description of the Streamlit package, including the distinction between active and currently unwired modules, see [`application-layer.md`](application-layer.md).
 
 ## Application entry point
 
@@ -27,7 +27,7 @@ Each domain sheet uses `scenario_id` to identify the case. The UI loads all vali
 
 The workbook defines its own `scenario_id` values and intended outcomes. These are data-level examples, not identifiers hard-coded into the application workflow. Scenario content can evolve independently from the application code as long as the workbook contract is preserved.
 
-See [`excel-scenario-input.md`](excel-scenario-input.md) for the workbook contract, supported fields and validation rules.
+See [`excel-scenario-input.md`](excel-scenario-input.md) for the workbook contract, supported fields and validation rules. The optional Centrale dei Rischi exposure fields in `BehaviouralData` are described in [`behavioural-analysis.md`](behavioural-analysis.md); they are contextual reporting/UI data and are not behavioural rule inputs.
 
 ## Reporting modes
 
@@ -52,7 +52,7 @@ The workflow in `src/agents/workflow/assessment_workflow.py` performs these step
 5. Capture generator/fallback information and elapsed times.
 6. Return an `AssessmentWorkflowResult` containing the case, analysis, report and execution metadata.
 
-The reporting stage is downstream of assessment and analysis. A provider or report-generation issue does not recalculate the deterministic case result.
+The reporting stage is downstream of assessment and analysis. A provider or report-generation issue does not recalculate the deterministic case result. `AssessmentWorkflow` records a UUID execution ID, a UTC start timestamp, the selected reporting mode, generator/fallback metadata and separate assessment, analysis, reporting and total elapsed times in `ExecutionMetadata`. These fields describe execution provenance and do not participate in credit decisioning.
 
 ## Executive Narrative contract
 
@@ -71,6 +71,8 @@ The results package under `app/ui/results/` renders the stored workflow result. 
 - filters for rule status, severity, assessment area and sort order;
 - individual rule details and indicator/evidence views;
 - the Executive Narrative.
+
+The Behavioural Analysis detail view can also display the optional Centrale dei Rischi reference date and exposure breakdown. The figures are supplied by the workbook, are shown as context, and do not create rule findings or change the assessment. Where the complete breakdown is available, the UI can show a reconciliation difference between the total and its components.
 
 The rationale is part of `FinalAssessment` (`status_rationale`) and is produced in the same decision branches that assign the final status. The Results page reads it from `result.credit_case.final_assessment`; it does not ask the reporting model to explain or infer the decision. Contributing areas are selected from `risk_sections`, and the displayed rule details are taken from each section's existing evidence.
 
