@@ -7,7 +7,7 @@ The Behavioural Analysis section combines two distinct information layers:
 1. **Deterministic behavioural rule evidence**, evaluated by `BehaviouralAssessmentService`.
 2. **Descriptive exposure context** from the latest available Centrale dei Rischi (CR) reference date.
 
-The CR exposure figures are contextual information, not rule inputs. They do not affect rule outcomes, severity, section status, or the final assessment.
+The CR exposure figures are contextual information, not rule inputs. They do not affect rule outcomes, severity, section status, or the final assessment. In the broader credit-quality monitoring scope, these figures complement internal behavioural evidence by providing a limited system-level exposure snapshot; they should not be interpreted as a complete CR analysis or as a longitudinal monitoring series.
 
 ## Context data contract
 
@@ -21,7 +21,11 @@ The CR exposure figures are contextual information, not rule inputs. They do not
 | `utilized_term` | Utilized amount for term facilities, in euros |
 | `utilized_self_liquidating` | Utilized amount for self-liquidating facilities, in euros |
 
-The values are optional. When exposure amounts are missing, the UI identifies the data as unavailable instead of treating missing values as zero. The input data provider is responsible for supplying the latest available CR reference date; the application does not infer or fetch the CR reference date automatically.
+The values are optional. When exposure amounts are missing, the UI identifies the data as unavailable instead of treating missing values as zero. The input data provider is responsible for supplying the latest available CR reference date; the application does not infer or fetch the CR reference date automatically. The current implementation does not connect directly to Banca d'Italia services and does not automatically retrieve monthly CR records.
+
+## Current scope and limitations
+
+The current CR contract is deliberately narrow: reference date, total utilised system exposure and the three supported facility categories. It does not currently represent the full set of information available in a Centrale dei Rischi report, nor does it implement trend analysis, bank-level concentration analysis, monthly variation monitoring or automated deterioration alerts from CR history. Such analyses are potential extensions and should only be documented as implemented when corresponding input contracts, calculations and tests exist.
 
 ## Presentation
 
