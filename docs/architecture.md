@@ -2,7 +2,7 @@
 
 ## Overview
 
-The system is a deterministic, multi-domain credit-assessment application with an optional AI-assisted reporting layer.
+The system is a prototype **credit-quality monitoring and analytical-support application**. It brings together configured deterministic checks across multiple credit-risk domains and an optional AI-assisted reporting layer. The business scope, monitoring dimensions and current prototype limitations are described in [`credit-monitoring-scope.md`](credit-monitoring-scope.md).
 
 > **The deterministic assessment decides; AI explains.**
 
@@ -39,7 +39,7 @@ The rule evaluation path is deterministic. Reporting is a separate concern.
 
 ## Domains and rule catalogue
 
-The assessment is organised into macro-areas. Each domain owns its inputs, rule catalogue and rule evidence. The active rule inventory is **not duplicated in this document**; it is defined by the valid configuration catalogues and registered implementations at runtime.
+The monitoring analysis is organised into complementary macro-areas: Customer Profile (including EWS-related contextual information), Financial Analysis, Behavioural Analysis and Debt Sustainability. Together, they support a structured view of early-warning signals, available behavioural/CR evidence, financial condition and debt-service capacity. The assessment is organised into macro-areas. Each domain owns its inputs, rule catalogue and rule evidence. The active rule inventory is **not duplicated in this document**; it is defined by the valid configuration catalogues and registered implementations at runtime.
 
 This is intentional: adding or removing a rule should not require rewriting the architecture document.
 
@@ -126,7 +126,7 @@ Missing evidence can remain represented as `None` so a rule can explicitly retur
 
 ## Deterministic comments and evidence
 
-The `src/comments` package is intentionally separate from the LLM reporting layer. `CommentEngine` creates deterministic explanatory text for triggered rules from the same `RuleResult` objects used by the assessment pipeline. Behavioural Analysis also carries optional Centrale dei Rischi exposure context; these descriptive figures are not rule inputs and do not affect assessment status.
+The `src/comments` package is intentionally separate from the LLM reporting layer. `CommentEngine` creates deterministic explanatory text for triggered rules from the same `RuleResult` objects used by the assessment pipeline. Behavioural Analysis also carries optional Centrale dei Rischi exposure context; the current CR fields provide a dated aggregate exposure snapshot and breakdown, not a complete CR ingestion or longitudinal CR analysis. These descriptive figures are not rule inputs and do not affect assessment status. Likewise, EWS score class, notching, variation and active-EWI fields in Customer Profile are contextual unless a specific configured deterministic rule evaluates the relevant information.
 
 These comments are evidence-preserving and traceable; they explain what happened, but they do not decide the credit outcome. They are part of the deterministic evidence chain, not a second adjudication layer.
 
@@ -269,6 +269,10 @@ credit-assessment-system/
 ```
 
 The authoritative structure is the repository tree itself. Agent responsibilities are separated into `src/agents/base/`, `src/agents/analysis/`, `src/agents/reporting/` and `src/agents/workflow/`. Documentation intentionally avoids enumerating every concrete rule module.
+
+## Monitoring capability boundary
+
+The application currently runs an assessment on a selected Excel scenario. It automates configured rule evaluation and evidence aggregation, but it does not yet provide scheduled/continuous monitoring, direct core-banking or Centrale dei Rischi integration, or persistent historical comparison across successive runs. Those capabilities require additional ingestion, storage, temporal analysis and operational workflow components; they must not be inferred from the current deterministic assessment architecture.
 
 ## Demo data
 
