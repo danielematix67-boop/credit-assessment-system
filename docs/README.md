@@ -35,6 +35,7 @@ The [glossary](glossary.md) is useful whenever a technical or credit-risk term i
 | [`rules.md`](rules.md) | How a credit-risk rule is defined, implemented, tested and extended |
 | [`reporting.md`](reporting.md) | How deterministic assessment evidence becomes a human-readable report |
 | [`customer-profile.md`](customer-profile.md) | Customer Profile fields, rule/context separation and executive materiality |
+| [`behavioural-analysis.md`](behavioural-analysis.md) | Behavioural rule evidence and descriptive Centrale dei Rischi context |
 | [`excel-scenario-input.md`](excel-scenario-input.md) | Excel input contract, model-driven fields and scenario validation |
 | [`application-workflow.md`](application-workflow.md) | Current Streamlit input, reporting modes, execution and results presentation |
 | [`validation.md`](validation.md) | What the system validates and how correctness is tested |
@@ -182,7 +183,7 @@ This means the documentation distinguishes:
 - material contextual fields, selected deterministically before reporting;
 - narrative, which can only verbalise the supplied evidence and context.
 
-The current Customer Profile implementation and field-level materiality contract are documented in [`customer-profile.md`](customer-profile.md).
+The current Customer Profile implementation and field-level materiality contract are documented in [`customer-profile.md`](customer-profile.md). Behavioural rule evidence and the separate descriptive Centrale dei Rischi (CR) exposure context are documented in [`behavioural-analysis.md`](behavioural-analysis.md).
 
 ## Current application boundary
 
@@ -268,6 +269,7 @@ Before changing documentation, verify that:
 - deterministic assessment remains clearly separated from AI reporting;
 - `NOT_EVALUABLE` is not described as equivalent to a normal result;
 - Customer Profile rule evidence is not confused with contextual profile information;
+- Centrale dei Rischi exposure context is not described as a behavioural rule input or assessment driver;
 - Executive Summary materiality is described as deterministic pre-selection, not an LLM decision;
 - links point to maintained documents;
 - volatile inventories and configuration values are not unnecessarily copied into Markdown.
