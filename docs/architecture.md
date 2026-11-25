@@ -126,7 +126,7 @@ Missing evidence can remain represented as `None` so a rule can explicitly retur
 
 ## Deterministic comments and evidence
 
-The `src/comments` package is intentionally separate from the LLM reporting layer. `CommentEngine` creates deterministic explanatory text for triggered rules from the same `RuleResult` objects used by the assessment pipeline.
+The `src/comments` package is intentionally separate from the LLM reporting layer. `CommentEngine` creates deterministic explanatory text for triggered rules from the same `RuleResult` objects used by the assessment pipeline. Behavioural Analysis also carries optional Centrale dei Rischi exposure context; these descriptive figures are not rule inputs and do not affect assessment status.
 
 These comments are evidence-preserving and traceable; they explain what happened, but they do not decide the credit outcome. They are part of the deterministic evidence chain, not a second adjudication layer.
 
@@ -256,7 +256,7 @@ credit-assessment-system/
 ├── app/                 # Streamlit presentation and orchestration
 ├── config/              # Declarative rule and final-assessment policy
 ├── src/
-│   ├── agents/          # Analysis/reporting orchestration
+│   ├── agents/          # base/, analysis/, reporting/ and workflow/ orchestration
 │   ├── comments/        # Deterministic comments/evidence support
 │   ├── config/          # Configuration loading and policy objects
 │   ├── engine/          # Rule execution
@@ -268,7 +268,7 @@ credit-assessment-system/
 └── tests/               # Unit, integration, workflow, reporting and UI tests
 ```
 
-The authoritative structure is the repository tree itself. Documentation intentionally avoids enumerating every concrete rule module.
+The authoritative structure is the repository tree itself. Agent responsibilities are separated into `src/agents/base/`, `src/agents/analysis/`, `src/agents/reporting/` and `src/agents/workflow/`. Documentation intentionally avoids enumerating every concrete rule module.
 
 ## Demo data
 
