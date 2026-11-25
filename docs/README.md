@@ -31,6 +31,7 @@ The [glossary](glossary.md) is useful whenever a technical or credit-risk term i
 |---|---|
 | [`getting-started.md`](getting-started.md) | How to understand, install and run the project for the first time |
 | [`glossary.md`](glossary.md) | Plain-language and technical definitions of the main project terms |
+| [`credit-monitoring-scope.md`](credit-monitoring-scope.md) | Business positioning as a credit-quality monitoring support tool, analytical dimensions and current implementation boundaries |
 | [`architecture.md`](architecture.md) | How the system is organised and how information moves through it |
 | [`rules.md`](rules.md) | How a credit-risk rule is defined, implemented, tested and extended |
 | [`reporting.md`](reporting.md) | How deterministic assessment evidence becomes a human-readable report |
@@ -116,15 +117,19 @@ Architectural decisions
 
 ## The central idea
 
-The simplest way to understand the project is:
+The simplest way to understand the project is as an automated credit-quality monitoring workflow:
 
 ```text
-                 CREDIT ASSESSMENT
+             CREDIT QUALITY MONITORING
+                        │
+                        ▼
+       EWI / EWS · BEHAVIOURAL / CR
+       FINANCIAL ANALYSIS · DEBT SUSTAINABILITY
                         │
                         ▼
              DETERMINISTIC ENGINE
                         │
-             "What is the result?"
+             "What signals are present?"
                         │
                         ▼
               STRUCTURED EVIDENCE
@@ -138,7 +143,7 @@ The simplest way to understand the project is:
                      REPORT
 ```
 
-The deterministic part of the system is responsible for the assessment and its evidence. The AI layer can turn that evidence into natural language, but it cannot replace or change the underlying assessment.
+The deterministic part of the system evaluates configured indicators and produces the assessment evidence. The AI layer can turn that evidence into natural language, but it cannot replace or change the underlying assessment. The current prototype is input-driven (Excel Upload) and should not be confused with a live, continuously connected monitoring platform. See [credit-monitoring-scope.md](credit-monitoring-scope.md) for the business scope and explicit implementation limits.
 
 > **The deterministic system decides; AI explains.**
 
@@ -276,6 +281,8 @@ Before changing documentation, verify that:
 - `NOT_EVALUABLE` is not described as equivalent to a normal result;
 - Customer Profile rule evidence is not confused with contextual profile information;
 - Centrale dei Rischi exposure context is not described as a behavioural rule input or assessment driver;
+- EWS score context and active-EWI fields are not described as recalculated unless an implemented deterministic calculation supports that claim;
+- the Excel-driven prototype is not described as continuous monitoring or direct source-system integration;
 - Executive Summary materiality is described as deterministic pre-selection, not an LLM decision;
 - links point to maintained documents;
 - volatile inventories and configuration values are not unnecessarily copied into Markdown.
