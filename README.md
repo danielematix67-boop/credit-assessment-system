@@ -1,6 +1,6 @@
 # Credit Assessment System
 
-> **A deterministic credit-risk assessment engine with controlled AI-assisted reporting.**
+> **A credit-quality monitoring and analytical-support prototype, built around deterministic credit-risk assessment and controlled AI-assisted reporting.**
 
 [![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/UI-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
@@ -17,11 +17,13 @@
 
 ## 🎯 What is this project?
 
-Credit Assessment System is a prototype credit-risk platform designed to evaluate a credit position through **explicit, configurable and testable deterministic rules** and then turn the resulting structured evidence into controlled, grounded reporting.
+Credit Assessment System is a prototype **credit-quality monitoring support platform**. It is designed to automate selected analyses of a counterparty's risk profile—Early Warning Indicators (EWIs), EWS-related information, internal behavioural evidence, available Centrale dei Rischi (CR) exposure context, financial statements and debt sustainability—through **explicit, configurable and testable deterministic rules**. It then organises the resulting evidence into a structured assessment and controlled, grounded reporting.
+
+The project is intended to support credit analysts and monitoring teams by highlighting signals, consolidating evidence and helping prioritise further review. It does not replace professional judgement, formal credit processes or an institution's official EWS infrastructure. The current prototype processes structured Excel inputs; it is not yet a continuously running monitoring platform with direct source-system integrations or persistent historical tracking.
 
 The project combines four perspectives:
 
-- **Credit Risk:** financial, behavioural, customer and debt-sustainability evidence.
+- **Credit Quality Monitoring:** configured EWIs, EWS-related context, internal behavioural checks, CR exposure context, financial analysis and debt-sustainability evidence.
 - **Data Analytics:** indicators, thresholds, severity and structured evidence.
 - **Software Engineering:** configuration-driven rules, automatic discovery, validation and testing.
 - **AI:** optional narrative generation that remains strictly downstream of the deterministic assessment.
@@ -70,8 +72,8 @@ The deterministic path is the **source of truth**. The reporting path consumes i
 
 | Area | Role |
 |---|---|
-| **Business domain** | Credit Risk / Credit Assessment |
-| **Core engine** | Deterministic Rule Engine |
+| **Business domain** | Credit Quality Monitoring / Credit Risk Analysis |
+| **Core engine** | Deterministic multi-domain monitoring and assessment rules |
 | **Configuration** | YAML-driven rule and assessment policy |
 | **Backend** | Python |
 | **Application** | Streamlit |
@@ -83,9 +85,11 @@ The deterministic path is the **source of truth**. The reporting path consumes i
 
 ---
 
-## 🏦 Business problem
+## 🏦 Credit quality monitoring problem
 
-Credit assessment requires combining heterogeneous evidence while keeping the final judgement **traceable, reproducible and explainable**.
+Credit quality monitoring requires combining heterogeneous and complementary evidence while keeping the analysis **traceable, reproducible and explainable**. Signals may emerge from early-warning indicators, changes in internal credit behaviour, information available from the Centrale dei Rischi, financial-statement developments or a weakening capacity to service debt.
+
+The project provides an automated analytical workflow to evaluate configured indicators, preserve the supporting evidence and summarise the results by macro-area. Its role is to support the monitoring process and the analyst's assessment—not to make autonomous credit decisions.
 
 A useful system therefore needs to answer questions such as:
 
@@ -96,7 +100,7 @@ A useful system therefore needs to answer questions such as:
 5. Can the result be reproduced from the same inputs and configuration?
 6. Can an executive report be generated without allowing a language model to alter the underlying decision?
 
-This project addresses those requirements through a deterministic assessment layer followed by a bounded reporting layer.
+This project addresses those requirements through deterministic domain assessments followed by structured case analysis and a bounded reporting layer. The business scope and the distinction between current capabilities and possible extensions are described in [`docs/credit-monitoring-scope.md`](docs/credit-monitoring-scope.md).
 
 ---
 
@@ -417,6 +421,7 @@ See [`docs/security-data-handling.md`](docs/security-data-handling.md).
 | [`docs/rules.md`](docs/rules.md) | Complete rule-development lifecycle |
 | [`docs/reporting.md`](docs/reporting.md) | Reporting and evidence contract |
 | [`docs/customer-profile.md`](docs/customer-profile.md) | Customer Profile fields and materiality policy |
+| [`docs/credit-monitoring-scope.md`](docs/credit-monitoring-scope.md) | Business positioning, monitoring dimensions, current capabilities and extension boundaries |
 | [`docs/behavioural-analysis.md`](docs/behavioural-analysis.md) | Behavioural rule evidence and descriptive Centrale dei Rischi context |
 | [`docs/excel-scenario-input.md`](docs/excel-scenario-input.md) | Excel workbook contract, validation and demo scenarios |
 | [`docs/application-workflow.md`](docs/application-workflow.md) | Current Streamlit workflow and results interface |
