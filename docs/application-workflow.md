@@ -1,6 +1,6 @@
 # Application Workflow and Streamlit Interface
 
-This document describes the current application path implemented under `app/` and the workflow orchestration under `src/agents/workflow/`.
+This document describes the user-visible application path implemented under `app/` and the workflow orchestration under `src/agents/workflow/`. For a module-by-module description of the Streamlit package, including the distinction between active and currently unwired modules, see [`application-layer.md`](application-layer.md).
 
 ## Application entry point
 
